@@ -1,0 +1,13 @@
+{
+  "name": "forkbell-runtime",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "openid-client": "^6.8.8",
+    "postgres": "^3.4.9",
+    "zod": "^4.6.7"
+  }
+}

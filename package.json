@@ -1,0 +1,13 @@
+{
+  "name": "forkbell",
+  "private": true,
+  "packageManager": "pnpm@10.34.7",
+  "scripts": {
+    "dev:server": "pnpm --filter @forkbell/server dev",
+    "dev:app": "pnpm --filter @forkbell/app start",
+    "migrate": "pnpm --filter @forkbell/db migrate",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "engines": { "node": ">=22" }
+}

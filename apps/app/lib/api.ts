@@ -1,0 +1,64 @@
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+
+const isWeb = Platform.OS === 'web';
+let serverUrl: string | null = null;
+let token: string | null = null;
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+  }
+}
+
+/** Web is served by the Forkbell server itself; phones remember the address you typed. */
+export async function loadConnection() {
+  if (isWeb) {
+    serverUrl = process.env.EXPO_PUBLIC_API_URL || window.location.origin;
+    return { serverUrl, needsServer: false };
+  }
+  serverUrl = await SecureStore.getItemAsync('server');
+  token = await SecureStore.getItemAsync('token');
+  return { serverUrl, needsServer: !serverUrl };
+}
+
+export function getServerUrl() {
+  return serverUrl;
+}
+
+export async function setServerUrl(url: string) {
+  serverUrl = url;
+  await SecureStore.setItemAsync('server', url);
+}
+
+export async function setToken(value: string | null) {
+  token = value;
+  if (isWeb) return;
+  if (value) await SecureStore.setItemAsync('token', value);
+  else await SecureStore.deleteItemAsync('token');
+}
+
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  if (!serverUrl) throw new ApiError('Add your Forkbell server address first.', 0);
+  let res: Response;
+  try {
+    res = await fetch(serverUrl + path, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        ...(init.body ? { 'content-type': 'application/json' } : {}),
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(init.headers as Record<string, string> | undefined),
+      },
+    });
+  } catch {
+    throw new ApiError(`Can't reach ${serverUrl}. Check the address and your connection.`, 0);
+  }
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new ApiError(data.error ?? `The server answered ${res.status}.`, res.status);
+  return data as T;
+}
+
+export const post = <T>(path: string, body: unknown) => api<T>(path, { method: 'POST', body: JSON.stringify(body) });
+export const put = <T>(path: string, body: unknown) => api<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+export const del = <T>(path: string) => api<T>(path, { method: 'DELETE' });

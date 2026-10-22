@@ -1,0 +1,30 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env: { POSTGRES_DB: forkbell, POSTGRES_USER: forkbell_admin, POSTGRES_PASSWORD: ci-admin }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U forkbell_admin" --health-interval 5s --health-retries 20
+    env:
+      DATABASE_ADMIN_URL: postgres://forkbell_admin:ci-admin@localhost:5432/forkbell
+      DATABASE_URL: postgres://forkbell_app:ci-app@localhost:5432/forkbell
+      APP_DB_PASSWORD: ci-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Migrate and prove row-level security
+        run: |
+          pnpm migrate
+          pnpm --filter @forkbell/db rls-check
+      - name: Web build
+        run: cd apps/app && CI=1 npx expo export --platform web --output-dir dist

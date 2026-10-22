@@ -1,0 +1,33 @@
+name: iOS IPA
+# Unsigned build for sideloading (SideStore / LiveContainer). Run it from the Actions tab.
+on: workflow_dispatch
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Generate the native iOS project
+        working-directory: apps/app
+        run: CI=1 npx expo prebuild --platform ios --clean
+      - name: Build unsigned app
+        working-directory: apps/app/ios
+        run: |
+          xcodebuild -workspace Forkbell.xcworkspace -scheme Forkbell -configuration Release \
+            -sdk iphoneos -archivePath "$RUNNER_TEMP/Forkbell.xcarchive" archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+      - name: Package IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -R "$RUNNER_TEMP/Forkbell.xcarchive/Products/Applications/Forkbell.app" "$RUNNER_TEMP/Payload/"
+          cd "$RUNNER_TEMP" && zip -qr Forkbell.ipa Payload
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-${{ github.run_number }}
+          name: Forkbell iOS build ${{ github.run_number }}
+          files: ${{ runner.temp }}/Forkbell.ipa
