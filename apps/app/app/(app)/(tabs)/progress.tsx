@@ -11,6 +11,8 @@ import { useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { NumberField } from '../../../components/NumberField';
 import { WeightChart } from '../../../components/WeightChart';
+import { WellbeingCard } from '../../../components/WellbeingCard';
+import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
 
 type Progress = {
@@ -22,7 +24,7 @@ type Progress = {
   goal: { weightKg: number | null; date: string | null; weeklyWorkoutGoal: number; plan: GoalPlan | null };
   streaks: Streaks;
   milestones: Milestone[];
-  measurements: { kind: string; latest: { date: string; valueCm: number } | null; first: { date: string; valueCm: number } | null }[];
+  measurements: { kind: string; custom: boolean; unit: string; latest: { date: string; value: number } | null; first: { date: string; value: number } | null }[];
 };
 
 const CM_PER_IN = 2.54;
@@ -39,6 +41,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function ProgressScreen() {
   const units = useUnit();
+  const viewing = useViewing();
   const { me, refreshMe } = useAuth();
   const [p, setP] = useState<Progress | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export default function ProgressScreen() {
       setError(e instanceof Error ? e.message : String(e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [units.unit]);
+  }, [units.unit, viewing]);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -95,8 +98,9 @@ export default function ProgressScreen() {
 
         {p && (
           <>
-            {/* Weigh-in */}
-            <View style={s.card}>
+            {/* Weigh-in (only for your own data) */}
+            {viewing && <Text style={type.small}>{viewing.name}’s progress, read-only.</Text>}
+            <View style={[s.card, viewing && { display: 'none' }]}>
               <Text style={type.title}>Today’s weight</Text>
               <View style={s.row}>
                 <TextInput value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder={latest ? units.show(latest.weightKg) : ''} style={[s.input, { flex: 1 }]} accessibilityLabel={`Today's weight in ${units.unit}`} />
@@ -161,7 +165,7 @@ export default function ProgressScreen() {
                   Not enough data yet. {p.energy.needs} Then Forkbell works out what you really burn from your own numbers, no formulas or guesses.
                 </Text>
               )}
-              {p.goal.plan?.suggestedKcal && p.goal.plan.suggestedKcal !== p.calorieGoal && (
+              {!viewing && p.goal.plan?.suggestedKcal && p.goal.plan.suggestedKcal !== p.calorieGoal && (
                 <View style={s.suggest}>
                   <Text style={type.body}>
                     {p.goal.plan.reached ? 'To stay where you are' : `To move toward ${units.label(p.goal.weightKg)} at a steady pace`}, eat about{' '}
@@ -182,7 +186,7 @@ export default function ProgressScreen() {
               )}
             </View>
 
-            <GoalCard p={p} units={units} onSave={(body) => act(() => send('PUT', '/api/progress/goal', body, { label: 'Goal', coalesceKey: 'goal' }), 'Goal saved.')} />
+            {!viewing && <GoalCard p={p} units={units} onSave={(body) => act(() => send('PUT', '/api/progress/goal', body, { label: 'Goal', coalesceKey: 'goal' }), 'Goal saved.')} />}
 
             {/* Streaks */}
             <View style={s.card}>
@@ -200,12 +204,14 @@ export default function ProgressScreen() {
               </Text>
             </View>
 
+            <WellbeingCard />
+
             <Milestones list={p.milestones} />
 
             <MeasurementsCard
               p={p}
               units={units}
-              onSave={(kind, valueCm) => act(() => send('PUT', '/api/progress/measurements', { date: todayLocal(), kind, valueCm }, { label: `${kind} measurement`, coalesceKey: `measure:${todayLocal()}:${kind}` }), 'Measurement saved.')}
+              onSave={(kind, value, unit) => act(() => send('PUT', '/api/progress/measurements', { date: todayLocal(), kind, value, unit }, { label: `${kind} measurement`, coalesceKey: `measure:${todayLocal()}:${kind}` }), 'Measurement saved.')}
             />
           </>
         )}
@@ -293,36 +299,64 @@ function Milestones({ list }: { list: Milestone[] }) {
   );
 }
 
-function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (kind: string, valueCm: number) => void }) {
+function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (kind: string, value: number, unit: string) => void }) {
+  const viewing = useViewing();
   const inches = units.unit === 'lb';
-  const unit = inches ? 'in' : 'cm';
-  const show = (cm: number) => String(Math.round((inches ? cm / CM_PER_IN : cm) * 10) / 10);
+  const [newKind, setNewKind] = useState('');
+  const [newUnit, setNewUnit] = useState('');
+  // Body measurements are stored in cm and shown in inches if you use pounds; your own ones keep their unit.
+  const shown = (m: Progress['measurements'][number]) => (m.custom || m.unit !== 'cm' ? m.unit : inches ? 'in' : 'cm');
+  const show = (m: Progress['measurements'][number], v: number) => String(Math.round((!m.custom && m.unit === 'cm' && inches ? v / CM_PER_IN : v) * 10) / 10);
+  const list = p.measurements.filter((m) => !viewing || m.latest);
   return (
     <View style={s.card}>
       <Text style={type.title}>Measurements</Text>
-      <Text style={type.small}>Tape around the same spot each time. Today’s value replaces any earlier one from today.</Text>
-      {p.measurements.map((m) => (
+      <Text style={type.small}>Tape around the same spot each time, or track anything else with your own unit. Today’s value replaces any earlier one from today.</Text>
+      {list.map((m) => (
         <View key={m.kind} style={s.row}>
           <View style={{ flex: 1 }}>
             <Text style={type.body}>{cap(m.kind)}</Text>
             <Text style={type.small}>
-              {m.latest ? `${show(m.latest.valueCm)} ${unit} · ${longDate(m.latest.date)}` : 'Not measured yet'}
-              {m.first && m.latest ? ` · ${m.latest.valueCm - m.first.valueCm > 0 ? '+' : '−'}${show(Math.abs(m.latest.valueCm - m.first.valueCm))} since ${longDate(m.first.date)}` : ''}
+              {m.latest ? `${show(m, m.latest.value)} ${shown(m)} · ${longDate(m.latest.date)}` : 'Not measured yet'}
+              {m.first && m.latest ? ` · ${m.latest.value - m.first.value > 0 ? '+' : '−'}${show(m, Math.abs(m.latest.value - m.first.value))} since ${longDate(m.first.date)}` : ''}
             </Text>
           </View>
+          {!viewing && (
+            <NumberField
+              key={`${m.latest?.date}-${m.latest?.value}`}
+              label={`${m.kind} in ${shown(m)}`}
+              value=""
+              placeholder={shown(m)}
+              onCommit={(t) => {
+                const v = Number(t.replace(',', '.'));
+                if (t.trim() && v >= 0) onSave(m.kind, !m.custom && m.unit === 'cm' && inches ? v * CM_PER_IN : v, m.custom ? m.unit : 'cm');
+              }}
+              style={[s.input, { width: 72, textAlign: 'center' }]}
+            />
+          )}
+        </View>
+      ))}
+      {!viewing && (
+        <View style={s.row}>
+          <TextInput value={newKind} onChangeText={setNewKind} placeholder="Track something else" style={[s.input, { flex: 2 }]} />
+          <TextInput value={newUnit} onChangeText={setNewUnit} placeholder="unit" style={[s.input, { flex: 1 }]} autoCapitalize="none" />
           <NumberField
-            key={`${m.latest?.date}-${m.latest?.valueCm}`}
-            label={`${m.kind} in ${unit}`}
+            key={`${newKind}-${newUnit}`}
+            label="New measurement value"
             value=""
-            placeholder={unit}
+            placeholder="value"
             onCommit={(t) => {
               const v = Number(t.replace(',', '.'));
-              if (t.trim() && v > 0) onSave(m.kind, inches ? v * CM_PER_IN : v);
+              if (newKind.trim() && newUnit.trim() && t.trim() && v >= 0) {
+                onSave(newKind.trim(), v, newUnit.trim());
+                setNewKind('');
+                setNewUnit('');
+              }
             }}
             style={[s.input, { width: 72, textAlign: 'center' }]}
           />
         </View>
-      ))}
+      )}
     </View>
   );
 }

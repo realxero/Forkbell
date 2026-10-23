@@ -6,7 +6,8 @@ import { sql } from 'drizzle-orm';
 import type { Database } from '@forkbell/db';
 import { env } from './env.ts';
 
-export type AppEnv = { Variables: { userId: string; tokenHash: string } };
+/** userId: who is signed in. profileId: whose data this request is about (theirs, or someone who shared with them). */
+export type AppEnv = { Variables: { userId: string; profileId: string; tokenHash: string } };
 
 const COOKIE = 'fb_session';
 const NATIVE_REDIRECT = 'forkbell://auth';

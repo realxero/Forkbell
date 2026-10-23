@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MEALS, addDays, checkFood, forAmount, sumEntries, todayLocal, type DiaryDay, type Meal } from '@forkbell/shared';
 import { SuggestionsCard } from '../../../components/SuggestionsCard';
 import { useAuth } from '../../../lib/auth';
+import { useViewing } from '../../../lib/profile';
 import { cachedGet } from '../../../lib/sync';
 import { copyDay } from '../../../lib/actions';
 import { MacroBar } from '../../../components/MacroBar';
@@ -23,6 +24,7 @@ function dayLabel(date: string) {
 
 export default function Diary() {
   const { me } = useAuth();
+  const viewing = useViewing();
   const [date, setDate] = useState(todayLocal());
   const [day, setDay] = useState<DiaryDay | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export default function Diary() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [date]);
+  }, [date, viewing]);
 
   useFocusEffect(
     useCallback(() => {
@@ -112,8 +114,8 @@ export default function Diary() {
               </View>
             </View>
 
-            <SuggestionsCard day={day} onChanged={load} />
-            {date >= todayLocal() && (
+            {!viewing && <SuggestionsCard day={day} onChanged={load} />}
+            {!viewing && date >= todayLocal() && (
               <Pressable onPress={() => router.push({ pathname: '/plan', params: { date } })} style={{ alignSelf: 'flex-start' }}>
                 <Text style={s.addText}>Plan {date === todayLocal() ? 'the rest of today' : 'this day'} ›</Text>
               </Pressable>

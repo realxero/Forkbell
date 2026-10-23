@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { getViewing, isShareable } from './profile';
 
 const isWeb = Platform.OS === 'web';
 let serverUrl: string | null = null;
@@ -41,6 +42,10 @@ export async function setToken(value: string | null) {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!serverUrl) throw new ApiError('Add your Forkbell server address first.', 0);
   let res: Response;
+  // Whose data: an explicit header (queued changes keep theirs), else who you're viewing now.
+  const extra = { ...((init.headers as Record<string, string> | undefined) ?? {}) };
+  const profile = 'x-forkbell-profile' in extra ? extra['x-forkbell-profile'] : getViewing()?.id;
+  delete extra['x-forkbell-profile'];
   try {
     res = await fetch(serverUrl + path, {
       ...init,
@@ -48,7 +53,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       headers: {
         ...(init.body ? { 'content-type': 'application/json' } : {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
-        ...(init.headers as Record<string, string> | undefined),
+        ...(profile && isShareable(path) ? { 'x-forkbell-profile': profile } : {}),
+        ...extra,
       },
     });
   } catch {

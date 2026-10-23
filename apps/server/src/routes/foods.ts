@@ -21,7 +21,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/search', async (c) => {
     const q = (c.req.query('q') ?? '').trim();
     if (q.length < 2) return c.json({ mine: [], results: [], errors: [] });
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     const like = `%${likeEscape(q)}%`;
     const prefix = `${likeEscape(q)}%`;
 
@@ -49,7 +49,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
 
   /** Your own foods and the built-in ones, kept on the device so search works offline. */
   r.get('/library', async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     const rows = await asUser(userId, (tx) =>
       tx.select().from(foods).where(or(eq(foods.ownerId, userId), isNull(foods.ownerId))).orderBy(desc(foods.createdAt)).limit(2000),
     );
@@ -58,7 +58,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
 
   /** Foods you've logged lately, with the amount you used last time. */
   r.get('/recent', async (c) => {
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     // The phone's own date, so "60 days" follows your time zone, not the server's.
     const today = dateSchema.safeParse(c.req.query('today'));
     const since = addDays(today.success ? today.data : todayLocal(), -60);
@@ -95,7 +95,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/barcode/:code', async (c) => {
     const codes = barcodeVariants(c.req.param('code'));
     if (!codes.length) return c.json({ error: 'That is not a barcode number.' }, 400);
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     const [mine] = await asUser(userId, (tx) =>
       tx.select().from(foods).where(and(eq(foods.ownerId, userId), inArray(foods.barcode, codes))).orderBy(desc(foods.createdAt)).limit(1),
     );
@@ -114,7 +114,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
     const parsed = foodInputSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the food details.' }, 400);
     try {
-      const food = await asUser(c.get('userId'), (tx) => saveFood(tx, c.get('userId'), parsed.data));
+      const food = await asUser(c.get('profileId'), (tx) => saveFood(tx, c.get('profileId'), parsed.data));
       return c.json({ food }, 201);
     } catch (err) {
       if (err instanceof BadFood) return c.json({ error: err.message }, 400);

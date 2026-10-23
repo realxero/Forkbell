@@ -6,6 +6,14 @@ import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { saveFood, BadFood } from './save-food.ts';
 
+/** The goals for a date: that weekday's own goals if set, otherwise the everyday ones. */
+function goalsFor(date: string, me: typeof users.$inferSelect | undefined): DiaryDay['goals'] {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  const weekday = String(new Date(Date.UTC(y, m - 1, d)).getUTCDay());
+  const special = (me?.weekdayGoals as Record<string, DiaryDay['goals']> | undefined)?.[weekday];
+  return special ?? { kcal: me?.goalKcal ?? null, protein: me?.goalProtein ?? null, carbs: me?.goalCarbs ?? null, fat: me?.goalFat ?? null };
+}
+
 export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
 
@@ -14,7 +22,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
     const from = dateSchema.safeParse(c.req.query('from'));
     const to = dateSchema.safeParse(c.req.query('to'));
     if (!from.success || !to.success || from.data > to.data) return c.json({ error: 'Use from and to dates like 2026-10-22.' }, 400);
-    const rows = await asUser(c.get('userId'), (tx) =>
+    const rows = await asUser(c.get('profileId'), (tx) =>
       tx
         .select({ entry: diaryEntries, food: foods })
         .from(diaryEntries)
@@ -29,7 +37,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/entry/:id', async (c) => {
     const id = c.req.param('id');
     if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: 'That entry was not found.' }, 404);
-    const [row] = await asUser(c.get('userId'), (tx) =>
+    const [row] = await asUser(c.get('profileId'), (tx) =>
       tx.select({ entry: diaryEntries, food: foods }).from(diaryEntries).innerJoin(foods, eq(foods.id, diaryEntries.foodId)).where(eq(diaryEntries.id, id)).limit(1),
     );
     if (!row) return c.json({ error: 'That entry was not found.' }, 404);
@@ -44,7 +52,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
     const { from, to, meal, toMeal } = parsed.data;
     if (from === to && (!meal || !toMeal || meal === toMeal)) return c.json({ error: 'Pick a different day or meal to copy into.' }, 400);
     // Row-level security limits the source rows to yours; user_id defaults to you.
-    const copied = await asUser(c.get('userId'), (tx) =>
+    const copied = await asUser(c.get('profileId'), (tx) =>
       tx.execute(sql`
         insert into diary_entries (date, meal, food_id, grams)
         select ${to}::date, coalesce(${toMeal ?? null}::text, meal), food_id, grams
@@ -59,7 +67,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/:date', async (c) => {
     const date = dateSchema.safeParse(c.req.param('date'));
     if (!date.success) return c.json({ error: 'Use a date like 2026-10-22.' }, 400);
-    const day = await asUser(c.get('userId'), async (tx): Promise<DiaryDay> => {
+    const day = await asUser(c.get('profileId'), async (tx): Promise<DiaryDay> => {
       // Row-level security already limits this to the signed-in user's rows.
       const rows = await tx
         .select({ entry: diaryEntries, food: foods })
@@ -67,7 +75,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         .innerJoin(foods, eq(foods.id, diaryEntries.foodId))
         .where(eq(diaryEntries.date, date.data))
         .orderBy(asc(diaryEntries.createdAt));
-      const [me] = await tx.select().from(users).where(eq(users.id, c.get('userId'))).limit(1);
+      const [me] = await tx.select().from(users).where(eq(users.id, c.get('profileId'))).limit(1);
       const entries: DiaryEntry[] = rows.map(({ entry, food }) => ({
         id: entry.id,
         date: entry.date,
@@ -79,7 +87,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         date: date.data,
         entries,
         totals: sumEntries(entries),
-        goals: { kcal: me?.goalKcal ?? null, protein: me?.goalProtein ?? null, carbs: me?.goalCarbs ?? null, fat: me?.goalFat ?? null },
+        goals: goalsFor(date.data, me),
       };
     });
     return c.json(day);
@@ -89,7 +97,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
     const parsed = addEntrySchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the entry.' }, 400);
     const input = parsed.data;
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     try {
       const entry = await asUser(userId, async (tx) => {
         if (input.id) {
@@ -118,15 +126,15 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   r.patch('/:id', async (c) => {
     const parsed = updateEntrySchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the change.' }, 400);
-    const updated = await asUser(c.get('userId'), (tx) =>
-      tx.update(diaryEntries).set(parsed.data).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('userId')))).returning({ id: diaryEntries.id }),
+    const updated = await asUser(c.get('profileId'), (tx) =>
+      tx.update(diaryEntries).set(parsed.data).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('profileId')))).returning({ id: diaryEntries.id }),
     );
     return updated.length ? c.json({ ok: true }) : c.json({ error: 'That entry was not found.' }, 404);
   });
 
   r.delete('/:id', async (c) => {
-    const deleted = await asUser(c.get('userId'), (tx) =>
-      tx.delete(diaryEntries).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('userId')))).returning({ id: diaryEntries.id }),
+    const deleted = await asUser(c.get('profileId'), (tx) =>
+      tx.delete(diaryEntries).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('profileId')))).returning({ id: diaryEntries.id }),
     );
     return deleted.length ? c.json({ ok: true }) : c.json({ error: 'That entry was not found.' }, 404);
   });

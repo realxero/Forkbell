@@ -78,6 +78,8 @@ export interface Me {
   goals: Goals;
   weightUnit: 'lb' | 'kg';
   preferences: import('./food-safety.ts').Preferences;
+  /** goals for particular weekdays, "0" = Sunday */
+  weekdayGoals: Partial<Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', Goals>>;
 }
 
 /** A food you've logged before, with the amount you used last time. */

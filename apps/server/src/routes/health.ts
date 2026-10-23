@@ -16,7 +16,7 @@ export function healthRoutes({ asUser }: ReturnType<typeof connect>) {
     const parsed = healthImportSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the health data.' }, 400);
     const { source, days, weights } = parsed.data;
-    const counts = await asUser(c.get('userId'), async (tx) => {
+    const counts = await asUser(c.get('profileId'), async (tx) => {
       if (days.length)
         await tx
           .insert(healthDaily)

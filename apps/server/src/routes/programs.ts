@@ -19,7 +19,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
 
   /** Your programs (active first) with their routines, plus the starter programs you can copy. */
   r.get('/', async (c) => {
-    const list = await asUser(c.get('userId'), async (tx) => {
+    const list = await asUser(c.get('profileId'), async (tx) => {
       const rows = await tx.select().from(programs).orderBy(desc(programs.active), desc(programs.createdAt));
       const byProgram = await loadRoutines(tx, rows.map((p) => p.id));
       const out: Program[] = [];
@@ -38,7 +38,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
     const body = await c.req.json<{ key?: string }>().catch(() => ({}) as { key?: string });
     const starter = STARTER_PROGRAMS.find((p) => p.key === body.key);
     if (!starter) return c.json({ error: 'That starter program was not found.' }, 404);
-    const id = await asUser(c.get('userId'), async (tx) => {
+    const id = await asUser(c.get('profileId'), async (tx) => {
       const keys = [...new Set(starter.routines.flatMap((x) => x.exercises.map(([k]) => k)))];
       const found = await tx.select({ id: exercises.id, key: exercises.key, rest: exercises.restSeconds }).from(exercises).where(and(eq(exercises.source, 'builtin'), inArray(exercises.key, keys)));
       const byKey = new Map(found.map((f) => [f.key!, f]));
@@ -61,7 +61,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
   r.post('/', async (c) => {
     const parsed = nameSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: 'Give the program a name.' }, 400);
-    const id = await asUser(c.get('userId'), async (tx) => {
+    const id = await asUser(c.get('profileId'), async (tx) => {
       const [p] = await tx.insert(programs).values({ name: parsed.data.name, active: false } as typeof programs.$inferInsert).returning({ id: programs.id });
       await activate(tx, p!.id);
       return p!.id;
@@ -72,14 +72,14 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
   r.post('/:id/activate', async (c) => {
     const id = c.req.param('id');
     if (!isUuid(id)) return c.json({ error: 'That program was not found.' }, 404);
-    const done = await asUser(c.get('userId'), (tx) => activate(tx, id));
+    const done = await asUser(c.get('profileId'), (tx) => activate(tx, id));
     return done.length ? c.json({ ok: true }) : c.json({ error: 'That program was not found.' }, 404);
   });
 
   r.delete('/:id', async (c) => {
     const id = c.req.param('id');
     if (!isUuid(id)) return c.json({ error: 'That program was not found.' }, 404);
-    const deleted = await asUser(c.get('userId'), (tx) => tx.delete(programs).where(eq(programs.id, id)).returning({ id: programs.id }));
+    const deleted = await asUser(c.get('profileId'), (tx) => tx.delete(programs).where(eq(programs.id, id)).returning({ id: programs.id }));
     return deleted.length ? c.json({ ok: true }) : c.json({ error: 'That program was not found.' }, 404);
   });
 
@@ -88,7 +88,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
     const id = c.req.param('id');
     const parsed = nameSchema.safeParse(await c.req.json().catch(() => null));
     if (!isUuid(id) || !parsed.success) return c.json({ error: 'Give the day a name.' }, 400);
-    const routineId = await asUser(c.get('userId'), async (tx) => {
+    const routineId = await asUser(c.get('profileId'), async (tx) => {
       const [p] = await tx.select({ id: programs.id }).from(programs).where(eq(programs.id, id)).limit(1);
       if (!p) return null;
       const [{ last }] = (await tx.select({ last: max(routines.position) }).from(routines).where(eq(routines.programId, id))) as [{ last: number | null }];
@@ -111,7 +111,7 @@ export function routineRoutes({ asUser }: ReturnType<typeof connect>) {
     const parsed = saveRoutineSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the day.' }, 400);
     try {
-      const ok = await asUser(c.get('userId'), async (tx) => {
+      const ok = await asUser(c.get('profileId'), async (tx) => {
         const updated = await tx.update(routines).set({ name: parsed.data.name }).where(eq(routines.id, id)).returning({ id: routines.id });
         if (!updated.length) return false;
         await tx.delete(routineExercises).where(eq(routineExercises.routineId, id));
@@ -129,7 +129,7 @@ export function routineRoutes({ asUser }: ReturnType<typeof connect>) {
   r.delete('/:id', async (c) => {
     const id = c.req.param('id');
     if (!isUuid(id)) return c.json({ error: 'That day was not found.' }, 404);
-    const deleted = await asUser(c.get('userId'), (tx) => tx.delete(routines).where(eq(routines.id, id)).returning({ id: routines.id }));
+    const deleted = await asUser(c.get('profileId'), (tx) => tx.delete(routines).where(eq(routines.id, id)).returning({ id: routines.id }));
     return deleted.length ? c.json({ ok: true }) : c.json({ error: 'That day was not found.' }, 404);
   });
 

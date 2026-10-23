@@ -16,7 +16,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
   /** The library: your own exercises and the built-in ones, ones you use most first. */
   r.get('/', async (c) => {
     const q = (c.req.query('q') ?? '').trim();
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     const rows = await asUser(userId, (tx) =>
       tx
         .select({ ex: exercises, uses: usesSql })
@@ -36,7 +36,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
   r.post('/', async (c) => {
     const parsed = exerciseInputSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the exercise.' }, 400);
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     const [row] = await asUser(userId, (tx) =>
       tx.insert(exercises).values({ ownerId: userId, source: 'custom', ...parsed.data }).returning(),
     );
@@ -47,7 +47,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/:id', async (c) => {
     const id = c.req.param('id');
     if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: 'That exercise was not found.' }, 404);
-    const data = await asUser(c.get('userId'), async (tx) => {
+    const data = await asUser(c.get('profileId'), async (tx) => {
       const [ex] = await tx.select().from(exercises).where(eq(exercises.id, id)).limit(1);
       if (!ex) return null;
       const rows = await tx

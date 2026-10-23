@@ -25,7 +25,7 @@ export function bellRoutes({ asUser }: ReturnType<typeof connect>, internal: (pa
 
   r.post('/chat', async (c) => {
     if (!env.ai.provider) return c.json({ error: 'Bell isn’t set up on this server. Set AI_PROVIDER, AI_API_KEY and AI_MODEL.' }, 503);
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     if (!allowed(userId)) return c.json({ error: 'That’s a lot of messages in a short time. Try again in a few minutes.' }, 429);
     const parsed = bellChatSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the message.' }, 400);

@@ -302,3 +302,19 @@ export interface Activity {
   restingHr: number | null;
   source: HealthSource | null;
 }
+
+// Goal presets ------------------------------------------------------------------------
+export type GoalPreset = 'lose' | 'maintain' | 'gain';
+/**
+ * Starting goals from your measured burn and trend weight: lose about 0.5% of
+ * body weight a week, maintain, or gain about 0.25%. Protein 1.6 g per kg,
+ * fat about 28% of calories, carbs the rest. Never below 1,200 kcal.
+ */
+export function presetGoals(preset: GoalPreset, burnKcal: number, weightKg: number) {
+  const weekly = preset === 'lose' ? -0.005 : preset === 'gain' ? 0.0025 : 0;
+  const kcal = Math.max(MIN_SUGGESTED_KCAL, Math.round((burnKcal + (weightKg * weekly * KCAL_PER_KG) / 7) / 10) * 10);
+  const protein = Math.round(weightKg * 1.6);
+  const fat = Math.round((kcal * 0.28) / 9);
+  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  return { kcal, protein, carbs, fat };
+}

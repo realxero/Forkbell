@@ -5,7 +5,8 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { connect } from '@forkbell/db';
+import { connect, withRequestUser } from '@forkbell/db';
+import { sql } from 'drizzle-orm';
 import { env } from './env.ts';
 import { authRoutes, requireUser, type AppEnv } from './auth.ts';
 import { diaryRoutes } from './routes/diary.ts';
@@ -17,6 +18,8 @@ import { programRoutes, routineRoutes } from './routes/programs.ts';
 import { progressRoutes } from './routes/progress.ts';
 import { healthRoutes } from './routes/health.ts';
 import { bellRoutes } from './routes/bell.ts';
+import { shareRoutes } from './routes/shares.ts';
+import { wellbeingRoutes } from './routes/wellbeing.ts';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
@@ -30,6 +33,37 @@ app.route('/auth', authRoutes(database.db));
 
 const api = new Hono<AppEnv>();
 api.use('*', requireUser(database.db));
+
+// Viewing someone who shared with you: which routes allow it, and with which permission.
+const SHAREABLE: [prefix: string, read: string, write: string | null][] = [
+  ['/api/diary', 'food_read', 'food_write'],
+  ['/api/foods', 'food_read', 'food_write'],
+  ['/api/workouts', 'training_read', null],
+  ['/api/exercises', 'training_read', null],
+  ['/api/programs', 'training_read', null],
+  ['/api/routines', 'training_read', null],
+  ['/api/progress', 'progress_read', null],
+  ['/api/wellbeing', 'wellbeing_read', null],
+];
+api.use('*', async (c, next) => {
+  const userId = c.get('userId');
+  const want = c.req.header('x-forkbell-profile');
+  const rule = SHAREABLE.find(([p]) => c.req.path === p || c.req.path.startsWith(`${p}/`));
+  let profileId = userId;
+  // Anything else (your account, Bell, sharing itself) is always about you.
+  if (want && want !== userId && rule) {
+    if (!/^[0-9a-f-]{36}$/i.test(want)) return c.json({ error: 'Unknown profile.' }, 400);
+    const perm = c.req.method === 'GET' ? rule[1] : rule[2];
+    if (!perm) return c.json({ error: 'You can view this, but only they can change it.' }, 403);
+    const ok = await withRequestUser(userId, () =>
+      database.asUser(want, async (tx) => ((await tx.execute(sql`select may(${perm}) as ok`)) as unknown as { ok: boolean }[])[0]?.ok === true),
+    );
+    if (!ok) return c.json({ error: 'They haven’t shared this with you.' }, 403);
+    profileId = want;
+  }
+  c.set('profileId', profileId);
+  return withRequestUser(userId, () => next());
+});
 api.route('/me', meRoutes(database));
 api.route('/diary', diaryRoutes(database));
 api.route('/foods', foodRoutes(database));
@@ -39,12 +73,15 @@ api.route('/programs', programRoutes(database));
 api.route('/routines', routineRoutes(database));
 api.route('/progress', progressRoutes(database));
 api.route('/health', healthRoutes(database));
+api.route('/shares', shareRoutes(database));
+api.route('/wellbeing', wellbeingRoutes(database));
 
 // Bell reads data through the same routes as the app, as the signed-in person.
 // This copy of the API is never served; only Bell's tools call it, in-process.
 const internalApi = new Hono<AppEnv>();
 internalApi.use('*', async (c, next) => {
   c.set('userId', c.req.header('x-forkbell-user')!);
+  c.set('profileId', c.req.header('x-forkbell-user')!);
   await next();
 });
 internalApi.route('/api/diary', diaryRoutes(database));

@@ -14,6 +14,8 @@ export interface OutboxItem {
   label: string;
   createdAt: number;
   attempts: number;
+  /** whose data, when logging for someone who shared with you */
+  profileId?: string | null;
 }
 
 /**

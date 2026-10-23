@@ -8,6 +8,7 @@ import { AppState, Platform } from 'react-native';
 import { classify, enqueue, newId, type OutboxItem } from '@forkbell/shared';
 import { api, ApiError } from './api';
 import { loadStore, saveStore } from './store';
+import { getViewing, isShareable } from './profile';
 
 type Entry = { t: number; data: unknown };
 type State = { cache: Record<string, Entry>; outbox: OutboxItem[]; problems: string[] };
@@ -58,7 +59,12 @@ function setOnline(v: boolean) {
   }
 }
 
-const keyOf = (path: string) => path.split('?')[0]!;
+// Someone else's data is kept apart from yours: their copies are keyed by who.
+const keyOf = (path: string) => {
+  const base = path.split('?')[0]!;
+  const v = getViewing();
+  return v && isShareable(base) ? `@${v.id}${base}` : base;
+};
 
 export function readCache<T>(path: string): T | undefined {
   return state.cache[keyOf(path)]?.data as T | undefined;
@@ -135,6 +141,7 @@ export async function send<T = unknown>(method: OutboxItem['method'], path: stri
     label: opts.label,
     createdAt: Date.now(),
     attempts: 0,
+    profileId: isShareable(path) ? (getViewing()?.id ?? null) : null,
   });
   persist();
   void flush();
@@ -155,7 +162,11 @@ export async function flush(): Promise<void> {
       const item = state.outbox[0]!;
       let status = 0;
       try {
-        await api(item.path, { method: item.method, ...(item.body === undefined ? {} : { body: JSON.stringify(item.body) }) });
+        await api(item.path, {
+          method: item.method,
+          headers: { 'x-forkbell-profile': item.profileId ?? '' },
+          ...(item.body === undefined ? {} : { body: JSON.stringify(item.body) }),
+        });
         status = 200;
       } catch (e) {
         status = e instanceof ApiError ? e.status : 0;

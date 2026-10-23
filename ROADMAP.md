@@ -17,5 +17,9 @@ Each phase ends with something usable on web and iPhone.
 8. **Smart suggestions (done).** Swaps, protein and fiber ideas, nutrient limits,
    restaurant options, day and week planning, shopping list, allergy and
    dislike filtering, safety tips for training.
-9. **More health.** Sleep, mood, medications, custom measurements, goal
+9. **More health (done).** Sleep, mood, medications, custom measurements, goal
    presets and per-weekday targets, family sharing with permissions.
+
+Possible next steps: medication reminders as phone notifications, sleep from
+Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
+data, and per-user AI keys for Bell.

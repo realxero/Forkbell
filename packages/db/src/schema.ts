@@ -18,6 +18,7 @@ export const users = pgTable('users', {
   goalDate: date('goal_date', { mode: 'string' }),
   weeklyWorkoutGoal: integer('weekly_workout_goal').notNull(),
   preferences: jsonb('preferences').$type<Record<string, unknown>>().notNull(),
+  weekdayGoals: jsonb('weekday_goals').$type<Record<string, unknown>>().notNull(),
 });
 
 export const foods = pgTable('foods', {
@@ -154,5 +155,53 @@ export const measurements = pgTable('measurements', {
   userId: uuid('user_id').notNull(),
   date: date('date', { mode: 'string' }).notNull(),
   kind: text('kind').notNull(),
-  valueCm: num('value_cm').notNull(),
+  value: num('value').notNull(),
+  unit: text('unit').notNull(),
+});
+
+export const shares = pgTable('shares', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerId: uuid('owner_id').notNull(),
+  granteeId: uuid('grantee_id').notNull(),
+  permissions: text('permissions').array().notNull(),
+});
+
+export const shareInvites = pgTable('share_invites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerId: uuid('owner_id').notNull(),
+  codeHash: text('code_hash').notNull(),
+  permissions: text('permissions').array().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true, mode: 'string' }),
+});
+
+export const checkIns = pgTable('check_ins', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  sleepHours: num('sleep_hours'),
+  sleepQuality: integer('sleep_quality'),
+  mood: integer('mood'),
+  energy: integer('energy'),
+  note: text('note'),
+});
+
+export const medications = pgTable('medications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  name: text('name').notNull(),
+  dose: text('dose'),
+  timesPerDay: integer('times_per_day').notNull(),
+  notes: text('notes'),
+  active: boolean('active').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+});
+
+export const medicationLogs = pgTable('medication_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  medicationId: uuid('medication_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  slot: integer('slot').notNull(),
+  status: text('status', { enum: ['taken', 'skipped'] }).notNull(),
 });

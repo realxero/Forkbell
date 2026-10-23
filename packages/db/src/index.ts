@@ -2,6 +2,11 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import * as schema from './schema.ts';
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+/** Who is signed in for the request being handled (set once by the server's auth middleware). */
+const requestUser = new AsyncLocalStorage<{ userId: string }>();
+export const withRequestUser = <T>(userId: string, fn: () => T) => requestUser.run({ userId }, fn);
 
 export { schema };
 export * from './schema.ts';
@@ -15,9 +20,15 @@ export function connect(url: string) {
    * query on user data must go through here: row-level security returns
    * nothing (and refuses writes) outside it.
    */
-  async function asUser<T>(userId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  /**
+   * profileId is whose data to read or write: yours, or someone who shared
+   * with you. The signed-in person comes from the request; Postgres checks the
+   * share on every row.
+   */
+  async function asUser<T>(profileId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+    const userId = requestUser.getStore()?.userId ?? profileId;
     return db.transaction(async (tx) => {
-      await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`);
+      await tx.execute(sql`select set_config('app.user_id', ${userId}, true), set_config('app.profile_id', ${profileId}, true)`);
       return fn(tx);
     });
   }

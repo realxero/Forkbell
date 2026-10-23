@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { presetGoals, todayLocal } from '@forkbell/shared';
+import { cachedGet } from '../../lib/sync';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +49,7 @@ export default function Settings() {
           </Pressable>
         </View>
         <Text style={type.small}>Daily goals. Leave one empty to just track it.</Text>
+        <Presets onPick={(g) => setForm({ kcal: String(g.kcal), protein: String(g.protein), carbs: String(g.carbs), fat: String(g.fat) })} />
         {field('kcal', 'Calories')}
         {field('protein', 'Protein (g)')}
         {field('carbs', 'Carbs (g)')}
@@ -75,8 +78,13 @@ export default function Settings() {
           ))}
         </View>
 
+        <WeekdayGoals />
+
         <Pressable onPress={() => router.push('/preferences')} style={{ marginTop: space(6) }}>
           <Text style={s.link}>Food preferences and suggestions ›</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push('/sharing')} style={{ marginTop: space(3) }}>
+          <Text style={s.link}>Sharing with family ›</Text>
         </Pressable>
 
         <HealthSection />
@@ -89,6 +97,74 @@ export default function Settings() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Starting goals from your measured burn and weight. They fill the boxes; nothing is saved until you tap Save. */
+function Presets({ onPick }: { onPick: (g: { kcal: number; protein: number; carbs: number; fat: number }) => void }) {
+  const [info, setInfo] = useState<{ burn: number; kg: number } | null | undefined>(undefined);
+  useEffect(() => {
+    cachedGet<{ energy: { kcal: number | null }; weighIns: { trendKg: number }[] }>(`/api/progress?today=${todayLocal()}`).then(
+      (p) => setInfo(p.energy.kcal && p.weighIns.length ? { burn: p.energy.kcal, kg: p.weighIns.at(-1)!.trendKg } : null),
+      () => setInfo(null),
+    );
+  }, []);
+  if (info === undefined) return null;
+  if (info === null) return <Text style={type.small}>Presets appear once Forkbell knows your daily burn (about two weeks of logging and weigh-ins).</Text>;
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+      {(['lose', 'maintain', 'gain'] as const).map((k) => (
+        <Chip key={k} label={k === 'lose' ? 'Lose steadily' : k === 'maintain' ? 'Maintain' : 'Gain slowly'} on={false} onPress={() => onPick(presetGoals(k, info.burn, info.kg))} />
+      ))}
+    </View>
+  );
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** Different calories (and protein) on particular days, e.g. more on training days or weekends. */
+function WeekdayGoals() {
+  const { me, refreshMe } = useAuth();
+  const [day, setDay] = useState<number | null>(null);
+  const [kcal, setKcal] = useState('');
+  const [protein, setProtein] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!me) return null;
+  const wg = me.weekdayGoals ?? {};
+  const pick = (d: number) => {
+    setDay(d);
+    const g = wg[String(d) as '0'];
+    setKcal(g?.kcal ? String(g.kcal) : '');
+    setProtein(g?.protein ? String(g.protein) : '');
+  };
+  const save = async (clear = false) => {
+    if (day === null) return;
+    const g = clear || !kcal.trim() ? null : { kcal: Math.round(Number(kcal)), protein: protein.trim() ? Number(protein) : me.goals.protein, carbs: null, fat: null };
+    try {
+      await put('/api/me/weekday-goals', { ...wg, [String(day)]: g });
+      await refreshMe();
+      setMsg(g ? `${WEEKDAYS[day]} goal saved.` : `${WEEKDAYS[day]} uses your everyday goals.`);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
+  return (
+    <View style={{ gap: space(2), marginTop: space(6) }}>
+      <Text style={type.small}>Different goals on some days (optional)</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+        {WEEKDAYS.map((w, i) => (
+          <Chip key={w} label={wg[String(i) as '0'] ? `${w} · ${wg[String(i) as '0']!.kcal}` : w} on={day === i} onPress={() => pick(i)} />
+        ))}
+      </View>
+      {day !== null && (
+        <View style={{ flexDirection: 'row', gap: space(2), alignItems: 'center' }}>
+          <TextInput value={kcal} onChangeText={setKcal} keyboardType="number-pad" placeholder="kcal" style={[s.input, { flex: 1 }]} />
+          <TextInput value={protein} onChangeText={setProtein} keyboardType="decimal-pad" placeholder="protein g" style={[s.input, { flex: 1 }]} />
+          <Pressable onPress={() => save()}><Text style={s.link}>Save</Text></Pressable>
+          <Pressable onPress={() => save(true)}><Text style={[s.link, { color: color.ironSoft }]}>Clear</Text></Pressable>
+        </View>
+      )}
+      {msg && <Text style={type.small}>{msg}</Text>}
+    </View>
   );
 }
 

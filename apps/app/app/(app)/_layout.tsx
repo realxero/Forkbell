@@ -5,6 +5,7 @@ import { warmCache } from '../../lib/sync';
 import { AppState } from 'react-native';
 import { healthSupported, syncHealth } from '../../lib/health-sync';
 import { SyncBanner } from '../../components/SyncBanner';
+import { ProfileBar } from '../../components/ProfileBar';
 import { Redirect, Stack } from 'expo-router';
 import { useAuth } from '../../lib/auth';
 import { color } from '../../lib/theme';
@@ -22,6 +23,7 @@ export default function SignedInLayout() {
   if (status === 'signedOut') return <Redirect href="/login" />;
   return (
     <View style={{ flex: 1 }}>
+    <ProfileBar />
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.chalk } }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="add" options={{ presentation: 'modal' }} />

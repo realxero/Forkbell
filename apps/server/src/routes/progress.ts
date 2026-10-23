@@ -8,7 +8,8 @@ import type { AppEnv } from '../auth.ts';
 export const MEASUREMENT_KINDS = ['waist', 'hips', 'chest', 'neck', 'arm', 'thigh', 'calf'] as const;
 
 const weighInSchema = z.object({ date: dateSchema, weightKg: z.number().min(20).max(400), bodyFat: z.number().min(2).max(70).nullish() });
-const measurementSchema = z.object({ date: dateSchema, kind: z.enum(MEASUREMENT_KINDS), valueCm: z.number().min(5).max(300) });
+/** Body measurements (cm) or anything you want to track with your own unit. */
+const measurementSchema = z.object({ date: dateSchema, kind: z.string().trim().toLowerCase().min(1).max(40), value: z.number().min(0).max(100000), unit: z.string().trim().min(1).max(12).default('cm') });
 const goalSchema = z.object({
   goalWeightKg: z.number().min(20).max(400).nullable(),
   goalDate: dateSchema.nullable(),
@@ -22,7 +23,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/', async (c) => {
     const t = dateSchema.safeParse(c.req.query('today'));
     const today = t.success ? t.data : todayLocal();
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     const data = await asUser(userId, async (tx) => {
       const [me] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
       const weights = await tx.select().from(weighIns).orderBy(asc(weighIns.date));
@@ -48,8 +49,9 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     const goalKg = data.me.goalWeightKg;
     const plan = current && goalKg !== null ? planGoal({ currentKg: current.trendKg, goalKg, goalDate: data.me.goalDate, today, energy, unit }) : null;
 
-    const byKind = new Map<string, { date: string; valueCm: number }[]>();
-    for (const m of data.ms) byKind.set(m.kind, [...(byKind.get(m.kind) ?? []), { date: m.date, valueCm: m.valueCm }]);
+    const byKind = new Map<string, { date: string; value: number; unit: string }[]>();
+    for (const m of data.ms) byKind.set(m.kind, [...(byKind.get(m.kind) ?? []), { date: m.date, value: m.value, unit: m.unit }]);
+    const custom = [...byKind.keys()].filter((k) => !(MEASUREMENT_KINDS as readonly string[]).includes(k));
 
     // Activity from the phone: today, and the average of the last 7 full days.
     const valueOn = (kind: string, date: string) => {
@@ -81,9 +83,9 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       goal: { weightKg: goalKg, date: data.me.goalDate, weeklyWorkoutGoal: data.me.weeklyWorkoutGoal, plan },
       streaks: computeStreaks(loggedDates, workoutDates, data.me.weeklyWorkoutGoal, today),
       milestones: milestones({ loggedDates, workoutDates, series, goalKg, unit }),
-      measurements: MEASUREMENT_KINDS.map((kind) => {
+      measurements: [...MEASUREMENT_KINDS, ...custom].map((kind) => {
         const list = byKind.get(kind) ?? [];
-        return { kind, latest: list.at(-1) ?? null, first: list.length > 1 ? list[0]! : null };
+        return { kind, custom: custom.includes(kind), unit: list.at(-1)?.unit ?? 'cm', latest: list.at(-1) ?? null, first: list.length > 1 ? list[0]! : null };
       }),
     });
   });
@@ -93,7 +95,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     const parsed = weighInSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: 'Enter a weight between 20 and 400 kg (44 and 880 lb).' }, 400);
     const { date, weightKg, bodyFat } = parsed.data;
-    await asUser(c.get('userId'), (tx) =>
+    await asUser(c.get('profileId'), (tx) =>
       tx
         .insert(weighIns)
         .values({ date, weightKg, bodyFat: bodyFat ?? null } as typeof weighIns.$inferInsert)
@@ -105,19 +107,20 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
   r.delete('/weigh-ins/:date', async (c) => {
     const date = dateSchema.safeParse(c.req.param('date'));
     if (!date.success) return c.json({ error: 'Use a date like 2026-10-22.' }, 400);
-    const deleted = await asUser(c.get('userId'), (tx) => tx.delete(weighIns).where(eq(weighIns.date, date.data)).returning({ id: weighIns.id }));
+    const deleted = await asUser(c.get('profileId'), (tx) => tx.delete(weighIns).where(eq(weighIns.date, date.data)).returning({ id: weighIns.id }));
     return deleted.length ? c.json({ ok: true }) : c.json({ error: 'No weigh-in that day.' }, 404);
   });
 
   r.put('/measurements', async (c) => {
     const parsed = measurementSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the measurement.' }, 400);
-    const { date, kind, valueCm } = parsed.data;
-    await asUser(c.get('userId'), (tx) =>
+    const { date, kind, value, unit } = parsed.data;
+    if ((MEASUREMENT_KINDS as readonly string[]).includes(kind) && (unit !== 'cm' || value < 5 || value > 300)) return c.json({ error: 'Body measurements are 5 to 300 cm.' }, 400);
+    await asUser(c.get('profileId'), (tx) =>
       tx
         .insert(measurements)
-        .values({ date, kind, valueCm } as typeof measurements.$inferInsert)
-        .onConflictDoUpdate({ target: [measurements.userId, measurements.date, measurements.kind], set: { valueCm } }),
+        .values({ date, kind, value, unit } as typeof measurements.$inferInsert)
+        .onConflictDoUpdate({ target: [measurements.userId, measurements.date, measurements.kind], set: { value, unit } }),
     );
     return c.json({ ok: true });
   });
@@ -125,7 +128,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
   r.delete('/measurements/:date/:kind', async (c) => {
     const date = dateSchema.safeParse(c.req.param('date'));
     if (!date.success) return c.json({ error: 'Use a date like 2026-10-22.' }, 400);
-    const deleted = await asUser(c.get('userId'), (tx) =>
+    const deleted = await asUser(c.get('profileId'), (tx) =>
       tx.delete(measurements).where(and(eq(measurements.date, date.data), eq(measurements.kind, c.req.param('kind')))).returning({ id: measurements.id }),
     );
     return deleted.length ? c.json({ ok: true }) : c.json({ error: 'No measurement like that.' }, 404);
@@ -134,7 +137,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
   r.put('/goal', async (c) => {
     const parsed = goalSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check your goal.' }, 400);
-    await asUser(c.get('userId'), (tx) => tx.update(users).set(parsed.data).where(eq(users.id, c.get('userId'))));
+    await asUser(c.get('profileId'), (tx) => tx.update(users).set(parsed.data).where(eq(users.id, c.get('profileId'))));
     return c.json(parsed.data);
   });
 

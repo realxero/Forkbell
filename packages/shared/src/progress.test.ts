@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { addDays } from './dates.ts';
-import { computeStreaks, estimateEnergy, milestones, planGoal, weekStart, weightTrend, type WeighIn } from './progress.ts';
+import { presetGoals, computeStreaks, estimateEnergy, milestones, planGoal, weekStart, weightTrend, type WeighIn } from './progress.ts';
 
 const today = '2026-10-23';
 
@@ -79,4 +79,12 @@ test('weight milestones follow the trend toward the goal', () => {
   assert.ok(five.reached && five.date);
   assert.equal(five.detail, 'About the weight of a bag of flour.');
   assert.equal(m.find((x) => x.key === 'goal')!.reached, false);
+});
+
+test('goal presets add up and respect the floor', () => {
+  const g = presetGoals('lose', 2600, 80);
+  assert.equal(g.kcal, 2160); // 2600 - 80 × 0.005 × 7700 / 7 = 2160
+  assert.equal(g.protein, 128);
+  assert.ok(Math.abs(g.protein * 4 + g.carbs * 4 + g.fat * 9 - g.kcal) < 15);
+  assert.equal(presetGoals('lose', 1250, 50).kcal, 1200);
 });

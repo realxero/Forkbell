@@ -4,7 +4,7 @@ Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
 Authelia (or any OpenID Connect provider).
 
-**Status:** phase 8. Food: search (Open Food Facts, USDA, about a hundred
+**Status:** all nine roadmap phases are in. Food: search (Open Food Facts, USDA, about a hundred
 built-in common foods, your own), barcode scanning, one-tap logging from recent
 and most-logged foods, copying meals, daily goals. Training: a library of about
 60 exercises plus your own, starter programs, workout logging with weight,
@@ -20,7 +20,9 @@ Bell, the assistant: ask about your own data, or log food by describing it or
 sending a photo, with every item reviewed before it's added. Suggestions:
 lighter drink swaps, protein and fiber ideas, a sodium heads-up, planning a
 day or a week, a shopping list, allergy, diet and dislike filtering, and
-safety tips for training. See
+safety tips for training. More health: sleep, mood and energy check-ins, a
+medications checklist, custom measurements, goal presets and per-weekday
+goals, and family sharing with permissions. See
 [ROADMAP.md](ROADMAP.md) for what comes next.
 
 ## How it fits together
@@ -78,6 +80,21 @@ nothing is counted twice. Imported weights fill in days you didn't weigh in
 yourself; one you typed into Forkbell is never replaced. The iOS build is
 ad-hoc signed with the HealthKit entitlement so a sideloading tool can keep it
 when it re-signs the app.
+
+## Family sharing
+
+Share with someone who has an account on the same server: pick what they can
+see (food diary, workouts, weight and progress, sleep/mood/medications) and
+whether they can log food for you, then send them a one-time code (7 days).
+Either of you can end it at any time.
+
+This is enforced by Postgres, not just the app. Each request carries who is
+signed in and whose data it's about (`app.user_id` and `app.profile_id`);
+every policy shows one person's rows, and someone else's only when a share
+grants that kind of data. Logging food for someone is the only write allowed;
+everything else is read-only for them. Invite codes are stored as hashes. The
+row-level security check covers all of it, including that a share can't be
+created except by accepting a real invite.
 
 ## Suggestions and planning
 

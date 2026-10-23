@@ -27,7 +27,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   /** Recent sessions, newest first. */
   r.get('/', async (c) => {
     const limit = Math.min(Number(c.req.query('limit')) || 20, 100);
-    const rows = await asUser(c.get('userId'), (tx) =>
+    const rows = await asUser(c.get('profileId'), (tx) =>
       tx
         .select({
           w: workouts,
@@ -48,7 +48,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
 
   /** The session in progress, if any. There is at most one. */
   r.get('/open', async (c) => {
-    const workout = await asUser(c.get('userId'), async (tx) => {
+    const workout = await asUser(c.get('profileId'), async (tx) => {
       const [w] = await tx.select({ id: workouts.id }).from(workouts).where(isNull(workouts.finishedAt)).limit(1);
       return w ? loadWorkout(tx, w.id) : null;
     });
@@ -59,7 +59,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   r.post('/', async (c) => {
     const parsed = startWorkoutSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the workout.' }, 400);
-    const userId = c.get('userId');
+    const userId = c.get('profileId');
     const result = await asUser(userId, async (tx) => {
       if (parsed.data.id) {
         const [prior] = await tx.select({ id: workouts.id }).from(workouts).where(eq(workouts.id, parsed.data.id)).limit(1);
@@ -110,7 +110,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/:id', async (c) => {
     const id = c.req.param('id');
     if (!isUuid(id)) return c.json({ error: 'That workout was not found.' }, 404);
-    const workout = await asUser(c.get('userId'), (tx) => loadWorkout(tx, id));
+    const workout = await asUser(c.get('profileId'), (tx) => loadWorkout(tx, id));
     return workout ? c.json({ workout }) : c.json({ error: 'That workout was not found.' }, 404);
   });
 
@@ -121,7 +121,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
     const parsed = saveWorkoutSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the workout.' }, 400);
     try {
-      const ok = await asUser(c.get('userId'), (tx) => saveWorkout(tx, id, parsed.data));
+      const ok = await asUser(c.get('profileId'), (tx) => saveWorkout(tx, id, parsed.data));
       return ok ? c.json({ ok: true }) : c.json({ error: 'That workout was not found.' }, 404);
     } catch (err) {
       if (isMissingExercise(err)) return c.json({ error: 'One of those exercises was not found.' }, 400);
@@ -138,7 +138,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
     if (!isUuid(id)) return c.json({ error: 'That workout was not found.' }, 404);
     const body = finishWorkoutSchema.safeParse(await c.req.json().catch(() => ({})));
     const finishedAt = body.success && body.data.finishedAt ? pastOrNow(body.data.finishedAt) : null;
-    const result = await asUser(c.get('userId'), async (tx) => {
+    const result = await asUser(c.get('profileId'), async (tx) => {
       const [w] = await tx.select().from(workouts).where(eq(workouts.id, id)).limit(1);
       if (!w) return null;
       const ids = tx.select({ id: workoutExercises.id }).from(workoutExercises).where(eq(workoutExercises.workoutId, id));
@@ -182,7 +182,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   r.delete('/:id', async (c) => {
     const id = c.req.param('id');
     if (!isUuid(id)) return c.json({ error: 'That workout was not found.' }, 404);
-    const deleted = await asUser(c.get('userId'), (tx) => tx.delete(workouts).where(eq(workouts.id, id)).returning({ id: workouts.id }));
+    const deleted = await asUser(c.get('profileId'), (tx) => tx.delete(workouts).where(eq(workouts.id, id)).returning({ id: workouts.id }));
     return deleted.length ? c.json({ ok: true }) : c.json({ error: 'That workout was not found.' }, 404);
   });
 
