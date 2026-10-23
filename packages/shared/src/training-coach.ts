@@ -25,8 +25,10 @@ export const trainingSetupSchema = z
     hiddenTips: z.array(z.string().uuid()).max(500).default([]),
     /** strength goals: exercise id to an estimated one-rep max, in kg */
     goals: z.record(z.string().uuid(), z.number().positive().max(1000)).default({}),
+    /** the weekdays you train, 0 = Sunday */
+    trainingDays: z.array(z.number().int().min(0).max(6)).max(7).default([]),
   })
-  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {} });
+  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, trainingDays: [] });
 export type TrainingSetup = z.infer<typeof trainingSetupSchema>;
 
 // Name fragments for movements that put real load on each area.

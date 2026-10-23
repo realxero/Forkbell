@@ -8,6 +8,8 @@ import { cachedGet } from '../../../lib/sync';
 import { startWorkout } from '../../../lib/actions';
 import { formatDuration, useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
+import { YourWeek } from '../../../components/YourWeek';
+import { TrainingCheckInCard } from '../../../components/CheckInCards';
 import { color, space, type } from '../../../lib/theme';
 
 function dayName(date: string) {
@@ -119,6 +121,13 @@ export default function Train() {
             </Pressable>
           </View>
         ) : null}
+
+        <TrainingCheckInCard />
+        <YourWeek
+          program={program}
+          finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
+          onChanged={load}
+        />
 
         {!open && (
           <View style={s.row}>

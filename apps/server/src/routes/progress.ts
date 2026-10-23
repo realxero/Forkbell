@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { healthDaily, measurements, users, weighIns, workouts, type connect } from '@forkbell/db';
-import { addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource } from '@forkbell/shared';
+import { foodCheckIn, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -27,9 +27,10 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     const data = await asUser(userId, async (tx) => {
       const [me] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
       const weights = await tx.select().from(weighIns).orderBy(asc(weighIns.date));
-      const intakeRows = await tx.execute<{ date: string; kcal: string; protein: string; carbs: string; fat: string }>(sql`
+      const intakeRows = await tx.execute<{ date: string; kcal: string; protein: string; carbs: string; fat: string; fiber: string | null; sodium: string | null }>(sql`
         select d.date::text as date, sum(d.grams / 100 * f.kcal) as kcal,
-               sum(d.grams / 100 * f.protein) as protein, sum(d.grams / 100 * f.carbs) as carbs, sum(d.grams / 100 * f.fat) as fat
+               sum(d.grams / 100 * f.protein) as protein, sum(d.grams / 100 * f.carbs) as carbs, sum(d.grams / 100 * f.fat) as fat,
+               sum(d.grams / 100 * coalesce(f.fiber, 0)) as fiber, sum(d.grams / 100 * coalesce(f.sodium_mg, 0)) as sodium
         from diary_entries d join foods f on f.id = d.food_id
         where d.date >= ${addDays(today, -400)}::date and d.date <= ${today}::date
         group by d.date`);
@@ -99,9 +100,29 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       return { date, kcal: Math.round(Number(r?.kcal ?? 0)), protein: Math.round(Number(r?.protein ?? 0)), carbs: Math.round(Number(r?.carbs ?? 0)), fat: Math.round(Number(r?.fat ?? 0)), goal };
     });
 
+    // Weekly check-in: the 7 days before today.
+    const trendOn = (date: string) => [...series].reverse().find((p) => p.date <= date)?.trendKg ?? null;
+    const weekRows = new Map(data.intakeRows.map((r) => [r.date, r]));
+    const checkIn = foodCheckIn({
+      days: Array.from({ length: 7 }, (_, i) => {
+        const date = addDays(today, i - 7);
+        const r = weekRows.get(date);
+        return { date, kcal: r ? Math.round(Number(r.kcal)) : null, sodium: r?.sodium != null ? Math.round(Number(r.sodium)) : null, fiber: r?.fiber != null ? Math.round(Number(r.fiber) * 10) / 10 : null };
+      }),
+      burn: energy.kcal,
+      trendFromKg: series.length ? trendOn(addDays(today, -8)) : null,
+      trendToKg: series.length ? trendOn(addDays(today, -1)) : null,
+      goalKg,
+      goalDate: data.me.goalDate,
+      calorieGoal: data.me.goalKcal,
+      today,
+      unit,
+    });
+
     return c.json({
       today,
       unit,
+      checkIn,
       activity,
       days,
       weighIns: series.slice(-400).map((p, i, all) => {

@@ -13,12 +13,15 @@ import { NumberField } from '../../../components/NumberField';
 import { CalorieBars, LogCalendar, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
 import { WellbeingCard } from '../../../components/WellbeingCard';
 import { RecapCard } from '../../../components/RecapCard';
+import { FoodCheckInCard } from '../../../components/CheckInCards';
+import type { FoodCheckIn } from '@forkbell/shared';
 import { HealthCard } from '../../../components/HealthCard';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
 
 type Progress = {
   today: string;
+  checkIn?: FoodCheckIn;
   days?: DayTotals[];
   activity?: Activity;
   weighIns: (TrendPoint & { bodyFat: number | null })[];
@@ -101,6 +104,8 @@ export default function ProgressScreen() {
 
         {p && (
           <>
+            {p.checkIn && <FoodCheckInCard checkIn={p.checkIn} unit={units.unit} onChanged={load} />}
+
             {/* Weigh-in (only for your own data) */}
             {viewing && <Text style={type.small}>{viewing.name}’s progress, read-only.</Text>}
             <View style={[s.card, viewing && { display: 'none' }]}>

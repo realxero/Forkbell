@@ -46,6 +46,46 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
     return c.json({ muscles: Object.fromEntries(rows.map((r) => [r.muscle, r.sets])), workouts: n?.n ?? 0 });
   });
 
+  /**
+   * A week in review for the training check-in: workouts, working sets per
+   * muscle, and how many top sets were RPE 9 or harder.
+   */
+  r.get('/review', async (c) => {
+    const from = dateSchema.safeParse(c.req.query('from'));
+    const to = dateSchema.safeParse(c.req.query('to'));
+    if (!from.success || !to.success || from.data > to.data) return c.json({ error: 'Use from and to dates like 2026-10-22.' }, 400);
+    const out = await asUser(c.get('profileId'), async (tx) => {
+      const range = sql`${workouts.date} between ${from.data}::date and ${to.data}::date and ${workouts.finishedAt} is not null`;
+      const muscles = await tx
+        .select({ muscle: exercises.muscle, sets: sql<number>`count(${workoutSets.id})::int` })
+        .from(workoutSets)
+        .innerJoin(workoutExercises, eq(workoutExercises.id, workoutSets.workoutExerciseId))
+        .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
+        .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
+        .where(and(range, eq(workoutSets.done, true), eq(workoutSets.warmup, false)))
+        .groupBy(exercises.muscle);
+      const [n] = await tx.select({ n: count() }).from(workouts).where(range);
+      // The heaviest working set of each exercise in each session, and its RPE.
+      const tops = (await tx.execute<{ rpe: string | null }>(sql`
+        select distinct on (we.id) s.rpe
+        from workout_sets s join workout_exercises we on we.id = s.workout_exercise_id join workouts w on w.id = we.workout_id
+        where w.date between ${from.data}::date and ${to.data}::date and w.finished_at is not null and s.done and not s.warmup and s.weight_kg is not null
+        order by we.id, s.weight_kg desc, s.reps desc`)) as unknown as { rpe: string | null }[];
+      const [me] = await tx.select({ goal: users.weeklyWorkoutGoal }).from(users).where(eq(users.id, c.get('profileId'))).limit(1);
+      const rated = tops.filter((t) => t.rpe !== null);
+      return {
+        weekOf: from.data,
+        workouts: n?.n ?? 0,
+        weeklyGoal: me?.goal ?? 3,
+        sets: muscles.reduce((s, m) => s + m.sets, 0),
+        muscles: Object.fromEntries(muscles.map((m) => [m.muscle, m.sets])),
+        ratedTopSets: rated.length,
+        hardTopSets: rated.filter((t) => Number(t.rpe) >= 9).length,
+      };
+    });
+    return c.json(out);
+  });
+
   /** Recent sessions, newest first. */
   r.get('/', async (c) => {
     const limit = Math.min(Number(c.req.query('limit')) || 20, 100);
