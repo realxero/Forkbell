@@ -4,6 +4,9 @@
 //   "log ..."         -> calls search_foods, then proposes an entry
 //   a photo           -> proposes two estimated foods
 //   "bad label"       -> proposes impossible numbers (Bell must refuse them)
+//   "a bowl of rice"  -> asks how big the bowl was (ask_question)
+//   "lazy rice"       -> proposes 100 g with no amount said (Bell must refuse it)
+//   a label photo     -> (the /label route) answers with a US per-serving label
 // Run: node scripts/mock-ai.mjs 8787
 import http from 'node:http';
 
@@ -22,6 +25,14 @@ function plan(messages, toolResults) {
       { name: 'White rice', grams: 180, per100: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3 }, estimate: true },
     ] }] };
     return { text: 'Chicken and rice, about 520 kcal. Check the amounts.' };
+  }
+  if (text.includes('a bowl of rice')) {
+    if (n === 0) return { call: ['ask_question', { question: 'How big was the bowl?', choices: ['Small', 'Medium', 'Large'] }] };
+    return { text: 'Waiting.' };
+  }
+  if (text.includes('lazy rice')) {
+    if (n === 0) return { call: ['propose_food_entries', { items: [{ name: 'White rice', grams: 100, per100: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3 }, estimate: true }] }] };
+    return { text: `Tool said: ${toolResults.at(-1)}` };
   }
   if (text.includes('bad label')) {
     if (n === 0) return { call: ['propose_food_entries', { items: [{ name: 'Mystery bar', grams: 60, per100: { kcal: 250, protein: 60, carbs: 30, fat: 10 }, estimate: false }] }] };
@@ -64,7 +75,10 @@ http
         ? msgs.slice(lastUserIdx).flatMap((m) => (Array.isArray(m.content) ? m.content.filter((c) => c.type === 'tool_result').map((c) => c.content) : []))
         : msgs.slice(lastUserIdx).filter((m) => m.role === 'tool').map((m) => m.content);
       void results;
-      const step = plan(msgs.slice(lastUserIdx), fresh);
+      const system = b.system || textOf(msgs[0] || {});
+      const step = system.includes('You read nutrition labels')
+        ? { text: '```json\n' + JSON.stringify({ readable: true, name: 'Granola', brand: 'Test Co', serving_label: '2/3 cup (55g)', serving_g: 55, per100: null, per_serving: { kcal: 230, protein: 3, carbs: 37, fat: 8, sodium_mg: 160 }, note: null }) + '\n```' }
+        : plan(msgs.slice(lastUserIdx), fresh);
       if (step.call && step.call[1].date === '__TODAY__') step.call[1].date = today;
       res.setHeader('content-type', 'application/json');
       const id = `call_${Math.random().toString(36).slice(2, 8)}`;

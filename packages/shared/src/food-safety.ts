@@ -28,6 +28,14 @@ export const preferencesSchema = z.object({
     })
     .default({ enabled: true, strictness: 'balanced', drinks: true, protein: true, fiber: true, sodium: true }),
   trainingTips: z.boolean().default(true),
+  bell: z
+    .object({
+      /** ask one question instead of guessing a portion or how it was cooked */
+      askWhenUnsure: z.boolean().default(true),
+      /** a voice message sends when you let go (off: it lands in the text box to edit) */
+      voiceSends: z.boolean().default(true),
+    })
+    .default({ askWhenUnsure: true, voiceSends: true }),
 });
 export type Preferences = z.infer<typeof preferencesSchema>;
 export const defaultPreferences = (): Preferences => preferencesSchema.parse({});

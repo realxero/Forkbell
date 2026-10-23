@@ -59,7 +59,14 @@
         {
           "photosPermission": "Forkbell lets you pick a meal photo for Bell to estimate.",
           "cameraPermission": "Forkbell uses the camera to scan barcodes and photograph meals for Bell.",
-          "microphonePermission": false
+          "microphonePermission": "Forkbell uses the microphone so you can talk to Bell instead of typing."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Forkbell uses the microphone so you can talk to Bell instead of typing.",
+          "speechRecognitionPermission": "Forkbell turns what you say to Bell into text. On iPhone this happens on the device when it can."
         }
       ]
     ],

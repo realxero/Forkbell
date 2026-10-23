@@ -1,7 +1,7 @@
 // Bell's tools. Reads go through the same API routes the app uses (as the
 // signed-in person, so row-level security applies); Bell never writes. Food
 // it wants to log comes back as proposals the person reviews and confirms.
-import { checkFood, per100Problems, proposeArgsSchema, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences } from '@forkbell/shared';
+import { askArgsSchema, checkFood, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences } from '@forkbell/shared';
 import type { ToolSpec } from './providers.ts';
 
 export type Internal = (path: string) => Promise<unknown>;
@@ -62,6 +62,7 @@ export const TOOLS: ToolSpec[] = [
               },
               estimate: { type: 'boolean' },
               note: { type: 'string', description: 'short note shown on the card, e.g. "assumed one medium bowl"' },
+              amount_confirmed: { type: 'boolean', description: 'only when exactly 100 g really is what they had (they said so, it is their usual amount, or one serving is 100 g)' },
             },
             required: ['name', 'grams'],
           },
@@ -71,6 +72,23 @@ export const TOOLS: ToolSpec[] = [
     },
   },
 ];
+
+/** Only offered when "Ask me when unsure" is on. */
+export const ASK_TOOL: ToolSpec = {
+  name: 'ask_question',
+  description:
+    'Ask the person ONE short question when a detail you cannot see or infer would change calories by roughly a quarter or more (portion size, how it was cooked, a sauce or dressing, which brand or size). Give 2 to 4 short answers they can tap. A "just estimate it" answer is added for them, so a question never blocks logging. After asking, stop and wait; do not propose foods for the unclear item in the same turn.',
+  parameters: {
+    type: 'object',
+    properties: {
+      question: { type: 'string', description: 'one short, plain question' },
+      choices: { type: 'array', items: { type: 'string' }, description: '2 to 4 short answers, e.g. ["Small bowl", "Medium bowl", "Large bowl"]' },
+    },
+    required: ['question', 'choices'],
+  },
+};
+
+export const toolsFor = (prefs: Preferences) => (prefs.bell.askWhenUnsure ? [...TOOLS, ASK_TOOL] : TOOLS);
 
 const trimFood = (f: Food & { id?: string }) => ({
   ...(f.id ? { id: f.id } : {}),
@@ -82,7 +100,18 @@ const trimFood = (f: Food & { id?: string }) => ({
 });
 
 /** Run one tool. Returns text for the model; proposals are collected separately. */
-export async function runTool(name: string, args: unknown, ctx: { call: Internal; today: string; meal: Meal; proposals: FoodProposal[]; prefs: Preferences }): Promise<string> {
+export interface ToolContext {
+  call: Internal;
+  today: string;
+  meal: Meal;
+  proposals: FoodProposal[];
+  prefs: Preferences;
+  /** what the person said this turn, to check amounts against */
+  userText: string;
+  question: BellQuestion | null;
+}
+
+export async function runTool(name: string, args: unknown, ctx: ToolContext): Promise<string> {
   const a = (args ?? {}) as Record<string, string>;
   switch (name) {
     case 'get_day': {
@@ -126,6 +155,14 @@ export async function runTool(name: string, args: unknown, ctx: { call: Internal
       const problems: string[] = [];
       for (const item of parsed.data.items) {
         const food = item.food_id ? lib.foods.find((f) => f.id === item.food_id) ?? null : null;
+        // 100 g is the per-100 basis, rarely what someone ate. Don't let it slip through.
+        if (!item.amount_confirmed && looksLikeDefaultAmount(item.grams, ctx.userText)) {
+          const typical = food?.servingGrams ? ` One serving of this food is ${food.servingGrams} g.` : '';
+          problems.push(
+            `${item.name}: grams is 100, which looks like the per-100 g basis, not what they ate.${typical} Work out the amount from what they said or showed, use their usual amount from get_recent_foods, or ${ctx.prefs.bell.askWhenUnsure ? 'ask with ask_question' : 'use a typical portion and say so in the note'}. If 100 g really is right, set amount_confirmed.`,
+          );
+          continue;
+        }
         if (item.food_id && !food) {
           problems.push(`${item.name}: food_id not found; give per100 instead.`);
           continue;
@@ -160,6 +197,13 @@ export async function runTool(name: string, args: unknown, ctx: { call: Internal
         ? `${ok} item(s) shown to the person for review. Not shown: ${problems.join(' ')}`
         : `${ok} item(s) shown to the person for review. They will confirm or change them; do not say they are logged.`;
     }
+    case 'ask_question': {
+      const parsed = askArgsSchema.safeParse(args);
+      if (!parsed.success) return `Not asked: ${parsed.error.issues[0]?.path.join('.')} ${parsed.error.issues[0]?.message}.`;
+      if (ctx.question) return 'You already asked a question this turn. Ask only one; wait for the answer.';
+      ctx.question = { text: parsed.data.question, choices: parsed.data.choices };
+      return 'The question is shown with buttons. Stop here and wait for their answer; do not repeat the question in your reply.';
+    }
     default:
       return `Unknown tool ${name}.`;
   }
@@ -180,7 +224,10 @@ How to help:
 - Answer questions about their own data with the tools. Never guess numbers about them; look them up.
 - To log food, use propose_food_entries. Search or check recent foods first and prefer a real match. The person reviews every item, so say "here's what I'd log" and never claim it's logged.
 - For a photo of a meal: name each food you see and estimate grams from what's on the plate; mark estimates. For a nutrition label, read the per-100 g column (or convert from per-serving using the serving size) and set estimate=false.
-- If an unseen detail would change calories a lot (oil, sauce, portion), make a sensible assumption, say it in the note, and invite a correction.
+${opts.prefs.bell.askWhenUnsure
+    ? `- If an unseen detail would change calories a lot (portion, oil, sauce, which size), ask ONE short question with ask_question instead of guessing. Log anything that is already clear in the same turn. If they answer "${JUST_ESTIMATE}", make a sensible assumption and say it in the note. Don't ask about small things (a splash of milk, a pinch of salt), and never ask twice about the same item.`
+    : '- If an unseen detail would change calories a lot (oil, sauce, portion), make a sensible assumption, say it in the note, and invite a correction.'}
+- grams is what they ate, never 100 just because foods are stored per 100 g. Use what they said, what the photo shows, their usual amount, or a typical portion.
 - Keep replies short and plain. Use their units.
 
 Safety:

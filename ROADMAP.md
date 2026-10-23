@@ -14,6 +14,8 @@ Each phase ends with something usable on web and iPhone.
 6. **Health platforms (done).** Apple Health and Health Connect, reading and writing.
 7. **AI assistant (Bell) (done).** Bring-your-own model; chat logging, photo logging
    with a review step, questions about your own data.
+   Since then: asks when unsure, voice, pasted photos and image links, and fixing
+   barcode data from a label photo.
 8. **Smart suggestions (done).** Swaps, protein and fiber ideas, nutrient limits,
    restaurant options, day and week planning, shopping list, allergy and
    dislike filtering, safety tips for training.

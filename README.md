@@ -129,7 +129,11 @@ stays off.
 - Photos are sent to the model only with the message they're attached to and
   are not stored on the server.
 - About 40 messages per person per 10 minutes, to keep API costs in check.
-- `apps/server/scripts/mock-ai.mjs` is a stand-in model for testing without a key.
+- **Asks when it's unsure.** When a portion or how something was cooked would change the calories a lot, Bell asks one question with answers you can tap, always including *Just estimate it*. It never logs exactly 100 g unless you said 100 (that's the per-100 g basis, not an amount). Turn the questions off in Settings, Food and suggestions.
+- **Talk to it.** Hold the mic, speak, and let go to send; the words show as you speak. A quick tap listens hands-free until you tap again. Speech is turned into text on the iPhone when it can be; in Chrome on the web, the browser sends audio to Google to do it.
+- **Paste a photo.** Ctrl/Cmd+V on the web, or the *Paste image* button on a phone. Pasting an image link loads the picture. The server never fetches links itself, so a link can't be used to reach anything on your network.
+- **Fix a wrong barcode entry from the label.** After scanning, *Numbers look wrong?* opens the food form; photograph the label and Bell reads what's printed (it isn't allowed to estimate). Forkbell converts per-serving, kJ and salt figures to per 100 g itself, fills the form for you to check, and your corrected copy is what scans from then on.
+- `apps/server/scripts/mock-ai.mjs` is a stand-in model for testing without a key (it also asks a question, tries a 100 g default, and answers label photos).
 
 ## Offline
 

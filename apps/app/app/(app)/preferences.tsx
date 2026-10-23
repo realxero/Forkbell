@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ALLERGENS, DIETS, checkFood, defaultPreferences, type Preferences } from '@forkbell/shared';
+import { ALLERGENS, DIETS, checkFood, defaultPreferences, preferencesSchema, type Preferences } from '@forkbell/shared';
 import { put } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { Chip } from '../../components/AmountPicker';
@@ -14,7 +14,8 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 /** Food preferences and suggestion settings. */
 export default function PreferencesScreen() {
   const { me, refreshMe } = useAuth();
-  const [p, setP] = useState<Preferences>(me?.preferences ?? defaultPreferences());
+  // Parsing fills in settings added since this copy was saved (e.g. offline).
+  const [p, setP] = useState<Preferences>(me ? preferencesSchema.parse(me.preferences) : defaultPreferences());
   const [avoid, setAvoid] = useState(p.avoid.join(', '));
   const [dislikes, setDislikes] = useState(p.dislikes.join(', '));
   const [never, setNever] = useState(p.neverSuggest.join(', '));
@@ -86,6 +87,12 @@ export default function PreferencesScreen() {
             {sw('Sodium heads-up', sg.sodium, (v) => setP({ ...p, suggestions: { ...sg, sodium: v } }))}
           </>
         )}
+
+        <Text style={s.section}>Bell</Text>
+        {sw('Ask me when it’s unsure', p.bell.askWhenUnsure, (v) => setP({ ...p, bell: { ...p.bell, askWhenUnsure: v } }))}
+        <Text style={s.note}>When a portion or how something was cooked would change the calories a lot, Bell asks one quick question instead of guessing. You can always tap “Just estimate it”.</Text>
+        {sw('Send voice messages when I let go', p.bell.voiceSends, (v) => setP({ ...p, bell: { ...p.bell, voiceSends: v } }))}
+        <Text style={s.note}>Off: what you said goes into the message box so you can fix it first.</Text>
 
         <Text style={s.section}>Training</Text>
         {sw('Safety tips on exercises', p.trainingTips, (v) => setP({ ...p, trainingTips: v }))}

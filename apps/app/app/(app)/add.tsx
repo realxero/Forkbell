@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { forAmount, mealForTime, per100Problems, todayLocal, type Food, type FoodCandidate, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
-import { api, ApiError } from '../../lib/api';
+import { forAmount, mealForTime, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
+import { api, ApiError, post } from '../../lib/api';
+import { pickImage } from '../../lib/images';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { cachedGet } from '../../lib/sync';
 import { addEntry, createFood, findByBarcodeOffline, foodLibrary, searchOffline } from '../../lib/actions';
 import { AmountPicker, Chip, MEAL_NAMES } from '../../components/AmountPicker';
@@ -14,7 +16,7 @@ import { color, space, type } from '../../lib/theme';
 type Pick = Food | FoodCandidate;
 type SearchResult = { mine: Food[]; results: FoodCandidate[]; errors: string[] };
 type BarcodeResult = { food?: Food; candidate?: FoodCandidate };
-type Screen = { kind: 'search' } | { kind: 'scan' } | { kind: 'amount'; food: Pick; lastGrams?: number } | { kind: 'create'; barcode?: string; note?: string };
+type Screen = { kind: 'search' } | { kind: 'scan' } | { kind: 'amount'; food: Pick; lastGrams?: number } | { kind: 'create'; barcode?: string; note?: string; prefill?: { name: string; brand: string | null } };
 
 export default function AddFood() {
   const params = useLocalSearchParams<{ meal?: Meal; date?: string; scan?: string }>();
@@ -29,8 +31,10 @@ export default function AddFood() {
   const [tab, setTab] = useState<'recent' | 'frequent'>('recent');
   const [added, setAdded] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [canReadLabels, setCanReadLabels] = useState(false);
 
   useEffect(() => {
+    api<{ enabled: boolean }>('/api/bell/status').then((r) => setCanReadLabels(r.enabled), () => setCanReadLabels(false));
     cachedGet<RecentFoods>(`/api/foods/recent?today=${todayLocal()}`).then(setRecent, () => setRecent({ recent: [], frequent: [] }));
     void foodLibrary(); // keep a copy for searching offline
   }, []);
@@ -123,15 +127,35 @@ export default function AddFood() {
               }
             }}
           >
+            {view.food.barcode ? (
+              // Barcode data is crowd-sourced and sometimes wrong. Your corrected copy is what scans from then on.
+              <Pressable
+                onPress={() =>
+                  setView({
+                    kind: 'create',
+                    barcode: view.food.barcode ?? undefined,
+                    prefill: { name: view.food.name, brand: view.food.brand },
+                    note: canReadLabels
+                      ? 'Take a photo of the nutrition label and check the numbers, then save. Your corrected version is what scans from now on.'
+                      : 'Type the numbers from the label, then save. Your corrected version is what scans from now on.',
+                  })
+                }
+                style={s.secondary}
+              >
+                <Text style={s.link}>Numbers look wrong? Fix them from the label</Text>
+              </Pressable>
+            ) : null}
             <Pressable onPress={() => { setError(null); setView({ kind: 'search' }); }} style={s.secondary}>
               <Text style={s.link}>Pick a different food</Text>
             </Pressable>
           </AmountPicker>
         ) : view.kind === 'create' ? (
           <CreateFood
-            initialName={q}
+            initialName={view.prefill?.name ?? q}
+            initialBrand={view.prefill?.brand ?? ''}
             barcode={view.barcode}
             note={view.note}
+            canReadLabels={canReadLabels}
             onCreated={(f) => setView({ kind: 'amount', food: f })}
             onCancel={() => setView({ kind: 'search' })}
           />
@@ -293,16 +317,47 @@ function Scanner({ onCode, onCancel, error }: { onCode: (code: string) => Promis
   );
 }
 
-function CreateFood({ initialName, barcode, note, onCreated, onCancel }: { initialName: string; barcode?: string; note?: string; onCreated: (f: Food) => void; onCancel: () => void }) {
-  const [form, setForm] = useState({ name: initialName.trim(), brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: barcode ?? '' });
+function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, onCreated, onCancel }: { initialName: string; initialBrand?: string; barcode?: string; note?: string; canReadLabels: boolean; onCreated: (f: Food) => void; onCancel: () => void }) {
+  const [form, setForm] = useState({ name: initialName.trim(), brand: initialBrand ?? '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: barcode ?? '' });
+  /** fiber, sugar and sodium from a label photo; there are no boxes for them, so they ride along */
+  const [extra, setExtra] = useState<Partial<Record<'fiber' | 'sugar' | 'sodium', number | null>>>({});
+  const [read, setRead] = useState<{ busy: boolean; basis?: LabelFood['basis']; note?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (v: string) => setForm({ ...form, [k]: v });
   const num = (v: string) => Number(v.replace(',', '.') || 0);
-  const per100 = { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat) };
+  const per100 = { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat), ...extra };
   const problem = form.kcal ? per100Problems(per100)[0] : null;
   const code = form.barcode.replace(/\D/g, '');
   const codeProblem = code && (code.length < 6 || code.length > 14) ? 'A barcode is 6 to 14 digits.' : null;
-  const blocked = !form.name.trim() || !form.kcal || Boolean(problem) || Boolean(codeProblem);
+  const blocked = !form.name.trim() || !form.kcal || Boolean(problem) || Boolean(codeProblem) || Boolean(read?.busy);
+
+  /** Photograph the label; Bell reads it and fills the boxes for you to check. Nothing is saved yet. */
+  const readLabel = async () => {
+    setError(null);
+    const photo = await pickImage(true);
+    if (!photo) return;
+    if ('error' in photo) return setError(photo.error);
+    setRead({ busy: true });
+    try {
+      const { food } = await post<{ food: LabelFood }>('/api/bell/label', { image: photo.image });
+      const str = (n: number | null | undefined) => (n == null ? '' : String(n));
+      setForm((f) => ({
+        ...f,
+        name: f.name || food.name || '',
+        brand: f.brand || food.brand || '',
+        kcal: str(food.per100.kcal),
+        protein: str(food.per100.protein),
+        carbs: str(food.per100.carbs),
+        fat: str(food.per100.fat),
+        serving: food.servingGrams ? str(food.servingGrams) : f.serving,
+      }));
+      setExtra({ fiber: food.per100.fiber ?? null, sugar: food.per100.sugar ?? null, sodium: food.per100.sodium ?? null });
+      setRead({ busy: false, basis: food.basis, note: food.note });
+    } catch (e) {
+      setRead(null);
+      setError(e instanceof ApiError && e.status === 0 ? 'Reading a label needs a connection. You can type the numbers in.' : message(e));
+    }
+  };
 
   const save = async () => {
     setError(null);
@@ -324,13 +379,27 @@ function CreateFood({ initialName, barcode, note, onCreated, onCancel }: { initi
   const field = (k: keyof typeof form, label: string, keyboard: 'decimal-pad' | 'number-pad' | 'default' = 'decimal-pad') => (
     <View style={{ flex: 1, gap: space(1) }}>
       <Text style={type.small}>{label}</Text>
-      <TextInput value={form[k]} onChangeText={set(k)} keyboardType={keyboard} style={s.input} />
+      <TextInput value={form[k]} onChangeText={set(k)} keyboardType={keyboard} style={s.input} accessibilityLabel={label} />
     </View>
   );
 
   return (
     <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
       {note && <Text style={type.body}>{note}</Text>}
+      {canReadLabels && (
+        <Pressable onPress={readLabel} disabled={read?.busy} style={[s.labelButton, read?.busy && { opacity: 0.6 }]} accessibilityLabel="Read the nutrition label from a photo">
+          {read?.busy ? <ActivityIndicator color={color.accent} /> : <Ionicons name="camera-outline" size={20} color={color.accent} />}
+          <Text style={s.labelButtonText}>{read?.busy ? 'Reading the label…' : read?.basis ? 'Read another photo' : 'Read the label from a photo'}</Text>
+        </Pressable>
+      )}
+      {read?.basis && (
+        <Text style={[type.small, s.readNote]}>
+          {read.basis === 'per serving, converted'
+            ? `Read from the per-serving column and converted to per 100 g using the ${form.serving} g serving.`
+            : 'Read from the per-100 g column.'}{' '}
+          Check each number against the label before saving.{read.note ? ` ${read.note}` : ''}
+        </Text>
+      )}
       {field('name', 'Name', 'default')}
       {field('brand', 'Brand (optional)', 'default')}
       <Text style={[type.small, { marginTop: space(2) }]}>Per 100 g, from the label’s per-100 g column</Text>
@@ -365,6 +434,9 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(2) },
   buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
-  secondary: { alignSelf: 'center', padding: space(3) },
+  secondary: { alignSelf: 'center', padding: space(3), minHeight: 44, justifyContent: 'center' },
+  labelButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space(2), minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
+  labelButtonText: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  readNote: { backgroundColor: color.infoBg, borderRadius: 10, padding: space(3), color: color.iron },
   link: { color: color.protein, fontWeight: '700', fontSize: 16 },
 });

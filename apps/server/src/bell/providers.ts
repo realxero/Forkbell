@@ -60,7 +60,14 @@ export function anthropic(cfg: Config, system: string, turns: ChatTurn[], tools:
       const data = await post(
         `${cfg.baseUrl || 'https://api.anthropic.com'}/v1/messages`,
         { 'x-api-key': cfg.apiKey, 'anthropic-version': '2023-06-01' },
-        { model: cfg.model, max_tokens: 1500, system, messages, tools: tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters })) },
+        {
+          model: cfg.model,
+          max_tokens: 1500,
+          system,
+          messages,
+          // Some APIs reject an empty tool list, so leave it out when there are none.
+          ...(tools.length ? { tools: tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters })) } : {}),
+        },
       );
       const content = (data.content as { type: string; text?: string; id?: string; name?: string; input?: unknown }[]) ?? [];
       messages.push({ role: 'assistant', content });
@@ -86,7 +93,11 @@ export function openai(cfg: Config, system: string, turns: ChatTurn[], tools: To
       const data = await post(
         `${cfg.baseUrl || 'https://api.openai.com/v1'}/chat/completions`,
         cfg.apiKey ? { authorization: `Bearer ${cfg.apiKey}` } : {},
-        { model: cfg.model, messages, tools: tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })) },
+        {
+          model: cfg.model,
+          messages,
+          ...(tools.length ? { tools: tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })) } : {}),
+        },
       );
       const msg = ((data.choices as { message?: Record<string, unknown> }[])?.[0]?.message ?? {}) as {
         content?: string | null;

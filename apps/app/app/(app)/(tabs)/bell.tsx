@@ -1,28 +1,58 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import { forAmount, mealForTime, todayLocal, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
+import { useFocusEffect } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
 import { api, ApiError, post } from '../../../lib/api';
 import { addEntry } from '../../../lib/actions';
+import { useAuth } from '../../../lib/auth';
 import { readCache, writeCache } from '../../../lib/sync';
+import { clipboardHasImage, imageFromLink, imageFromPasteEvent, pasteImage, pickImage, type ImageResult } from '../../../lib/images';
 import { Chip, MEAL_NAMES } from '../../../components/AmountPicker';
 import { NumberField } from '../../../components/NumberField';
 import { FoodIcon } from '../../../components/FoodIcon';
+import { VoiceButton, voiceAvailable } from '../../../components/VoiceButton';
 import { color, space, type } from '../../../lib/theme';
 
-type Message = { role: 'user' | 'assistant'; text: string; image?: string; proposals?: FoodProposal[]; added?: boolean };
+type Message = {
+  role: 'user' | 'assistant';
+  text: string;
+  image?: string;
+  proposals?: FoodProposal[];
+  added?: boolean;
+  question?: BellQuestion;
+  /** the answer tapped, once there is one */
+  answered?: string;
+  /** said out loud rather than typed */
+  spoken?: boolean;
+};
 const KEY = 'device:bell-chat';
 const SUGGESTIONS = ['What have I eaten today?', 'How much protein do I have left?', 'Log 2 eggs and toast for breakfast', 'How is my bench press going?'];
 
+/** What the model sees for each turn; a question Bell asked is part of what it said. */
+const forModel = (m: Message) => ({
+  role: m.role,
+  text: [m.text, m.question?.text].filter(Boolean).join('\n'),
+  ...(m.image?.startsWith('data:') ? { image: m.image } : {}),
+});
+
 export default function Bell() {
+  const { me } = useAuth();
+  const prefs = me?.preferences.bell ?? { askWhenUnsure: true, voiceSends: true };
   const [status, setStatus] = useState<{ enabled: boolean; model: string | null } | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(KEY) ?? []);
   const [text, setText] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [hearing, setHearing] = useState<{ text: string } | null>(null);
+  const [canPaste, setCanPaste] = useState(false);
+  const [loadingImage, setLoadingImage] = useState(false);
+  const [canTalk] = useState(voiceAvailable);
   const scroll = useRef<ScrollViewInstance>(null);
+  const triedLink = useRef<string | null>(null);
 
   useEffect(() => {
     api<{ enabled: boolean; model: string | null }>('/api/bell/status').then(setStatus, () => setStatus({ enabled: false, model: null }));
@@ -33,23 +63,71 @@ export default function Bell() {
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
   }, [messages]);
 
-  const send = async (override?: string) => {
+  const takeImage = (r: ImageResult) => {
+    if (!r) return;
+    if ('error' in r) return setError(r.error);
+    setError(null);
+    setImage(r.image);
+  };
+
+  // Phones: offer a Paste button when there's an image on the clipboard.
+  const checkClipboard = useCallback(() => {
+    clipboardHasImage().then(setCanPaste);
+  }, []);
+  useFocusEffect(checkClipboard);
+
+  // Web: Ctrl/Cmd+V with an image pastes it as the photo.
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+      const onPaste = (e: ClipboardEvent) => {
+        if (!Array.from(e.clipboardData?.items ?? []).some((i) => i.kind === 'file' && i.type.startsWith('image/'))) return;
+        e.preventDefault();
+        imageFromPasteEvent(e).then(takeImage);
+      };
+      document.addEventListener('paste', onPaste);
+      return () => document.removeEventListener('paste', onPaste);
+    }, []),
+  );
+
+  /** A pasted image link turns into the photo itself, and the link leaves the message. */
+  const onChangeText = async (v: string) => {
+    setText(v);
+    const link = imageLinkIn(v);
+    if (!link || image || link === triedLink.current) return;
+    triedLink.current = link;
+    setLoadingImage(true);
+    const r = await imageFromLink(link);
+    setLoadingImage(false);
+    if (r && 'image' in r) {
+      setImage(r.image);
+      setText((t) => t.replace(link, '').replace(/\s{2,}/g, ' ').trim());
+      setNotice(null);
+    } else if (r) {
+      setNotice(r.error);
+    }
+  };
+
+  const send = async (override?: string, opts: { spoken?: boolean; answering?: number } = {}) => {
     const body = (override ?? text).trim();
     if ((!body && !image) || busy) return;
-    const next: Message[] = [...messages, { role: 'user', text: body, image: image ?? undefined }];
+    const base = opts.answering !== undefined ? messages.map((m, j) => (j === opts.answering ? { ...m, answered: body } : m)) : messages;
+    const next: Message[] = [...base, { role: 'user', text: body, image: image ?? undefined, spoken: opts.spoken }];
     setMessages(next);
-    setText('');
+    if (override === undefined) setText('');
     setImage(null);
+    triedLink.current = null;
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const r = await post<BellReply>('/api/bell/chat', {
-        messages: next.slice(-20).map((m) => ({ role: m.role, text: m.text, ...(m.image?.startsWith('data:') ? { image: m.image } : {}) })),
+        messages: next.slice(-20).map(forModel),
         today: todayLocal(),
         meal: mealForTime(),
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       });
-      setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined }]);
+      setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined, question: r.question ?? undefined }]);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 0 ? 'Bell needs a connection.' : e instanceof Error ? e.message : String(e));
     } finally {
@@ -57,20 +135,10 @@ export default function Bell() {
     }
   };
 
-  const pickPhoto = async (camera: boolean) => {
-    setError(null);
-    if (camera && Platform.OS !== 'web') {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) return setError('Camera access is off for Forkbell. You can turn it on in Settings.');
-    }
-    const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.45, base64: true };
-    const r = camera && Platform.OS !== 'web' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
-    if (r.canceled || !r.assets[0]) return;
-    const a = r.assets[0];
-    const url = a.base64 ? `data:${a.mimeType?.startsWith('image/') ? a.mimeType : 'image/jpeg'};base64,${a.base64}` : a.uri.startsWith('data:') ? a.uri : null;
-    if (!url) return setError('Couldn’t read that photo.');
-    if (url.length > 3_900_000) return setError('That photo is too large. Try a smaller one or crop it.');
-    setImage(url);
+  const heardAll = (words: string) => {
+    if (!words) return;
+    if (prefs.voiceSends) return send(words, { spoken: true });
+    setText((t) => (t ? `${t} ${words}` : words));
   };
 
   if (status && !status.enabled) {
@@ -89,13 +157,16 @@ export default function Bell() {
     );
   }
 
+  const lastIndex = messages.length - 1;
+  const empty = !text.trim() && !image;
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
         <View style={s.head}>
           <Text style={[type.hero, { fontSize: 34 }]}>Bell</Text>
           {messages.length > 0 && (
-            <Pressable onPress={() => setMessages([])} hitSlop={10}>
+            <Pressable onPress={() => setMessages([])} hitSlop={12} style={s.headButton}>
               <Text style={s.link}>New chat</Text>
             </Pressable>
           )}
@@ -103,7 +174,9 @@ export default function Bell() {
         <ScrollView ref={scroll} contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
           {messages.length === 0 && (
             <View style={{ gap: space(2) }}>
-              <Text style={type.body}>Ask about your food, training and progress, or tell me what you ate. You check everything before it’s logged.</Text>
+              <Text style={type.body}>
+                Ask about your food, training and progress, or tell me what you ate{canTalk ? ' (hold the mic to say it)' : ''}. You check everything before it’s logged.
+              </Text>
               {SUGGESTIONS.map((q) => (
                 <Pressable key={q} onPress={() => send(q)} style={s.suggestion}>
                   <Text style={type.body}>{q}</Text>
@@ -113,9 +186,14 @@ export default function Bell() {
           )}
           {messages.map((m, i) => (
             <View key={i} style={[s.bubble, m.role === 'user' ? s.mine : s.theirs]}>
-              {m.image?.startsWith('data:') && <Image source={{ uri: m.image }} style={s.photo} />}
-              {m.image === 'photo' && <Text style={type.small}>[photo]</Text>}
-              {!!m.text && <Text style={[type.body, m.role === 'user' && { color: color.chalk }]}>{m.text}</Text>}
+              {m.image?.startsWith('data:') && <Image source={{ uri: m.image }} style={s.photo} accessibilityLabel="Your photo" />}
+              {m.image === 'photo' && <Text style={[type.small, m.role === 'user' && { color: color.chalk }]}>[photo]</Text>}
+              {!!m.text && (
+                <Text style={[type.body, m.role === 'user' && { color: color.chalk }]}>
+                  {m.spoken ? '🎙 ' : ''}
+                  {m.text}
+                </Text>
+              )}
               {m.proposals && (
                 <Proposals
                   items={m.proposals}
@@ -123,6 +201,7 @@ export default function Bell() {
                   onAdded={() => setMessages((list) => list.map((x, j) => (j === i ? { ...x, added: true } : x)))}
                 />
               )}
+              {m.question && <Question q={m.question} answered={m.answered} live={i === lastIndex && !busy} onAnswer={(a) => send(a, { answering: i })} />}
             </View>
           ))}
           {busy && (
@@ -134,40 +213,110 @@ export default function Bell() {
           {error && <Text style={s.error}>{error}</Text>}
         </ScrollView>
 
-        {image && (
+        {hearing && (
+          <View style={s.hearing} accessibilityLiveRegion="polite">
+            <View style={s.dot} />
+            <Text style={[type.body, { flex: 1 }]} numberOfLines={3}>
+              {hearing.text || 'Listening…'}
+            </Text>
+            <Text style={type.small}>{prefs.voiceSends ? 'Let go to send' : 'Let go to finish'}</Text>
+          </View>
+        )}
+        {notice && !hearing && (
           <View style={s.attached}>
-            <Image source={{ uri: image }} style={{ width: 48, height: 48, borderRadius: 8 }} />
-            <Text style={[type.small, { flex: 1 }]}>Photo attached. Add a note if you like (“half of this”, “with ranch”).</Text>
-            <Pressable onPress={() => setImage(null)} hitSlop={8}>
-              <Text style={[s.link, { color: color.over }]}>Remove</Text>
+            <Text style={[type.small, { flex: 1 }]}>{notice}</Text>
+            <Pressable onPress={() => setNotice(null)} hitSlop={12} accessibilityLabel="Dismiss">
+              <Ionicons name="close" size={18} color={color.ironSoft} />
+            </Pressable>
+          </View>
+        )}
+        {(image || loadingImage) && (
+          <View style={s.attached}>
+            {image ? <Image source={{ uri: image }} style={{ width: 48, height: 48, borderRadius: 8 }} /> : <ActivityIndicator color={color.iron} />}
+            <Text style={[type.small, { flex: 1 }]}>{image ? 'Photo attached. Add a note if you like (“half of this”, “with ranch”).' : 'Loading the image from that link…'}</Text>
+            {image && (
+              <Pressable onPress={() => setImage(null)} hitSlop={12}>
+                <Text style={[s.link, { color: color.over }]}>Remove</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+        {canPaste && !image && !hearing && (
+          <View style={s.pasteRow}>
+            <Pressable
+              onPress={async () => {
+                takeImage(await pasteImage());
+                setCanPaste(false);
+              }}
+              style={s.pasteChip}
+              accessibilityLabel="Paste the image from the clipboard"
+            >
+              <Ionicons name="clipboard-outline" size={16} color={color.accent} />
+              <Text style={s.pasteText}>Paste image</Text>
             </Pressable>
           </View>
         )}
         <View style={s.composer}>
-          <Pressable onPress={() => pickPhoto(true)} style={s.icon} accessibilityLabel="Take a photo of your meal">
-            <Text style={{ fontSize: 20 }}>📷</Text>
+          <Pressable onPress={async () => takeImage(await pickImage(true))} style={s.icon} accessibilityLabel="Take a photo of your meal">
+            <Ionicons name="camera-outline" size={22} color={color.iron} />
           </Pressable>
           {Platform.OS !== 'web' && (
-            <Pressable onPress={() => pickPhoto(false)} style={s.icon} accessibilityLabel="Choose a photo">
-              <Text style={{ fontSize: 20 }}>🖼</Text>
+            <Pressable onPress={async () => takeImage(await pickImage(false))} style={s.icon} accessibilityLabel="Choose a photo">
+              <Ionicons name="images-outline" size={22} color={color.iron} />
             </Pressable>
           )}
           <TextInput
             value={text}
-            onChangeText={setText}
-            placeholder="Ask Bell or describe a meal"
+            onChangeText={onChangeText}
+            onFocus={checkClipboard}
+            placeholder={Platform.OS === 'web' ? 'Ask Bell, describe a meal, or paste a photo' : 'Ask Bell or describe a meal'}
+            placeholderTextColor={color.placeholder}
             style={s.input}
             multiline
             onSubmitEditing={() => send()}
             blurOnSubmit={false}
             accessibilityLabel="Message to Bell"
           />
-          <Pressable onPress={() => send()} disabled={busy || (!text.trim() && !image)} style={[s.send, (busy || (!text.trim() && !image)) && { opacity: 0.4 }]}>
-            <Text style={s.sendText}>Send</Text>
-          </Pressable>
+          {empty && canTalk ? (
+            <VoiceButton
+              disabled={busy}
+              onHearing={(t, on) => setHearing(on ? { text: t } : null)}
+              onDone={heardAll}
+              onError={(m) => setNotice(m)}
+            />
+          ) : (
+            <Pressable onPress={() => send()} disabled={busy || empty} style={[s.send, (busy || empty) && { opacity: 0.4 }]} accessibilityLabel="Send">
+              <Ionicons name="arrow-up" size={22} color={color.chalk} />
+            </Pressable>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+/** A question from Bell, answered with one tap. "Just estimate it" is always there. */
+function Question({ q, answered, live, onAnswer }: { q: BellQuestion; answered?: string; live: boolean; onAnswer: (a: string) => void }) {
+  const choices = q.choices.some((c) => c.toLowerCase() === JUST_ESTIMATE.toLowerCase()) ? q.choices : [...q.choices, JUST_ESTIMATE];
+  return (
+    <View style={{ gap: space(2) }}>
+      <Text style={[type.body, { fontWeight: '700' }]}>{q.text}</Text>
+      <View style={s.choices}>
+        {choices.map((c) => (
+          <Pressable
+            key={c}
+            disabled={!live || Boolean(answered)}
+            onPress={() => onAnswer(c)}
+            style={[s.choice, answered === c && s.choiceOn, (!live || answered) && answered !== c && { opacity: 0.45 }]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: answered === c, disabled: !live || Boolean(answered) }}
+          >
+            <Text style={[s.choiceText, answered === c && { color: color.onAccent }]}>{c}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {live && !answered && <Text style={type.small}>Or type your own answer.</Text>}
+    </View>
   );
 }
 
@@ -267,7 +416,17 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingTop: space(4), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  headButton: { minHeight: 44, justifyContent: 'center' },
+  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
+  choice: { minHeight: 44, justifyContent: 'center', paddingHorizontal: space(4), borderRadius: 22, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
+  choiceOn: { backgroundColor: color.accent },
+  choiceText: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  hearing: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingHorizontal: space(4), paddingVertical: space(3), backgroundColor: color.card, borderTopWidth: 1, borderTopColor: color.line },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.over },
+  pasteRow: { flexDirection: 'row', paddingHorizontal: space(3), paddingTop: space(2), backgroundColor: color.card, borderTopWidth: 1, borderTopColor: color.line },
+  pasteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: space(3), borderRadius: 18, borderWidth: 1, borderColor: color.line },
+  pasteText: { color: color.accent, fontWeight: '700', fontSize: 14 },
   list: { padding: space(4), gap: space(3), paddingBottom: space(6), maxWidth: 640, width: '100%', alignSelf: 'center' },
   suggestion: { backgroundColor: color.card, borderRadius: 12, padding: space(3), borderWidth: 1, borderColor: color.line },
   bubble: { borderRadius: 16, padding: space(3), gap: space(2), maxWidth: '92%' },
@@ -277,14 +436,14 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   card: { gap: space(3), marginTop: space(1) },
   item: { gap: space(2), borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(2) },
-  tick: { width: 26, height: 26, borderRadius: 6, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
+  tick: { width: 28, height: 28, borderRadius: 6, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   tickOn: { backgroundColor: color.fat, borderColor: color.fat },
   grams: { ...type.body, ...type.number, width: 70, textAlign: 'center', backgroundColor: color.chalk, borderRadius: 8, paddingVertical: space(1) },
   add: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
   attached: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingHorizontal: space(4), paddingVertical: space(2), backgroundColor: color.card, borderTopWidth: 1, borderTopColor: color.line },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: space(2), padding: space(3), borderTopWidth: 1, borderTopColor: color.line, backgroundColor: color.card },
-  icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: color.chalk },
-  input: { ...type.body, flex: 1, maxHeight: 120, backgroundColor: color.chalk, borderRadius: 18, paddingHorizontal: space(3), paddingVertical: space(2) },
-  send: { backgroundColor: color.iron, borderRadius: 18, paddingHorizontal: space(4), paddingVertical: space(2) + 2 },
+  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.chalk },
+  input: { ...type.body, flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: color.chalk, borderRadius: 22, paddingHorizontal: space(4), paddingVertical: space(3) },
+  send: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
   sendText: { color: color.chalk, fontWeight: '700', fontSize: 15 },
 });
