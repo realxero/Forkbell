@@ -17,8 +17,13 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: color.accent,
         tabBarInactiveTintColor: color.ironSoft,
-        // Room for the label under each icon; it was being clipped on iPhone.
-        tabBarStyle: { backgroundColor: color.card, borderTopColor: color.line, height: Platform.OS === 'web' ? 74 : undefined, paddingTop: 6, paddingBottom: Platform.OS === 'web' ? 12 : undefined },
+        // Phones: leave height and padding out entirely, so the tab bar works out its own
+        // height with the home-indicator space. (A height key set to undefined still
+        // overrides it and the bar collapses to nothing.) The web gets room for the labels.
+        tabBarStyle:
+          Platform.OS === 'web'
+            ? { backgroundColor: color.card, borderTopColor: color.line, height: 74, paddingTop: 6, paddingBottom: 12 }
+            : { backgroundColor: color.card, borderTopColor: color.line },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '700', lineHeight: 15, marginTop: 2 },
         tabBarItemStyle: { paddingBottom: 2 },
       }}
