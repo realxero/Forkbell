@@ -2,7 +2,7 @@
 // takes a transaction from asUser(), so row-level security applies throughout.
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, workoutExercises, workoutSets, workouts, type Tx } from '@forkbell/db';
-import { preferencesSchema, trainingTips, type Exercise, type ExerciseHowTo, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { picturePath, preferencesSchema, trainingTips, type Exercise, type ExerciseHowTo, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { users } from '@forkbell/db';
 
 type ExerciseRow = typeof exercises.$inferSelect;
@@ -20,6 +20,8 @@ export function toExercise(r: ExerciseRow): Exercise {
     custom: r.source === 'custom',
     library: r.library,
     howTo: r.steps.length > 0,
+    howToRef: r.howToRef,
+    pictures: r.imageCount,
   };
 }
 
@@ -30,7 +32,7 @@ export function toHowTo(r: ExerciseRow): ExerciseHowTo | null {
     steps: r.steps,
     level: r.level,
     secondary: r.secondaryMuscles.filter((m) => m !== r.muscle),
-    images: Array.from({ length: r.imageCount }, (_, n) => `/api/media/exercise/${encodeURIComponent(r.howToRef!)}/${n}.jpg`),
+    images: Array.from({ length: r.imageCount }, (_, n) => picturePath(r.howToRef!, n)),
     credit: 'Steps and pictures: Free Exercise DB (public domain)',
   };
 }

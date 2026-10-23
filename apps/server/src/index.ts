@@ -18,7 +18,7 @@ import { programRoutes, routineRoutes } from './routes/programs.ts';
 import { progressRoutes } from './routes/progress.ts';
 import { healthRoutes } from './routes/health.ts';
 import { bellRoutes } from './routes/bell.ts';
-import { mediaRoutes } from './media.ts';
+import { mediaRoutes, prefetchPictures } from './media.ts';
 import { shareRoutes } from './routes/shares.ts';
 import { mealRoutes, recipeRoutes } from './routes/meals.ts';
 import { aiRoutes } from './routes/ai.ts';
@@ -138,4 +138,8 @@ if (env.webDir) {
   app.get('*', (c) => c.html(index)); // client-side routes
 }
 
-serve({ fetch: app.fetch, port: env.port }, (info) => console.log(`Forkbell server on :${info.port}`));
+serve({ fetch: app.fetch, port: env.port }, (info) => {
+  console.log(`Forkbell server on :${info.port}`);
+  // Not essential, and never in the way: errors are logged and the server carries on.
+  void prefetchPictures().catch((e) => console.error('exercise pictures:', e));
+});

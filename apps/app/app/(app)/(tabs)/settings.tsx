@@ -14,6 +14,7 @@ import { AiSettings } from '../../../components/AiSettings';
 import { Logo } from '../../../components/Logo';
 import { Platform, Switch } from 'react-native';
 import { hapticsOn, hapticsSupported, setHapticsOn } from '../../../lib/haptics';
+import { downloadAllPictures, onPictureProgress, pictureCacheSupported, pictureDownloadRunning, pictureStats, removeSavedPictures } from '../../../lib/picture-cache';
 import { reminderSettings, remindersSupported, setReminderSettings, type ReminderSettings } from '../../../lib/reminders';
 import { connectHealth, getHealthSettings, healthName, healthSupported, setHealthSettings, syncHealth, type HealthSettings } from '../../../lib/health-sync';
 
@@ -85,6 +86,8 @@ export default function Settings() {
 
         {remindersSupported && <Reminders />}
 
+        {pictureCacheSupported && <SavedPictures />}
+
         <WeekdayGoals />
 
         <Pressable onPress={() => router.push({ pathname: '/onboarding', params: { from: 'settings' } })} style={{ marginTop: space(6) }}>
@@ -115,6 +118,69 @@ export default function Settings() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Exercise how-to pictures on this phone, for the gym with no signal. */
+function SavedPictures() {
+  const [stats, setStats] = useState<Awaited<ReturnType<typeof pictureStats>> | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(pictureDownloadRunning() ? { done: 0, total: 0 } : null);
+  const [note, setNote] = useState<string | null>(null);
+  const refresh = () => void pictureStats().then(setStats, () => {});
+  useEffect(() => {
+    refresh();
+    return onPictureProgress((p) => setProgress(p.done >= p.total ? null : p));
+  }, []);
+  const mb = (b: number) => `${Math.max(1, Math.round(b / 1e6))} MB`;
+  const all = stats && stats.total > 0 && stats.saved >= stats.total;
+  return (
+    <View style={{ gap: space(2), marginTop: space(6) }}>
+      <Text style={type.small}>Exercise pictures on this phone</Text>
+      <Text style={type.body}>
+        {!stats ? 'Checking…' : stats.saved ? `${stats.saved} of ${stats.total} saved (${mb(stats.bytes)})` : 'None saved yet'}
+      </Text>
+      <Text style={type.small}>
+        Pictures for your everyday exercises, and any you’ve done, save by themselves (about 7 MB), so how-to works with no signal. The rest load from your server when you open them.
+      </Text>
+      {progress ? (
+        <Text style={type.body} accessibilityLiveRegion="polite">
+          Downloading {progress.done} of {progress.total}…
+        </Text>
+      ) : (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(4) }}>
+          {!all && stats && stats.total > 0 && (
+            <Pressable
+              onPress={async () => {
+                setNote(null);
+                try {
+                  const r = await downloadAllPictures();
+                  setNote(r.failed ? `${r.failed} couldn’t download. Try again on a better connection.` : 'The whole library is on this phone.');
+                } catch (e) {
+                  setNote(e instanceof Error ? e.message : String(e));
+                }
+                refresh();
+              }}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Text style={s.link}>Download the whole library (about {mb(stats.remainingBytes)})</Text>
+            </Pressable>
+          )}
+          {stats && stats.saved > 0 && (
+            <Pressable
+              onPress={() => {
+                removeSavedPictures();
+                setNote('Removed. Everyday pictures will save again next time Forkbell opens.');
+                refresh();
+              }}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Text style={[s.link, { color: color.ironSoft }]}>Remove saved pictures</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
+      {note && <Text style={type.small}>{note}</Text>}
+    </View>
   );
 }
 

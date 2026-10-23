@@ -114,3 +114,11 @@ test('old preferences get training defaults', () => {
   const p = preferencesSchema.parse({ trainingTips: false });
   assert.deepEqual(p.training, { equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, trainingDays: [] });
 });
+
+test('picture paths match what the server serves', async () => {
+  const { picturePath, picturePaths } = await import('./index.ts');
+  assert.equal(picturePath('Barbell_Bench_Press_-_Medium_Grip', 0), '/api/media/exercise/Barbell_Bench_Press_-_Medium_Grip/0.jpg');
+  assert.equal(picturePath("Farmer's_Walk", 1), "/api/media/exercise/Farmer's_Walk/1.jpg");
+  assert.deepEqual(picturePaths({ howToRef: 'Plank', pictures: 2 }), ['/api/media/exercise/Plank/0.jpg', '/api/media/exercise/Plank/1.jpg']);
+  assert.deepEqual(picturePaths({ howToRef: null, pictures: 0 }), []);
+});

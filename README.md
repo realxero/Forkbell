@@ -198,7 +198,9 @@ Every built-in exercise shows how to do it: the start and end positions fading b
 
 The exercise picker keeps your everyday list short. Search covers a full library of about 690 more exercises, or tap *Show the full library*.
 
-Steps and pictures come from [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (public domain), pinned to one version in `packages/db/data/exercise-library.json`; `packages/db/scripts/build-exercise-library.mjs` rebuilds it. Your server fetches each picture the first time it's needed and keeps a copy (set `MEDIA_DIR` to keep them across updates), so phones only ever talk to your server. Only pictures in the library can be requested.
+Steps and pictures come from [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (public domain), pinned to one version in `packages/db/data/exercise-library.json`; `packages/db/scripts/build-exercise-library.mjs` rebuilds it. Your server fetches each picture the first time it's needed and keeps a copy, so phones only ever talk to your server, and only pictures in the library can be requested. Set `MEDIA_DIR` to a mounted folder and the copies last across updates; the server then also fetches the whole set (about 90 MB) once in the background, picking up where it left off after a restart.
+
+**On the phone**, pictures for your everyday exercises and any you've done save by themselves (about 7 MB), so how-to works at the gym with no signal. Settings, *Exercise pictures on this phone*, can download the whole library (about 87 MB) or remove the saved pictures.
 
 ## App icon
 

@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 import { healthSupported, syncHealth } from '../../lib/health-sync';
 import { refreshReminders } from '../../lib/reminders';
 import { followSystemScheme } from '../../lib/theme';
+import { keepEverydayPictures } from '../../lib/picture-cache';
 import { SyncBanner } from '../../components/SyncBanner';
 import { ProfileBar } from '../../components/ProfileBar';
 import { ToastHost } from '../../components/ToastHost';
@@ -23,6 +24,8 @@ export default function SignedInLayout() {
     if (status !== 'signedIn') return;
     // Replan reminders whenever the app comes back: a new day, or food logged elsewhere.
     void refreshReminders().catch(() => {});
+    // Your everyday exercises' how-to pictures, kept on the phone for the gym.
+    void keepEverydayPictures().catch(() => {});
     const remind = AppState.addEventListener('change', (s) => {
       if (s !== 'active') return;
       void refreshReminders().catch(() => {});

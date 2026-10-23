@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Exercise, ExerciseHowTo } from '@forkbell/shared';
-import { getServerUrl } from '../lib/api';
+import { pictureSource } from '../lib/picture-cache';
 import { cachedGet } from '../lib/sync';
 import { color, radius, space, type } from '../lib/theme';
 
-const src = (path: string) => ({ uri: `${getServerUrl() ?? ''}${path}` });
+// Saved on this phone when it can be (works with no signal), otherwise from your server.
+const src = pictureSource;
 
 /** The movement, as its start and end positions fading into each other. */
 export function HowToFrames({ images, name }: { images: string[]; name: string }) {

@@ -19,7 +19,17 @@ export interface Exercise {
   library?: boolean;
   /** has steps and pictures showing how to do it */
   howTo?: boolean;
+  /** where its how-to pictures live, and how many there are */
+  howToRef?: string | null;
+  pictures?: number;
 }
+
+/** A how-to picture's path on your Forkbell server. */
+export const picturePath = (ref: string, n: number) => `/api/media/exercise/${encodeURIComponent(ref)}/${n}.jpg`;
+
+/** All of an exercise's how-to picture paths. */
+export const picturePaths = (e: Pick<Exercise, 'howToRef' | 'pictures'>) =>
+  e.howToRef ? Array.from({ length: e.pictures ?? 0 }, (_, n) => picturePath(e.howToRef!, n)) : [];
 
 /** How to do an exercise: steps and pictures (start and end of the movement). */
 export interface ExerciseHowTo {
