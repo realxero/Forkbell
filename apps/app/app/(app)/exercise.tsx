@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Exercise, PersonalRecord, SetEntry } from '@forkbell/shared';
+import { fromKg, projectGoal, todayLocal, type Exercise, type PersonalRecord, type SetEntry } from '@forkbell/shared';
+import { useTrainingSetup } from '../../lib/training-setup';
 import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
@@ -99,6 +100,8 @@ export default function ExerciseDetail() {
               </View>
             )}
 
+            {d.exercise.kind === 'weight' && <StrengthGoal exercise={d.exercise} sessions={d.sessions} />}
+
             {d.sessions.length > 0 && <Text style={s.section}>Sessions</Text>}
             {d.sessions.map((sess) => (
               <Pressable key={sess.workoutId} onPress={() => router.push({ pathname: '/workout', params: { id: sess.workoutId } })} style={s.item}>
@@ -115,7 +118,74 @@ export default function ExerciseDetail() {
   );
 }
 
+/** A target one-rep max and, from your recent sessions, roughly when you'd get there. */
+function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { date: string; sets: SetEntry[] }[] }) {
+  const units = useUnit();
+  const { setup, save } = useTrainingSetup();
+  const goalKg = setup.goals[exercise.id] ?? null;
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const p = goalKg ? projectGoal(sessions, goalKg, todayLocal()) : null;
+  const when = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: date.slice(0, 4) === todayLocal().slice(0, 4) ? undefined : 'numeric' });
+
+  const store = async (kg: number | null) => {
+    setError(null);
+    try {
+      await save((t) => {
+        const goals = { ...t.goals };
+        if (kg === null) delete goals[exercise.id];
+        else goals[exercise.id] = kg;
+        return { ...t, goals };
+      });
+      setEditing(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <View style={s.card}>
+      <Text style={type.small}>Strength goal (estimated 1-rep max)</Text>
+      {editing ? (
+        <View style={{ flexDirection: 'row', gap: space(2), alignItems: 'center' }}>
+          <TextInput value={text} onChangeText={setText} keyboardType="decimal-pad" placeholder={`e.g. ${units.unit === 'kg' ? 100 : 225}`} placeholderTextColor={color.placeholder} style={s.goalInput} accessibilityLabel={`Goal in ${units.unit}`} autoFocus />
+          <Text style={type.body}>{units.unit}</Text>
+          <Pressable onPress={() => { const kg = units.read(text); if (kg) void store(kg); }} style={s.goalButton}><Text style={s.goalButtonText}>Save</Text></Pressable>
+          <Pressable onPress={() => setEditing(false)} hitSlop={10}><Text style={s.link}>Cancel</Text></Pressable>
+        </View>
+      ) : goalKg ? (
+        <>
+          <Text style={[type.title, type.number]}>{units.roundLabel(goalKg)}</Text>
+          <Text style={type.body}>
+            {p?.status === 'reached'
+              ? 'You’re there. Time for a new goal?'
+              : p?.status === 'projected'
+                ? `At your recent pace (about ${units.roundLabel(p.perWeekKg)} a week${p.capped ? ', the fastest an estimate will assume' : ''}), you’d get there around ${when(p.date)}.`
+                : p?.status === 'flat'
+                  ? `You’re at about ${units.roundLabel(p.currentKg)}, without a clear upward trend lately, so there’s no date yet. Steady sessions will show one.`
+                  : 'A few more sessions over a couple of weeks and an estimated date shows here.'}
+          </Text>
+          {p?.status === 'projected' && <Text style={type.small}>An estimate from your last eight weeks, not a promise. Progress slows as you get stronger.</Text>}
+          <View style={{ flexDirection: 'row', gap: space(4) }}>
+            <Pressable onPress={() => { setText(String(Math.round(fromKg(goalKg, units.unit)))); setEditing(true); }} hitSlop={10}><Text style={s.link}>Change</Text></Pressable>
+            <Pressable onPress={() => void store(null)} hitSlop={10}><Text style={[s.link, { color: color.ironSoft }]}>Remove</Text></Pressable>
+          </View>
+        </>
+      ) : (
+        <Pressable onPress={() => { setText(''); setEditing(true); }} style={{ minHeight: 44, justifyContent: 'center' }}>
+          <Text style={s.link}>Set a goal</Text>
+        </Pressable>
+      )}
+      {error && <Text style={s.error}>{error}</Text>}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  goalInput: { ...type.body, flex: 1, minHeight: 44, borderWidth: 1, borderColor: color.line, borderRadius: 10, paddingHorizontal: space(3), backgroundColor: color.chalk },
+  goalButton: { minHeight: 44, paddingHorizontal: space(4), borderRadius: 10, backgroundColor: color.accent, justifyContent: 'center' },
+  goalButtonText: { color: color.onAccent, fontWeight: '700', fontSize: 16 },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   link: { color: color.protein, fontWeight: '700', fontSize: 16 },

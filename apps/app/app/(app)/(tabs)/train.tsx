@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, todayLocal, type Program, type Workout, type WorkoutSummary } from '@forkbell/shared';
+import { addDays, todayLocal, weekStart, weeklyGaps, type Program, type Workout, type WorkoutSummary } from '@forkbell/shared';
 import { ApiError } from '../../../lib/api';
 import { cachedGet } from '../../../lib/sync';
 import { startWorkout } from '../../../lib/actions';
@@ -27,6 +27,7 @@ export default function Train() {
   const [starting, setStarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
+  const [gaps, setGaps] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -39,6 +40,12 @@ export default function Train() {
       setProgram(p.programs.find((x) => x.active) ?? null);
       setHistory(h.workouts.filter((w) => w.finishedAt));
       setError(null);
+      // Not essential: an older server or no connection just means no card.
+      const today = todayLocal();
+      cachedGet<{ muscles: Record<string, number>; workouts: number }>(`/api/workouts/muscles?from=${weekStart(today)}&to=${today}`).then(
+        (m) => setGaps(weeklyGaps(m.muscles, m.workouts, today)),
+        () => setGaps([]),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -126,6 +133,15 @@ export default function Train() {
           </View>
         )}
 
+        {gaps.length > 0 && (
+          <View style={s.week} accessibilityRole="summary">
+            <Text style={[type.body, { fontWeight: '700' }]}>This week</Text>
+            <Text style={type.body}>
+              Nothing for your {gaps.length === 1 ? gaps[0] : `${gaps.slice(0, -1).join(', ')} or ${gaps.at(-1)}`} yet. A session or a few sets before Sunday keeps things balanced.
+            </Text>
+          </View>
+        )}
+
         {history && history.length > 0 && <Text style={s.section}>History</Text>}
         {history?.map((w) => (
           <Pressable key={w.id} onPress={() => router.push({ pathname: '/workout', params: { id: w.id } })} style={({ pressed }) => [s.item, pressed && { opacity: 0.7 }]}>
@@ -146,6 +162,7 @@ export default function Train() {
 }
 
 const s = StyleSheet.create({
+  week: { backgroundColor: color.infoBg, borderRadius: 14, padding: space(4), gap: space(1) },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

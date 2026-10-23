@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { bigJump, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { bigJump, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet } from '../../lib/sync';
@@ -10,6 +10,8 @@ import { discardWorkout, finishWorkout, saveWorkout, type FinishSummary } from '
 import { confirm } from '../../lib/confirm';
 import { formatDuration, useUnit } from '../../lib/units';
 import { ExercisePicker } from '../../components/ExercisePicker';
+import { SwapSheet } from '../../components/SwapSheet';
+import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, space, type } from '../../lib/theme';
 
@@ -39,6 +41,9 @@ export default function WorkoutScreen() {
   const [picker, setPicker] = useState(false);
   /** when set, the picker swaps this exercise instead of adding one */
   const [swapIndex, setSwapIndex] = useState<number | null>(null);
+  /** the ranked swap suggestions, for this exercise */
+  const [swapSheet, setSwapSheet] = useState<number | null>(null);
+  const training = useTrainingSetup();
   const [menu, setMenu] = useState<number | null>(null);
   const [restEnd, setRestEnd] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(0);
@@ -144,12 +149,8 @@ export default function WorkoutScreen() {
     }
   };
 
-  const addExercise = async (ex: Exercise) => {
-    setPicker(false);
-    if (swapIndex !== null) {
-      // Swap in place: same sets and targets, the new exercise's own history.
-      const i = swapIndex;
-      setSwapIndex(null);
+  /** Swap in place: same sets and targets, the new exercise's own history and tips. */
+  const swapAt = async (i: number, ex: Exercise) => {
       let previous: SetEntry[] = [];
       try {
         previous = (await api<{ sessions: { sets: SetEntry[] }[] }>(`/api/exercises/${ex.id}`)).sessions[0]?.sets ?? [];
@@ -157,6 +158,14 @@ export default function WorkoutScreen() {
         /* not essential */
       }
       return updateExercise(i, (x) => ({ ...x, exercise: ex, restSeconds: ex.restSeconds, previous, tips: [], pain: false, painNote: null, sets: x.sets.map((s) => ({ ...s, weightKg: null, done: false })) }));
+  };
+
+  const addExercise = async (ex: Exercise) => {
+    setPicker(false);
+    if (swapIndex !== null) {
+      const i = swapIndex;
+      setSwapIndex(null);
+      return swapAt(i, ex);
     }
     // What you did last time fills the "previous" column straight away.
     let previous: SetEntry[] = [];
@@ -269,8 +278,12 @@ export default function WorkoutScreen() {
               }}
               onSwap={() => {
                 setMenu(null);
-                setSwapIndex(i);
-                setPicker(true);
+                setSwapSheet(i);
+              }}
+              onHideTips={async () => {
+                // Pain notes keep showing; the rest stop for this exercise, everywhere.
+                updateExercise(i, (x) => ({ ...x, tips: x.tips?.filter((t) => t.kind === 'pain') }));
+                await training.save((t) => ({ ...t, hiddenTips: [...new Set([...t.hiddenTips, e.exercise.id])] })).catch(() => {});
               }}
               onPain={(pain, painNote) => updateExercise(i, (x) => ({ ...x, pain, painNote }))}
             />
@@ -298,6 +311,20 @@ export default function WorkoutScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+      <SwapSheet
+        target={swapSheet !== null ? (w.exercises[swapSheet]?.exercise ?? null) : null}
+        onPick={(ex) => {
+          const i = swapSheet!;
+          setSwapSheet(null);
+          void swapAt(i, ex);
+        }}
+        onPickAny={() => {
+          setSwapIndex(swapSheet);
+          setSwapSheet(null);
+          setPicker(true);
+        }}
+        onClose={() => setSwapSheet(null)}
+      />
       <ExercisePicker
         visible={picker}
         title={swapIndex !== null ? 'Swap for…' : 'Add exercise'}
@@ -327,8 +354,11 @@ function ExerciseCard(props: {
   onMove: (by: number) => void;
   onRemove: () => void;
   onSwap: () => void;
+  onHideTips: () => void;
   onPain: (pain: boolean, note: string | null) => void;
 }) {
+  /** "Got it" hides the tips for this session only */
+  const [tipsDismissed, setTipsDismissed] = useState(false);
   const { e, units } = props;
   const kind = e.exercise.kind;
   const target = e.repMin ? (e.repMin === e.repMax ? `${e.repMin}` : `${e.repMin}–${e.repMax}`) : null;
@@ -365,12 +395,23 @@ function ExerciseCard(props: {
           <PainNote value={e.painNote ?? ''} onSave={(note) => props.onPain(true, note || null)} />
         </View>
       )}
-      {e.tips?.map((t) => (
+      {!tipsDismissed && e.tips?.map((t) => (
         <Text key={t.kind} style={[s.tip, t.kind === 'pain' && { color: color.over }]}>
-          {t.kind === 'checkup' ? '🩺 ' : t.kind === 'pain' ? '⚠ ' : '💡 '}
+          {t.kind === 'checkup' ? '🩺 ' : t.kind === 'pain' ? '⚠ ' : t.kind === 'stalled' ? '📉 ' : '💡 '}
           {t.text}
         </Text>
       ))}
+      {!tipsDismissed && Boolean(e.tips?.length) && (
+        <View style={s.tipActions}>
+          {e.tips!.some((t) => t.kind === 'stalled' || t.kind === 'pain') && (
+            <Pressable onPress={props.onSwap} style={s.tipButton}><Text style={s.tipButtonText}>See swaps</Text></Pressable>
+          )}
+          <Pressable onPress={() => setTipsDismissed(true)} style={s.tipButton}><Text style={s.tipButtonText}>Got it</Text></Pressable>
+          {e.tips!.some((t) => t.kind !== 'pain') && (
+            <Pressable onPress={props.onHideTips} style={s.tipButton}><Text style={[s.tipButtonText, { color: color.ironSoft }]}>Hide tips for this exercise</Text></Pressable>
+          )}
+        </View>
+      )}
 
       <View style={s.setHead}>
         <Text style={[s.colSet, s.th]}>Set</Text>
@@ -508,6 +549,7 @@ function SummaryView({ w, summary }: { w: Workout; summary: Summary }) {
           <Stat label="Sets" value={String(summary.sets)} />
           <Stat label="Volume" value={units.label(summary.volumeKg) || '0'} />
         </View>
+        {volumeComparison(summary.volumeKg) && <Text style={type.body}>{volumeComparison(summary.volumeKg)}</Text>}
         {summary.records.length > 0 ? (
           <View style={s.card}>
             <Text style={type.title}>New personal records</Text>
@@ -543,6 +585,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
+  tipActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
+  tipButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: space(3), borderRadius: 18, borderWidth: 1, borderColor: color.line },
+  tipButtonText: { color: color.accent, fontWeight: '700', fontSize: 14 },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingVertical: space(3), gap: space(3) },
   content: { padding: space(3), paddingBottom: space(24), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },

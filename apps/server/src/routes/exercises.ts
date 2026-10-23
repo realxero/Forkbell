@@ -60,8 +60,8 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
       // Safety tips for adding this exercise to today's workout.
       const recent = await recentSessions(tx, [id], { id: '00000000-0000-0000-0000-000000000000', startedAt: new Date().toISOString() });
       const [me] = await tx.select({ prefs: users.preferences }).from(users).limit(1);
-      const tipsOn = preferencesSchema.parse(me?.prefs ?? {}).trainingTips;
-      const tips = trainingTips(recent.get(id) ?? [], todayLocal()).filter((t) => tipsOn || t.kind === 'pain');
+      const prefs = preferencesSchema.parse(me?.prefs ?? {});
+      const tips = trainingTips(recent.get(id) ?? [], todayLocal()).filter((t) => t.kind === 'pain' || (prefs.trainingTips && !prefs.training.hiddenTips.includes(id)));
       return { ex, rows, tips };
     });
     if (!data) return c.json({ error: 'That exercise was not found.' }, 404);

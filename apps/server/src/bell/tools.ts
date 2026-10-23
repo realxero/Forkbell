@@ -217,6 +217,12 @@ export function systemPrompt(opts: { today: string; localTime?: string; unit: 'l
     p.diet !== 'none' ? `Diet: ${p.diet}. Only suggest foods that fit it.` : '',
     p.dislikes.length ? `Dislikes (don't suggest): ${p.dislikes.join(', ')}.` : '',
   ].filter(Boolean);
+  const t = p.training;
+  const training = [
+    t.protectedAreas.length ? `Go easy on their ${t.protectedAreas.join(', ')}: don't suggest exercises that load them; offer gentler alternatives.` : '',
+    t.equipment.length ? `They have: ${t.equipment.join(', ')} (and bodyweight). Only suggest exercises that use these.` : '',
+    t.neverSuggest.length ? `Never suggest these exercises: ${t.neverSuggest.join(', ')}.` : '',
+  ].filter(Boolean);
   return `You are Bell, the assistant inside Forkbell, a food and training tracker. You're talking with ${opts.name ?? 'the person who owns this account'}.
 Today is ${opts.today}${opts.localTime ? `, ${opts.localTime} on their phone` : ''}. They use ${opts.unit} for body and lifting weights. Foods are always stored per 100 g.
 
@@ -237,7 +243,7 @@ Safety:
 - Encourage, never shame.${rules.length ? `
 
 Their food rules (hard rules for anything you suggest, including restaurant orders):
-- ${rules.join('\n- ')}` : ''}
+- ${rules.join('\n- ')}` : ''}${training.length ? `\n\nTheir training setup (hard rules for any exercise you suggest):\n- ${training.join('\n- ')}` : ''}
 
 Eating out: when they name a restaurant or cuisine, suggest a few real menu items that fit what's left today, with how to order each (e.g. grilled, dressing on the side). Say when calories are your estimate rather than the restaurant's published numbers. They can log one with propose_food_entries (brand = the restaurant).`;
 }

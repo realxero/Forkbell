@@ -167,6 +167,19 @@ address in the app to your computer's LAN address instead of localhost.
 
 Checks: `pnpm typecheck`, `pnpm test`, and `pnpm --filter @forkbell/db rls-check`.
 
+## Training suggestions
+
+Rules, not AI, so they're instant and work offline. Set them up in Settings, Food and suggestions, under Training: the equipment you have, areas to go easy on (shoulders, elbows, wrists, lower back, knees), and exercises never to suggest.
+
+- **Swaps.** An exercise's menu, or *See swaps* under a tip, lists exercises for the same muscle, best first, each with why it fits ("easier on your shoulders", "you've done it before"). *Pick any exercise* is always there.
+- **Stalled lifts.** When three sessions over two weeks do no better than the ones before, a tip suggests a different rep range or a swap.
+- **This week.** From Thursday (or after two workouts), the Train tab says which major groups (chest, back, shoulders, legs) have had no work yet.
+- **Strength goals.** Set a target one-rep max on an exercise's page. Forkbell draws a trend through your last eight weeks and gives an estimated date, never assuming more than 1.5% a week.
+- **Tips.** *Got it* hides them for the session; *Hide tips for this exercise* hides them for good (pain notes always show). Settings can bring them back.
+- **Finish screen.** Your volume as something real: "That's about 6 grand pianos lifted today."
+
+Bell follows the same setup when it suggests exercises.
+
 ## App icon
 
 `apps/app/assets/Forkbell.icon` is the iPhone icon (iOS 26 and later): one flat layer, and iOS adds the Liquid Glass light and depth and switches between Light, Dark, Tinted and Clear with the home screen. It opens in Apple's Icon Composer on a Mac if you want to adjust it. `icon.png` is the Android and web version, and `forkbell-mark.svg` is the logo on its own.

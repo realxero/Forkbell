@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, users, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
 import {
+  dateSchema,
   findRecords,
   incrementKg,
   nextTarget,
@@ -23,6 +24,27 @@ const pastOrNow = (iso: string) => new Date(Math.min(Date.parse(iso), Date.now()
 
 export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
+
+  /** Working sets per muscle between two dates, and how many workouts, for "this week" gaps. */
+  r.get('/muscles', async (c) => {
+    const from = dateSchema.safeParse(c.req.query('from'));
+    const to = dateSchema.safeParse(c.req.query('to'));
+    if (!from.success || !to.success || from.data > to.data) return c.json({ error: 'Use from and to dates like 2026-10-22.' }, 400);
+    const rows = await asUser(c.get('profileId'), (tx) =>
+      tx
+        .select({ muscle: exercises.muscle, sets: sql<number>`count(${workoutSets.id})::int` })
+        .from(workoutSets)
+        .innerJoin(workoutExercises, eq(workoutExercises.id, workoutSets.workoutExerciseId))
+        .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
+        .innerJoin(exercises, eq(exercises.id, workoutExercises.exerciseId))
+        .where(and(sql`${workouts.date} between ${from.data}::date and ${to.data}::date`, sql`${workouts.finishedAt} is not null`, eq(workoutSets.done, true), eq(workoutSets.warmup, false)))
+        .groupBy(exercises.muscle),
+    );
+    const [n] = await asUser(c.get('profileId'), (tx) =>
+      tx.select({ n: count() }).from(workouts).where(and(sql`${workouts.date} between ${from.data}::date and ${to.data}::date`, sql`${workouts.finishedAt} is not null`)),
+    );
+    return c.json({ muscles: Object.fromEntries(rows.map((r) => [r.muscle, r.sets])), workouts: n?.n ?? 0 });
+  });
 
   /** Recent sessions, newest first. */
   r.get('/', async (c) => {

@@ -2,7 +2,7 @@
 // takes a transaction from asUser(), so row-level security applies throughout.
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, workoutExercises, workoutSets, workouts, type Tx } from '@forkbell/db';
-import { trainingTips, type Exercise, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { preferencesSchema, trainingTips, type Exercise, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { users } from '@forkbell/db';
 
 type ExerciseRow = typeof exercises.$inferSelect;
@@ -84,7 +84,7 @@ export async function historyBefore(tx: Tx, exerciseIds: string[], workout: { id
   return out;
 }
 
-/** The last three finished sessions of each exercise before a workout, newest first, with pain flags. */
+/** The last eight finished sessions of each exercise before a workout, newest first, with pain flags. */
 export async function recentSessions(tx: Tx, exerciseIds: string[], before: { id: string; startedAt: string }) {
   const out = new Map<string, PastSession[]>();
   if (!exerciseIds.length) return out;
@@ -94,11 +94,11 @@ export async function recentSessions(tx: Tx, exerciseIds: string[], before: { id
     .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
     .where(and(inArray(workoutExercises.exerciseId, exerciseIds), isNotNull(workouts.finishedAt), ne(workouts.id, before.id), lt(workouts.startedAt, before.startedAt)))
     .orderBy(desc(workouts.startedAt))
-    .limit(exerciseIds.length * 6);
+    .limit(exerciseIds.length * 16);
   const picked = new Map<string, typeof rows>();
   for (const r of rows) {
     const list = picked.get(r.we.exerciseId) ?? [];
-    if (list.length < 3) picked.set(r.we.exerciseId, [...list, r]);
+    if (list.length < 8) picked.set(r.we.exerciseId, [...list, r]);
   }
   const sets = await setsFor(tx, [...picked.values()].flat().map((r) => r.we.id));
   for (const [exId, list] of picked) out.set(exId, list.map((r) => ({ date: r.date, sets: sets.get(r.we.id) ?? [], pain: r.we.pain, painNote: r.we.painNote })));
@@ -117,7 +117,9 @@ export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
   const sets = await setsFor(tx, items.map((i) => i.we.id));
   const previous = await lastSessions(tx, [...new Set(items.map((i) => i.ex.id))], { id: w.id, startedAt: w.startedAt });
   const [me] = await tx.select({ prefs: users.preferences }).from(users).limit(1);
-  const tipsOn = (me?.prefs as { trainingTips?: boolean } | undefined)?.trainingTips !== false;
+  const prefs = preferencesSchema.parse(me?.prefs ?? {});
+  // Pain notes always show; other tips follow the setting and any exercise you hid them for.
+  const showTip = (exId: string, t: { kind: string }) => t.kind === 'pain' || (prefs.trainingTips && !prefs.training.hiddenTips.includes(exId));
   const recent = w.finishedAt ? new Map<string, PastSession[]>() : await recentSessions(tx, [...new Set(items.map((i) => i.ex.id))], { id: w.id, startedAt: w.startedAt });
   const list: WorkoutExercise[] = items.map(({ we, ex }) => ({
     exercise: toExercise(ex),
@@ -129,8 +131,7 @@ export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
     previous: previous.get(ex.id) ?? [],
     pain: we.pain,
     painNote: we.painNote,
-    // Pain notes always show; the other tips follow the setting.
-    tips: trainingTips(recent.get(ex.id) ?? [], w.date).filter((t) => tipsOn || t.kind === 'pain'),
+    tips: trainingTips(recent.get(ex.id) ?? [], w.date).filter((t) => showTip(ex.id, t)),
   }));
   return { id: w.id, date: w.date, name: w.name, routineId: w.routineId, startedAt: w.startedAt, finishedAt: w.finishedAt, notes: w.notes, exercises: list };
 }

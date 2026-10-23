@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ALLERGENS, DIETS, checkFood, defaultPreferences, preferencesSchema, type Preferences } from '@forkbell/shared';
+import { ALLERGENS, BODY_AREAS, DIETS, EQUIPMENT_KINDS, checkFood, defaultPreferences, preferencesSchema, type Preferences } from '@forkbell/shared';
 import { put } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { Chip } from '../../components/AmountPicker';
@@ -19,9 +19,15 @@ export default function PreferencesScreen() {
   const [avoid, setAvoid] = useState(p.avoid.join(', '));
   const [dislikes, setDislikes] = useState(p.dislikes.join(', '));
   const [never, setNever] = useState(p.neverSuggest.join(', '));
+  const [neverLifts, setNeverLifts] = useState(p.training.neverSuggest.join(', '));
   const [testName, setTestName] = useState('');
   const [status, setStatus] = useState<string | null>(null);
-  const current = (): Preferences => ({ ...p, avoid: list(avoid), dislikes: list(dislikes), neverSuggest: list(never) });
+  const current = (): Preferences => ({ ...p, avoid: list(avoid), dislikes: list(dislikes), neverSuggest: list(never), training: { ...p.training, neverSuggest: list(neverLifts) } });
+  const t = p.training;
+  const toggle = <K extends 'equipment' | 'protectedAreas'>(key: K, v: Preferences['training'][K][number]) => {
+    const now = t[key] as string[];
+    setP({ ...p, training: { ...t, [key]: now.includes(v) ? now.filter((x) => x !== v) : [...now, v] } });
+  };
   const test = testName.trim() ? checkFood(testName, current()) : null;
 
   const save = async () => {
@@ -96,7 +102,27 @@ export default function PreferencesScreen() {
 
         <Text style={s.section}>Training</Text>
         {sw('Safety tips on exercises', p.trainingTips, (v) => setP({ ...p, trainingTips: v }))}
-        <Text style={s.note}>Lighter-day and check-up tips, and big-jump heads-ups. Pain you flag always shows next time.</Text>
+        <Text style={s.note}>Lighter-day, check-up and stalled-lift tips, and big-jump heads-ups. Pain you flag always shows next time.</Text>
+        {t.hiddenTips.length > 0 && (
+          <Pressable onPress={() => setP({ ...p, training: { ...t, hiddenTips: [] } })} style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Text style={s.link}>Show tips again for the {t.hiddenTips.length} {t.hiddenTips.length === 1 ? 'exercise' : 'exercises'} you hid them on</Text>
+          </Pressable>
+        )}
+
+        <Text style={s.label}>Equipment you have</Text>
+        <View style={s.chips}>
+          <Chip label="Full gym" on={t.equipment.length === 0} onPress={() => setP({ ...p, training: { ...t, equipment: [] } })} />
+          {EQUIPMENT_KINDS.map((e) => <Chip key={e} label={cap(e)} on={t.equipment.includes(e)} onPress={() => toggle('equipment', e)} />)}
+        </View>
+        <Text style={s.note}>Swaps and Bell only suggest what you can do. Bodyweight exercises always count.</Text>
+
+        <Text style={s.label}>Go easy on</Text>
+        <View style={s.chips}>{BODY_AREAS.map((a) => <Chip key={a} label={cap(a)} on={t.protectedAreas.includes(a)} onPress={() => toggle('protectedAreas', a)} />)}</View>
+        <Text style={s.note}>Swaps steer away from exercises that load these, and say when one is easier on them. This isn’t medical advice; if something hurts, get it checked.</Text>
+
+        <Text style={s.label}>Never suggest these exercises</Text>
+        <TextInput value={neverLifts} onChangeText={setNeverLifts} placeholder="e.g. upright row, good morning" placeholderTextColor={color.placeholder} style={s.input} />
+        <Text style={s.note}>You can still log them; they just won’t be offered as swaps.</Text>
       </ScrollView>
     </SafeAreaView>
   );

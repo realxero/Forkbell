@@ -3,6 +3,7 @@
 import type { SetEntry, WeightUnit } from './training.ts';
 import { formatWeight, toKg } from './training.ts';
 import { daysBetween } from './progress.ts';
+import { isStalled } from './training-coach.ts';
 
 export interface PastSession {
   date: string;
@@ -11,7 +12,7 @@ export interface PastSession {
   painNote: string | null;
 }
 export interface TrainingTip {
-  kind: 'pain' | 'checkup' | 'lighter';
+  kind: 'pain' | 'checkup' | 'lighter' | 'stalled';
   text: string;
 }
 
@@ -27,6 +28,9 @@ export function trainingTips(sessions: PastSession[], today: string): TrainingTi
   const hard = sessions.slice(0, 3);
   if (hard.length === 3 && hard.every((s) => (topWorking(s.sets)?.rpe ?? 0) >= 9)) {
     tips.push({ kind: 'lighter', text: 'Your last three sessions here were near your limit (RPE 9+). A lighter day, or a few fewer reps, helps you keep progressing.' });
+  }
+  if (isStalled(sessions)) {
+    tips.push({ kind: 'stalled', text: 'No progress here across your last three sessions. A few weeks in a different rep range, or a similar exercise, can get it moving again.' });
   }
   return tips;
 }

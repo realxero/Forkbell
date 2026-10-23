@@ -3,6 +3,7 @@
 // sauces, hidden ingredients or cross-contact. Screens that use it say so,
 // and nothing here ever claims a food is safe.
 import { z } from 'zod';
+import { trainingSetupSchema } from './training-coach.ts';
 
 export const ALLERGENS = ['milk', 'egg', 'peanut', 'tree nuts', 'soy', 'wheat/gluten', 'fish', 'shellfish', 'sesame'] as const;
 export type Allergen = (typeof ALLERGENS)[number];
@@ -28,6 +29,8 @@ export const preferencesSchema = z.object({
     })
     .default({ enabled: true, strictness: 'balanced', drinks: true, protein: true, fiber: true, sodium: true }),
   trainingTips: z.boolean().default(true),
+  /** equipment, areas to protect, exercises to leave out, hidden tips and strength goals */
+  training: trainingSetupSchema,
   bell: z
     .object({
       /** ask one question instead of guessing a portion or how it was cooked */
