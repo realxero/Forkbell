@@ -38,3 +38,31 @@ test('every starter program only uses built-in exercises', () => {
         assert.ok(sets >= 1 && min >= 1 && max >= min, `${p.key}/${r.name}/${key}: targets`);
       }
 });
+
+test('every built-in exercise has steps and pictures', async () => {
+  const { exerciseLibrary } = await import('./exercise-library.ts');
+  for (const e of builtinExercises) {
+    const h = exerciseLibrary.core[e.key];
+    assert.ok(h, `${e.key} has a how-to`);
+    assert.ok(h.steps.length >= 1 && h.images >= 1, `${e.key} has steps and a picture`);
+  }
+});
+
+test('the full library fits Forkbell and never clashes with built-ins', async () => {
+  const { exerciseLibrary, howToImages } = await import('./exercise-library.ts');
+  const { MUSCLES } = await import('@forkbell/shared');
+  const keys = new Set(builtinExercises.map((e) => e.key));
+  const names = new Set(builtinExercises.map((e) => e.name.toLowerCase()));
+  assert.ok(exerciseLibrary.library.length > 500);
+  assert.match(exerciseLibrary.commit, /^[0-9a-f]{40}$/, 'pinned to one dataset version');
+  for (const e of exerciseLibrary.library) {
+    assert.ok(e.key.startsWith('lib:') && !keys.has(e.key), `${e.key} is its own key`);
+    keys.add(e.key);
+    assert.ok(!names.has(e.name.toLowerCase()), `${e.name} isn't a second copy of a built-in`);
+    assert.ok((MUSCLES as readonly string[]).includes(e.muscle), `${e.name}: ${e.muscle}`);
+    assert.ok(['weight', 'bodyweight', 'time'].includes(e.kind));
+    assert.ok(e.steps.length > 0 && e.images > 0, `${e.name} has steps and pictures`);
+    assert.match(e.ref, /^[A-Za-z0-9_\-(),']+$/, `${e.ref} is a safe picture folder name`);
+  }
+  assert.equal(howToImages.size, Object.keys(exerciseLibrary.core).length + exerciseLibrary.library.length);
+});

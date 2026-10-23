@@ -10,7 +10,9 @@ import { discardWorkout, finishWorkout, saveWorkout, type FinishSummary } from '
 import { confirm } from '../../lib/confirm';
 import { formatDuration, useUnit } from '../../lib/units';
 import { ExercisePicker } from '../../components/ExercisePicker';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { SwapSheet } from '../../components/SwapSheet';
+import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, space, type } from '../../lib/theme';
@@ -44,6 +46,8 @@ export default function WorkoutScreen() {
   const [swapIndex, setSwapIndex] = useState<number | null>(null);
   /** the ranked swap suggestions, for this exercise */
   const [swapSheet, setSwapSheet] = useState<number | null>(null);
+  /** "How to do it" for this exercise, over the workout */
+  const [howToFor, setHowToFor] = useState<Exercise | null>(null);
   const training = useTrainingSetup();
   const [menu, setMenu] = useState<number | null>(null);
   const [restEnd, setRestEnd] = useState<number | null>(null);
@@ -279,6 +283,10 @@ export default function WorkoutScreen() {
                 setMenu(null);
                 update((w) => ({ ...w, exercises: w.exercises.filter((_, j) => j !== i) }));
               }}
+              onHowTo={() => {
+                setMenu(null);
+                setHowToFor(e.exercise);
+              }}
               onSwap={() => {
                 setMenu(null);
                 setSwapSheet(i);
@@ -314,6 +322,7 @@ export default function WorkoutScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+      <HowToSheet exercise={howToFor} onClose={() => setHowToFor(null)} />
       <SwapSheet
         target={swapSheet !== null ? (w.exercises[swapSheet]?.exercise ?? null) : null}
         onPick={(ex) => {
@@ -357,6 +366,7 @@ function ExerciseCard(props: {
   onMove: (by: number) => void;
   onRemove: () => void;
   onSwap: () => void;
+  onHowTo: () => void;
   onHideTips: () => void;
   onPain: (pain: boolean, note: string | null) => void;
 }) {
@@ -375,12 +385,18 @@ function ExerciseCard(props: {
             rest {formatDuration(e.restSeconds)}
           </Text>
         </Pressable>
+        {e.exercise.howTo && (
+          <Pressable onPress={props.onHowTo} hitSlop={10} style={s.howToButton} accessibilityLabel={`How to do ${e.exercise.name}`}>
+            <Ionicons name="help-circle-outline" size={24} color={color.accent} />
+          </Pressable>
+        )}
         <Pressable onPress={props.onMenu} hitSlop={10} accessibilityLabel={`Options for ${e.exercise.name}`}>
           <Text style={s.dots}>⋯</Text>
         </Pressable>
       </View>
       {props.menuOpen && (
         <View style={s.menu}>
+          {e.exercise.howTo && <Pressable onPress={props.onHowTo}><Text style={s.menuItem}>How to do it</Text></Pressable>}
           <Pressable onPress={() => props.onRest(-15)}><Text style={s.menuItem}>Rest −15 s</Text></Pressable>
           <Pressable onPress={() => props.onRest(15)}><Text style={s.menuItem}>Rest +15 s</Text></Pressable>
           <Pressable onPress={() => props.onMove(-1)}><Text style={s.menuItem}>Move up</Text></Pressable>
@@ -588,6 +604,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
+  howToButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: space(1) },
   tipActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   tipButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: space(3), borderRadius: 18, borderWidth: 1, borderColor: color.line },
   tipButtonText: { color: color.accent, fontWeight: '700', fontSize: 14 },

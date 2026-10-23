@@ -38,3 +38,4 @@ export function connect(url: string) {
 
 export type Database = ReturnType<typeof connect>['db'];
 export type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
+export { exerciseLibrary, howToImages, type HowTo } from './exercise-library.ts';

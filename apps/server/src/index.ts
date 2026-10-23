@@ -18,6 +18,7 @@ import { programRoutes, routineRoutes } from './routes/programs.ts';
 import { progressRoutes } from './routes/progress.ts';
 import { healthRoutes } from './routes/health.ts';
 import { bellRoutes } from './routes/bell.ts';
+import { mediaRoutes } from './media.ts';
 import { shareRoutes } from './routes/shares.ts';
 import { mealRoutes, recipeRoutes } from './routes/meals.ts';
 import { aiRoutes } from './routes/ai.ts';
@@ -32,6 +33,9 @@ if (env.appUrl !== env.publicUrl) app.use('/api/*', cors({ origin: env.appUrl, c
 
 app.get('/healthz', (c) => c.json({ ok: true }));
 app.route('/auth', authRoutes(database.db));
+
+// Exercise pictures: public, so they're mounted before the signed-in API.
+app.route('/api/media', mediaRoutes());
 
 const api = new Hono<AppEnv>();
 api.use('*', requireUser(database.db));

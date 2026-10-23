@@ -72,6 +72,14 @@ export const exercises = pgTable('exercises', {
   increment: text('increment', { enum: ['small', 'large'] }).notNull(),
   restSeconds: integer('rest_seconds').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  /** part of the big searchable library rather than the everyday list */
+  library: boolean('library').notNull().default(false),
+  /** the Free Exercise DB entry its steps and pictures come from */
+  howToRef: text('how_to_ref'),
+  level: text('level'),
+  secondaryMuscles: text('secondary_muscles').array().notNull().default([]),
+  steps: text('steps').array().notNull().default([]),
+  imageCount: integer('image_count').notNull().default(0),
 });
 
 export const programs = pgTable('programs', {

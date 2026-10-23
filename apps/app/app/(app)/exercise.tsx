@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fromKg, projectGoal, todayLocal, type Exercise, type PersonalRecord, type SetEntry } from '@forkbell/shared';
+import { fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type SetEntry } from '@forkbell/shared';
 import { useTrainingSetup } from '../../lib/training-setup';
+import { HowToCard } from '../../components/HowTo';
 import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
@@ -11,6 +12,7 @@ import { color, space, type } from '../../lib/theme';
 
 type Detail = {
   exercise: Exercise;
+  howTo?: ExerciseHowTo | null;
   records: PersonalRecord[];
   sessions: { workoutId: string; date: string; name: string; sets: SetEntry[] }[];
   trend: { date: string; e1rmKg: number }[];
@@ -69,6 +71,13 @@ export default function ExerciseDetail() {
               {d.exercise.muscle.charAt(0).toUpperCase() + d.exercise.muscle.slice(1)} · {d.exercise.equipment}
               {d.exercise.custom ? ' · yours' : ''}
             </Text>
+
+            {d.howTo && (
+              <View style={s.card}>
+                <Text style={[type.title, { fontSize: 18 }]}>How to do it</Text>
+                <HowToCard howTo={d.howTo} name={d.exercise.name} short={d.sessions.length > 0} />
+              </View>
+            )}
 
             {d.records.length > 0 ? (
               <View style={s.records}>

@@ -4,7 +4,7 @@ import { exercises, workoutExercises, workoutSets, workouts, type connect } from
 import { estimatedOneRepMax, exerciseInputSchema, preferencesSchema, setVolumeKg, todayLocal, trainingTips, type PersonalRecord, type SetEntry } from '@forkbell/shared';
 import { users } from '@forkbell/db';
 import type { AppEnv } from '../auth.ts';
-import { recentSessions, toExercise, toSet } from '../training.ts';
+import { recentSessions, toExercise, toHowTo, toSet } from '../training.ts';
 
 // Spelled out in full: inside the subquery a bare "id" would mean the workout row's id.
 const usesSql = sql<number>`(select count(*) from workout_exercises we where we.exercise_id = "exercises"."id")::int`;
@@ -28,7 +28,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
           ),
         )
         .orderBy(desc(usesSql), asc(exercises.name))
-        .limit(q ? 50 : 200),
+        .limit(q ? 50 : 2000), // the whole library, kept lean: steps come with each exercise's own page
     );
     return c.json({ exercises: rows.map((r) => ({ ...toExercise(r.ex), uses: r.uses })) });
   });
@@ -103,7 +103,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
       .map((s) => ({ date: s.date, e1rmKg: Math.max(0, ...s.sets.filter((x) => !x.warmup && x.weightKg && x.reps).map((x) => estimatedOneRepMax(x.weightKg!, x.reps!) ?? 0)) }))
       .filter((p) => p.e1rmKg > 0);
 
-    return c.json({ exercise, records, sessions: sessions.slice(0, 30), trend, tips: data.tips });
+    return c.json({ exercise, howTo: toHowTo(data.ex), records, sessions: sessions.slice(0, 30), trend, tips: data.tips });
   });
 
   return r;

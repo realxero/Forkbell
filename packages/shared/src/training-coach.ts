@@ -91,6 +91,9 @@ export function rankSwaps(target: Exercise, library: (Exercise & { uses?: number
       score += 3;
     }
     if (ex.kind === target.kind) score += 2;
+    // The everyday list first; the big library fills in when there's nothing closer.
+    if (ex.library && !(ex.uses ?? 0)) score -= 3;
+    if (ex.howTo) score += 1;
     if (ex.equipment !== target.equipment) {
       reasons.push(ex.equipment === 'bodyweight' ? 'no equipment needed' : `uses a ${ex.equipment}`);
       score += 1;

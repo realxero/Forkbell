@@ -15,6 +15,22 @@ export interface Exercise {
   increment: 'small' | 'large';
   restSeconds: number;
   custom: boolean;
+  /** in the big searchable library rather than the everyday list */
+  library?: boolean;
+  /** has steps and pictures showing how to do it */
+  howTo?: boolean;
+}
+
+/** How to do an exercise: steps and pictures (start and end of the movement). */
+export interface ExerciseHowTo {
+  steps: string[];
+  /** beginner, intermediate or expert */
+  level: string | null;
+  /** muscles that help, besides the main one */
+  secondary: string[];
+  /** picture paths on your Forkbell server, in order */
+  images: string[];
+  credit: string;
 }
 
 export interface SetEntry {

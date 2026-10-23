@@ -41,6 +41,8 @@ export function ExercisePicker({
   const [list, setList] = useState<Listed[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [full, setFull] = useState(false);
+  const [limit, setLimit] = useState(120);
 
   // The whole library is small, so it's loaded once (and kept for offline) and searched here.
   useEffect(() => {
@@ -56,11 +58,17 @@ export function ExercisePicker({
   }, [visible]);
 
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  // The everyday list stays short; the full library joins in when you search or ask for it.
+  const libraryCount = (list ?? []).filter((e) => e.library).length;
   const shown = (list ?? []).filter(
-    (e) => (!muscle || e.muscle === muscle) && words.every((w) => `${e.name} ${e.muscle} ${e.equipment}`.toLowerCase().includes(w)),
+    (e) =>
+      (!muscle || e.muscle === muscle) &&
+      (full || words.length > 0 || !e.library || e.uses > 0) &&
+      words.every((w) => `${e.name} ${e.muscle} ${e.equipment}`.toLowerCase().includes(w)),
   );
   const used = shown.filter((e) => e.uses > 0);
-  const rest = shown.filter((e) => e.uses === 0);
+  const rest = shown.filter((e) => e.uses === 0).sort((a, b) => Number(Boolean(a.library)) - Number(Boolean(b.library)));
+  const visibleRest = rest.slice(0, limit);
 
   const body = (
       <SafeAreaView style={s.screen}>
@@ -87,12 +95,22 @@ export function ExercisePicker({
                 <Chip key={m} label={cap(m)} on={muscle === m} onPress={() => setMuscle(muscle === m ? null : m)} />
               ))}
             </ScrollView>
+            {libraryCount > 0 && !words.length && (
+              <Pressable onPress={() => { setFull(!full); setLimit(120); }} style={{ minHeight: 44, justifyContent: 'center' }}>
+                <Text style={s.link}>{full ? 'Just the everyday list' : `Show the full library (${libraryCount} more, with how-to pictures)`}</Text>
+              </Pressable>
+            )}
             {error && <Text style={s.error}>{error}</Text>}
             {!list && !error && <ActivityIndicator color={color.iron} />}
             {used.length > 0 && <Text style={s.section}>You’ve done these</Text>}
             {used.map((e) => <Row key={e.id} e={e} onPress={() => onPick(e)} />)}
             {rest.length > 0 && <Text style={s.section}>{used.length ? 'Everything else' : 'Exercises'}</Text>}
-            {rest.map((e) => <Row key={e.id} e={e} onPress={() => onPick(e)} />)}
+            {visibleRest.map((e) => <Row key={e.id} e={e} onPress={() => onPick(e)} />)}
+            {rest.length > visibleRest.length && (
+              <Pressable onPress={() => setLimit(limit + 120)} style={{ minHeight: 44, justifyContent: 'center' }}>
+                <Text style={s.link}>Show more ({rest.length - visibleRest.length} left)</Text>
+              </Pressable>
+            )}
             {list && shown.length === 0 && <Text style={type.body}>Nothing matches. Create it below.</Text>}
             <Pressable onPress={() => setCreating(true)} style={{ paddingVertical: space(3) }}>
               <Text style={s.link}>Create your own exercise</Text>
@@ -119,6 +137,7 @@ function Row({ e, onPress }: { e: Listed; onPress: () => void }) {
         <Text style={type.small}>
           {cap(e.muscle)} · {e.equipment}
           {e.custom ? ' · yours' : ''}
+          {e.howTo ? ' · how-to' : ''}
         </Text>
       </View>
     </Pressable>

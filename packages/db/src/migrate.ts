@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { builtinFoods } from './builtin-foods.ts';
 import { builtinExercises } from './builtin-exercises.ts';
+import { exerciseLibrary } from './exercise-library.ts';
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appPassword = process.env.APP_DB_PASSWORD;
@@ -71,17 +72,24 @@ async function syncBuiltinFoods() {
 async function syncBuiltinExercises() {
   await sql.begin(async (tx) => {
     await tx`alter table exercises no force row level security`;
-    for (const e of builtinExercises) {
+    const everyday = builtinExercises.map((e) => ({ ...e, library: false, howTo: exerciseLibrary.core[e.key] ?? null }));
+    const library = exerciseLibrary.library.map((e) => ({ ...e, library: true, howTo: e }));
+    for (const e of [...everyday, ...library]) {
+      const h = e.howTo;
       await tx`
-        insert into exercises (owner_id, source, key, name, muscle, equipment, kind, increment, rest_seconds)
-        values (null, 'builtin', ${e.key}, ${e.name}, ${e.muscle}, ${e.equipment}, ${e.kind}, ${e.increment}, ${e.restSeconds})
+        insert into exercises (owner_id, source, key, name, muscle, equipment, kind, increment, rest_seconds,
+                               library, how_to_ref, level, secondary_muscles, steps, image_count)
+        values (null, 'builtin', ${e.key}, ${e.name}, ${e.muscle}, ${e.equipment}, ${e.kind}, ${e.increment}, ${e.restSeconds},
+                ${e.library}, ${h?.ref ?? null}, ${h?.level ?? null}, ${h?.secondary ?? []}, ${h?.steps ?? []}, ${h?.images ?? 0})
         on conflict (key) where source = 'builtin' do update set
           name = excluded.name, muscle = excluded.muscle, equipment = excluded.equipment, kind = excluded.kind,
-          increment = excluded.increment, rest_seconds = excluded.rest_seconds`;
+          increment = excluded.increment, rest_seconds = excluded.rest_seconds, library = excluded.library,
+          how_to_ref = excluded.how_to_ref, level = excluded.level, secondary_muscles = excluded.secondary_muscles,
+          steps = excluded.steps, image_count = excluded.image_count`;
     }
     await tx`alter table exercises force row level security`;
   });
-  console.log(`built-in exercises: ${builtinExercises.length}`);
+  console.log(`built-in exercises: ${builtinExercises.length}, full library: ${exerciseLibrary.library.length}`);
 }
 
 function quoteLiteral(s: string) {

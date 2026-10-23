@@ -192,6 +192,14 @@ Rules, not AI, so they're instant and work offline. Set them up in Settings, Foo
 
 Bell follows the same setup when it suggests exercises.
 
+## Exercise library and how-to pictures
+
+Every built-in exercise shows how to do it: the start and end positions fading back and forth so you can see the movement (side by side with Reduce Motion on), plus step-by-step instructions and the level. Tap **?** on an exercise during a workout, or see it on the exercise's page.
+
+The exercise picker keeps your everyday list short. Search covers a full library of about 690 more exercises, or tap *Show the full library*.
+
+Steps and pictures come from [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (public domain), pinned to one version in `packages/db/data/exercise-library.json`; `packages/db/scripts/build-exercise-library.mjs` rebuilds it. Your server fetches each picture the first time it's needed and keeps a copy (set `MEDIA_DIR` to keep them across updates), so phones only ever talk to your server. Only pictures in the library can be requested.
+
 ## App icon
 
 `apps/app/assets/Forkbell.icon` is the iPhone icon (iOS 26 and later): one flat layer, and iOS adds the Liquid Glass light and depth and switches between Light, Dark, Tinted and Clear with the home screen. It opens in Apple's Icon Composer on a Mac if you want to adjust it. `icon.png` is the Android and web version, and `forkbell-mark.svg` is the logo on its own.
@@ -213,7 +221,8 @@ Forkbell is an original codebase. Its feature ideas were inspired by
 contains no code from either. Food data comes from
 [Open Food Facts](https://openfoodfacts.org) (ODbL) and
 [USDA FoodData Central](https://fdc.nal.usda.gov) (public domain), which the
-built-in common foods are also based on. Barcodes are read in the browser with
+built-in common foods are also based on. Exercise steps and pictures come from
+[Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (public domain). Barcodes are read in the browser with
 [ZXing](https://github.com/zxing-js/library) (Apache 2.0).
 
 ## Licence

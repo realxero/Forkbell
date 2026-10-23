@@ -2,14 +2,37 @@
 // takes a transaction from asUser(), so row-level security applies throughout.
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, workoutExercises, workoutSets, workouts, type Tx } from '@forkbell/db';
-import { preferencesSchema, trainingTips, type Exercise, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { preferencesSchema, trainingTips, type Exercise, type ExerciseHowTo, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { users } from '@forkbell/db';
 
 type ExerciseRow = typeof exercises.$inferSelect;
 type SetRow = typeof workoutSets.$inferSelect;
 
 export function toExercise(r: ExerciseRow): Exercise {
-  return { id: r.id, name: r.name, muscle: r.muscle, equipment: r.equipment, kind: r.kind, increment: r.increment, restSeconds: r.restSeconds, custom: r.source === 'custom' };
+  return {
+    id: r.id,
+    name: r.name,
+    muscle: r.muscle,
+    equipment: r.equipment,
+    kind: r.kind,
+    increment: r.increment,
+    restSeconds: r.restSeconds,
+    custom: r.source === 'custom',
+    library: r.library,
+    howTo: r.steps.length > 0,
+  };
+}
+
+/** Steps and picture paths for an exercise, when it has them. */
+export function toHowTo(r: ExerciseRow): ExerciseHowTo | null {
+  if (!r.steps.length || !r.howToRef) return null;
+  return {
+    steps: r.steps,
+    level: r.level,
+    secondary: r.secondaryMuscles.filter((m) => m !== r.muscle),
+    images: Array.from({ length: r.imageCount }, (_, n) => `/api/media/exercise/${encodeURIComponent(r.howToRef!)}/${n}.jpg`),
+    credit: 'Steps and pictures: Free Exercise DB (public domain)',
+  };
 }
 
 export const toSet = (r: Pick<SetRow, 'weightKg' | 'reps' | 'seconds' | 'rpe' | 'warmup' | 'done'>): SetEntry => ({
