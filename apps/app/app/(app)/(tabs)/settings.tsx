@@ -10,6 +10,7 @@ import { useAuth } from '../../../lib/auth';
 import { put } from '../../../lib/api';
 import { color, space, type } from '../../../lib/theme';
 import { Chip } from '../../../components/AmountPicker';
+import { AiSettings } from '../../../components/AiSettings';
 import { Platform, Switch } from 'react-native';
 import { hapticsOn, hapticsSupported, setHapticsOn } from '../../../lib/haptics';
 import { reminderSettings, remindersSupported, setReminderSettings, type ReminderSettings } from '../../../lib/reminders';
@@ -91,6 +92,8 @@ export default function Settings() {
         <Pressable onPress={() => router.push('/sharing')} style={{ marginTop: space(3) }}>
           <Text style={s.link}>Sharing with family ›</Text>
         </Pressable>
+
+        <AiSettings />
 
         <HealthSection />
 

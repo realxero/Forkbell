@@ -20,6 +20,7 @@ import { healthRoutes } from './routes/health.ts';
 import { bellRoutes } from './routes/bell.ts';
 import { shareRoutes } from './routes/shares.ts';
 import { mealRoutes, recipeRoutes } from './routes/meals.ts';
+import { aiRoutes } from './routes/ai.ts';
 import { wellbeingRoutes } from './routes/wellbeing.ts';
 
 const database = connect(env.databaseUrl);
@@ -78,6 +79,7 @@ api.route('/progress', progressRoutes(database));
 api.route('/health', healthRoutes(database));
 api.route('/shares', shareRoutes(database));
 api.route('/meals', mealRoutes(database));
+api.route('/ai', aiRoutes(database));
 api.route('/recipes', recipeRoutes(database));
 api.route('/wellbeing', wellbeingRoutes(database));
 

@@ -245,3 +245,13 @@ export const recipeItems = pgTable('recipe_items', {
   grams: num('grams').notNull(),
   position: integer('position').notNull(),
 });
+
+export const aiSettings = pgTable('ai_settings', {
+  userId: uuid('user_id').primaryKey(),
+  provider: text('provider', { enum: ['gemini', 'anthropic', 'openai', 'custom'] }).notNull(),
+  model: text('model').notNull(),
+  baseUrl: text('base_url'),
+  keyCiphertext: text('key_ciphertext'),
+  keyHint: text('key_hint'),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+});

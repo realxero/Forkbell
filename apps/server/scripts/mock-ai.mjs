@@ -57,6 +57,12 @@ function plan(messages, toolResults) {
 
 http
   .createServer((req, res) => {
+    // The model list, for checking a key in Settings → Bell.
+    if (req.method === 'GET' && req.url.endsWith('/models')) {
+      res.setHeader('content-type', 'application/json');
+      if ((req.headers.authorization ?? '') === 'Bearer bad-key-123') return res.writeHead(401).end('{"error":"invalid key"}');
+      return res.end(JSON.stringify({ data: [{ id: 'mock-small' }, { id: 'mock-vision-large' }] }));
+    }
     let body = '';
     req.on('data', (d) => (body += d));
     req.on('end', () => {

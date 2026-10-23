@@ -42,7 +42,7 @@ export default function Bell() {
   const { me } = useAuth();
   const prefs = me?.preferences.bell ?? { askWhenUnsure: true, voiceSends: true, readAloud: 'voice' as const };
   const params = useLocalSearchParams<{ ask?: string }>();
-  const [status, setStatus] = useState<{ enabled: boolean; model: string | null } | null>(null);
+  const [status, setStatus] = useState<{ enabled: boolean; model: string | null; error?: string } | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(KEY) ?? []);
   const [text, setText] = useState('');
   const [image, setImage] = useState<string | null>(null);
@@ -56,9 +56,12 @@ export default function Bell() {
   const scroll = useRef<ScrollViewInstance>(null);
   const triedLink = useRef<string | null>(null);
 
-  useEffect(() => {
-    api<{ enabled: boolean; model: string | null }>('/api/bell/status').then(setStatus, () => setStatus({ enabled: false, model: null }));
-  }, []);
+  // Checked each time you open the tab, so a key added in Settings takes effect straight away.
+  useFocusEffect(
+    useCallback(() => {
+      api<{ enabled: boolean; model: string | null; error?: string }>('/api/bell/status').then(setStatus, () => setStatus({ enabled: false, model: null }));
+    }, []),
+  );
   // Keep the conversation on this device (without photos, which are large).
   useEffect(() => {
     writeCache(KEY, messages.slice(-40).map((m) => ({ ...m, image: m.image ? 'photo' : undefined })));
@@ -161,11 +164,12 @@ export default function Bell() {
         <View style={s.content}>
           <Text style={[type.hero, { fontSize: 34 }]}>Bell</Text>
           <Text style={type.body}>
-            Bell is Forkbell’s assistant: ask about your own data, log food by describing it or snapping a photo, and review everything before it’s added. It isn’t set up on this server yet.
+            Bell is Forkbell’s assistant: ask about your own data, log food by describing it or snapping a photo, and review everything before it’s added.
           </Text>
-          <Text style={type.small}>
-            To turn it on, add AI_PROVIDER, AI_API_KEY and AI_MODEL to the server’s settings (any Anthropic or OpenAI-compatible model, including one running at home), then redeploy.
-          </Text>
+          <Text style={type.small}>{status.error ?? 'Add an AI key to turn it on. Google Gemini, Anthropic and OpenAI all work; Gemini has a free tier.'}</Text>
+          <Pressable onPress={() => router.push('/settings')} style={{ backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' }}>
+            <Text style={{ color: color.onAccent, fontWeight: '700', fontSize: 16 }}>Add a key in Settings</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );

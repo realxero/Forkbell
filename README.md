@@ -115,6 +115,12 @@ Rules, not AI: instant, offline, and the same every time. They live in
 
 ## Bell (the assistant)
 
+The easy way: Settings → Bell, pick Google Gemini, Anthropic or OpenAI, paste
+your key, check it, pick a model. The key is encrypted on the server
+(AES-256-GCM, derived from SESSION_SECRET) and never sent back to the app or
+shared. Rotating SESSION_SECRET means re-entering it. The server-wide AI_*
+settings below still work as the default for anyone without their own key.
+
 Bell uses the model you choose, set on the server: `AI_PROVIDER=anthropic`
 with an Anthropic key, or `AI_PROVIDER=openai` for OpenAI and anything that
 speaks its API (Ollama, LM Studio, OpenRouter...; set `AI_BASE_URL`). Photo

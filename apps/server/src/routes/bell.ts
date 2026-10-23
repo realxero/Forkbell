@@ -4,8 +4,8 @@ import { users, type connect } from '@forkbell/db';
 import { z } from 'zod';
 import { bellChatSchema, extractJson, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
-import { env } from '../env.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
+import { aiConfigFor } from '../bell/config.ts';
 import { runTool, systemPrompt, toolsFor, type ToolContext } from '../bell/tools.ts';
 
 const MAX_ROUNDS = 8;
@@ -34,13 +34,21 @@ Rules:
 - name and brand only if you can read them on the pack; otherwise null.
 - If the photo isn't a nutrition label, or you can't read the numbers clearly, set readable to false and say why in note.`;
 
-export function bellRoutes({ asUser }: ReturnType<typeof connect>, internal: (path: string, userId: string) => Promise<unknown>) {
+export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: string, userId: string) => Promise<unknown>) {
+  const { asUser } = db;
   const r = new Hono<AppEnv>();
 
-  r.get('/status', (c) => c.json({ enabled: Boolean(env.ai.provider), provider: env.ai.provider, model: env.ai.provider ? env.ai.model : null }));
+  r.get('/status', async (c) => {
+    const cfg = await aiConfigFor(db, c.get('userId'));
+    if (!cfg) return c.json({ enabled: false, provider: null, model: null, source: null });
+    if ('error' in cfg) return c.json({ enabled: false, provider: null, model: null, source: 'yours', error: cfg.error });
+    return c.json({ enabled: true, provider: cfg.provider, model: cfg.model, source: cfg.source });
+  });
 
   r.post('/chat', async (c) => {
-    if (!env.ai.provider) return c.json({ error: 'Bell isn’t set up on this server. Set AI_PROVIDER, AI_API_KEY and AI_MODEL.' }, 503);
+    const ai = await aiConfigFor(db, c.get('userId'));
+    if (!ai) return c.json({ error: 'Bell needs an AI key. Add yours in Settings → Bell.' }, 503);
+    if ('error' in ai) return c.json({ error: ai.error }, 503);
     const userId = c.get('profileId');
     if (!allowed(userId)) return c.json({ error: 'That’s a lot of messages in a short time. Try again in a few minutes.' }, 429);
     const parsed = bellChatSchema.safeParse(await c.req.json().catch(() => null));
@@ -59,9 +67,9 @@ export function bellRoutes({ asUser }: ReturnType<typeof connect>, internal: (pa
     }));
     const prefs = preferencesSchema.parse(me?.prefs ?? {});
     const system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null, prefs });
-    const cfg = { apiKey: env.ai.apiKey, model: env.ai.model, baseUrl: env.ai.baseUrl };
+    const cfg = { apiKey: ai.apiKey, model: ai.model, baseUrl: ai.baseUrl };
     const tools = toolsFor(prefs);
-    const model = env.ai.provider === 'anthropic' ? anthropic(cfg, system, turns, tools) : openai(cfg, system, turns, tools);
+    const model = ai.format === 'anthropic' ? anthropic(cfg, system, turns, tools) : openai(cfg, system, turns, tools);
 
     const ctx: ToolContext = {
       call: (path: string) => internal(path, userId),
@@ -117,16 +125,17 @@ export function bellRoutes({ asUser }: ReturnType<typeof connect>, internal: (pa
 
   /** Read a nutrition label photo. Nothing is saved: the app shows the numbers to check first. */
   r.post('/label', async (c) => {
-    if (!env.ai.provider) return c.json({ error: 'Reading labels needs Bell, which isn’t set up on this server.' }, 503);
+    const ai = await aiConfigFor(db, c.get('userId'));
+    if (!ai || 'error' in ai) return c.json({ error: ai && 'error' in ai ? ai.error : 'Reading labels needs Bell: add an AI key in Settings → Bell.' }, 503);
     const userId = c.get('profileId');
     if (!allowed(userId)) return c.json({ error: 'That’s a lot of requests in a short time. Try again in a few minutes.' }, 429);
     const parsed = labelSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Send a photo of the label.' }, 400);
-    const cfg = { apiKey: env.ai.apiKey, model: env.ai.model, baseUrl: env.ai.baseUrl };
+    const cfg = { apiKey: ai.apiKey, model: ai.model, baseUrl: ai.baseUrl };
     const turns = [{ role: 'user' as const, text: 'Read this nutrition label.', image: parsed.data.image }];
     let answer: string;
     try {
-      const model = env.ai.provider === 'anthropic' ? anthropic(cfg, LABEL_PROMPT, turns, []) : openai(cfg, LABEL_PROMPT, turns, []);
+      const model = ai.format === 'anthropic' ? anthropic(cfg, LABEL_PROMPT, turns, []) : openai(cfg, LABEL_PROMPT, turns, []);
       answer = (await model.step()).text;
     } catch (e) {
       console.error('Bell label:', e);
