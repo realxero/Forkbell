@@ -47,6 +47,15 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
     return c.json({ mine, results, errors });
   });
 
+  /** Your own foods and the built-in ones, kept on the device so search works offline. */
+  r.get('/library', async (c) => {
+    const userId = c.get('userId');
+    const rows = await asUser(userId, (tx) =>
+      tx.select().from(foods).where(or(eq(foods.ownerId, userId), isNull(foods.ownerId))).orderBy(desc(foods.createdAt)).limit(2000),
+    );
+    return c.json({ foods: rows.map(toFood) });
+  });
+
   /** Foods you've logged lately, with the amount you used last time. */
   r.get('/recent', async (c) => {
     const userId = c.get('userId');

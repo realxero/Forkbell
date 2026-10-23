@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MUSCLES, type Exercise, type ExerciseKind, type Muscle } from '@forkbell/shared';
-import { api, post } from '../lib/api';
+import { post } from '../lib/api';
+import { cachedGet, updateCache } from '../lib/sync';
 import { Chip } from './AmountPicker';
 import { color, space, type } from '../lib/theme';
 
@@ -35,22 +36,23 @@ export function ExercisePicker({
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
+  // The whole library is small, so it's loaded once (and kept for offline) and searched here.
   useEffect(() => {
     if (!visible) return;
     let live = true;
-    const t = setTimeout(() => {
-      api<{ exercises: Listed[] }>(`/api/exercises${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`).then(
-        (r) => live && setList(r.exercises),
-        (e) => live && setError(e instanceof Error ? e.message : String(e)),
-      );
-    }, 250);
+    cachedGet<{ exercises: Listed[] }>('/api/exercises').then(
+      (r) => live && setList(r.exercises),
+      (e) => live && setError(e instanceof Error ? e.message : String(e)),
+    );
     return () => {
       live = false;
-      clearTimeout(t);
     };
-  }, [q, visible]);
+  }, [visible]);
 
-  const shown = (list ?? []).filter((e) => !muscle || e.muscle === muscle);
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = (list ?? []).filter(
+    (e) => (!muscle || e.muscle === muscle) && words.every((w) => `${e.name} ${e.muscle} ${e.equipment}`.toLowerCase().includes(w)),
+  );
   const used = shown.filter((e) => e.uses > 0);
   const rest = shown.filter((e) => e.uses === 0);
 
@@ -127,6 +129,7 @@ function CreateExercise({ initialName, onCreated }: { initialName: string; onCre
     setError(null);
     try {
       const { exercise } = await post<{ exercise: Exercise }>('/api/exercises', { name, muscle, equipment, kind, restSeconds: kind === 'time' ? 60 : 120 });
+      updateCache<{ exercises: (Exercise & { uses: number })[] }>('/api/exercises', (l) => l && { exercises: [{ ...exercise, uses: 0 }, ...l.exercises] });
       onCreated(exercise);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

@@ -10,6 +10,10 @@ export async function saveFood(tx: Tx, userId: string, input: FoodInput): Promis
   const problems = per100Problems(input.per100);
   if (problems.length) throw new BadFood(problems[0]);
 
+  if (input.id) {
+    const [same] = await tx.select().from(foods).where(and(eq(foods.id, input.id), eq(foods.ownerId, userId))).limit(1);
+    if (same) return toFood(same); // already saved by an earlier send
+  }
   if (input.sourceId && input.source !== 'custom') {
     const [existing] = await tx
       .select()
@@ -21,6 +25,7 @@ export async function saveFood(tx: Tx, userId: string, input: FoodInput): Promis
   const [row] = await tx
     .insert(foods)
     .values({
+      ...(input.id ? { id: input.id } : {}),
       ownerId: userId,
       name: input.name,
       brand: input.brand ?? null,

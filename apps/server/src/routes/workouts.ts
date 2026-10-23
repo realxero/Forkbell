@@ -8,6 +8,7 @@ import {
   saveWorkoutSchema,
   setVolumeKg,
   startWorkoutSchema,
+  finishWorkoutSchema,
   type PersonalRecord,
   type SaveWorkoutInput,
   type SetEntry,
@@ -17,6 +18,8 @@ import type { AppEnv } from '../auth.ts';
 import { historyBefore, isMissingExercise, lastSessions, loadWorkout, saveWorkout, volumeSql } from '../training.ts';
 
 const isUuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
+/** A time sent by the app, never later than now (a phone clock can be off). */
+const pastOrNow = (iso: string) => new Date(Math.min(Date.parse(iso), Date.now())).toISOString();
 
 export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
@@ -58,6 +61,10 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the workout.' }, 400);
     const userId = c.get('userId');
     const result = await asUser(userId, async (tx) => {
+      if (parsed.data.id) {
+        const [prior] = await tx.select({ id: workouts.id }).from(workouts).where(eq(workouts.id, parsed.data.id)).limit(1);
+        if (prior) return { workout: await loadWorkout(tx, prior.id) }; // started earlier, offline
+      }
       const [open] = await tx.select({ id: workouts.id }).from(workouts).where(isNull(workouts.finishedAt)).limit(1);
       if (open) return { conflict: open.id };
 
@@ -90,7 +97,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
       }
       const [w] = await tx
         .insert(workouts)
-        .values({ date: parsed.data.date, name, routineId: parsed.data.routineId ?? null } as typeof workouts.$inferInsert)
+        .values({ ...(parsed.data.id ? { id: parsed.data.id } : {}), ...(parsed.data.startedAt ? { startedAt: pastOrNow(parsed.data.startedAt) } : {}), date: parsed.data.date, name, routineId: parsed.data.routineId ?? null } as typeof workouts.$inferInsert)
         .returning({ id: workouts.id });
       await saveWorkout(tx, w!.id, { name, date: parsed.data.date, notes: null, exercises: plan });
       return { workout: await loadWorkout(tx, w!.id) };
@@ -129,6 +136,8 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   r.post('/:id/finish', async (c) => {
     const id = c.req.param('id');
     if (!isUuid(id)) return c.json({ error: 'That workout was not found.' }, 404);
+    const body = finishWorkoutSchema.safeParse(await c.req.json().catch(() => ({})));
+    const finishedAt = body.success && body.data.finishedAt ? pastOrNow(body.data.finishedAt) : null;
     const result = await asUser(c.get('userId'), async (tx) => {
       const [w] = await tx.select().from(workouts).where(eq(workouts.id, id)).limit(1);
       if (!w) return null;
@@ -142,7 +151,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
       }
       const [finished] = await tx
         .update(workouts)
-        .set({ finishedAt: w.finishedAt ?? sql`now()` } as Partial<typeof workouts.$inferInsert>)
+        .set({ finishedAt: w.finishedAt ?? finishedAt ?? sql`now()` } as Partial<typeof workouts.$inferInsert>)
         .where(eq(workouts.id, id))
         .returning({ finishedAt: workouts.finishedAt });
       const workout = (await loadWorkout(tx, id))!;

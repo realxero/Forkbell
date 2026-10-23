@@ -3,7 +3,9 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, dateSchema, todayLocal, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
-import { api, put } from '../../../lib/api';
+import { put } from '../../../lib/api';
+import { cachedGet, send } from '../../../lib/sync';
+import { saveWeighIn } from '../../../lib/actions';
 import { useAuth } from '../../../lib/auth';
 import { useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
@@ -46,7 +48,7 @@ export default function ProgressScreen() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api<Progress>(`/api/progress?today=${todayLocal()}`);
+      const data = await cachedGet<Progress>(`/api/progress?today=${todayLocal()}`);
       setP(data);
       const todays = data.weighIns.find((w) => w.date === data.today);
       setWeight(todays ? units.show(todays.weightKg) : '');
@@ -100,7 +102,7 @@ export default function ProgressScreen() {
                 <Text style={type.body}>{units.unit}</Text>
                 <Pressable
                   disabled={units.read(weight) === null}
-                  onPress={() => act(() => put('/api/progress/weigh-ins', { date: p.today, weightKg: units.read(weight) }), 'Weight saved.')}
+                  onPress={() => act(() => saveWeighIn(todayLocal(), units.read(weight)!), 'Weight saved.')}
                   style={[s.small, units.read(weight) === null && { opacity: 0.4 }]}
                 >
                   <Text style={s.smallText}>Save</Text>
@@ -160,7 +162,7 @@ export default function ProgressScreen() {
               )}
             </View>
 
-            <GoalCard p={p} units={units} onSave={(body) => act(() => put('/api/progress/goal', body), 'Goal saved.')} />
+            <GoalCard p={p} units={units} onSave={(body) => act(() => send('PUT', '/api/progress/goal', body, { label: 'Goal', coalesceKey: 'goal' }), 'Goal saved.')} />
 
             {/* Streaks */}
             <View style={s.card}>
@@ -180,7 +182,11 @@ export default function ProgressScreen() {
 
             <Milestones list={p.milestones} />
 
-            <MeasurementsCard p={p} units={units} onSave={(kind, valueCm) => act(() => put('/api/progress/measurements', { date: p.today, kind, valueCm }), 'Measurement saved.')} />
+            <MeasurementsCard
+              p={p}
+              units={units}
+              onSave={(kind, valueCm) => act(() => send('PUT', '/api/progress/measurements', { date: todayLocal(), kind, valueCm }, { label: `${kind} measurement`, coalesceKey: `measure:${todayLocal()}:${kind}` }), 'Measurement saved.')}
+            />
           </>
         )}
       </ScrollView>

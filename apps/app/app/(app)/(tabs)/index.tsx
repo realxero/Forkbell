@@ -3,7 +3,8 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MEALS, addDays, forAmount, sumEntries, todayLocal, type DiaryDay, type Meal } from '@forkbell/shared';
-import { api, post } from '../../../lib/api';
+import { cachedGet } from '../../../lib/sync';
+import { copyDay } from '../../../lib/actions';
 import { MacroBar } from '../../../components/MacroBar';
 import { color, space, type } from '../../../lib/theme';
 
@@ -28,7 +29,7 @@ export default function Diary() {
 
   const load = useCallback(async () => {
     try {
-      setDay(await api<DiaryDay>(`/api/diary/${date}`));
+      setDay(await cachedGet<DiaryDay>(`/api/diary/${date}`));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -52,7 +53,7 @@ export default function Diary() {
     setCopying(true);
     setNotice(null);
     try {
-      const { copied } = await post<{ copied: number }>('/api/diary/copy', { from: prev, to: date, ...(meal ? { meal } : {}) });
+      const copied = await copyDay(prev, date, meal);
       if (!copied) setNotice(`Nothing was logged${meal ? ` for ${MEAL_NAMES[meal].toLowerCase()}` : ''} ${relative ? prevName : `on ${prevName}`}.`);
       await load();
     } catch (e) {

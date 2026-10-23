@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Program, RoutineExercise } from '@forkbell/shared';
+import { cachedGet } from '../../lib/sync';
 import { api, del } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { formatDuration } from '../../lib/units';
@@ -19,7 +20,7 @@ export default function RoutineEditor() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api<{ programs: Program[] }>('/api/programs').then(
+    cachedGet<{ programs: Program[] }>('/api/programs').then(
       (r) => {
         const routine = r.programs.find((p) => p.id === programId)?.routines.find((x) => x.id === id);
         if (!routine) return setError('That day was not found.');

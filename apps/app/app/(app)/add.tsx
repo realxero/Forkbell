@@ -3,7 +3,9 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { forAmount, mealForTime, per100Problems, todayLocal, type Food, type FoodCandidate, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
-import { api, ApiError, post } from '../../lib/api';
+import { api, ApiError } from '../../lib/api';
+import { cachedGet } from '../../lib/sync';
+import { addEntry, createFood, findByBarcodeOffline, foodLibrary, searchOffline } from '../../lib/actions';
 import { AmountPicker, Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { BarcodeCamera } from '../../components/BarcodeCamera';
 import { color, space, type } from '../../lib/theme';
@@ -28,7 +30,8 @@ export default function AddFood() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<RecentFoods>(`/api/foods/recent?today=${todayLocal()}`).then(setRecent, () => setRecent({ recent: [], frequent: [] }));
+    cachedGet<RecentFoods>(`/api/foods/recent?today=${todayLocal()}`).then(setRecent, () => setRecent({ recent: [], frequent: [] }));
+    void foodLibrary(); // keep a copy for searching offline
   }, []);
 
   // Search 350 ms after typing stops; ignore answers to older queries.
@@ -42,7 +45,11 @@ export default function AddFood() {
         const r = await api<SearchResult>(`/api/foods/search?q=${encodeURIComponent(query)}`);
         if (live) setFound(r);
       } catch (e) {
-        if (live) setError(message(e));
+        // No connection: search the foods kept on this device.
+        if (e instanceof ApiError && e.status === 0) {
+          const mine = await searchOffline(query);
+          if (live) setFound({ mine, results: [], errors: ['Offline: showing your foods and common foods only.'] });
+        } else if (live) setError(message(e));
       } finally {
         if (live) setSearching(false);
       }
@@ -55,7 +62,7 @@ export default function AddFood() {
 
   const log = async (food: Pick, grams: number, toMeal: Meal) => {
     setError(null);
-    await post('/api/diary', 'id' in food ? { date, meal: toMeal, grams, foodId: food.id } : { date, meal: toMeal, grams, food });
+    await addEntry({ date, meal: toMeal, grams, food });
   };
 
   /** One tap: log a recent food with last time's amount and stay here to add more. */
@@ -75,6 +82,11 @@ export default function AddFood() {
       const food = r.food ?? r.candidate;
       if (food) setView({ kind: 'amount', food });
     } catch (e) {
+      if (e instanceof ApiError && e.status === 0) {
+        const known = await findByBarcodeOffline(code);
+        if (known) return setView({ kind: 'amount', food: known });
+        return setView({ kind: 'create', barcode: code.replace(/\D/g, ''), note: 'You’re offline and this barcode isn’t saved on this device. Add it from the label and it syncs later.' });
+      }
       // Not found (or Open Food Facts is down): offer to add it, with the barcode filled in.
       setView({ kind: 'create', barcode: code.replace(/\D/g, ''), note: message(e) });
     }
@@ -292,7 +304,7 @@ function CreateFood({ initialName, barcode, note, onCreated, onCancel }: { initi
   const save = async () => {
     setError(null);
     try {
-      const { food } = await post<{ food: Food }>('/api/foods', {
+      const food = await createFood({
         name: form.name,
         brand: form.brand || null,
         source: 'custom',

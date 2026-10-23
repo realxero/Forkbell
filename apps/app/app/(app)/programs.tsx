@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Program } from '@forkbell/shared';
+import { cachedGet } from '../../lib/sync';
 import { api, del, post } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { color, space, type } from '../../lib/theme';
@@ -19,7 +20,7 @@ export default function Programs() {
 
   const load = useCallback(async () => {
     try {
-      setData(await api('/api/programs'));
+      setData(await cachedGet('/api/programs'));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

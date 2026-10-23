@@ -15,6 +15,8 @@ export const per100Schema = z.object({
 });
 
 export const foodInputSchema = z.object({
+  /** made on the device for foods created offline, so a resend can't duplicate it */
+  id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(200),
   brand: z.string().trim().max(200).nullish(),
   source: z.enum(['custom', 'off', 'usda']),
@@ -28,6 +30,8 @@ export const foodInputSchema = z.object({
 
 export const addEntrySchema = z
   .object({
+    /** made on the device, so sending the same entry twice logs it once */
+    id: z.string().uuid().optional(),
     date: dateSchema,
     meal: z.enum(MEALS),
     grams: z.number().positive('Enter an amount above 0.').max(10000, 'That is more than 10 kg.'),

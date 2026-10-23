@@ -3,7 +3,8 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleShee
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { DiaryEntry } from '@forkbell/shared';
-import { api, del } from '../../lib/api';
+import { api, ApiError } from '../../lib/api';
+import { deleteEntry, findCachedEntry, updateEntry } from '../../lib/actions';
 import { AmountPicker } from '../../components/AmountPicker';
 import { color, space, type } from '../../lib/theme';
 
@@ -14,15 +15,16 @@ export default function EditEntry() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const cached = findCachedEntry(id);
     api<{ entry: DiaryEntry }>(`/api/diary/entry/${id}`).then(
       (r) => setEntry(r.entry),
-      (e) => setError(e instanceof Error ? e.message : String(e)),
+      (e) => (cached && (e instanceof ApiError ? e.status === 0 || e.status === 404 : false) ? setEntry(cached) : setError(e instanceof Error ? e.message : String(e))),
     );
   }, [id]);
 
   const remove = async () => {
     try {
-      await del(`/api/diary/${id}`);
+      await deleteEntry(entry!);
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -50,7 +52,7 @@ export default function EditEntry() {
             onSubmit={async (grams, meal) => {
               setError(null);
               try {
-                await api(`/api/diary/${id}`, { method: 'PATCH', body: JSON.stringify({ grams, meal }) });
+                await updateEntry(entry, { grams, meal });
                 router.back();
               } catch (e) {
                 setError(e instanceof Error ? e.message : String(e));

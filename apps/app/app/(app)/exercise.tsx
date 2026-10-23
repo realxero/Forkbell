@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Exercise, PersonalRecord, SetEntry } from '@forkbell/shared';
+import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
 import { color, space, type } from '../../lib/theme';
@@ -34,7 +35,7 @@ export default function ExerciseDetail() {
   const [d, setD] = useState<Detail | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    api<Detail>(`/api/exercises/${id}`).then(setD, (e) => setError(e instanceof Error ? e.message : String(e)));
+    cachedGet<Detail>(`/api/exercises/${id}`).then(setD, (e) => setError(e instanceof Error ? e.message : String(e)));
   }, [id]);
 
   const value = (r: PersonalRecord) =>

@@ -3,7 +3,9 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, todayLocal, type Program, type Workout, type WorkoutSummary } from '@forkbell/shared';
-import { api, ApiError, post } from '../../../lib/api';
+import { ApiError } from '../../../lib/api';
+import { cachedGet } from '../../../lib/sync';
+import { startWorkout } from '../../../lib/actions';
 import { formatDuration, useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { color, space, type } from '../../../lib/theme';
@@ -29,9 +31,9 @@ export default function Train() {
   const load = useCallback(async () => {
     try {
       const [o, p, h] = await Promise.all([
-        api<{ workout: Workout | null }>('/api/workouts/open'),
-        api<{ programs: Program[] }>('/api/programs'),
-        api<{ workouts: WorkoutSummary[] }>('/api/workouts?limit=20'),
+        cachedGet<{ workout: Workout | null }>('/api/workouts/open'),
+        cachedGet<{ programs: Program[] }>('/api/programs'),
+        cachedGet<{ workouts: WorkoutSummary[] }>('/api/workouts?limit=20'),
       ]);
       setOpen(o.workout);
       setProgram(p.programs.find((x) => x.active) ?? null);
@@ -50,8 +52,8 @@ export default function Train() {
   const start = async (routineId?: string) => {
     setStarting(true);
     try {
-      const r = await post<{ workout: Workout }>('/api/workouts', { date: todayLocal(), ...(routineId ? { routineId } : {}) });
-      router.push({ pathname: '/workout', params: { id: r.workout.id } });
+      const w = await startWorkout(todayLocal(), routineId);
+      router.push({ pathname: '/workout', params: { id: w.id } });
     } catch (e) {
       // Already one going: open that instead.
       const id = e instanceof ApiError && e.status === 409 ? open?.id : null;
@@ -130,7 +132,7 @@ export default function Train() {
             <View style={{ flex: 1 }}>
               <Text style={type.body}>{w.name}</Text>
               <Text style={type.small}>
-                {dayName(w.date)} · {w.sets} sets{w.volumeKg ? ` · ${units.label(w.volumeKg)}` : ''}
+                {dayName(w.date)} · {w.sets} {w.sets === 1 ? 'set' : 'sets'}{w.volumeKg ? ` · ${units.label(w.volumeKg)}` : ''}
                 {w.finishedAt ? ` · ${formatDuration((Date.parse(w.finishedAt) - Date.parse(w.startedAt)) / 1000)}` : ''}
               </Text>
             </View>

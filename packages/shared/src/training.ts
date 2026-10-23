@@ -285,9 +285,15 @@ export const saveWorkoutSchema = z.object({
 });
 
 export const startWorkoutSchema = z.object({
+  /** made on the device for workouts started offline */
+  id: z.string().uuid().optional(),
   date: dateSchema,
   routineId: z.string().uuid().nullish(),
+  /** when the workout really started, for ones started offline and sent later */
+  startedAt: z.string().datetime({ offset: true }).optional(),
 });
+
+export const finishWorkoutSchema = z.object({ finishedAt: z.string().datetime({ offset: true }).optional() });
 
 export const exerciseInputSchema = z.object({
   name: z.string().trim().min(1).max(120),

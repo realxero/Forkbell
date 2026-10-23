@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import type { Me } from '@forkbell/shared';
-import { api, ApiError, loadConnection, getServerUrl, setServerUrl, setToken, post } from './api';
+import { ApiError, loadConnection, getServerUrl, setServerUrl, setToken, post } from './api';
+import { cachedGet, updateCache } from './sync';
 
 type Status = 'loading' | 'signedOut' | 'signedIn';
 type Auth = {
@@ -31,9 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshMe = useCallback(async () => {
     try {
-      setMe(await api<Me>('/api/me'));
+      // Offline, this is the copy from last time, so the app still opens.
+      setMe(await cachedGet<Me>('/api/me'));
       setStatus('signedIn');
     } catch (e) {
+      if (e instanceof ApiError && e.status === 401) updateCache('/api/me', () => undefined);
       setMe(null);
       setStatus('signedOut');
       if (!(e instanceof ApiError && e.status === 401)) setError(e instanceof Error ? e.message : String(e));
@@ -75,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await post('/auth/logout', {}).catch(() => {});
+    updateCache('/api/me', () => undefined);
     await setToken(null);
     setMe(null);
     setStatus('signedOut');

@@ -3,7 +3,9 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Exercise, PersonalRecord, SetEntry, Workout, WorkoutExercise } from '@forkbell/shared';
-import { api, del, post } from '../../lib/api';
+import { api } from '../../lib/api';
+import { cachedGet } from '../../lib/sync';
+import { discardWorkout, finishWorkout, saveWorkout, type FinishSummary } from '../../lib/actions';
 import { confirm } from '../../lib/confirm';
 import { formatDuration, useUnit } from '../../lib/units';
 import { ExercisePicker } from '../../components/ExercisePicker';
@@ -24,7 +26,7 @@ function placeholderFor(e: WorkoutExercise, k: number) {
   };
 }
 
-type Summary = { durationSeconds: number; sets: number; volumeKg: number; records: PersonalRecord[] };
+type Summary = FinishSummary;
 const blankSet = (): SetEntry => ({ weightKg: null, reps: null, seconds: null, rpe: null, warmup: false, done: false });
 
 export default function WorkoutScreen() {
@@ -47,7 +49,7 @@ export default function WorkoutScreen() {
   const inFlight = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
-    api<{ workout: Workout }>(`/api/workouts/${id}`).then(
+    cachedGet<{ workout: Workout }>(`/api/workouts/${id}`).then(
       (r) => {
         latest.current = r.workout;
         setW(r.workout);
@@ -76,15 +78,8 @@ export default function WorkoutScreen() {
     if (!cur) return;
     setSaveState('saving');
     try {
-      await api(`/api/workouts/${cur.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          name: cur.name,
-          date: cur.date,
-          notes: cur.notes,
-          exercises: cur.exercises.map((e) => ({ exerciseId: e.exercise.id, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, sets: e.sets })),
-        }),
-      });
+      // Saved on the device right away; sent now, or later if there's no signal.
+      await saveWorkout(cur);
       setSaveState(latest.current === cur ? 'saved' : 'saving');
     } catch (e) {
       setSaveState('error');
@@ -178,7 +173,7 @@ export default function WorkoutScreen() {
     setFinishing(true);
     try {
       await flush();
-      const r = await post<{ summary?: Summary; discarded?: boolean }>(`/api/workouts/${w!.id}/finish`, {});
+      const r = await finishWorkout(latest.current ?? w!);
       if (r.discarded) return router.back();
       setRestEnd(null);
       setSummary(r.summary!);
@@ -193,7 +188,7 @@ export default function WorkoutScreen() {
     if (!(await confirm(w!.finishedAt ? 'Delete this workout?' : 'Discard this workout?', 'Its sets will be deleted. This can’t be undone.', 'Delete'))) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-    await del(`/api/workouts/${w!.id}`).catch(() => {});
+    await discardWorkout(w!).catch(() => {});
     router.back();
   };
 
@@ -454,6 +449,8 @@ function SummaryView({ w, summary }: { w: Workout; summary: Summary }) {
               </View>
             ))}
           </View>
+        ) : summary.offline ? (
+          <Text style={type.small}>Saved on this device. Records are checked once it syncs.</Text>
         ) : (
           <Text style={type.small}>No new records this time. Showing up is how they happen.</Text>
         )}

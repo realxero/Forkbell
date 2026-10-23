@@ -75,13 +75,18 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
     const userId = c.get('userId');
     try {
       const entry = await asUser(userId, async (tx) => {
+        if (input.id) {
+          // Sent before (the answer was lost on a bad connection): return what's there.
+          const [prior] = await tx.select({ entry: diaryEntries, food: foods }).from(diaryEntries).innerJoin(foods, eq(foods.id, diaryEntries.foodId)).where(eq(diaryEntries.id, input.id)).limit(1);
+          if (prior) return { id: prior.entry.id, date: prior.entry.date, meal: prior.entry.meal, grams: prior.entry.grams, food: toFood(prior.food) } satisfies DiaryEntry;
+        }
         let foodId = input.foodId;
         if (input.food) foodId = (await saveFood(tx, userId, input.food)).id;
         const [food] = await tx.select().from(foods).where(eq(foods.id, foodId!)).limit(1);
         if (!food) return null; // not yours and not built in: RLS hides it
         const [row] = await tx
           .insert(diaryEntries)
-          .values({ userId, date: input.date, meal: input.meal, grams: input.grams, foodId: food.id })
+          .values({ ...(input.id ? { id: input.id } : {}), userId, date: input.date, meal: input.meal, grams: input.grams, foodId: food.id })
           .returning();
         return { id: row!.id, date: row!.date, meal: row!.meal, grams: row!.grams, food: toFood(food) } satisfies DiaryEntry;
       });
