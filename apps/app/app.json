@@ -53,6 +53,14 @@
             "minSdkVersion": 26
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Forkbell lets you pick a meal photo for Bell to estimate.",
+          "cameraPermission": "Forkbell uses the camera to scan barcodes and photograph meals for Bell.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

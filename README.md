@@ -4,7 +4,7 @@ Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
 Authelia (or any OpenID Connect provider).
 
-**Status:** phase 6. Food: search (Open Food Facts, USDA, about a hundred
+**Status:** phase 7. Food: search (Open Food Facts, USDA, about a hundred
 built-in common foods, your own), barcode scanning, one-tap logging from recent
 and most-logged foods, copying meals, daily goals. Training: a library of about
 60 exercises plus your own, starter programs, workout logging with weight,
@@ -15,7 +15,9 @@ sustainable calorie suggestion, body measurements, streaks and milestones.
 Offline: the app opens and logging works with no signal; changes are kept on
 the device and sync by themselves when the connection returns. Health: the
 phone app reads steps, activity, resting heart rate and weigh-ins from Apple
-Health or Health Connect, and sends back daily calories, macros and workouts. See
+Health or Health Connect, and sends back daily calories, macros and workouts.
+Bell, the assistant: ask about your own data, or log food by describing it or
+sending a photo, with every item reviewed before it's added. See
 [ROADMAP.md](ROADMAP.md) for what comes next.
 
 ## How it fits together
@@ -73,6 +75,24 @@ nothing is counted twice. Imported weights fill in days you didn't weigh in
 yourself; one you typed into Forkbell is never replaced. The iOS build is
 ad-hoc signed with the HealthKit entitlement so a sideloading tool can keep it
 when it re-signs the app.
+
+## Bell (the assistant)
+
+Bell uses the model you choose, set on the server: `AI_PROVIDER=anthropic`
+with an Anthropic key, or `AI_PROVIDER=openai` for OpenAI and anything that
+speaks its API (Ollama, LM Studio, OpenRouter...; set `AI_BASE_URL`). Photo
+logging needs a model that can see images. Leave `AI_PROVIDER` empty and Bell
+stays off.
+
+- Bell reads your data through the same routes as the app, as you, so row-level
+  security applies to everything it sees. It never writes on its own.
+- Food it wants to log comes back as a review card: change amounts or meals,
+  untick items, then add. Numbers it makes up are checked with the same
+  impossible-number rules as foods you type, and marked as estimates.
+- Photos are sent to the model only with the message they're attached to and
+  are not stored on the server.
+- About 40 messages per person per 10 minutes, to keep API costs in check.
+- `apps/server/scripts/mock-ai.mjs` is a stand-in model for testing without a key.
 
 ## Offline
 

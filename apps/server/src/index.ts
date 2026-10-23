@@ -16,6 +16,7 @@ import { workoutRoutes } from './routes/workouts.ts';
 import { programRoutes, routineRoutes } from './routes/programs.ts';
 import { progressRoutes } from './routes/progress.ts';
 import { healthRoutes } from './routes/health.ts';
+import { bellRoutes } from './routes/bell.ts';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
@@ -38,6 +39,26 @@ api.route('/programs', programRoutes(database));
 api.route('/routines', routineRoutes(database));
 api.route('/progress', progressRoutes(database));
 api.route('/health', healthRoutes(database));
+
+// Bell reads data through the same routes as the app, as the signed-in person.
+// This copy of the API is never served; only Bell's tools call it, in-process.
+const internalApi = new Hono<AppEnv>();
+internalApi.use('*', async (c, next) => {
+  c.set('userId', c.req.header('x-forkbell-user')!);
+  await next();
+});
+internalApi.route('/api/diary', diaryRoutes(database));
+internalApi.route('/api/foods', foodRoutes(database));
+internalApi.route('/api/exercises', exerciseRoutes(database));
+internalApi.route('/api/workouts', workoutRoutes(database));
+internalApi.route('/api/progress', progressRoutes(database));
+const internal = async (path: string, userId: string) => {
+  const res = await internalApi.request(path, { headers: { 'x-forkbell-user': userId } });
+  const data = await res.json();
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+  return data;
+};
+api.route('/bell', bellRoutes(database, internal));
 app.route('/api', api);
 
 app.onError((err, c) => {
