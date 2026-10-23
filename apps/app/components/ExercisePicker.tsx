@@ -22,6 +22,7 @@ export function ExercisePicker({
   onClose,
   title = 'Add exercise',
   inline = false,
+  initialMuscle = null,
 }: {
   visible: boolean;
   onPick: (e: Exercise) => void;
@@ -29,9 +30,14 @@ export function ExercisePicker({
   title?: string;
   /** render as a page instead of a sheet over the current screen */
   inline?: boolean;
+  /** start filtered to one muscle, e.g. when suggesting a swap */
+  initialMuscle?: string | null;
 }) {
   const [q, setQ] = useState('');
-  const [muscle, setMuscle] = useState<Muscle | null>(null);
+  const [muscle, setMuscle] = useState<Muscle | null>((initialMuscle as Muscle) ?? null);
+  useEffect(() => {
+    if (visible) setMuscle((initialMuscle as Muscle) ?? null);
+  }, [visible, initialMuscle]);
   const [list, setList] = useState<Listed[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);

@@ -133,6 +133,12 @@ const rows: Row[] = [
   ['orange-juice', 'Orange juice', 45, 0.7, 10.4, 0.2, 0.2, 8.4, 1, { '1 cup': 248 }],
   ['cola', 'Cola, regular', 42, 0, 10.6, 0, 0, 10.6, 4, { '1 can (12 fl oz)': 368 }],
   ['coffee-black', 'Coffee, black', 1, 0.1, 0, 0, 0, 0, 2, { '1 cup': 240 }],
+  ['cola-zero', 'Cola, zero sugar', 1, 0, 0.1, 0, 0, 0, 12, { '1 can (12 fl oz)': 355 }],
+  ['sparkling-water', 'Sparkling water, unflavored', 0, 0, 0, 0, 0, 0, 2, { '1 can (12 fl oz)': 355 }],
+  ['iced-tea-unsweetened', 'Iced tea, unsweetened', 1, 0, 0.3, 0, 0, 0, 3, { '1 bottle (16 fl oz)': 473 }],
+  ['sweet-tea', 'Iced tea, sweetened', 34, 0, 8.6, 0, 0, 8.5, 3, { '1 bottle (16 fl oz)': 473 }],
+  ['energy-drink', 'Energy drink, regular', 45, 0.3, 11, 0, 0, 11, 40, { '1 can (16 fl oz)': 473 }],
+  ['energy-drink-zero', 'Energy drink, sugar free', 2, 0.3, 0.3, 0, 0, 0, 40, { '1 can (16 fl oz)': 473 }],
 ];
 
 export const builtinFoods: BuiltinFood[] = rows.map(([key, name, kcal, protein, carbs, fat, fiber, sugar, sodium, portions]) => ({

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Exercise, PersonalRecord, SetEntry, Workout, WorkoutExercise } from '@forkbell/shared';
+import { bigJump, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet } from '../../lib/sync';
 import { discardWorkout, finishWorkout, saveWorkout, type FinishSummary } from '../../lib/actions';
@@ -36,6 +37,8 @@ export default function WorkoutScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const [picker, setPicker] = useState(false);
+  /** when set, the picker swaps this exercise instead of adding one */
+  const [swapIndex, setSwapIndex] = useState<number | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
   const [restEnd, setRestEnd] = useState<number | null>(null);
   const [restTotal, setRestTotal] = useState(0);
@@ -143,18 +146,32 @@ export default function WorkoutScreen() {
 
   const addExercise = async (ex: Exercise) => {
     setPicker(false);
+    if (swapIndex !== null) {
+      // Swap in place: same sets and targets, the new exercise's own history.
+      const i = swapIndex;
+      setSwapIndex(null);
+      let previous: SetEntry[] = [];
+      try {
+        previous = (await api<{ sessions: { sets: SetEntry[] }[] }>(`/api/exercises/${ex.id}`)).sessions[0]?.sets ?? [];
+      } catch {
+        /* not essential */
+      }
+      return updateExercise(i, (x) => ({ ...x, exercise: ex, restSeconds: ex.restSeconds, previous, tips: [], pain: false, painNote: null, sets: x.sets.map((s) => ({ ...s, weightKg: null, done: false })) }));
+    }
     // What you did last time fills the "previous" column straight away.
     let previous: SetEntry[] = [];
+    let tips: WorkoutExercise['tips'] = [];
     try {
-      const r = await api<{ sessions: { sets: SetEntry[] }[] }>(`/api/exercises/${ex.id}`);
+      const r = await api<{ sessions: { sets: SetEntry[] }[]; tips?: WorkoutExercise['tips'] }>(`/api/exercises/${ex.id}`);
       previous = r.sessions[0]?.sets ?? [];
+      tips = r.tips ?? [];
     } catch {
       /* not essential */
     }
     const count = Math.max(1, previous.filter((s) => !s.warmup).length);
     update((w) => ({
       ...w,
-      exercises: [...w.exercises, { exercise: ex, restSeconds: ex.restSeconds, targetSets: null, repMin: null, repMax: null, sets: Array.from({ length: count }, blankSet), previous }],
+      exercises: [...w.exercises, { exercise: ex, restSeconds: ex.restSeconds, targetSets: null, repMin: null, repMax: null, sets: Array.from({ length: count }, blankSet), previous, tips }],
     }));
   };
 
@@ -250,6 +267,12 @@ export default function WorkoutScreen() {
                 setMenu(null);
                 update((w) => ({ ...w, exercises: w.exercises.filter((_, j) => j !== i) }));
               }}
+              onSwap={() => {
+                setMenu(null);
+                setSwapIndex(i);
+                setPicker(true);
+              }}
+              onPain={(pain, painNote) => updateExercise(i, (x) => ({ ...x, pain, painNote }))}
             />
           ))}
 
@@ -275,7 +298,16 @@ export default function WorkoutScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-      <ExercisePicker visible={picker} onPick={addExercise} onClose={() => setPicker(false)} />
+      <ExercisePicker
+        visible={picker}
+        title={swapIndex !== null ? 'Swap for…' : 'Add exercise'}
+        initialMuscle={swapIndex !== null ? (w.exercises[swapIndex]?.exercise.muscle ?? null) : null}
+        onPick={addExercise}
+        onClose={() => {
+          setPicker(false);
+          setSwapIndex(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -294,6 +326,8 @@ function ExerciseCard(props: {
   onRest: (by: number) => void;
   onMove: (by: number) => void;
   onRemove: () => void;
+  onSwap: () => void;
+  onPain: (pain: boolean, note: string | null) => void;
 }) {
   const { e, units } = props;
   const kind = e.exercise.kind;
@@ -318,9 +352,25 @@ function ExerciseCard(props: {
           <Pressable onPress={() => props.onRest(15)}><Text style={s.menuItem}>Rest +15 s</Text></Pressable>
           <Pressable onPress={() => props.onMove(-1)}><Text style={s.menuItem}>Move up</Text></Pressable>
           <Pressable onPress={() => props.onMove(1)}><Text style={s.menuItem}>Move down</Text></Pressable>
+          <Pressable onPress={props.onSwap}><Text style={s.menuItem}>Swap for a similar exercise</Text></Pressable>
+          <Pressable onPress={() => props.onPain(!e.pain, e.pain ? null : e.painNote ?? null)}>
+            <Text style={[s.menuItem, { color: color.over }]}>{e.pain ? 'Clear pain flag' : 'Flag pain or discomfort'}</Text>
+          </Pressable>
           <Pressable onPress={props.onRemove}><Text style={[s.menuItem, { color: color.over }]}>Remove</Text></Pressable>
         </View>
       )}
+      {e.pain && (
+        <View style={s.pain}>
+          <Text style={[type.small, { color: color.over, fontWeight: '700' }]}>Pain flagged. Stop or go lighter; it’ll be shown next time.</Text>
+          <PainNote value={e.painNote ?? ''} onSave={(note) => props.onPain(true, note || null)} />
+        </View>
+      )}
+      {e.tips?.map((t) => (
+        <Text key={t.kind} style={[s.tip, t.kind === 'pain' && { color: color.over }]}>
+          {t.kind === 'checkup' ? '🩺 ' : t.kind === 'pain' ? '⚠ ' : '💡 '}
+          {t.text}
+        </Text>
+      ))}
 
       <View style={s.setHead}>
         <Text style={[s.colSet, s.th]}>Set</Text>
@@ -396,6 +446,12 @@ function ExerciseCard(props: {
           </View>
         );
       })}
+      {(() => {
+        // A big jump over last time's top set gets a heads-up (once per card).
+        const top = e.sets.find((x) => !x.warmup && x.weightKg !== null && bigJump(x.weightKg, e.previous, units.unit));
+        const msg = top ? bigJump(top.weightKg, e.previous, units.unit) : null;
+        return msg ? <Text style={s.tip}>💡 {msg}</Text> : null;
+      })()}
 
       <View style={s.cardFoot}>
         <Pressable onPress={props.onAddSet} hitSlop={6}><Text style={s.addText}>+ Add set</Text></Pressable>
@@ -404,6 +460,21 @@ function ExerciseCard(props: {
         )}
       </View>
     </View>
+  );
+}
+
+/** A short note on where it hurt; saved when you leave the box. */
+function PainNote({ value, onSave }: { value: string; onSave: (note: string) => void }) {
+  const [text, setText] = useState(value);
+  return (
+    <TextInput
+      value={text}
+      onChangeText={setText}
+      onBlur={() => text.trim() !== value && onSave(text.trim())}
+      placeholder="Where, and what it felt like (optional)"
+      style={s.painInput}
+      maxLength={300}
+    />
   );
 }
 
@@ -500,6 +571,9 @@ const s = StyleSheet.create({
   check: { height: 36, borderRadius: 8, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
   checkOn: { backgroundColor: color.fat, borderColor: color.fat },
   checkText: { fontSize: 18, fontWeight: '800', color: color.ironSoft },
+  tip: { ...type.small, color: '#7A5600', backgroundColor: '#FFF4D6', borderRadius: 8, padding: space(2), marginBottom: space(1) },
+  pain: { backgroundColor: '#FDECEA', borderRadius: 8, padding: space(2), gap: space(1), marginBottom: space(1) },
+  painInput: { ...type.small, backgroundColor: color.card, borderRadius: 6, padding: space(2) },
   cardFoot: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: space(2) },
   addText: { color: color.protein, fontWeight: '700', fontSize: 15 },
   addExercise: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },

@@ -2,7 +2,8 @@
 // takes a transaction from asUser(), so row-level security applies throughout.
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, workoutExercises, workoutSets, workouts, type Tx } from '@forkbell/db';
-import type { Exercise, Routine, SaveWorkoutInput, SetEntry, Workout, WorkoutExercise } from '@forkbell/shared';
+import { trainingTips, type Exercise, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { users } from '@forkbell/db';
 
 type ExerciseRow = typeof exercises.$inferSelect;
 type SetRow = typeof workoutSets.$inferSelect;
@@ -83,6 +84,27 @@ export async function historyBefore(tx: Tx, exerciseIds: string[], workout: { id
   return out;
 }
 
+/** The last three finished sessions of each exercise before a workout, newest first, with pain flags. */
+export async function recentSessions(tx: Tx, exerciseIds: string[], before: { id: string; startedAt: string }) {
+  const out = new Map<string, PastSession[]>();
+  if (!exerciseIds.length) return out;
+  const rows = await tx
+    .select({ we: workoutExercises, date: workouts.date, startedAt: workouts.startedAt })
+    .from(workoutExercises)
+    .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
+    .where(and(inArray(workoutExercises.exerciseId, exerciseIds), isNotNull(workouts.finishedAt), ne(workouts.id, before.id), lt(workouts.startedAt, before.startedAt)))
+    .orderBy(desc(workouts.startedAt))
+    .limit(exerciseIds.length * 6);
+  const picked = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const list = picked.get(r.we.exerciseId) ?? [];
+    if (list.length < 3) picked.set(r.we.exerciseId, [...list, r]);
+  }
+  const sets = await setsFor(tx, [...picked.values()].flat().map((r) => r.we.id));
+  for (const [exId, list] of picked) out.set(exId, list.map((r) => ({ date: r.date, sets: sets.get(r.we.id) ?? [], pain: r.we.pain, painNote: r.we.painNote })));
+  return out;
+}
+
 export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
   const [w] = await tx.select().from(workouts).where(eq(workouts.id, id)).limit(1);
   if (!w) return null;
@@ -94,6 +116,9 @@ export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
     .orderBy(asc(workoutExercises.position));
   const sets = await setsFor(tx, items.map((i) => i.we.id));
   const previous = await lastSessions(tx, [...new Set(items.map((i) => i.ex.id))], { id: w.id, startedAt: w.startedAt });
+  const [me] = await tx.select({ prefs: users.preferences }).from(users).limit(1);
+  const tipsOn = (me?.prefs as { trainingTips?: boolean } | undefined)?.trainingTips !== false;
+  const recent = w.finishedAt ? new Map<string, PastSession[]>() : await recentSessions(tx, [...new Set(items.map((i) => i.ex.id))], { id: w.id, startedAt: w.startedAt });
   const list: WorkoutExercise[] = items.map(({ we, ex }) => ({
     exercise: toExercise(ex),
     restSeconds: we.restSeconds,
@@ -102,6 +127,10 @@ export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
     repMax: we.repMax,
     sets: sets.get(we.id) ?? [],
     previous: previous.get(ex.id) ?? [],
+    pain: we.pain,
+    painNote: we.painNote,
+    // Pain notes always show; the other tips follow the setting.
+    tips: trainingTips(recent.get(ex.id) ?? [], w.date).filter((t) => tipsOn || t.kind === 'pain'),
   }));
   return { id: w.id, date: w.date, name: w.name, routineId: w.routineId, startedAt: w.startedAt, finishedAt: w.finishedAt, notes: w.notes, exercises: list };
 }
@@ -114,7 +143,7 @@ export async function saveWorkout(tx: Tx, id: string, input: SaveWorkoutInput) {
   for (const [position, e] of input.exercises.entries()) {
     const [we] = await tx
       .insert(workoutExercises)
-      .values({ workoutId: id, exerciseId: e.exerciseId, position, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax } as typeof workoutExercises.$inferInsert)
+      .values({ workoutId: id, exerciseId: e.exerciseId, position, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, pain: e.pain ?? false, painNote: e.painNote ?? null } as typeof workoutExercises.$inferInsert)
       .returning({ id: workoutExercises.id });
     if (e.sets.length) {
       await tx.insert(workoutSets).values(e.sets.map((s, i) => ({ workoutExerciseId: we!.id, position: i, ...s }) as typeof workoutSets.$inferInsert));

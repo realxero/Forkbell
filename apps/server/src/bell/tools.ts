@@ -1,7 +1,7 @@
 // Bell's tools. Reads go through the same API routes the app uses (as the
 // signed-in person, so row-level security applies); Bell never writes. Food
 // it wants to log comes back as proposals the person reviews and confirms.
-import { per100Problems, proposeArgsSchema, type DiaryDay, type Food, type FoodProposal, type Meal } from '@forkbell/shared';
+import { checkFood, per100Problems, proposeArgsSchema, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences } from '@forkbell/shared';
 import type { ToolSpec } from './providers.ts';
 
 export type Internal = (path: string) => Promise<unknown>;
@@ -82,7 +82,7 @@ const trimFood = (f: Food & { id?: string }) => ({
 });
 
 /** Run one tool. Returns text for the model; proposals are collected separately. */
-export async function runTool(name: string, args: unknown, ctx: { call: Internal; today: string; meal: Meal; proposals: FoodProposal[] }): Promise<string> {
+export async function runTool(name: string, args: unknown, ctx: { call: Internal; today: string; meal: Meal; proposals: FoodProposal[]; prefs: Preferences }): Promise<string> {
   const a = (args ?? {}) as Record<string, string>;
   switch (name) {
     case 'get_day': {
@@ -152,6 +152,7 @@ export async function runTool(name: string, args: unknown, ctx: { call: Internal
           per100: food ? null : item.per100!,
           estimate: food ? false : item.estimate !== false,
           note: item.note ?? null,
+          warnings: checkFood(`${food?.name ?? item.name} ${food?.brand ?? item.brand ?? ''}`, ctx.prefs).reasons.filter((r) => !r.startsWith('you dislike') && !r.includes('never-suggest')),
         });
       }
       const ok = parsed.data.items.length - problems.length;
@@ -164,7 +165,14 @@ export async function runTool(name: string, args: unknown, ctx: { call: Internal
   }
 }
 
-export function systemPrompt(opts: { today: string; localTime?: string; unit: 'lb' | 'kg'; name: string | null }) {
+export function systemPrompt(opts: { today: string; localTime?: string; unit: 'lb' | 'kg'; name: string | null; prefs: Preferences }) {
+  const p = opts.prefs;
+  const rules = [
+    p.allergies.length ? `Allergies: ${p.allergies.join(', ')}. Never suggest anything that may contain them, and say when you can't be sure.` : '',
+    p.avoid.length ? `Never suggest: ${p.avoid.join(', ')}.` : '',
+    p.diet !== 'none' ? `Diet: ${p.diet}. Only suggest foods that fit it.` : '',
+    p.dislikes.length ? `Dislikes (don't suggest): ${p.dislikes.join(', ')}.` : '',
+  ].filter(Boolean);
   return `You are Bell, the assistant inside Forkbell, a food and training tracker. You're talking with ${opts.name ?? 'the person who owns this account'}.
 Today is ${opts.today}${opts.localTime ? `, ${opts.localTime} on their phone` : ''}. They use ${opts.unit} for body and lifting weights. Foods are always stored per 100 g.
 
@@ -179,5 +187,10 @@ Safety:
 - You are not a doctor or dietitian. For medical conditions, pregnancy, eating disorders, injuries or medication, suggest a professional.
 - Never recommend eating under 1,200 kcal a day or losing more than about 1% of body weight a week.
 - Never encourage training through pain; suggest rest, an easier variation, or getting it checked.
-- Encourage, never shame.`;
+- Encourage, never shame.${rules.length ? `
+
+Their food rules (hard rules for anything you suggest, including restaurant orders):
+- ${rules.join('\n- ')}` : ''}
+
+Eating out: when they name a restaurant or cuisine, suggest a few real menu items that fit what's left today, with how to order each (e.g. grilled, dressing on the side). Say when calories are your estimate rather than the restaurant's published numbers. They can log one with propose_food_entries (brand = the restaurant).`;
 }

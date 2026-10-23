@@ -77,6 +77,7 @@ export interface Me {
   email: string | null;
   goals: Goals;
   weightUnit: 'lb' | 'kg';
+  preferences: import('./food-safety.ts').Preferences;
 }
 
 /** A food you've logged before, with the amount you used last time. */

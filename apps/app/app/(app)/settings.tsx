@@ -75,6 +75,10 @@ export default function Settings() {
           ))}
         </View>
 
+        <Pressable onPress={() => router.push('/preferences')} style={{ marginTop: space(6) }}>
+          <Text style={s.link}>Food preferences and suggestions ›</Text>
+        </Pressable>
+
         <HealthSection />
 
         <View style={s.account}>

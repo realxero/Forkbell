@@ -36,6 +36,11 @@ export interface WorkoutExercise {
   sets: SetEntry[];
   /** what you did last time, for the "previous" column */
   previous: SetEntry[];
+  /** you flagged pain or discomfort on this lift in this session */
+  pain?: boolean;
+  painNote?: string | null;
+  /** safety tips from recent sessions */
+  tips?: import('./training-tips.ts').TrainingTip[];
 }
 
 export interface Workout {
@@ -279,6 +284,8 @@ export const saveWorkoutSchema = z.object({
         repMin: z.number().int().min(1).max(100).nullable(),
         repMax: z.number().int().min(1).max(100).nullable(),
         sets: z.array(setSchema).max(50),
+        pain: z.boolean().optional(),
+        painNote: z.string().max(300).nullish(),
       }),
     )
     .max(40),

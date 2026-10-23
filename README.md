@@ -4,7 +4,7 @@ Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
 Authelia (or any OpenID Connect provider).
 
-**Status:** phase 7. Food: search (Open Food Facts, USDA, about a hundred
+**Status:** phase 8. Food: search (Open Food Facts, USDA, about a hundred
 built-in common foods, your own), barcode scanning, one-tap logging from recent
 and most-logged foods, copying meals, daily goals. Training: a library of about
 60 exercises plus your own, starter programs, workout logging with weight,
@@ -17,7 +17,10 @@ the device and sync by themselves when the connection returns. Health: the
 phone app reads steps, activity, resting heart rate and weigh-ins from Apple
 Health or Health Connect, and sends back daily calories, macros and workouts.
 Bell, the assistant: ask about your own data, or log food by describing it or
-sending a photo, with every item reviewed before it's added. See
+sending a photo, with every item reviewed before it's added. Suggestions:
+lighter drink swaps, protein and fiber ideas, a sodium heads-up, planning a
+day or a week, a shopping list, allergy, diet and dislike filtering, and
+safety tips for training. See
 [ROADMAP.md](ROADMAP.md) for what comes next.
 
 ## How it fits together
@@ -75,6 +78,23 @@ nothing is counted twice. Imported weights fill in days you didn't weigh in
 yourself; one you typed into Forkbell is never replaced. The iOS build is
 ad-hoc signed with the HealthKit entitlement so a sideloading tool can keep it
 when it re-signs the app.
+
+## Suggestions and planning
+
+Rules, not AI: instant, offline, and the same every time. They live in
+`packages/shared` (`suggestions.ts`, `planner.ts`, `food-safety.ts`,
+`training-tips.ts`) with tests.
+
+- Allergies, diet and dislikes are matched on food names only (whole words,
+  plurals, a few synonyms). It errs toward keeping things out, can't see
+  hidden ingredients, and never calls anything safe. Logged foods whose names
+  match get a small flag in the diary; Bell gets the same rules.
+- Plans fill empty meals with a protein, a starch and a vegetable or fruit
+  from foods you log first, sized to what's left of your calories and protein,
+  never repeating a food in a day or the previous day's dinner.
+- Training tips: a pain flag on a lift shows next time, two in a month suggest
+  getting it checked, three near-limit sessions suggest a lighter day, and a
+  jump of more than 10% and 15 lb (7.5 kg) over last time gets a heads-up.
 
 ## Bell (the assistant)
 

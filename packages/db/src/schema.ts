@@ -17,6 +17,7 @@ export const users = pgTable('users', {
   goalWeightKg: num('goal_weight_kg'),
   goalDate: date('goal_date', { mode: 'string' }),
   weeklyWorkoutGoal: integer('weekly_workout_goal').notNull(),
+  preferences: jsonb('preferences').$type<Record<string, unknown>>().notNull(),
 });
 
 export const foods = pgTable('foods', {
@@ -113,6 +114,8 @@ export const workoutExercises = pgTable('workout_exercises', {
   targetSets: integer('target_sets'),
   repMin: integer('rep_min'),
   repMax: integer('rep_max'),
+  pain: boolean('pain').notNull(),
+  painNote: text('pain_note'),
 });
 
 export const workoutSets = pgTable('workout_sets', {

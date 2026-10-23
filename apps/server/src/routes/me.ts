@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
-import { goalsSchema, type Me } from '@forkbell/shared';
+import { goalsSchema, preferencesSchema, type Me } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -17,6 +17,8 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
       email: u.email,
       goals: { kcal: u.goalKcal, protein: u.goalProtein, carbs: u.goalCarbs, fat: u.goalFat },
       weightUnit: u.weightUnit,
+      // Stored as given; defaults fill anything missing (and anything added later).
+      preferences: preferencesSchema.parse(u.preferences ?? {}),
     };
     return c.json(me);
   });
@@ -29,6 +31,13 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
       tx.update(users).set({ goalKcal: g.kcal, goalProtein: g.protein, goalCarbs: g.carbs, goalFat: g.fat }).where(eq(users.id, c.get('userId'))),
     );
     return c.json({ goals: g });
+  });
+
+  r.put('/preferences', async (c) => {
+    const parsed = preferencesSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check your preferences.' }, 400);
+    await asUser(c.get('userId'), (tx) => tx.update(users).set({ preferences: parsed.data }).where(eq(users.id, c.get('userId'))));
+    return c.json({ preferences: parsed.data });
   });
 
   r.put('/settings', async (c) => {

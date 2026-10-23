@@ -2,7 +2,9 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MEALS, addDays, forAmount, sumEntries, todayLocal, type DiaryDay, type Meal } from '@forkbell/shared';
+import { MEALS, addDays, checkFood, forAmount, sumEntries, todayLocal, type DiaryDay, type Meal } from '@forkbell/shared';
+import { SuggestionsCard } from '../../../components/SuggestionsCard';
+import { useAuth } from '../../../lib/auth';
 import { cachedGet } from '../../../lib/sync';
 import { copyDay } from '../../../lib/actions';
 import { MacroBar } from '../../../components/MacroBar';
@@ -20,6 +22,7 @@ function dayLabel(date: string) {
 }
 
 export default function Diary() {
+  const { me } = useAuth();
   const [date, setDate] = useState(todayLocal());
   const [day, setDay] = useState<DiaryDay | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +112,13 @@ export default function Diary() {
               </View>
             </View>
 
+            <SuggestionsCard day={day} onChanged={load} />
+            {date >= todayLocal() && (
+              <Pressable onPress={() => router.push({ pathname: '/plan', params: { date } })} style={{ alignSelf: 'flex-start' }}>
+                <Text style={s.addText}>Plan {date === todayLocal() ? 'the rest of today' : 'this day'} ›</Text>
+              </Pressable>
+            )}
+
             {day.entries.length === 0 && (
               <Pressable disabled={copying} onPress={() => copyFromPrev()} style={[s.copyDay, copying && { opacity: 0.5 }]}>
                 <Text style={s.addText}>Copy everything from {prevName}</Text>
@@ -138,6 +148,11 @@ export default function Diary() {
                           <Text style={type.small} numberOfLines={1}>
                             {e.food.brand ? `${e.food.brand}, ` : ''}{e.grams} g
                           </Text>
+                          {(() => {
+                            // Name-based allergy and diet flags, so a mistake is easy to spot.
+                            const flags = me ? checkFood(`${e.food.name} ${e.food.brand ?? ''}`, me.preferences).reasons.filter((r) => r.startsWith('may contain') || r.startsWith('not ') || r.startsWith('on your avoid')) : [];
+                            return flags.length ? <Text style={s.flag}>⚠ {flags.join(' · ')} (by name)</Text> : null;
+                          })()}
                         </View>
                         <Text style={[type.body, type.number]}>{n.kcal}</Text>
                       </Pressable>
@@ -183,6 +198,7 @@ const s = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space(5) },
   add: { paddingVertical: space(3), paddingHorizontal: space(1) },
   addText: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  flag: { fontSize: 12, color: '#9A6B00', fontWeight: '600', marginTop: 2 },
   copyText: { color: color.ironSoft, fontWeight: '600', fontSize: 16 },
   copyDay: { backgroundColor: color.card, borderRadius: 12, padding: space(4), alignItems: 'center', borderWidth: 1, borderColor: color.line, borderStyle: 'dashed' },
 });

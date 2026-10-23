@@ -16,6 +16,8 @@ export interface FoodProposal {
   /** true when the numbers are Bell's estimate rather than a database or label */
   estimate: boolean;
   note: string | null;
+  /** name-based allergy or diet flags, e.g. "may contain milk" */
+  warnings: string[];
 }
 
 export const bellChatSchema = z.object({

@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { and, asc, desc, eq, ilike, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { exercises, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
-import { estimatedOneRepMax, exerciseInputSchema, setVolumeKg, type PersonalRecord, type SetEntry } from '@forkbell/shared';
+import { estimatedOneRepMax, exerciseInputSchema, preferencesSchema, setVolumeKg, todayLocal, trainingTips, type PersonalRecord, type SetEntry } from '@forkbell/shared';
+import { users } from '@forkbell/db';
 import type { AppEnv } from '../auth.ts';
-import { toExercise, toSet } from '../training.ts';
+import { recentSessions, toExercise, toSet } from '../training.ts';
 
 // Spelled out in full: inside the subquery a bare "id" would mean the workout row's id.
 const usesSql = sql<number>`(select count(*) from workout_exercises we where we.exercise_id = "exercises"."id")::int`;
@@ -56,7 +57,12 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
         .innerJoin(workouts, eq(workouts.id, workoutExercises.workoutId))
         .where(and(eq(workoutExercises.exerciseId, id), isNotNull(workouts.finishedAt), eq(workoutSets.done, true)))
         .orderBy(desc(workouts.date), desc(workouts.startedAt), asc(workoutExercises.position), asc(workoutSets.position));
-      return { ex, rows };
+      // Safety tips for adding this exercise to today's workout.
+      const recent = await recentSessions(tx, [id], { id: '00000000-0000-0000-0000-000000000000', startedAt: new Date().toISOString() });
+      const [me] = await tx.select({ prefs: users.preferences }).from(users).limit(1);
+      const tipsOn = preferencesSchema.parse(me?.prefs ?? {}).trainingTips;
+      const tips = trainingTips(recent.get(id) ?? [], todayLocal()).filter((t) => tipsOn || t.kind === 'pain');
+      return { ex, rows, tips };
     });
     if (!data) return c.json({ error: 'That exercise was not found.' }, 404);
     const exercise = toExercise(data.ex);
@@ -97,7 +103,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
       .map((s) => ({ date: s.date, e1rmKg: Math.max(0, ...s.sets.filter((x) => !x.warmup && x.weightKg && x.reps).map((x) => estimatedOneRepMax(x.weightKg!, x.reps!) ?? 0)) }))
       .filter((p) => p.e1rmKg > 0);
 
-    return c.json({ exercise, records, sessions: sessions.slice(0, 30), trend });
+    return c.json({ exercise, records, sessions: sessions.slice(0, 30), trend, tips: data.tips });
   });
 
   return r;

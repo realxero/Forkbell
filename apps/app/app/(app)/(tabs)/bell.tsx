@@ -224,6 +224,7 @@ function Proposals({ items, added, onAdded }: { items: FoodProposal[]; added: bo
                   {p.estimate ? ' · estimate' : p.food ? ' · from your foods' : ''}
                 </Text>
                 {p.note && <Text style={type.small}>{p.note}</Text>}
+                {p.warnings?.length > 0 && <Text style={[type.small, { color: '#9A6B00', fontWeight: '700' }]}>⚠ {p.warnings.join(' · ')} (by name)</Text>}
               </View>
             </View>
             {!added && p.keep && (

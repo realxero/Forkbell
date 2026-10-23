@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
-import { bellChatSchema, type BellReply, type FoodProposal } from '@forkbell/shared';
+import { bellChatSchema, preferencesSchema, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { env } from '../env.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
@@ -31,7 +31,7 @@ export function bellRoutes({ asUser }: ReturnType<typeof connect>, internal: (pa
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the message.' }, 400);
     const { messages, today, meal, localTime } = parsed.data;
 
-    const [me] = await asUser(userId, (tx) => tx.select({ name: users.name, unit: users.weightUnit }).from(users).where(eq(users.id, userId)).limit(1));
+    const [me] = await asUser(userId, (tx) => tx.select({ name: users.name, unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1));
     // Only the newest photo goes to the model; older ones are just mentioned.
     const window = messages.slice(-20);
     const lastImage = window.map((m) => Boolean(m.image)).lastIndexOf(true);
@@ -40,7 +40,8 @@ export function bellRoutes({ asUser }: ReturnType<typeof connect>, internal: (pa
       text: m.image && i !== lastImage ? `${m.text} [photo]` : m.text,
       image: i === lastImage ? m.image : undefined,
     }));
-    const system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null });
+    const prefs = preferencesSchema.parse(me?.prefs ?? {});
+    const system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null, prefs });
     const cfg = { apiKey: env.ai.apiKey, model: env.ai.model, baseUrl: env.ai.baseUrl };
     const model = env.ai.provider === 'anthropic' ? anthropic(cfg, system, turns, TOOLS) : openai(cfg, system, turns, TOOLS);
 
@@ -57,7 +58,7 @@ export function bellRoutes({ asUser }: ReturnType<typeof connect>, internal: (pa
         for (const tc of step.calls) {
           let output: string;
           try {
-            output = await runTool(tc.name, tc.args, { call, today, meal, proposals });
+            output = await runTool(tc.name, tc.args, { call, today, meal, proposals, prefs });
           } catch (e) {
             output = `Tool failed: ${e instanceof Error ? e.message : String(e)}`;
           }
