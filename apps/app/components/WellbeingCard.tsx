@@ -18,7 +18,7 @@ const avg = (xs: (number | null)[]) => {
 };
 
 /** Today's sleep, mood and energy, a week's averages, and today's medications. */
-export function WellbeingCard() {
+export function WellbeingCard({ healthSleepMin = null }: { healthSleepMin?: number | null }) {
   const viewing = useViewing();
   const [w, setW] = useState<Wellbeing | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,14 +35,16 @@ export function WellbeingCard() {
         setForm(t);
         setSleep(t.sleepHours === null ? '' : String(t.sleepHours));
       }
+      // Sleep from Apple Health / Health Connect fills in the hours if you haven't.
+      if ((!t || t.sleepHours === null) && healthSleepMin) setSleep(String(Math.round((healthSleepMin / 60) * 10) / 10));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [healthSleepMin]);
   useEffect(() => {
     load();
-  }, [load, viewing]);
+  }, [load, viewing, healthSleepMin]);
 
   if (error) return viewing ? null : <Text style={type.small}>{error}</Text>;
   if (!w) return null;
@@ -79,6 +81,7 @@ export function WellbeingCard() {
             <Text style={[type.body, { flex: 1 }]}>Sleep last night</Text>
             <TextInput value={sleep} onChangeText={setSleep} keyboardType="decimal-pad" placeholder="hours" style={s.input} accessibilityLabel="Hours of sleep" />
           </View>
+          {healthSleepMin !== null && <Text style={[type.small, { marginTop: -space(2) }]}>From your phone’s health data. Change it if it’s off.</Text>}
           {scale('sleepQuality', 'Sleep quality')}
           {scale('mood', 'Mood')}
           {scale('energy', 'Energy')}

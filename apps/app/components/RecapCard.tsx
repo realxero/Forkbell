@@ -10,7 +10,7 @@ import { color, radius, space, type } from '../lib/theme';
 type Month = { start: string; daysLogged: number; avgKcal: number | null; avgProtein: number | null; weightChangeKg: number | null; workouts: number };
 const monthName = (start: string) => {
   const [y, m] = start.split('-').map(Number) as [number, number];
-  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long' });
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'short' });
 };
 
 /** This month so far, next to last month. */
@@ -32,17 +32,21 @@ export function RecapCard({ unit }: { unit: 'lb' | 'kg' }) {
   return (
     <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line }}>
       <Text style={type.title}>Monthly recap</Text>
-      <View style={{ flexDirection: 'row' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
         <View style={{ flex: 1 }} />
-        <Text style={[type.label, { width: 92, textAlign: 'right', color: color.accent }]}>{monthName(r.thisMonth.start)}</Text>
-        <Text style={[type.label, { width: 92, textAlign: 'right' }]}>{monthName(r.lastMonth.start)}</Text>
+        <View style={{ width: 84, alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: color.onAccent, backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.thisMonth.start)}</Text>
+        </View>
+        <View style={{ width: 84, alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: color.ironSoft, backgroundColor: color.raised, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.lastMonth.start)}</Text>
+        </View>
       </View>
       {rows.map(([icon, label, a, b]) => (
         <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
           <Ionicons name={icon} size={18} color={color.ironSoft} />
           <Text style={[type.body, { flex: 1 }]}>{label}</Text>
-          <Text style={[type.body, type.number, { width: 92, textAlign: 'right', fontWeight: '800' }]}>{a}</Text>
-          <Text style={[type.body, type.number, { width: 92, textAlign: 'right', color: color.ironSoft }]}>{b}</Text>
+          <Text style={[type.body, type.number, { width: 84, textAlign: 'right', fontWeight: '800' }]}>{a}</Text>
+          <Text style={[type.body, type.number, { width: 84, textAlign: 'right', color: color.ironSoft }]}>{b}</Text>
         </View>
       ))}
     </View>

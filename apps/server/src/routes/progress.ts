@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { healthDaily, measurements, users, weighIns, workouts, type connect } from '@forkbell/db';
-import { addDays, computeStreaks, dateSchema, estimateEnergy, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthSource } from '@forkbell/shared';
+import { addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -35,9 +35,8 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
         group by d.date`);
       const done = await tx.select({ date: workouts.date }).from(workouts).where(isNotNull(workouts.finishedAt)).orderBy(asc(workouts.date));
       const ms = await tx.select().from(measurements).orderBy(asc(measurements.date));
-      const health = await tx.select().from(healthDaily).where(sql`${healthDaily.date} >= ${addDays(today, -8)}::date`);
-      const finished = await tx.execute<{ date: string }>(sql`select date::text as date from day_status where date >= ${addDays(today, -60)}::date`);
-      return { me: me!, weights, intakeRows, done, ms, health, finished };
+      const health = await tx.select().from(healthDaily).where(sql`${healthDaily.date} >= ${addDays(today, -60)}::date`);
+      return { me: me!, weights, intakeRows, done, ms, health };
     });
 
     const unit = data.me.weightUnit;
@@ -46,7 +45,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     for (const row of data.intakeRows) intake[row.date] = Number(row.kcal);
     const loggedDates = Object.keys(intake).filter((d) => intake[d]! > 0);
     const workoutDates = data.done.map((w) => w.date);
-    const energy = estimateEnergy(intake, series, today, 28, new Set([...data.finished].map((f) => f.date)));
+    const energy = estimateEnergy(intake, series, today);
     const current = series.at(-1) ?? null;
     const goalKg = data.me.goalWeightKg;
     const plan = current && goalKg !== null ? planGoal({ currentKg: current.trendKg, goalKg, goalDate: data.me.goalDate, today, energy, unit }) : null;
@@ -65,7 +64,22 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
     };
     const hr = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => valueOn('resting_hr', addDays(today, -i))).find((v) => v !== null) ?? null;
+    // Every health number: latest, 7-day average, and four weeks for a small chart.
+    const metrics: HealthMetric[] = HEALTH_KINDS.filter((k) => data.health.some((h) => h.kind === k)).map((kind) => {
+      const series = Array.from({ length: 28 }, (_, i) => valueOn(kind, addDays(today, i - 27)));
+      const dated = data.health.filter((h) => h.kind === kind).sort((a, b) => (a.date < b.date ? 1 : -1));
+      const latestDate = dated[0]?.date ?? null;
+      const last7 = [0, 1, 2, 3, 4, 5, 6].map((i) => valueOn(kind, addDays(today, -i))).filter((v): v is number => v !== null);
+      return {
+        kind,
+        latest: latestDate ? valueOn(kind, latestDate) : null,
+        latestDate,
+        avg7: last7.length ? Math.round((last7.reduce((a, b) => a + b, 0) / last7.length) * 10) / 10 : null,
+        series,
+      };
+    });
     const activity: Activity = {
+      metrics,
       today: { steps: valueOn('steps', today), activeKcal: valueOn('active_kcal', today) },
       week: { steps: avg('steps'), activeKcal: avg('active_kcal') },
       restingHr: hr,

@@ -34,6 +34,16 @@ export async function requestHealthAccess() {
     { accessType: 'read', recordType: 'RestingHeartRate' },
     { accessType: 'read', recordType: 'Weight' },
     { accessType: 'read', recordType: 'BodyFat' },
+    { accessType: 'read', recordType: 'Distance' },
+    { accessType: 'read', recordType: 'FloorsClimbed' },
+    { accessType: 'read', recordType: 'HeartRate' },
+    { accessType: 'read', recordType: 'HeartRateVariabilityRmssd' },
+    { accessType: 'read', recordType: 'OxygenSaturation' },
+    { accessType: 'read', recordType: 'RespiratoryRate' },
+    { accessType: 'read', recordType: 'Vo2Max' },
+    { accessType: 'read', recordType: 'LeanBodyMass' },
+    { accessType: 'read', recordType: 'SleepSession' },
+    { accessType: 'read', recordType: 'ExerciseSession' },
     { accessType: 'write', recordType: 'Nutrition' },
     { accessType: 'write', recordType: 'ExerciseSession' },
   ]);
@@ -59,6 +69,53 @@ export async function readHealth(from: string, to: string): Promise<Omit<HealthI
     for (const g of await aggregateGroupByPeriod({ recordType: 'RestingHeartRate', timeRangeFilter, timeRangeSlicer }))
       push(todayLocal(new Date(g.startTime)), 'resting_hr', g.result.BPM_AVG);
   } catch { /* not allowed */ }
+
+  try {
+    for (const g of await aggregateGroupByPeriod({ recordType: 'Distance', timeRangeFilter, timeRangeSlicer }))
+      push(todayLocal(new Date(g.startTime)), 'distance_m', g.result.DISTANCE?.inMeters);
+  } catch { /* not allowed */ }
+  try {
+    for (const g of await aggregateGroupByPeriod({ recordType: 'FloorsClimbed', timeRangeFilter, timeRangeSlicer }))
+      push(todayLocal(new Date(g.startTime)), 'flights', g.result.FLOORS_CLIMBED_TOTAL);
+  } catch { /* not allowed */ }
+  try {
+    for (const g of await aggregateGroupByPeriod({ recordType: 'HeartRate', timeRangeFilter, timeRangeSlicer }))
+      push(todayLocal(new Date(g.startTime)), 'hr_avg', g.result.BPM_AVG);
+  } catch { /* not allowed */ }
+  // Readings without a built-in daily total: average them per day.
+  const perDay = async (recordType: string, kind: HealthImport['days'][number]['kind'], pick: (r: Record<string, unknown>) => number | undefined, when: (r: Record<string, unknown>) => string) => {
+    try {
+      const { records } = await readRecords(recordType as 'HeartRateVariabilityRmssd', { timeRangeFilter });
+      const by = new Map<string, number[]>();
+      for (const r of records as unknown as Record<string, unknown>[]) {
+        const v = pick(r);
+        if (v === undefined || !(v > 0)) continue;
+        const d = todayLocal(new Date(when(r)));
+        by.set(d, [...(by.get(d) ?? []), v]);
+      }
+      for (const [d, vs] of by) push(d, kind, vs.reduce((a, b) => a + b, 0) / vs.length);
+    } catch { /* not allowed */ }
+  };
+  const at = (r: Record<string, unknown>) => r.time as string;
+  await perDay('HeartRateVariabilityRmssd', 'hrv_ms', (r) => r.heartRateVariabilityMillis as number, at);
+  await perDay('OxygenSaturation', 'spo2_pct', (r) => (r.percentage as { value?: number } | number | undefined) && (typeof r.percentage === 'number' ? r.percentage : (r.percentage as { value: number }).value), at);
+  await perDay('RespiratoryRate', 'resp_rate', (r) => r.rate as number, at);
+  await perDay('Vo2Max', 'vo2max', (r) => r.vo2MillilitersPerMinuteKilogram as number, at);
+  await perDay('LeanBodyMass', 'lean_kg', (r) => (r.mass as { inKilograms: number } | undefined)?.inKilograms, at);
+  // Sleep and exercise sessions: minutes, on the day they ended.
+  const minutes = async (recordType: string, kind: HealthImport['days'][number]['kind']) => {
+    try {
+      const { records } = await readRecords(recordType as 'SleepSession', { timeRangeFilter });
+      const by = new Map<string, number>();
+      for (const r of records as unknown as { startTime: string; endTime: string }[]) {
+        const d = todayLocal(new Date(r.endTime));
+        by.set(d, (by.get(d) ?? 0) + (Date.parse(r.endTime) - Date.parse(r.startTime)) / 60000);
+      }
+      for (const [d, m] of by) push(d, kind, Math.round(m));
+    } catch { /* not allowed */ }
+  };
+  await minutes('SleepSession', 'sleep_min');
+  await minutes('ExerciseSession', 'exercise_min');
 
   const weights = new Map<string, { date: string; weightKg: number; bodyFat: number | null }>();
   try {

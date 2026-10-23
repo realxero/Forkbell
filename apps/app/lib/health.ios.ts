@@ -2,6 +2,8 @@
 import {
   isHealthDataAvailableAsync,
   queryQuantitySamples,
+  queryCategorySamples,
+  CategoryValueSleepAnalysis,
   queryStatisticsCollectionForQuantity,
   requestAuthorization,
   saveQuantitySample,
@@ -33,6 +35,16 @@ export async function requestHealthAccess() {
       'HKQuantityTypeIdentifierRestingHeartRate',
       'HKQuantityTypeIdentifierBodyMass',
       'HKQuantityTypeIdentifierBodyFatPercentage',
+      'HKQuantityTypeIdentifierAppleExerciseTime',
+      'HKQuantityTypeIdentifierFlightsClimbed',
+      'HKQuantityTypeIdentifierDistanceWalkingRunning',
+      'HKQuantityTypeIdentifierHeartRate',
+      'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
+      'HKQuantityTypeIdentifierOxygenSaturation',
+      'HKQuantityTypeIdentifierRespiratoryRate',
+      'HKQuantityTypeIdentifierVO2Max',
+      'HKQuantityTypeIdentifierLeanBodyMass',
+      'HKCategoryTypeIdentifierSleepAnalysis',
     ],
     toShare: [
       'HKQuantityTypeIdentifierDietaryEnergyConsumed',
@@ -63,6 +75,34 @@ export async function readHealth(from: string, to: string): Promise<Omit<HealthI
   await daily('active_kcal', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierActiveEnergyBurned', ['cumulativeSum'], startDate, { day: 1 }, { filter, unit: 'kcal' }));
   await daily('resting_kcal', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierBasalEnergyBurned', ['cumulativeSum'], startDate, { day: 1 }, { filter, unit: 'kcal' }));
   await daily('resting_hr', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierRestingHeartRate', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: 'count/min' }));
+  await daily('exercise_min', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierAppleExerciseTime', ['cumulativeSum'], startDate, { day: 1 }, { filter, unit: 'min' }));
+  await daily('flights', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierFlightsClimbed', ['cumulativeSum'], startDate, { day: 1 }, { filter, unit: 'count' }));
+  await daily('distance_m', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierDistanceWalkingRunning', ['cumulativeSum'], startDate, { day: 1 }, { filter, unit: 'm' }));
+  await daily('hr_avg', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierHeartRate', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: 'count/min' }));
+  await daily('hrv_ms', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierHeartRateVariabilitySDNN', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: 'ms' }));
+  await daily('resp_rate', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierRespiratoryRate', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: 'count/min' }));
+  await daily('vo2max', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierVO2Max', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: 'ml/(kg*min)' }));
+  await daily('lean_kg', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierLeanBodyMass', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: 'kg' }));
+  // Blood oxygen comes as a fraction (0.97 = 97%).
+  const before = days.length;
+  await daily('spo2_pct', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierOxygenSaturation', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: '%' }));
+  for (const d of days.slice(before)) if (d.value <= 1) d.value = Math.round(d.value * 1000) / 10;
+
+  // Sleep: time actually asleep (not just in bed), counted on the morning you woke up.
+  try {
+    const asleep = new Set<number>([CategoryValueSleepAnalysis.asleepUnspecified, CategoryValueSleepAnalysis.asleepCore, CategoryValueSleepAnalysis.asleepDeep, CategoryValueSleepAnalysis.asleepREM]);
+    const byNight = new Map<string, number>();
+    const sleepFilter = { date: { startDate: new Date(startDate.getTime() - 86400000), endDate } };
+    for (const s of await queryCategorySamples('HKCategoryTypeIdentifierSleepAnalysis', { limit: 5000, ascending: true, filter: sleepFilter })) {
+      if (!asleep.has(s.value as number)) continue;
+      const end = new Date(s.endDate);
+      const night = todayLocal(end);
+      byNight.set(night, (byNight.get(night) ?? 0) + (end.getTime() - new Date(s.startDate).getTime()) / 60000);
+    }
+    for (const [date, min] of byNight) if (date >= from && date <= to && min > 0) days.push({ date, kind: 'sleep_min', value: Math.round(min) });
+  } catch {
+    /* not allowed */
+  }
 
   // Weights: the last reading of each day. Body fat comes as a fraction (0.2 = 20%).
   const weights = new Map<string, { date: string; weightKg: number; bodyFat: number | null }>();

@@ -295,7 +295,28 @@ export function milestones(opts: { loggedDates: string[]; workoutDates: string[]
 
 // Health platforms ---------------------------------------------------------------------
 
-export const HEALTH_KINDS = ['steps', 'active_kcal', 'resting_kcal', 'resting_hr'] as const;
+export const HEALTH_KINDS = [
+  'steps', 'active_kcal', 'resting_kcal', 'resting_hr',
+  'exercise_min', 'flights', 'distance_m', 'hr_avg', 'hrv_ms', 'spo2_pct', 'resp_rate', 'vo2max', 'lean_kg', 'sleep_min',
+] as const;
+
+/** How each health number is shown, and whether a day's value is a total or an average. */
+export const HEALTH_INFO: Record<(typeof HEALTH_KINDS)[number], { label: string; unit: string; total: boolean; digits: number }> = {
+  steps: { label: 'Steps', unit: '', total: true, digits: 0 },
+  active_kcal: { label: 'Active energy', unit: 'kcal', total: true, digits: 0 },
+  resting_kcal: { label: 'Resting energy', unit: 'kcal', total: true, digits: 0 },
+  exercise_min: { label: 'Exercise', unit: 'min', total: true, digits: 0 },
+  flights: { label: 'Flights climbed', unit: '', total: true, digits: 0 },
+  distance_m: { label: 'Walk + run', unit: 'km', total: true, digits: 1 },
+  sleep_min: { label: 'Sleep', unit: 'h', total: true, digits: 1 },
+  resting_hr: { label: 'Resting heart rate', unit: 'bpm', total: false, digits: 0 },
+  hr_avg: { label: 'Heart rate', unit: 'bpm', total: false, digits: 0 },
+  hrv_ms: { label: 'HRV', unit: 'ms', total: false, digits: 0 },
+  spo2_pct: { label: 'Blood oxygen', unit: '%', total: false, digits: 0 },
+  resp_rate: { label: 'Breathing rate', unit: '/min', total: false, digits: 1 },
+  vo2max: { label: 'Cardio fitness', unit: 'VO₂max', total: false, digits: 1 },
+  lean_kg: { label: 'Lean body mass', unit: 'kg', total: false, digits: 1 },
+};
 export type HealthKind = (typeof HEALTH_KINDS)[number];
 export type HealthSource = 'apple_health' | 'health_connect';
 
@@ -306,7 +327,19 @@ export const healthImportSchema = z.object({
 });
 export type HealthImport = z.infer<typeof healthImportSchema>;
 
+export interface HealthMetric {
+  kind: HealthKind;
+  /** today's value, or the latest day's for things measured now and then (VO2 max, lean mass) */
+  latest: number | null;
+  latestDate: string | null;
+  /** average of the last 7 days that have a value */
+  avg7: number | null;
+  /** last 28 days, oldest first; null where there's nothing */
+  series: (number | null)[];
+}
+
 export interface Activity {
+  metrics?: HealthMetric[];
   today: { steps: number | null; activeKcal: number | null };
   /** averages over the last 7 full days with data */
   week: { steps: number | null; activeKcal: number | null };

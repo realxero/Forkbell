@@ -152,7 +152,7 @@ export const healthDaily = pgTable('health_daily', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull(),
   date: date('date', { mode: 'string' }).notNull(),
-  kind: text('kind', { enum: ['steps', 'active_kcal', 'resting_kcal', 'resting_hr'] }).notNull(),
+  kind: text('kind').notNull(),
   value: num('value').notNull(),
   source: text('source', { enum: ['apple_health', 'health_connect'] }).notNull(),
 });

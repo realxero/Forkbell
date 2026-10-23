@@ -2,7 +2,7 @@
 // and on the web, and follow light and dark mode.
 import { useState } from 'react';
 import { Platform, Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { daysBetween, type TrendPoint } from '@forkbell/shared';
 import { color, space, type } from '../lib/theme';
 
@@ -24,7 +24,7 @@ function useWidth() {
 export function WeightChart({ points, goalKg, show }: { points: TrendPoint[]; goalKg: number | null; show: (kg: number) => string }) {
   const [width, onLayout] = useWidth();
   const height = 190;
-  const padL = 44;
+  const padL = 56;
   const padB = 22;
   if (points.length < 2) return <Text style={type.small}>Weigh in a few more times to see the chart.</Text>;
 
@@ -87,49 +87,99 @@ export function WeightChart({ points, goalKg, show }: { points: TrendPoint[]; go
 
 export type DayTotals = { date: string; kcal: number; protein: number; carbs: number; fat: number; goal: number | null };
 
-/** Calories each day against the goal: over in red, today lighter while it's still going. */
+/**
+ * Calories each day against the goal: one dashed goal line, a bar per logged
+ * day (red when over), a dot on days with nothing logged. Tap a bar for its number.
+ */
 export function CalorieBars({ days, today }: { days: DayTotals[]; today: string }) {
   const [width, onLayout] = useWidth();
-  const height = 150;
-  const padB = 20;
-  const top = Math.max(...days.map((d) => Math.max(d.kcal, d.goal ?? 0)), 500) * 1.1;
-  const bw = width / days.length;
-  const y = (v: number) => (height - padB) * (1 - v / top);
+  const [picked, setPicked] = useState<string | null>(null);
+  const height = 170;
+  const padTop = 22;
+  const padB = 34;
+  const padL = 40;
+  const goal = [...days].reverse().find((d) => d.goal)?.goal ?? null;
+  const top = Math.max(...days.map((d) => d.kcal), goal ?? 0, 500) * 1.12;
+  const plotW = Math.max(1, width - padL);
+  const plotH = height - padTop - padB;
+  const bw = plotW / days.length;
+  const y = (v: number) => padTop + plotH * (1 - v / top);
+  const over = (d: DayTotals) => d.goal !== null && d.kcal > d.goal * 1.05;
   const logged = days.filter((d) => d.kcal > 0 && d.date !== today);
   const avg = logged.length ? Math.round(logged.reduce((s, d) => s + d.kcal, 0) / logged.length) : null;
-  const within = logged.filter((d) => d.goal && d.kcal <= d.goal * 1.05).length;
+  const onTarget = logged.filter((d) => d.goal && !over(d)).length;
+  const sel = days.find((d) => d.date === (picked ?? today));
+  const weekday = (date: string) => {
+    const [yy, mm, dd] = date.split('-').map(Number) as [number, number, number];
+    return new Date(yy, mm - 1, dd).toLocaleDateString(undefined, { weekday: 'narrow' });
+  };
+
   return (
-    <View onLayout={onLayout} style={{ gap: space(2) }}>
-      {width > 0 && (
-        <Svg width={width} height={height}>
-          {days.map((d, i) => {
-            const over = d.goal !== null && d.kcal > d.goal * 1.05;
-            const h = (height - padB) - y(d.kcal);
-            return (
-              <Rect
-                key={d.date}
-                x={i * bw + bw * 0.18}
-                y={y(d.kcal)}
-                width={bw * 0.64}
-                height={Math.max(d.kcal > 0 ? 2 : 0, h)}
-                rx={Math.min(4, bw * 0.3)}
-                fill={over ? color.over : color.accent}
-                opacity={d.date === today ? 0.45 : 0.9}
-              />
-            );
-          })}
-          {days.map((d, i) => (d.goal ? <Line key={`g${d.date}`} x1={i * bw + 1} x2={(i + 1) * bw - 1} y1={y(d.goal)} y2={y(d.goal)} stroke={color.fat} strokeWidth={2} /> : null))}
-          {days.map((d, i) =>
-            i % 7 === 0 || i === days.length - 1 ? (
-              <SvgText {...font} key={`t${d.date}`} x={i * bw + bw / 2} y={height - 4} fontSize={10} fill={color.ironSoft} textAnchor="middle">{shortDate(d.date)}</SvgText>
-            ) : null,
-          )}
-        </Svg>
-      )}
-      <Text style={type.small}>
-        {avg ? `Average ${avg.toLocaleString()} kcal on ${logged.length} logged days` : 'Log a few days to see your pattern'}
-        {avg && logged.some((d) => d.goal) ? ` · within your goal on ${within} of them` : ''}. Green marks are the goal.
-      </Text>
+    <View style={{ gap: space(3) }}>
+      <View style={{ flexDirection: 'row', gap: space(3) }}>
+        <View style={{ flex: 1, backgroundColor: color.raised, borderRadius: 12, padding: space(3) }}>
+          <Text style={type.label}>Daily average</Text>
+          <Text style={[type.title, type.number]}>{avg ? avg.toLocaleString() : '–'}<Text style={type.small}> kcal</Text></Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: color.raised, borderRadius: 12, padding: space(3) }}>
+          <Text style={type.label}>On target</Text>
+          <Text style={[type.title, type.number]}>{logged.length ? `${onTarget} of ${logged.length}` : '–'}<Text style={type.small}> days</Text></Text>
+        </View>
+      </View>
+      <View onLayout={onLayout}>
+        {width > 0 && (
+          <Svg width={width} height={height}>
+            <Line x1={padL} x2={width} y1={y(0)} y2={y(0)} stroke={color.line} strokeWidth={1} />
+            <SvgText {...font} x={padL - 6} y={y(0) + 4} fontSize={10} fill={color.ironSoft} textAnchor="end">0</SvgText>
+            {goal && (
+              <>
+                <Line x1={padL} x2={width} y1={y(goal)} y2={y(goal)} stroke={color.fat} strokeWidth={1.5} strokeDasharray="5 4" />
+                <SvgText {...font} x={padL - 6} y={y(goal) + 4} fontSize={10} fill={color.fat} textAnchor="end" fontWeight="700">{goal >= 1000 ? `${(goal / 1000).toFixed(1)}k` : goal}</SvgText>
+              </>
+            )}
+            {days.map((d, i) => {
+              const cx = padL + i * bw + bw / 2;
+              const isToday = d.date === today;
+              const isSel = d.date === (picked ?? today);
+              return (
+                <G key={d.date} onPress={() => setPicked(d.date)}>
+                  <Rect x={padL + i * bw} y={padTop} width={bw} height={plotH + padB} fill="transparent" />
+                  {d.kcal > 0 ? (
+                    <Rect
+                      x={cx - bw * 0.3}
+                      y={y(d.kcal)}
+                      width={bw * 0.6}
+                      height={Math.max(3, y(0) - y(d.kcal))}
+                      rx={Math.min(5, bw * 0.25)}
+                      fill={over(d) ? color.over : color.accent}
+                      opacity={isSel ? 1 : isToday ? 0.55 : 0.8}
+                    />
+                  ) : (
+                    <Circle cx={cx} cy={y(0) - 4} r={2.5} fill={color.track} />
+                  )}
+                  <SvgText {...font} x={cx} y={height - 18} fontSize={10} fill={isToday ? color.iron : color.ironSoft} fontWeight={isToday ? '800' : '400'} textAnchor="middle">
+                    {weekday(d.date)}
+                  </SvgText>
+                  {i % 7 === 0 && (
+                    <SvgText {...font} x={cx} y={height - 4} fontSize={9} fill={color.ironSoft} textAnchor="middle">{shortDate(d.date)}</SvgText>
+                  )}
+                </G>
+              );
+            })}
+            {sel && sel.kcal > 0 && (
+              <SvgText {...font} x={Math.min(width - 30, Math.max(padL + 20, padL + days.indexOf(sel) * bw + bw / 2))} y={Math.max(12, y(sel.kcal) - 6)} fontSize={11} fontWeight="800" fill={color.iron} textAnchor="middle">
+                {sel.kcal.toLocaleString()}
+              </SvgText>
+            )}
+          </Svg>
+        )}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(4) }}>
+        <Text style={type.small}><Text style={{ color: color.accent }}>■</Text> within goal</Text>
+        <Text style={type.small}><Text style={{ color: color.over }}>■</Text> over goal</Text>
+        <Text style={type.small}><Text style={{ color: color.fat }}>┄</Text> goal</Text>
+        <Text style={type.small}>Tap a day for its total</Text>
+      </View>
     </View>
   );
 }
@@ -182,7 +232,7 @@ export function MacroDonut({ days }: { days: DayTotals[] }) {
             <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: x.tint }} />
             <Text style={[type.body, { flex: 1 }]}>{x.label}</Text>
             <Text style={[type.body, type.number, { fontWeight: '700' }]}>{Math.round(x.share * 100)}%</Text>
-            <Text style={[type.small, type.number, { width: 56, textAlign: 'right' }]}>{x.grams} g/day</Text>
+            <Text style={[type.small, type.number, { width: 72, textAlign: 'right' }]} numberOfLines={1}>{x.grams} g/day</Text>
           </View>
         ))}
       </View>

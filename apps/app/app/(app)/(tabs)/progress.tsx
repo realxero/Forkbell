@@ -13,6 +13,7 @@ import { NumberField } from '../../../components/NumberField';
 import { CalorieBars, LogCalendar, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
 import { WellbeingCard } from '../../../components/WellbeingCard';
 import { RecapCard } from '../../../components/RecapCard';
+import { HealthCard } from '../../../components/HealthCard';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
 
@@ -153,23 +154,9 @@ export default function ProgressScreen() {
               </>
             )}
 
-            {/* Activity from Apple Health / Health Connect */}
-            {p.activity?.source && (
-              <View style={s.card}>
-                <Text style={type.title}>Activity</Text>
-                <View style={s.row}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[type.title, type.number]}>{p.activity.today.steps?.toLocaleString() ?? '–'}</Text>
-                    <Text style={type.small}>steps today{p.activity.week.steps ? ` · ${p.activity.week.steps.toLocaleString()} a day lately` : ''}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[type.title, type.number]}>{p.activity.today.activeKcal?.toLocaleString() ?? '–'}</Text>
-                    <Text style={type.small}>active kcal{p.activity.week.activeKcal ? ` · ${p.activity.week.activeKcal.toLocaleString()} a day` : ''}</Text>
-                  </View>
-                </View>
-                {p.activity.restingHr && <Text style={type.small}>Resting heart rate {p.activity.restingHr} bpm</Text>}
-                <Text style={type.small}>From {p.activity.source === 'apple_health' ? 'Apple Health' : 'Health Connect'}. Your daily burn below comes from your own logs and weight, so it already reflects this activity.</Text>
-              </View>
+            {/* Everything from Apple Health / Health Connect */}
+            {p.activity?.source && p.activity.metrics && p.activity.metrics.length > 0 && (
+              <HealthCard metrics={p.activity.metrics} source={p.activity.source} unit={units.unit} today={p.today} />
             )}
 
             {/* Energy */}
@@ -228,7 +215,7 @@ export default function ProgressScreen() {
 
             <RecapCard unit={units.unit} />
 
-            <WellbeingCard />
+            <WellbeingCard healthSleepMin={p.activity?.metrics?.find((m) => m.kind === 'sleep_min' && m.latestDate === p.today)?.latest ?? null} />
 
             <Milestones list={p.milestones} />
 

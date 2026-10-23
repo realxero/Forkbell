@@ -15,6 +15,8 @@ export interface HealthSettings {
   /** workouts finished after this were not sent yet */
   workoutsSentUntil: string | null;
   lastError: string | null;
+  /** which set of health types we've asked for; new types are asked for once */
+  permVersion?: number;
 }
 
 const KEY = 'device:health';
@@ -35,7 +37,7 @@ export async function connectHealth(): Promise<string | null> {
   const ok = await requestHealthAccess();
   if (!ok) return `${healthName} didn’t give access. You can allow it in its settings.`;
   // Don't send years of old workouts on the first connect; start from now.
-  setHealthSettings({ connected: true, workoutsSentUntil: getHealthSettings().workoutsSentUntil ?? new Date().toISOString() });
+  setHealthSettings({ connected: true, permVersion: 2, workoutsSentUntil: getHealthSettings().workoutsSentUntil ?? new Date().toISOString() });
   return syncHealth(true);
 }
 
@@ -49,6 +51,11 @@ export function syncHealth(force = false): Promise<string | null> {
     if (!force && s.lastSync && Date.now() - Date.parse(s.lastSync) < 15 * 60 * 1000) return null;
     const today = todayLocal();
     try {
+      // Version 2 reads more types (sleep, heart, distance...): ask for them once.
+      if ((s.permVersion ?? 1) < 2) {
+        await requestHealthAccess();
+        setHealthSettings({ permVersion: 2 });
+      }
       if (s.readActivity) {
         const data = await readHealth(addDays(today, -13), today);
         if (data.days.length || data.weights.length) await api('/api/health/import', { method: 'POST', body: JSON.stringify({ source: healthSource, ...data }) });

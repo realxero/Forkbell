@@ -22,7 +22,17 @@
         "android.permission.health.READ_WEIGHT",
         "android.permission.health.READ_BODY_FAT",
         "android.permission.health.WRITE_NUTRITION",
-        "android.permission.health.WRITE_EXERCISE"
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_FLOORS_CLIMBED",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_OXYGEN_SATURATION",
+        "android.permission.health.READ_RESPIRATORY_RATE",
+        "android.permission.health.READ_VO2_MAX",
+        "android.permission.health.READ_LEAN_BODY_MASS",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_EXERCISE"
       ]
     },
     "web": {
