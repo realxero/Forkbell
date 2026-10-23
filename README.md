@@ -4,12 +4,14 @@ Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
 Authelia (or any OpenID Connect provider).
 
-**Status:** phase 3. Food: search (Open Food Facts, USDA, about a hundred
+**Status:** phase 4. Food: search (Open Food Facts, USDA, about a hundred
 built-in common foods, your own), barcode scanning, one-tap logging from recent
 and most-logged foods, copying meals, daily goals. Training: a library of about
 60 exercises plus your own, starter programs, workout logging with weight,
 reps, RPE and warm-ups, a rest timer, suggested weights each session, and
-personal records. See
+personal records. Progress: weigh-ins with a smoothed trend and chart, your
+real daily burn worked out from your own logs, a goal date range and a
+sustainable calorie suggestion, body measurements, streaks and milestones. See
 [ROADMAP.md](ROADMAP.md) for what comes next.
 
 ## How it fits together

@@ -14,6 +14,9 @@ export const users = pgTable('users', {
   goalCarbs: num('goal_carbs'),
   goalFat: num('goal_fat'),
   weightUnit: text('weight_unit', { enum: ['lb', 'kg'] }).notNull(),
+  goalWeightKg: num('goal_weight_kg'),
+  goalDate: date('goal_date', { mode: 'string' }),
+  weeklyWorkoutGoal: integer('weekly_workout_goal').notNull(),
 });
 
 export const foods = pgTable('foods', {
@@ -123,4 +126,20 @@ export const workoutSets = pgTable('workout_sets', {
   rpe: num('rpe'),
   warmup: boolean('warmup').notNull(),
   done: boolean('done').notNull(),
+});
+
+export const weighIns = pgTable('weigh_ins', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  weightKg: num('weight_kg').notNull(),
+  bodyFat: num('body_fat'),
+});
+
+export const measurements = pgTable('measurements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  kind: text('kind').notNull(),
+  valueCm: num('value_cm').notNull(),
 });

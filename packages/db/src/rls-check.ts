@@ -82,6 +82,17 @@ try {
     "Bob can't use Alice's custom exercise",
   );
 
+  // Progress: weigh-ins and measurements are private too.
+  await as(alice, async (tx) => {
+    await tx`insert into weigh_ins (date, weight_kg) values ('2026-10-22', 80)`;
+    await tx`insert into measurements (date, kind, value_cm) values ('2026-10-22', 'waist', 84)`;
+  });
+  for (const table of ['weigh_ins', 'measurements']) {
+    assert.equal((await as(bob, (tx) => tx`select * from ${tx(table)}`)).length, 0, `Bob can't read Alice's ${table}`);
+    assert.equal((await as(bob, (tx) => tx`update ${tx(table)} set date = '2026-01-01' returning 1`)).length, 0, `Bob can't edit Alice's ${table}`);
+  }
+  await assert.rejects(as(bob, (tx) => tx`insert into weigh_ins (user_id, date, weight_kg) values (${alice}, '2026-10-23', 90)`), "Bob can't weigh in as Alice");
+
   // Alice still sees her own data.
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 1, 'Alice sees her entry');
   assert.equal((await as(alice, (tx) => tx`select * from workout_sets`)).length, 1, 'Alice sees her sets');
