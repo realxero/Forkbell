@@ -48,3 +48,24 @@ export function per100Problems(p: Per100): string[] {
   }
   return problems;
 }
+
+/**
+ * A recipe's numbers per 100 g of the finished dish: everything in it, spread
+ * over the cooked weight (or the ingredients' total if it wasn't weighed).
+ */
+export function recipePer100(items: { food: { per100: Per100 }; grams: number }[], cookedGrams?: number | null) {
+  const total = items.reduce(
+    (t, i) => {
+      const n = forAmount(i.food.per100, i.grams);
+      return { kcal: t.kcal + n.kcal, protein: t.protein + n.protein, carbs: t.carbs + n.carbs, fat: t.fat + n.fat, fiber: t.fiber + n.fiber, sugar: t.sugar + n.sugar, sodium: t.sodium + n.sodium };
+    },
+    { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 },
+  );
+  const weight = cookedGrams && cookedGrams > 0 ? cookedGrams : items.reduce((s, i) => s + i.grams, 0);
+  const per = (v: number) => Math.round((v * 100 * 10) / Math.max(weight, 1)) / 10;
+  return {
+    weight,
+    per100: { kcal: Math.round((total.kcal * 100) / Math.max(weight, 1)), protein: per(total.protein), carbs: per(total.carbs), fat: per(total.fat), fiber: per(total.fiber), sugar: per(total.sugar), sodium: Math.round((total.sodium * 100) / Math.max(weight, 1)) },
+    total,
+  };
+}

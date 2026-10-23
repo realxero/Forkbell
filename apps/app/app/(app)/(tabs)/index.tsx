@@ -13,6 +13,7 @@ import type { ComponentProps } from 'react';
 import { MacroRing, Ring } from '../../../components/Ring';
 import { EntryMenu, removeWithUndo } from '../../../components/EntryMenu';
 import { SwipeRow } from '../../../components/SwipeRow';
+import { SelectionBar } from '../../../components/SelectionBar';
 import { CalendarSheet } from '../../../components/Calendar';
 import { showToast } from '../../../lib/toast';
 import { FoodIcon } from '../../../components/FoodIcon';
@@ -70,6 +71,9 @@ export default function Diary() {
   const [calendar, setCalendar] = useState(false);
   const [pickDay, setPickDay] = useState(date);
   const [menu, setMenu] = useState<DiaryEntry | null>(null);
+  /** ids picked in select mode; null when not selecting */
+  const [selected, setSelected] = useState<string[] | null>(null);
+  const toggle = (id: string) => setSelected((s) => (s ? (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]) : [id]));
 
   /** Copy all of another day's food into this one (from the calendar). */
   const copyWholeDay = async (from: string) => {
@@ -180,13 +184,20 @@ export default function Diary() {
                         right={{ label: 'Remove', icon: 'trash-outline', tint: color.over, run: () => void removeWithUndo(e, load) }}
                       >
                       <Pressable
-                        onPress={() => router.push({ pathname: '/edit', params: { id: e.id } })}
-                        onLongPress={() => setMenu(e)}
+                        onPress={() => (selected ? toggle(e.id) : router.push({ pathname: '/edit', params: { id: e.id } }))}
+                        onLongPress={() => (selected ? toggle(e.id) : setMenu(e))}
+                        accessibilityState={selected ? { checked: selected.includes(e.id) } : undefined}
                         delayLongPress={350}
                         style={({ pressed }) => [s.entry, pressed && { opacity: 0.7 }]}
                         accessibilityHint="Tap to change it. Swipe or hold to copy or remove it."
                       >
-                        <FoodIcon name={e.food.name} brand={e.food.brand} size={38} />
+                        {selected ? (
+                          <View style={[s.check, selected.includes(e.id) && s.checkOn]}>
+                            {selected.includes(e.id) && <Ionicons name="checkmark" size={20} color={color.onAccent} />}
+                          </View>
+                        ) : (
+                          <FoodIcon name={e.food.name} brand={e.food.brand} size={38} />
+                        )}
                         <View style={{ flex: 1 }}>
                           <Text style={type.body} numberOfLines={1}>{e.food.name}</Text>
                           <Text style={type.small} numberOfLines={1}>
@@ -232,7 +243,10 @@ export default function Diary() {
           </>
         )}
       </ScrollView>
-      <EntryMenu entry={menu} onClose={() => setMenu(null)} onChanged={load} />
+      <EntryMenu entry={menu} onClose={() => setMenu(null)} onChanged={load} onSelect={viewing ? undefined : (e) => setSelected([e.id])} />
+      {selected && day && (
+        <SelectionBar entries={day.entries.filter((e) => selected.includes(e.id))} onDone={() => setSelected(null)} onChanged={load} />
+      )}
       <CalendarSheet
         visible={calendar}
         selected={pickDay}
@@ -285,6 +299,8 @@ function FinishDay({ date, finished, onChange }: { date: string; finished: boole
 }
 
 const s = StyleSheet.create({
+  check: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
+  checkOn: { backgroundColor: color.accent, borderColor: color.accent },
   finish: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
   finished: { backgroundColor: color.infoBg, borderColor: color.infoBg },
   finishButton: { minHeight: 44, paddingHorizontal: space(4), borderRadius: 22, backgroundColor: color.accent, justifyContent: 'center' },

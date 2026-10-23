@@ -51,8 +51,28 @@ export const copyMealSchema = z.object({
 });
 
 export const updateEntrySchema = z
-  .object({ grams: z.number().positive('Enter an amount above 0.').max(10000, 'That is more than 10 kg.').optional(), meal: z.enum(MEALS).optional() })
-  .refine((v) => v.grams !== undefined || v.meal !== undefined, 'Nothing to change.');
+  .object({
+    grams: z.number().positive('Enter an amount above 0.').max(10000, 'That is more than 10 kg.').optional(),
+    meal: z.enum(MEALS).optional(),
+    /** point the entry at another food, e.g. an edited copy with corrected numbers */
+    foodId: z.string().uuid().optional(),
+  })
+  .refine((v) => v.grams !== undefined || v.meal !== undefined || v.foodId !== undefined, 'Nothing to change.');
+
+const itemSchema = z.object({ foodId: z.string().uuid(), grams: z.number().positive().max(10000) });
+
+export const savedMealSchema = z.object({
+  name: z.string().trim().min(1, 'Give the meal a name.').max(80),
+  items: z.array(itemSchema).min(1, 'Add at least one food.').max(40),
+});
+
+export const recipeSchema = z.object({
+  name: z.string().trim().min(1, 'Give the recipe a name.').max(200),
+  servings: z.number().positive().max(100),
+  /** weight of the finished dish, if you weighed it after cooking */
+  cookedGrams: z.number().positive().max(50000).nullish(),
+  items: z.array(itemSchema).min(1, 'Add at least one ingredient.').max(60),
+});
 
 export const goalsSchema = z.object({
   kcal: z.number().int().min(0).max(20000).nullable(),

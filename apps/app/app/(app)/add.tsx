@@ -11,6 +11,7 @@ import { addEntry, createFood, findByBarcodeOffline, foodLibrary, searchOffline 
 import { AmountPicker, Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { BarcodeCamera } from '../../components/BarcodeCamera';
 import { FoodIcon } from '../../components/FoodIcon';
+import { MealShortcuts } from '../../components/MealShortcuts';
 import { color, space, type } from '../../lib/theme';
 
 type Pick = Food | FoodCandidate;
@@ -180,7 +181,10 @@ export default function AddFood() {
             {added.length > 0 && <Text style={s.added}>Added {added.join('; ')}</Text>}
 
             {q.trim().length < 2 ? (
+              <>
+              <MealShortcuts date={date} meal={meal} onLogged={(t) => setAdded((x) => [...x, t])} />
               <RecentList data={recent} tab={tab} setTab={setTab} onPick={(r) => setView({ kind: 'amount', food: r.food, lastGrams: r.lastGrams })} onQuickAdd={quickAdd} />
+              </>
             ) : (
               <>
                 {searching && <ActivityIndicator color={color.iron} />}

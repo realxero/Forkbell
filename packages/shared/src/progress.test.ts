@@ -88,3 +88,16 @@ test('goal presets add up and respect the floor', () => {
   assert.ok(Math.abs(g.protein * 4 + g.carbs * 4 + g.fat * 9 - g.kcal) < 15);
   assert.equal(presetGoals('lose', 1250, 50).kcal, 1200);
 });
+
+import { recipePer100 } from './nutrition.ts';
+test('recipes: numbers per 100 g of the finished dish', () => {
+  const rice = { per100: { kcal: 360, protein: 7, carbs: 79, fat: 0.6, fiber: 1, sugar: 0, sodium: 5 } };
+  const beans = { per100: { kcal: 130, protein: 9, carbs: 23, fat: 0.5, fiber: 7, sugar: 0, sodium: 2 } };
+  const raw = recipePer100([{ food: rice, grams: 200 }, { food: beans, grams: 300 }]);
+  assert.equal(raw.weight, 500);
+  assert.equal(raw.total.kcal, 720 + 390);
+  assert.equal(raw.per100.kcal, 222);
+  // Rice soaks up water: weighed after cooking, the same food is spread over more grams.
+  const cooked = recipePer100([{ food: rice, grams: 200 }, { food: beans, grams: 300 }], 1110);
+  assert.equal(cooked.per100.kcal, 100);
+});

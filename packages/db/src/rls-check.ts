@@ -138,6 +138,13 @@ try {
   await as(bob, (tx) => tx`delete from shares where owner_id = ${alice}`);
   assert.equal((await asBobViewingAlice((tx) => tx`select * from diary_entries`)).length, 0, 'after the share ends, nothing');
 
+  // Saved meals and recipes are private like the diary.
+  const [am] = await as(alice, (tx) => tx`insert into saved_meals (name) values ('Alice breakfast') returning id`);
+  await as(alice, (tx) => tx`insert into saved_meal_items (meal_id, food_id, grams) values (${am!.id}, ${aliceFood}, 50)`);
+  assert.equal((await as(bob, (tx) => tx`select * from saved_meals`)).length, 0, "Bob can't see Alice's saved meals");
+  assert.equal((await as(bob, (tx) => tx`select * from saved_meal_items`)).length, 0, "or their items");
+  await assert.rejects(as(bob, (tx) => tx`insert into saved_meal_items (meal_id, user_id, food_id, grams) values (${am!.id}, ${bob}, ${aliceFood}, 5)`), "Bob can't add to Alice's meal");
+
   // Alice still sees her own data.
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 2, 'Alice sees her entries');
   assert.equal((await as(alice, (tx) => tx`select * from workout_sets`)).length, 1, 'Alice sees her sets');

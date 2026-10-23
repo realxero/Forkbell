@@ -26,7 +26,7 @@ export const foods = pgTable('foods', {
   ownerId: uuid('owner_id'),
   name: text('name').notNull(),
   brand: text('brand'),
-  source: text('source', { enum: ['custom', 'off', 'usda', 'builtin'] }).notNull(),
+  source: text('source', { enum: ['custom', 'off', 'usda', 'builtin', 'recipe'] }).notNull(),
   sourceId: text('source_id'),
   kcal: num('kcal').notNull(),
   protein: num('protein').notNull(),
@@ -211,4 +211,36 @@ export const medicationLogs = pgTable('medication_logs', {
   date: date('date', { mode: 'string' }).notNull(),
   slot: integer('slot').notNull(),
   status: text('status', { enum: ['taken', 'skipped'] }).notNull(),
+});
+
+export const savedMeals = pgTable('saved_meals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+});
+
+export const savedMealItems = pgTable('saved_meal_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  mealId: uuid('meal_id').notNull(),
+  foodId: uuid('food_id').notNull(),
+  grams: num('grams').notNull(),
+  position: integer('position').notNull(),
+});
+
+export const recipes = pgTable('recipes', {
+  foodId: uuid('food_id').primaryKey(),
+  userId: uuid('user_id').notNull(),
+  servings: num('servings').notNull(),
+  cookedGrams: num('cooked_grams'),
+});
+
+export const recipeItems = pgTable('recipe_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  recipeId: uuid('recipe_id').notNull(),
+  foodId: uuid('food_id').notNull(),
+  grams: num('grams').notNull(),
+  position: integer('position').notNull(),
 });

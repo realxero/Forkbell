@@ -19,6 +19,7 @@ import { progressRoutes } from './routes/progress.ts';
 import { healthRoutes } from './routes/health.ts';
 import { bellRoutes } from './routes/bell.ts';
 import { shareRoutes } from './routes/shares.ts';
+import { mealRoutes, recipeRoutes } from './routes/meals.ts';
 import { wellbeingRoutes } from './routes/wellbeing.ts';
 
 const database = connect(env.databaseUrl);
@@ -38,6 +39,8 @@ api.use('*', requireUser(database.db));
 const SHAREABLE: [prefix: string, read: string, write: string | null][] = [
   ['/api/diary', 'food_read', 'food_write'],
   ['/api/foods', 'food_read', 'food_write'],
+  ['/api/meals', 'food_read', 'food_write'],
+  ['/api/recipes', 'food_read', 'food_write'],
   ['/api/workouts', 'training_read', null],
   ['/api/exercises', 'training_read', null],
   ['/api/programs', 'training_read', null],
@@ -74,6 +77,8 @@ api.route('/routines', routineRoutes(database));
 api.route('/progress', progressRoutes(database));
 api.route('/health', healthRoutes(database));
 api.route('/shares', shareRoutes(database));
+api.route('/meals', mealRoutes(database));
+api.route('/recipes', recipeRoutes(database));
 api.route('/wellbeing', wellbeingRoutes(database));
 
 // Bell reads data through the same routes as the app, as the signed-in person.

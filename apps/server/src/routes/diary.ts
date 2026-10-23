@@ -166,9 +166,13 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   r.patch('/:id', async (c) => {
     const parsed = updateEntrySchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the change.' }, 400);
-    const updated = await asUser(c.get('profileId'), (tx) =>
-      tx.update(diaryEntries).set(parsed.data).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('profileId')))).returning({ id: diaryEntries.id }),
-    );
+    const updated = await asUser(c.get('profileId'), async (tx) => {
+      if (parsed.data.foodId) {
+        const [f] = await tx.select({ id: foods.id }).from(foods).where(eq(foods.id, parsed.data.foodId)).limit(1);
+        if (!f) return []; // not theirs and not built in
+      }
+      return tx.update(diaryEntries).set(parsed.data).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('profileId')))).returning({ id: diaryEntries.id });
+    });
     return updated.length ? c.json({ ok: true }) : c.json({ error: 'That entry was not found.' }, 404);
   });
 

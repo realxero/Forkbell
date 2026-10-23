@@ -37,7 +37,7 @@ export async function removeWithUndo(e: DiaryEntry, after?: () => void) {
 }
 
 /** What you get by holding a logged food: copy it somewhere, edit, or remove. */
-export function EntryMenu({ entry, onClose, onChanged }: { entry: DiaryEntry | null; onClose: () => void; onChanged: () => void }) {
+export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: DiaryEntry | null; onClose: () => void; onChanged: () => void; onSelect?: (e: DiaryEntry) => void }) {
   const [picking, setPicking] = useState(false);
   const [target, setTarget] = useState<string | null>(null);
   const [meal, setMeal] = useState<Meal | null>(null);
@@ -114,6 +114,7 @@ export function EntryMenu({ entry, onClose, onChanged }: { entry: DiaryEntry | n
               </View>
             ) : (
             <>
+            {onSelect && item('checkmark-circle-outline', 'Select several…', () => { const e = entry; close(); onSelect(e); })}
             {item('sparkles-outline', 'Better option for my goal', findBetter)}
             {entry.date !== today && item('today-outline', `Copy to today (${MEAL_NAMES[mealForTime()].toLowerCase()})`, () => copyTo(today, mealForTime()))}
             {item('arrow-forward-circle-outline', `Copy to ${entry.date === today ? 'tomorrow' : 'the next day'}`, () => copyTo(addDays(entry.date, 1), entry.meal))}

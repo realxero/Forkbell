@@ -16,6 +16,7 @@ import {
   type RecentFoods,
   type Workout,
   type WorkoutSummary,
+  type SavedMeal,
 } from '@forkbell/shared';
 import { cachedGet, cachedPaths, newId, readCache, send, updateCache, writeCache } from './sync';
 import { haptic } from './haptics';
@@ -240,4 +241,46 @@ export async function setDayFinished(date: string, finished: boolean) {
   });
   nudgeReminders();
   return r;
+}
+
+// Saved meals, previous meals, several at once ------------------------------------
+
+/** Log several foods into one meal (a saved meal, or a meal from an earlier day). Works offline. */
+export async function logItems(date: string, meal: Meal, items: { food: Food; grams: number }[]) {
+  for (const it of items) await addEntry({ date, meal, grams: it.grams, food: it.food });
+}
+
+/** Save foods as a named meal to log again later. Needs a connection. */
+export async function saveMeal(name: string, items: { food: Food; grams: number }[]) {
+  const usable = items.filter((i) => !i.food.id.startsWith('pending-'));
+  const r = await send<{ id: string }>('POST', '/api/meals', { name, items: usable.map((i) => ({ foodId: i.food.id, grams: i.grams })) }, { label: `Save ${name}` });
+  updateCache<{ meals: SavedMeal[] }>('/api/meals', (m) => m && { meals: [...m.meals, { id: !r.queued ? r.data.id : `pending-${newId()}`, name, items: usable }].sort((a, b) => a.name.localeCompare(b.name)) });
+  return r;
+}
+
+export async function deleteSavedMeal(m: SavedMeal) {
+  updateCache<{ meals: SavedMeal[] }>('/api/meals', (x) => x && { meals: x.meals.filter((y) => y.id !== m.id) });
+  return send('DELETE', `/api/meals/${m.id}`, undefined, { label: `Remove ${m.name}` });
+}
+
+/**
+ * Correct the numbers of one logged food: a copy of the food with the
+ * numbers you entered for this amount, and the entry points at it. The
+ * original food (and other days that used it) stay as they were.
+ */
+export async function changeEntryNutrition(entry: DiaryEntry, totals: { kcal: number; protein: number; carbs: number; fat: number }) {
+  const k = 100 / entry.grams;
+  const old = entry.food.per100;
+  const per100 = {
+    kcal: Math.round(totals.kcal * k),
+    protein: Math.round(totals.protein * k * 10) / 10,
+    carbs: Math.round(totals.carbs * k * 10) / 10,
+    fat: Math.round(totals.fat * k * 10) / 10,
+    fiber: old.fiber ?? null,
+    sugar: old.sugar ?? null,
+    sodium: old.sodium ?? null,
+  };
+  const food = await createFood({ name: entry.food.name, brand: entry.food.brand, source: 'custom', per100, servingGrams: entry.food.servingGrams, barcode: null } as Parameters<typeof createFood>[0]);
+  updateCache<DiaryDay>(`/api/diary/${entry.date}`, (day) => day && withEntries(day, day.entries.map((e) => (e.id === entry.id ? { ...e, food } : e))));
+  return send('PATCH', `/api/diary/${entry.id}`, { foodId: food.id }, { label: `Correct ${entry.food.name}`, coalesceKey: `entry-food:${entry.id}` });
 }

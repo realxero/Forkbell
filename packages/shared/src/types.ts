@@ -13,7 +13,7 @@ export interface Per100 {
   sodium?: number | null;
 }
 
-export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin';
+export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin' | 'recipe';
 
 /** A named amount, like "1 large" = 50 g. */
 export interface Portion {
@@ -97,4 +97,17 @@ export interface RecentFoods {
   recent: RecentFood[];
   /** most logged in the last 60 days first */
   frequent: RecentFood[];
+}
+
+export interface SavedMeal {
+  id: string;
+  name: string;
+  items: { food: Food; grams: number }[];
+}
+
+export interface Recipe {
+  food: Food;
+  servings: number;
+  cookedGrams: number | null;
+  items: { food: Food; grams: number }[];
 }
