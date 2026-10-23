@@ -9,6 +9,7 @@ export default function SignedInLayout() {
   if (status === 'signedOut') return <Redirect href="/login" />;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.chalk } }}>
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       <Stack.Screen name="edit" options={{ presentation: 'modal' }} />
     </Stack>

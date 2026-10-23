@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, numeric, date, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, numeric, date, timestamp, jsonb, boolean } from 'drizzle-orm/pg-core';
 
 // Mirrors migrations/*.sql. The SQL files are the source of truth (they hold
 // the row-level security policies); this is only for typed queries.
@@ -13,6 +13,7 @@ export const users = pgTable('users', {
   goalProtein: num('goal_protein'),
   goalCarbs: num('goal_carbs'),
   goalFat: num('goal_fat'),
+  weightUnit: text('weight_unit', { enum: ['lb', 'kg'] }).notNull(),
 });
 
 export const foods = pgTable('foods', {
@@ -44,4 +45,82 @@ export const diaryEntries = pgTable('diary_entries', {
   foodId: uuid('food_id').notNull(),
   grams: num('grams').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const exercises = pgTable('exercises', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerId: uuid('owner_id'),
+  source: text('source', { enum: ['builtin', 'custom'] }).notNull(),
+  key: text('key'),
+  name: text('name').notNull(),
+  muscle: text('muscle').notNull(),
+  equipment: text('equipment').notNull(),
+  kind: text('kind', { enum: ['weight', 'bodyweight', 'time'] }).notNull(),
+  increment: text('increment', { enum: ['small', 'large'] }).notNull(),
+  restSeconds: integer('rest_seconds').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const programs = pgTable('programs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  name: text('name').notNull(),
+  active: boolean('active').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const routines = pgTable('routines', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  programId: uuid('program_id').notNull(),
+  name: text('name').notNull(),
+  position: integer('position').notNull(),
+});
+
+export const routineExercises = pgTable('routine_exercises', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  routineId: uuid('routine_id').notNull(),
+  exerciseId: uuid('exercise_id').notNull(),
+  position: integer('position').notNull(),
+  sets: integer('sets').notNull(),
+  repMin: integer('rep_min').notNull(),
+  repMax: integer('rep_max').notNull(),
+  restSeconds: integer('rest_seconds').notNull(),
+});
+
+export const workouts = pgTable('workouts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  name: text('name').notNull(),
+  routineId: uuid('routine_id'),
+  startedAt: timestamp('started_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  finishedAt: timestamp('finished_at', { withTimezone: true, mode: 'string' }),
+  notes: text('notes'),
+});
+
+export const workoutExercises = pgTable('workout_exercises', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  workoutId: uuid('workout_id').notNull(),
+  exerciseId: uuid('exercise_id').notNull(),
+  position: integer('position').notNull(),
+  restSeconds: integer('rest_seconds').notNull(),
+  targetSets: integer('target_sets'),
+  repMin: integer('rep_min'),
+  repMax: integer('rep_max'),
+});
+
+export const workoutSets = pgTable('workout_sets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  workoutExerciseId: uuid('workout_exercise_id').notNull(),
+  position: integer('position').notNull(),
+  weightKg: num('weight_kg'),
+  reps: integer('reps'),
+  seconds: integer('seconds'),
+  rpe: num('rpe'),
+  warmup: boolean('warmup').notNull(),
+  done: boolean('done').notNull(),
 });

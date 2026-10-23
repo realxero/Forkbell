@@ -3,11 +3,11 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MEALS, addDays, forAmount, sumEntries, todayLocal, type DiaryDay, type Meal } from '@forkbell/shared';
-import { api, post } from '../../lib/api';
-import { MacroBar } from '../../components/MacroBar';
-import { color, space, type } from '../../lib/theme';
+import { api, post } from '../../../lib/api';
+import { MacroBar } from '../../../components/MacroBar';
+import { color, space, type } from '../../../lib/theme';
 
-import { MEAL_NAMES } from '../../components/AmountPicker';
+import { MEAL_NAMES } from '../../../components/AmountPicker';
 
 function dayLabel(date: string) {
   const today = todayLocal();

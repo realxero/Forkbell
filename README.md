@@ -4,10 +4,12 @@ Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
 Authelia (or any OpenID Connect provider).
 
-**Status:** phase 2. Sign in, search foods (Open Food Facts, USDA, about a
-hundred built-in common foods, your own), scan barcodes, log with one tap from
-recent and most-logged foods, copy meals from the day before, edit entries, set
-daily goals, and see calories and macros against them. See
+**Status:** phase 3. Food: search (Open Food Facts, USDA, about a hundred
+built-in common foods, your own), barcode scanning, one-tap logging from recent
+and most-logged foods, copying meals, daily goals. Training: a library of about
+60 exercises plus your own, starter programs, workout logging with weight,
+reps, RPE and warm-ups, a rest timer, suggested weights each session, and
+personal records. See
 [ROADMAP.md](ROADMAP.md) for what comes next.
 
 ## How it fits together
@@ -33,6 +35,9 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
   app role can't read. The web app uses an httpOnly cookie; the phone app keeps
   its token in the iOS Keychain / Android Keystore via SecureStore.
 - **Admin credentials** are only given to the one-shot `migrate` container.
+- **No borrowing ids.** Rows in a workout or program point at their parent by
+  id and owner together, and a workout can only use built-in exercises or your
+  own, so a guessed id from someone else's data is refused by Postgres itself.
 
 ## Self-hosting
 
@@ -45,8 +50,8 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
 Back up `./data/postgres` (or use `pg_dump`).
 
 Updating: pull, rebuild the image, and redeploy. The `migrate` container
-upgrades the database and refreshes the built-in foods before the server
-starts.
+upgrades the database and refreshes the built-in foods and exercises before
+the server starts.
 
 Barcode scanning in the web app needs the camera, which browsers only allow on
 an `https://` address (or `localhost`).

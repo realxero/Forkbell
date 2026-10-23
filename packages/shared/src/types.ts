@@ -76,6 +76,7 @@ export interface Me {
   name: string | null;
   email: string | null;
   goals: Goals;
+  weightUnit: 'lb' | 'kg';
 }
 
 /** A food you've logged before, with the amount you used last time. */

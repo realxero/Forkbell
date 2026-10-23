@@ -6,6 +6,7 @@ import type { Goals } from '@forkbell/shared';
 import { useAuth } from '../../lib/auth';
 import { put } from '../../lib/api';
 import { color, space, type } from '../../lib/theme';
+import { Chip } from '../../components/AmountPicker';
 
 export default function Settings() {
   const { me, signOut, refreshMe } = useAuth();
@@ -52,6 +53,25 @@ export default function Settings() {
           <Text style={s.buttonText}>Save goals</Text>
         </Pressable>
         {status && <Text style={type.body}>{status}</Text>}
+
+        <Text style={[type.small, { marginTop: space(6) }]}>Weights in workouts</Text>
+        <View style={{ flexDirection: 'row', gap: space(2) }}>
+          {(['lb', 'kg'] as const).map((u) => (
+            <Chip
+              key={u}
+              label={u === 'lb' ? 'Pounds (lb)' : 'Kilograms (kg)'}
+              on={me?.weightUnit === u}
+              onPress={async () => {
+                try {
+                  await put('/api/me/settings', { weightUnit: u });
+                  await refreshMe();
+                } catch (e) {
+                  setStatus(e instanceof Error ? e.message : String(e));
+                }
+              }}
+            />
+          ))}
+        </View>
 
         <View style={s.account}>
           <Text style={type.body}>Signed in as {me?.name ?? me?.email ?? 'you'}</Text>

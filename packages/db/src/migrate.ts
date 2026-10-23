@@ -6,6 +6,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { builtinFoods } from './builtin-foods.ts';
+import { builtinExercises } from './builtin-exercises.ts';
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appPassword = process.env.APP_DB_PASSWORD;
@@ -38,6 +39,7 @@ try {
   }
 
   await syncBuiltinFoods();
+  await syncBuiltinExercises();
   console.log('database is up to date');
 } finally {
   await sql.end();
@@ -63,6 +65,23 @@ async function syncBuiltinFoods() {
     await tx`alter table foods force row level security`;
   });
   console.log(`built-in foods: ${builtinFoods.length}`);
+}
+
+/** Same as the foods: insert or update the built-in exercise library. */
+async function syncBuiltinExercises() {
+  await sql.begin(async (tx) => {
+    await tx`alter table exercises no force row level security`;
+    for (const e of builtinExercises) {
+      await tx`
+        insert into exercises (owner_id, source, key, name, muscle, equipment, kind, increment, rest_seconds)
+        values (null, 'builtin', ${e.key}, ${e.name}, ${e.muscle}, ${e.equipment}, ${e.kind}, ${e.increment}, ${e.restSeconds})
+        on conflict (key) where source = 'builtin' do update set
+          name = excluded.name, muscle = excluded.muscle, equipment = excluded.equipment, kind = excluded.kind,
+          increment = excluded.increment, rest_seconds = excluded.rest_seconds`;
+    }
+    await tx`alter table exercises force row level security`;
+  });
+  console.log(`built-in exercises: ${builtinExercises.length}`);
 }
 
 function quoteLiteral(s: string) {

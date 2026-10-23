@@ -54,8 +54,37 @@ try {
     console.warn('No built-in foods found; run the migrator first to check them.');
   }
 
+  // Training: Alice's custom exercise, program, routine and workout.
+  const t = await as(alice, async (tx) => {
+    const [ex] = await tx`insert into exercises (owner_id, source, name, muscle, equipment, kind) values (${alice}, 'custom', 'Alice press', 'chest', 'machine', 'weight') returning id`;
+    const [prog] = await tx`insert into programs (name, active) values ('Alice plan', true) returning id`;
+    const [rt] = await tx`insert into routines (program_id, name, position) values (${prog!.id}, 'Day A', 0) returning id`;
+    await tx`insert into routine_exercises (routine_id, exercise_id, position, sets, rep_min, rep_max, rest_seconds) values (${rt!.id}, ${ex!.id}, 0, 3, 8, 12, 90)`;
+    const [w] = await tx`insert into workouts (date, name, routine_id) values ('2026-10-22', 'Day A', ${rt!.id}) returning id`;
+    const [we] = await tx`insert into workout_exercises (workout_id, exercise_id, position, rest_seconds) values (${w!.id}, ${ex!.id}, 0, 90) returning id`;
+    await tx`insert into workout_sets (workout_exercise_id, position, weight_kg, reps, done) values (${we!.id}, 0, 60, 10, true)`;
+    return { ex: ex!.id as string, routine: rt!.id as string, workout: w!.id as string, we: we!.id as string };
+  });
+  for (const table of ['programs', 'routines', 'routine_exercises', 'workouts', 'workout_exercises', 'workout_sets']) {
+    assert.equal((await as(bob, (tx) => tx`select * from ${tx(table)}`)).length, 0, `Bob can't read Alice's ${table}`);
+    assert.equal((await as(bob, (tx) => tx`delete from ${tx(table)} returning 1`)).length, 0, `Bob can't delete Alice's ${table}`);
+  }
+  assert.equal((await as(bob, (tx) => tx`select * from exercises where owner_id is not null`)).length, 0, "Bob can't see Alice's exercises");
+  // Guessed ids still get nowhere: the parent must be yours, and so must a custom exercise.
+  await assert.rejects(as(bob, (tx) => tx`insert into workout_exercises (workout_id, exercise_id, position, rest_seconds) select ${t.workout}, id, 0, 90 from exercises where source = 'builtin' limit 1`), "Bob can't add to Alice's workout");
+  await assert.rejects(as(bob, (tx) => tx`insert into workout_sets (workout_exercise_id, position, reps) values (${t.we}, 1, 5)`), "Bob can't add sets to Alice's workout");
+  await assert.rejects(as(bob, (tx) => tx`insert into workouts (date, name, routine_id) values ('2026-10-22', 'x', ${t.routine})`), "Bob can't link Alice's routine");
+  await assert.rejects(
+    as(bob, async (tx) => {
+      const [w] = await tx`insert into workouts (date, name) values ('2026-10-22', 'Bob day') returning id`;
+      await tx`insert into workout_exercises (workout_id, exercise_id, position, rest_seconds) values (${w!.id}, ${t.ex}, 0, 90)`;
+    }),
+    "Bob can't use Alice's custom exercise",
+  );
+
   // Alice still sees her own data.
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 1, 'Alice sees her entry');
+  assert.equal((await as(alice, (tx) => tx`select * from workout_sets`)).length, 1, 'Alice sees her sets');
   console.log('Row-level security: all checks passed.');
 } finally {
   await admin`delete from users where oidc_issuer = ${tag}`;
