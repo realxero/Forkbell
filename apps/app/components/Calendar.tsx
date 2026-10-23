@@ -40,7 +40,7 @@ export function CalendarSheet({
     const from = `${month}-01`;
     const to = addDays(`${month}-01`, 40);
     api<{ days: DayTotal[] }>(`/api/diary/totals?from=${from}&to=${to}`).then(
-      (r) => setTotals(Object.fromEntries(r.days.map((d) => [d.date, d.totals.kcal]))),
+      (r) => setTotals(Object.fromEntries((r.days ?? []).map((d) => [d.date, d.totals?.kcal ?? 0]))),
       () => setTotals({}),
     );
   }, [visible, month]);
@@ -53,7 +53,7 @@ export function CalendarSheet({
   const goalFor = (date: string) => {
     const [yy, mm, dd] = date.split('-').map(Number) as [number, number, number];
     const wd = String(new Date(yy, mm - 1, dd).getDay()) as '0';
-    return me?.weekdayGoals?.[wd]?.kcal ?? me?.goals.kcal ?? null;
+    return me?.weekdayGoals?.[wd]?.kcal ?? me?.goals?.kcal ?? null;
   };
   const shift = (by: number) => {
     const d = new Date(y, m - 1 + by, 1);

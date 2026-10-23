@@ -33,7 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshMe = useCallback(async () => {
     try {
       // Offline, this is the copy from last time, so the app still opens.
-      setMe(await cachedGet<Me>('/api/me'));
+      const me = await cachedGet<Me>('/api/me');
+      // Never sign in with something that isn't an account (a stray copy from a bad answer).
+      if (!me || typeof me !== 'object' || !me.id || !me.goals) {
+        updateCache('/api/me', () => undefined);
+        throw new Error('The server’s answer didn’t look like a Forkbell account. Check the server address, then sign in again.');
+      }
+      setMe(me);
       setStatus('signedIn');
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) updateCache('/api/me', () => undefined);
@@ -67,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (typeof code !== 'string') return setError('Sign-in did not finish. Try again.');
       try {
         const { token } = await post<{ token: string }>('/auth/exchange', { code });
+        if (!token) throw new Error('Sign-in finished but the server sent no session. Check the server address and try again.');
         await setToken(token);
         await refreshMe();
       } catch (e) {

@@ -60,6 +60,17 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   } catch {
     throw new ApiError(`Can't reach ${serverUrl}. Check the address and your connection.`, 0);
   }
+  // Forkbell always answers in JSON. A web page here means something in front of the
+  // server answered instead, most often a login page from the reverse proxy.
+  if (!(res.headers.get('content-type') ?? '').includes('application/json')) {
+    const page = res.redirected || (res.headers.get('content-type') ?? '').includes('text/html');
+    throw new ApiError(
+      page
+        ? `${serverUrl} answered with a web page instead of Forkbell. If your reverse proxy puts a login (such as Authelia forward-auth) in front of Forkbell, turn it off for Forkbell: the app signs in with Authelia by itself.`
+        : `${serverUrl} answered ${res.status} without Forkbell data. Check the server address.`,
+      res.ok ? 418 : res.status,
+    );
+  }
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new ApiError(data.error ?? `The server answered ${res.status}.`, res.status);
   return data as T;
