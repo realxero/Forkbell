@@ -25,6 +25,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/Payload"
           cp -R "$RUNNER_TEMP/Forkbell.xcarchive/Products/Applications/Forkbell.app" "$RUNNER_TEMP/Payload/"
+          # Ad-hoc sign with the app's entitlements (HealthKit) so SideStore and
+          # LiveContainer can see them when they re-sign the app with your account.
+          codesign --force --deep --sign - --entitlements apps/app/ios/Forkbell/Forkbell.entitlements "$RUNNER_TEMP/Payload/Forkbell.app"
           cd "$RUNNER_TEMP" && zip -qr Forkbell.ipa Payload
       - uses: softprops/action-gh-release@v2
         with:

@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { addDays } from './dates.ts';
+import { dateSchema } from './schemas.ts';
 import { KG_PER_LB, formatWeight, type WeightUnit } from './training.ts';
 
 /** Energy in a kilogram of body weight change, the usual working figure. */
@@ -278,4 +280,25 @@ export function milestones(opts: { loggedDates: string[]; workoutDates: string[]
     out.push({ key: 'goal', label: 'Goal weight reached', detail: null, reached: Boolean(goalHit), date: goalHit?.date ?? null });
   }
   return out;
+}
+
+// Health platforms ---------------------------------------------------------------------
+
+export const HEALTH_KINDS = ['steps', 'active_kcal', 'resting_kcal', 'resting_hr'] as const;
+export type HealthKind = (typeof HEALTH_KINDS)[number];
+export type HealthSource = 'apple_health' | 'health_connect';
+
+export const healthImportSchema = z.object({
+  source: z.enum(['apple_health', 'health_connect']),
+  days: z.array(z.object({ date: dateSchema, kind: z.enum(HEALTH_KINDS), value: z.number().min(0).max(999999) })).max(1000),
+  weights: z.array(z.object({ date: dateSchema, weightKg: z.number().min(20).max(400), bodyFat: z.number().min(2).max(70).nullish() })).max(400),
+});
+export type HealthImport = z.infer<typeof healthImportSchema>;
+
+export interface Activity {
+  today: { steps: number | null; activeKcal: number | null };
+  /** averages over the last 7 full days with data */
+  week: { steps: number | null; activeKcal: number | null };
+  restingHr: number | null;
+  source: HealthSource | null;
 }

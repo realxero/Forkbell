@@ -15,6 +15,7 @@ import { exerciseRoutes } from './routes/exercises.ts';
 import { workoutRoutes } from './routes/workouts.ts';
 import { programRoutes, routineRoutes } from './routes/programs.ts';
 import { progressRoutes } from './routes/progress.ts';
+import { healthRoutes } from './routes/health.ts';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
@@ -36,6 +37,7 @@ api.route('/workouts', workoutRoutes(database));
 api.route('/programs', programRoutes(database));
 api.route('/routines', routineRoutes(database));
 api.route('/progress', progressRoutes(database));
+api.route('/health', healthRoutes(database));
 app.route('/api', api);
 
 app.onError((err, c) => {

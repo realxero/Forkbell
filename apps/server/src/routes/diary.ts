@@ -9,6 +9,23 @@ import { saveFood, BadFood } from './save-food.ts';
 export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
 
+  /** Calories and macros per day, for sending to Apple Health or Health Connect. */
+  r.get('/totals', async (c) => {
+    const from = dateSchema.safeParse(c.req.query('from'));
+    const to = dateSchema.safeParse(c.req.query('to'));
+    if (!from.success || !to.success || from.data > to.data) return c.json({ error: 'Use from and to dates like 2026-10-22.' }, 400);
+    const rows = await asUser(c.get('userId'), (tx) =>
+      tx
+        .select({ entry: diaryEntries, food: foods })
+        .from(diaryEntries)
+        .innerJoin(foods, eq(foods.id, diaryEntries.foodId))
+        .where(sql`${diaryEntries.date} between ${from.data}::date and ${to.data}::date`),
+    );
+    const byDate = new Map<string, { grams: number; food: ReturnType<typeof toFood> }[]>();
+    for (const { entry, food } of rows) byDate.set(entry.date, [...(byDate.get(entry.date) ?? []), { grams: entry.grams, food: toFood(food) }]);
+    return c.json({ days: [...byDate.entries()].sort().map(([date, entries]) => ({ date, totals: sumEntries(entries) })) });
+  });
+
   r.get('/entry/:id', async (c) => {
     const id = c.req.param('id');
     if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: 'That entry was not found.' }, 404);

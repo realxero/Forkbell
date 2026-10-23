@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
-import { measurements, users, weighIns, workouts, type connect } from '@forkbell/db';
-import { addDays, computeStreaks, dateSchema, estimateEnergy, milestones, planGoal, todayLocal, weightTrend } from '@forkbell/shared';
+import { healthDaily, measurements, users, weighIns, workouts, type connect } from '@forkbell/db';
+import { addDays, computeStreaks, dateSchema, estimateEnergy, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthSource } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -33,7 +33,8 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
         group by d.date`);
       const done = await tx.select({ date: workouts.date }).from(workouts).where(isNotNull(workouts.finishedAt)).orderBy(asc(workouts.date));
       const ms = await tx.select().from(measurements).orderBy(asc(measurements.date));
-      return { me: me!, weights, intakeRows, done, ms };
+      const health = await tx.select().from(healthDaily).where(sql`${healthDaily.date} >= ${addDays(today, -8)}::date`);
+      return { me: me!, weights, intakeRows, done, ms, health };
     });
 
     const unit = data.me.weightUnit;
@@ -50,10 +51,31 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     const byKind = new Map<string, { date: string; valueCm: number }[]>();
     for (const m of data.ms) byKind.set(m.kind, [...(byKind.get(m.kind) ?? []), { date: m.date, valueCm: m.valueCm }]);
 
+    // Activity from the phone: today, and the average of the last 7 full days.
+    const valueOn = (kind: string, date: string) => {
+      const rows = data.health.filter((h) => h.kind === kind && h.date === date);
+      return rows.length ? Math.max(...rows.map((h) => h.value)) : null; // two sources: take the larger, never add
+    };
+    const avg = (kind: string) => {
+      const vals = [1, 2, 3, 4, 5, 6, 7].map((i) => valueOn(kind, addDays(today, -i))).filter((v): v is number => v !== null);
+      return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+    };
+    const hr = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => valueOn('resting_hr', addDays(today, -i))).find((v) => v !== null) ?? null;
+    const activity: Activity = {
+      today: { steps: valueOn('steps', today), activeKcal: valueOn('active_kcal', today) },
+      week: { steps: avg('steps'), activeKcal: avg('active_kcal') },
+      restingHr: hr,
+      source: (data.health[0]?.source as HealthSource | undefined) ?? null,
+    };
+
     return c.json({
       today,
       unit,
-      weighIns: series.slice(-400).map((p, i, all) => ({ ...p, bodyFat: data.weights[data.weights.length - all.length + i]?.bodyFat ?? null })),
+      activity,
+      weighIns: series.slice(-400).map((p, i, all) => {
+        const w = data.weights[data.weights.length - all.length + i];
+        return { ...p, bodyFat: w?.bodyFat ?? null, source: w?.source ?? 'manual' };
+      }),
       energy,
       calorieGoal: data.me.goalKcal,
       goal: { weightKg: goalKg, date: data.me.goalDate, weeklyWorkoutGoal: data.me.weeklyWorkoutGoal, plan },

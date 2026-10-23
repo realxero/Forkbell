@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, dateSchema, todayLocal, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
+import { addDays, dateSchema, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
 import { put } from '../../../lib/api';
 import { cachedGet, send } from '../../../lib/sync';
 import { saveWeighIn } from '../../../lib/actions';
@@ -15,6 +15,7 @@ import { color, space, type } from '../../../lib/theme';
 
 type Progress = {
   today: string;
+  activity?: Activity;
   weighIns: (TrendPoint & { bodyFat: number | null })[];
   energy: EnergyEstimate;
   calorieGoal: number | null;
@@ -123,6 +124,25 @@ export default function ProgressScreen() {
                   {RANGES.map((r) => <Chip key={r.days} label={r.label} on={range === r.days} onPress={() => setRange(r.days)} />)}
                 </View>
                 <WeightChart points={shown} goalKg={p.goal.weightKg} show={(kg) => units.label(kg)} />
+              </View>
+            )}
+
+            {/* Activity from Apple Health / Health Connect */}
+            {p.activity?.source && (
+              <View style={s.card}>
+                <Text style={type.title}>Activity</Text>
+                <View style={s.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[type.title, type.number]}>{p.activity.today.steps?.toLocaleString() ?? '–'}</Text>
+                    <Text style={type.small}>steps today{p.activity.week.steps ? ` · ${p.activity.week.steps.toLocaleString()} a day lately` : ''}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[type.title, type.number]}>{p.activity.today.activeKcal?.toLocaleString() ?? '–'}</Text>
+                    <Text style={type.small}>active kcal{p.activity.week.activeKcal ? ` · ${p.activity.week.activeKcal.toLocaleString()} a day` : ''}</Text>
+                  </View>
+                </View>
+                {p.activity.restingHr && <Text style={type.small}>Resting heart rate {p.activity.restingHr} bpm</Text>}
+                <Text style={type.small}>From {p.activity.source === 'apple_health' ? 'Apple Health' : 'Health Connect'}. Your daily burn below comes from your own logs and weight, so it already reflects this activity.</Text>
               </View>
             )}
 

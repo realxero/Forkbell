@@ -134,6 +134,16 @@ export const weighIns = pgTable('weigh_ins', {
   date: date('date', { mode: 'string' }).notNull(),
   weightKg: num('weight_kg').notNull(),
   bodyFat: num('body_fat'),
+  source: text('source', { enum: ['manual', 'apple_health', 'health_connect'] }).notNull(),
+});
+
+export const healthDaily = pgTable('health_daily', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  kind: text('kind', { enum: ['steps', 'active_kcal', 'resting_kcal', 'resting_hr'] }).notNull(),
+  value: num('value').notNull(),
+  source: text('source', { enum: ['apple_health', 'health_connect'] }).notNull(),
 });
 
 export const measurements = pgTable('measurements', {

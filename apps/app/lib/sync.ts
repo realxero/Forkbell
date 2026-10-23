@@ -43,7 +43,9 @@ function persist() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     // Keep the most recently used screens; drop the oldest.
-    const keys = Object.keys(state.cache).sort((a, b) => state.cache[b]!.t - state.cache[a]!.t);
+    const keys = Object.keys(state.cache)
+      .filter((k) => !k.startsWith('device:')) // settings for this phone are never dropped
+      .sort((a, b) => state.cache[b]!.t - state.cache[a]!.t);
     for (const k of keys.slice(MAX_CACHE)) delete state.cache[k];
     void saveStore(state);
   }, 300);

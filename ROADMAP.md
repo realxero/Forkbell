@@ -11,7 +11,7 @@ Each phase ends with something usable on web and iPhone.
 4. **Progress (done).** Weigh-ins and measurements, adaptive energy expenditure,
    goal-date estimate with a weight trend chart, streaks and milestones.
 5. **Offline (done).** On-device database with sync, so logging works with no signal.
-6. **Health platforms.** Apple Health and Health Connect, reading and writing.
+6. **Health platforms (done).** Apple Health and Health Connect, reading and writing.
 7. **AI assistant (Bell).** Bring-your-own model; chat logging, photo logging
    with a review step, questions about your own data.
 8. **Smart suggestions.** Swaps, protein and fiber ideas, nutrient limits,

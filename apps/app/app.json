@@ -11,7 +11,17 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.realxero.forkbell"
+      "package": "com.realxero.forkbell",
+      "permissions": [
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_BASAL_METABOLIC_RATE",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.WRITE_NUTRITION",
+        "android.permission.health.WRITE_EXERCISE"
+      ]
     },
     "web": {
       "output": "single",
@@ -25,6 +35,23 @@
         {
           "cameraPermission": "Forkbell uses the camera to scan food barcodes.",
           "recordAudioAndroid": false
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Forkbell reads your steps, activity, resting heart rate and weight to show your progress.",
+          "NSHealthUpdateUsageDescription": "Forkbell saves your daily calories, macros and workouts to Apple Health.",
+          "background": false
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ]
     ],

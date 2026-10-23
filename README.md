@@ -4,7 +4,7 @@ Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
 Authelia (or any OpenID Connect provider).
 
-**Status:** phase 5. Food: search (Open Food Facts, USDA, about a hundred
+**Status:** phase 6. Food: search (Open Food Facts, USDA, about a hundred
 built-in common foods, your own), barcode scanning, one-tap logging from recent
 and most-logged foods, copying meals, daily goals. Training: a library of about
 60 exercises plus your own, starter programs, workout logging with weight,
@@ -13,7 +13,9 @@ personal records. Progress: weigh-ins with a smoothed trend and chart, your
 real daily burn worked out from your own logs, a goal date range and a
 sustainable calorie suggestion, body measurements, streaks and milestones.
 Offline: the app opens and logging works with no signal; changes are kept on
-the device and sync by themselves when the connection returns. See
+the device and sync by themselves when the connection returns. Health: the
+phone app reads steps, activity, resting heart rate and weigh-ins from Apple
+Health or Health Connect, and sends back daily calories, macros and workouts. See
 [ROADMAP.md](ROADMAP.md) for what comes next.
 
 ## How it fits together
@@ -60,6 +62,17 @@ the server starts.
 Barcode scanning in the web app needs the camera, and offline use needs a
 service worker; browsers only allow both on an `https://` address (or
 `localhost`).
+
+## Apple Health and Health Connect
+
+These only exist on phones, so they work in the native app (Settings, then
+Connect). Each sync reads the last 14 days and sends the last 7 days of food
+totals and any newly finished workouts. Writing a day again replaces it in
+Apple Health (sync identifiers) and Health Connect (client record ids), so
+nothing is counted twice. Imported weights fill in days you didn't weigh in
+yourself; one you typed into Forkbell is never replaced. The iOS build is
+ad-hoc signed with the HealthKit entitlement so a sideloading tool can keep it
+when it re-signs the app.
 
 ## Offline
 

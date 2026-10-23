@@ -7,6 +7,8 @@ import { useAuth } from '../../lib/auth';
 import { put } from '../../lib/api';
 import { color, space, type } from '../../lib/theme';
 import { Chip } from '../../components/AmountPicker';
+import { Platform, Switch } from 'react-native';
+import { connectHealth, getHealthSettings, healthName, healthSupported, setHealthSettings, syncHealth, type HealthSettings } from '../../lib/health-sync';
 
 export default function Settings() {
   const { me, signOut, refreshMe } = useAuth();
@@ -73,6 +75,8 @@ export default function Settings() {
           ))}
         </View>
 
+        <HealthSection />
+
         <View style={s.account}>
           <Text style={type.body}>Signed in as {me?.name ?? me?.email ?? 'you'}</Text>
           <Pressable onPress={signOut}>
@@ -81,6 +85,82 @@ export default function Settings() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function HealthSection() {
+  const [h, setH] = useState<HealthSettings>(getHealthSettings());
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!healthSupported) {
+    return (
+      <View style={{ gap: space(1), marginTop: space(6) }}>
+        <Text style={type.small}>Apple Health and Health Connect</Text>
+        <Text style={type.body}>
+          {Platform.OS === 'web' ? 'These connect from the Forkbell app on your phone. Steps, activity and weight synced there show up here too.' : 'Not available on this device.'}
+        </Text>
+      </View>
+    );
+  }
+  const toggle = (key: 'readActivity' | 'writeNutrition' | 'writeWorkouts', label: string) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space(3) }}>
+      <Text style={[type.body, { flex: 1 }]}>{label}</Text>
+      <Switch
+        value={h[key]}
+        onValueChange={(v) => {
+          setHealthSettings({ [key]: v });
+          setH(getHealthSettings());
+        }}
+      />
+    </View>
+  );
+  const run = async (fn: () => Promise<string | null>, ok: string) => {
+    setBusy(true);
+    setMsg(null);
+    const err = await fn();
+    setH(getHealthSettings());
+    setMsg(err ?? ok);
+    setBusy(false);
+  };
+  return (
+    <View style={{ gap: space(3), marginTop: space(6) }}>
+      <Text style={type.small}>{healthName}</Text>
+      {!h.connected ? (
+        <>
+          <Text style={type.body}>
+            Bring in steps, active calories, resting heart rate and weigh-ins, and send your daily calories, macros and workouts to {healthName}. Weights you type into Forkbell always win over imported ones.
+          </Text>
+          <Pressable disabled={busy} onPress={() => run(connectHealth, `Connected to ${healthName}.`)} style={[s.button, busy && { opacity: 0.5 }]}>
+            <Text style={s.buttonText}>Connect {healthName}</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          {toggle('readActivity', 'Bring in steps, activity and weight')}
+          {toggle('writeNutrition', `Send daily calories and macros to ${healthName}`)}
+          {toggle('writeWorkouts', `Send workouts to ${healthName}`)}
+          <Text style={type.small}>
+            {h.lastSync ? `Last synced ${new Date(h.lastSync).toLocaleString()}.` : 'Not synced yet.'} Syncs when you open the app.
+            {h.lastError ? ` Last problem: ${h.lastError}` : ''}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: space(5) }}>
+            <Pressable disabled={busy} onPress={() => run(() => syncHealth(true), 'Synced.')}>
+              <Text style={s.link}>{busy ? 'Syncing…' : 'Sync now'}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setHealthSettings({ connected: false });
+                setH(getHealthSettings());
+                setMsg(`Disconnected. To remove Forkbell’s access completely, use ${healthName}’s own settings.`);
+              }}
+            >
+              <Text style={[s.link, { color: color.over }]}>Disconnect</Text>
+            </Pressable>
+          </View>
+        </>
+      )}
+      {msg && <Text style={type.body}>{msg}</Text>}
+    </View>
   );
 }
 

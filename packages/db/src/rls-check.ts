@@ -93,6 +93,11 @@ try {
   }
   await assert.rejects(as(bob, (tx) => tx`insert into weigh_ins (user_id, date, weight_kg) values (${alice}, '2026-10-23', 90)`), "Bob can't weigh in as Alice");
 
+  // Health data from the phone is private too.
+  await as(alice, (tx) => tx`insert into health_daily (date, kind, value, source) values ('2026-10-22', 'steps', 9000, 'apple_health')`);
+  assert.equal((await as(bob, (tx) => tx`select * from health_daily`)).length, 0, "Bob can't read Alice's health data");
+  await assert.rejects(as(bob, (tx) => tx`insert into health_daily (user_id, date, kind, value, source) values (${alice}, '2026-10-22', 'steps', 1, 'apple_health')`), "Bob can't write Alice's health data");
+
   // Alice still sees her own data.
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 1, 'Alice sees her entry');
   assert.equal((await as(alice, (tx) => tx`select * from workout_sets`)).length, 1, 'Alice sees her sets');
