@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { TextInput, type StyleProp, type TextStyle } from 'react-native';
+import { color } from '../lib/theme';
 
 /**
  * A number box that keeps what you type ("12." or "") while you type, and
@@ -37,7 +38,7 @@ export function NumberField({
       }}
       onSubmitEditing={() => onCommit(text)}
       placeholder={placeholder}
-      placeholderTextColor="#A3ACB1"
+      placeholderTextColor={color.placeholder}
       keyboardType={decimal ? 'decimal-pad' : 'number-pad'}
       selectTextOnFocus
       style={style}

@@ -10,13 +10,14 @@ import { useAuth } from '../../../lib/auth';
 import { useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { NumberField } from '../../../components/NumberField';
-import { WeightChart } from '../../../components/WeightChart';
+import { CalorieBars, LogCalendar, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
 import { WellbeingCard } from '../../../components/WellbeingCard';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
 
 type Progress = {
   today: string;
+  days?: DayTotals[];
   activity?: Activity;
   weighIns: (TrendPoint & { bodyFat: number | null })[];
   energy: EnergyEstimate;
@@ -129,6 +130,26 @@ export default function ProgressScreen() {
                 </View>
                 <WeightChart points={shown} goalKg={p.goal.weightKg} show={(kg) => units.label(kg)} />
               </View>
+            )}
+
+            {/* Calories and macros, day by day */}
+            {p.days && (
+              <>
+                <View style={s.card}>
+                  <Text style={type.title}>Calories, last 2 weeks</Text>
+                  <CalorieBars days={p.days.slice(-14)} today={p.today} />
+                </View>
+                <View style={s.card}>
+                  <Text style={type.title}>Where your calories come from</Text>
+                  <Text style={type.small}>Last 7 days</Text>
+                  <MacroDonut days={p.days.slice(-7)} />
+                </View>
+                <View style={s.card}>
+                  <Text style={type.title}>Days logged</Text>
+                  <LogCalendar days={p.days} today={p.today} />
+                  <Text style={type.small}>Green: logged and within your goal. Red: over it. Grey: nothing logged.</Text>
+                </View>
+              </>
             )}
 
             {/* Activity from Apple Health / Health Connect */}
@@ -366,14 +387,14 @@ const s = StyleSheet.create({
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   error: { ...type.body, color: color.over },
   notice: { ...type.small, color: color.fat, fontWeight: '700' },
-  warning: { ...type.small, color: '#9A6B00', backgroundColor: '#FFF4D6', padding: space(2), borderRadius: 8 },
+  warning: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, padding: space(2), borderRadius: 8 },
   card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginBottom: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   small: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3), alignSelf: 'flex-start' },
   smallText: { color: color.chalk, fontWeight: '700', fontSize: 15 },
-  suggest: { backgroundColor: '#EEF3FB', borderRadius: 12, padding: space(3), gap: space(2), marginTop: space(2) },
+  suggest: { backgroundColor: color.infoBg, borderRadius: 12, padding: space(3), gap: space(2), marginTop: space(2) },
   step: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontSize: 20, color: color.iron, fontWeight: '700' },
   button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center', marginTop: space(1) },

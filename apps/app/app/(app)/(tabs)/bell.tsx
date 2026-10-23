@@ -8,6 +8,7 @@ import { addEntry } from '../../../lib/actions';
 import { readCache, writeCache } from '../../../lib/sync';
 import { Chip, MEAL_NAMES } from '../../../components/AmountPicker';
 import { NumberField } from '../../../components/NumberField';
+import { FoodIcon } from '../../../components/FoodIcon';
 import { color, space, type } from '../../../lib/theme';
 
 type Message = { role: 'user' | 'assistant'; text: string; image?: string; proposals?: FoodProposal[]; added?: boolean };
@@ -216,6 +217,7 @@ function Proposals({ items, added, onAdded }: { items: FoodProposal[]; added: bo
               >
                 <Text style={{ color: color.card, fontWeight: '800' }}>{p.keep ? '✓' : ''}</Text>
               </Pressable>
+              <FoodIcon name={p.name} brand={p.brand} size={32} />
               <View style={{ flex: 1 }}>
                 <Text style={[type.body, { fontWeight: '700' }]}>{p.name}</Text>
                 <Text style={type.small}>
@@ -224,7 +226,7 @@ function Proposals({ items, added, onAdded }: { items: FoodProposal[]; added: bo
                   {p.estimate ? ' · estimate' : p.food ? ' · from your foods' : ''}
                 </Text>
                 {p.note && <Text style={type.small}>{p.note}</Text>}
-                {p.warnings?.length > 0 && <Text style={[type.small, { color: '#9A6B00', fontWeight: '700' }]}>⚠ {p.warnings.join(' · ')} (by name)</Text>}
+                {p.warnings?.length > 0 && <Text style={[type.small, { color: color.warnText, fontWeight: '700' }]}>⚠ {p.warnings.join(' · ')} (by name)</Text>}
               </View>
             </View>
             {!added && p.keep && (

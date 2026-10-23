@@ -86,7 +86,7 @@ export function SuggestionsCard({ day, onChanged }: { day: DiaryDay; onChanged: 
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: '#EEF3FB', borderRadius: 14, padding: space(4), gap: space(3) },
+  card: { backgroundColor: color.infoBg, borderRadius: 14, padding: space(4), gap: space(3) },
   item: { gap: space(1) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   x: { color: color.ironSoft, fontSize: 16 },

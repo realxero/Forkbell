@@ -27,8 +27,9 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     const data = await asUser(userId, async (tx) => {
       const [me] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
       const weights = await tx.select().from(weighIns).orderBy(asc(weighIns.date));
-      const intakeRows = await tx.execute<{ date: string; kcal: string }>(sql`
-        select d.date::text as date, sum(d.grams / 100 * f.kcal) as kcal
+      const intakeRows = await tx.execute<{ date: string; kcal: string; protein: string; carbs: string; fat: string }>(sql`
+        select d.date::text as date, sum(d.grams / 100 * f.kcal) as kcal,
+               sum(d.grams / 100 * f.protein) as protein, sum(d.grams / 100 * f.carbs) as carbs, sum(d.grams / 100 * f.fat) as fat
         from diary_entries d join foods f on f.id = d.food_id
         where d.date >= ${addDays(today, -400)}::date and d.date <= ${today}::date
         group by d.date`);
@@ -70,10 +71,22 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       source: (data.health[0]?.source as HealthSource | undefined) ?? null,
     };
 
+    // The last four weeks, day by day, for the charts.
+    const byDate = new Map(data.intakeRows.map((r) => [r.date, r]));
+    const weekdayGoals = (data.me.weekdayGoals ?? {}) as Record<string, { kcal: number | null } | undefined>;
+    const days = Array.from({ length: 28 }, (_, i) => {
+      const date = addDays(today, i - 27);
+      const r = byDate.get(date);
+      const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+      const goal = weekdayGoals[String(new Date(Date.UTC(y, m - 1, d)).getUTCDay())]?.kcal ?? data.me.goalKcal;
+      return { date, kcal: Math.round(Number(r?.kcal ?? 0)), protein: Math.round(Number(r?.protein ?? 0)), carbs: Math.round(Number(r?.carbs ?? 0)), fat: Math.round(Number(r?.fat ?? 0)), goal };
+    });
+
     return c.json({
       today,
       unit,
       activity,
+      days,
       weighIns: series.slice(-400).map((p, i, all) => {
         const w = data.weights[data.weights.length - all.length + i];
         return { ...p, bodyFat: w?.bodyFat ?? null, source: w?.source ?? 'manual' };

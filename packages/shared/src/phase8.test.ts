@@ -83,3 +83,12 @@ test('training tips: pain follow-up, a check-up nudge, and big jumps', () => {
   assert.equal(bigJump(toKg(145, 'lb'), prev, 'lb'), null);
   assert.match(bigJump(toKg(155, 'lb'), prev, 'lb')!, /20 lb more/);
 });
+
+import { foodEmoji } from './emoji.ts';
+test('food pictures: the dish wins over an ingredient', () => {
+  assert.equal(foodEmoji('Chicken sandwich'), '🥪');
+  assert.equal(foodEmoji('Coca-Cola Zero Caffeine Free', 'Coca-Cola'), '🥤');
+  assert.equal(foodEmoji('Powdered Peanut Butter', 'PB2'), '🥜');
+  assert.equal(foodEmoji('Egg, whole'), '🥚');
+  assert.equal(foodEmoji('Something unusual'), '🍽️');
+});

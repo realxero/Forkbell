@@ -11,3 +11,4 @@ export * from './food-safety.ts';
 export * from './suggestions.ts';
 export * from './planner.ts';
 export * from './training-tips.ts';
+export * from './emoji.ts';

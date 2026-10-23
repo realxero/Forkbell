@@ -7,6 +7,7 @@ import { useAuth } from '../../lib/auth';
 import { addEntry, foodLibrary } from '../../lib/actions';
 import { cachedGet } from '../../lib/sync';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
+import { FoodIcon } from '../../components/FoodIcon';
 import { color, space, type } from '../../lib/theme';
 
 const label = (date: string, today: string) => {
@@ -101,6 +102,7 @@ export default function Plan() {
                         style={[s.item, off && { opacity: 0.35 }]}
                         accessibilityLabel={`${off ? 'Put back' : 'Leave out'} ${it.food.name}`}
                       >
+                        <FoodIcon name={it.food.name} brand={it.food.brand} size={30} />
                         <Text style={[type.body, { flex: 1 }]} numberOfLines={1}>{it.food.name}</Text>
                         <Text style={[type.small, type.number]}>{it.grams} g · {Math.round((it.food.per100.kcal * it.grams) / 100)} kcal</Text>
                       </Pressable>
@@ -133,7 +135,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', gap: space(5) },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(2), paddingVertical: 3 },
-  note: { ...type.small, color: '#9A6B00' },
+  note: { ...type.small, color: color.warnText },
   button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
   buttonText: { color: color.chalk, fontSize: 16, fontWeight: '700' },
 });

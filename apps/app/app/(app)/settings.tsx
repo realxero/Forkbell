@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { presetGoals, todayLocal } from '@forkbell/shared';
-import { cachedGet } from '../../lib/sync';
+import { cachedGet, readCache, writeCache } from '../../lib/sync';
+import { setWebScheme, type SchemeChoice } from '../../lib/theme';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -78,6 +79,8 @@ export default function Settings() {
           ))}
         </View>
 
+        <Appearance />
+
         <WeekdayGoals />
 
         <Pressable onPress={() => router.push('/preferences')} style={{ marginTop: space(6) }}>
@@ -97,6 +100,27 @@ export default function Settings() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Light, dark, or follow the phone. Instant on the web; phones apply it on the next launch. */
+function Appearance() {
+  const [choice, setChoice] = useState<SchemeChoice>(readCache<SchemeChoice>('device:theme') ?? 'system');
+  const pick = (c: SchemeChoice) => {
+    setChoice(c);
+    writeCache('device:theme', c);
+    setWebScheme(c);
+  };
+  return (
+    <View style={{ gap: space(2), marginTop: space(6) }}>
+      <Text style={type.small}>Appearance</Text>
+      <View style={{ flexDirection: 'row', gap: space(2) }}>
+        {(['system', 'light', 'dark'] as const).map((c) => (
+          <Chip key={c} label={c === 'system' ? 'Match device' : c === 'light' ? 'Light' : 'Dark'} on={choice === c} onPress={() => pick(c)} />
+        ))}
+      </View>
+      {Platform.OS !== 'web' && <Text style={type.small}>Takes effect the next time you open the app.</Text>}
+    </View>
   );
 }
 

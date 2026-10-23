@@ -8,6 +8,7 @@ import { cachedGet } from '../../lib/sync';
 import { addEntry, createFood, findByBarcodeOffline, foodLibrary, searchOffline } from '../../lib/actions';
 import { AmountPicker, Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { BarcodeCamera } from '../../components/BarcodeCamera';
+import { FoodIcon } from '../../components/FoodIcon';
 import { color, space, type } from '../../lib/theme';
 
 type Pick = Food | FoodCandidate;
@@ -209,6 +210,7 @@ function RecentList({
       {list.length === 0 && <Text style={type.small}>Foods you log more than once show up here.</Text>}
       {list.map((r) => (
         <Pressable key={r.food.id} onPress={() => onPick(r)} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+          <FoodIcon name={r.food.name} brand={r.food.brand} size={36} />
           <View style={{ flex: 1 }}>
             <Text style={type.body} numberOfLines={1}>{r.food.name}</Text>
             <Text style={type.small} numberOfLines={1}>
@@ -229,6 +231,7 @@ function Row({ food, onPress }: { food: Pick; onPress: () => void }) {
   const portion = food.portions[0];
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+      <FoodIcon name={food.name} brand={food.brand} size={36} />
       <View style={{ flex: 1 }}>
         <Text style={type.body} numberOfLines={2}>{food.name}</Text>
         {food.brand ? <Text style={type.small} numberOfLines={1}>{food.brand}</Text> : null}
