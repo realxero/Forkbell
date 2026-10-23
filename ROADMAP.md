@@ -2,8 +2,8 @@
 
 Each phase ends with something usable on web and iPhone.
 
-1. **Diary (now).** Sign-in, food search, logging, daily goals and totals.
-2. **Food logging speed.** Barcode scanning, recent and frequent foods, copy
+1. **Diary (done).** Sign-in, food search, logging, daily goals and totals.
+2. **Food logging speed (done).** Barcode scanning, recent and frequent foods, copy
    meals between days, portion chips, editing an entry's amount, built-in
    common foods.
 3. **Training.** Exercise library, workout logging with sets, reps, weight and

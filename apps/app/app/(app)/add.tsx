@@ -1,26 +1,35 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { forAmount, mealForTime, per100Problems, todayLocal, type Food, type FoodCandidate, type Meal } from '@forkbell/shared';
-import { api, post } from '../../lib/api';
+import { forAmount, mealForTime, per100Problems, todayLocal, type Food, type FoodCandidate, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
+import { api, ApiError, post } from '../../lib/api';
+import { AmountPicker, Chip, MEAL_NAMES } from '../../components/AmountPicker';
+import { BarcodeCamera } from '../../components/BarcodeCamera';
 import { color, space, type } from '../../lib/theme';
 
 type Pick = Food | FoodCandidate;
 type SearchResult = { mine: Food[]; results: FoodCandidate[]; errors: string[] };
-const MEAL_NAMES: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
+type BarcodeResult = { food?: Food; candidate?: FoodCandidate };
+type Screen = { kind: 'search' } | { kind: 'scan' } | { kind: 'amount'; food: Pick; lastGrams?: number } | { kind: 'create'; barcode?: string; note?: string };
 
 export default function AddFood() {
-  const params = useLocalSearchParams<{ meal?: Meal; date?: string }>();
+  const params = useLocalSearchParams<{ meal?: Meal; date?: string; scan?: string }>();
   const meal = params.meal ?? mealForTime();
   const date = params.date ?? todayLocal();
 
+  const [view, setView] = useState<Screen>(params.scan ? { kind: 'scan' } : { kind: 'search' });
   const [q, setQ] = useState('');
   const [found, setFound] = useState<SearchResult | null>(null);
   const [searching, setSearching] = useState(false);
-  const [picked, setPicked] = useState<Pick | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [recent, setRecent] = useState<RecentFoods | null>(null);
+  const [tab, setTab] = useState<'recent' | 'frequent'>('recent');
+  const [added, setAdded] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<RecentFoods>(`/api/foods/recent?today=${todayLocal()}`).then(setRecent, () => setRecent({ recent: [], frequent: [] }));
+  }, []);
 
   // Search 350 ms after typing stops; ignore answers to older queries.
   useEffect(() => {
@@ -33,7 +42,7 @@ export default function AddFood() {
         const r = await api<SearchResult>(`/api/foods/search?q=${encodeURIComponent(query)}`);
         if (live) setFound(r);
       } catch (e) {
-        if (live) setError(e instanceof Error ? e.message : String(e));
+        if (live) setError(message(e));
       } finally {
         if (live) setSearching(false);
       }
@@ -44,47 +53,114 @@ export default function AddFood() {
     };
   }, [q]);
 
-  const log = async (food: Pick, grams: number) => {
+  const log = async (food: Pick, grams: number, toMeal: Meal) => {
     setError(null);
+    await post('/api/diary', 'id' in food ? { date, meal: toMeal, grams, foodId: food.id } : { date, meal: toMeal, grams, food });
+  };
+
+  /** One tap: log a recent food with last time's amount and stay here to add more. */
+  const quickAdd = async (r: RecentFood) => {
     try {
-      await post('/api/diary', 'id' in food ? { date, meal, grams, foodId: food.id } : { date, meal, grams, food });
-      router.back();
+      await log(r.food, r.lastGrams, meal);
+      setAdded((a) => [...a, `${r.food.name}, ${r.lastGrams} g`]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(message(e));
     }
   };
+
+  const onCode = useCallback(async (code: string) => {
+    setError(null);
+    try {
+      const r = await api<BarcodeResult>(`/api/foods/barcode/${encodeURIComponent(code)}`);
+      const food = r.food ?? r.candidate;
+      if (food) setView({ kind: 'amount', food });
+    } catch (e) {
+      // Not found (or Open Food Facts is down): offer to add it, with the barcode filled in.
+      setView({ kind: 'create', barcode: code.replace(/\D/g, ''), note: message(e) });
+    }
+  }, []);
+
+  const lastGramsFor = (food: Pick) => ('id' in food ? recent?.recent.concat(recent.frequent).find((r) => r.food.id === food.id)?.lastGrams : undefined);
 
   return (
     <SafeAreaView style={s.screen}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={s.head}>
-          <Text style={type.title}>Add to {MEAL_NAMES[meal]}</Text>
+          <Text style={type.title}>
+            {view.kind === 'scan' ? 'Scan a barcode' : view.kind === 'create' ? 'New food' : view.kind === 'amount' ? 'How much?' : `Add to ${MEAL_NAMES[meal]}`}
+          </Text>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={s.link}>Close</Text>
+            <Text style={s.link}>{added.length ? 'Done' : 'Close'}</Text>
           </Pressable>
         </View>
 
-        {picked ? (
-          <Amount food={picked} meal={meal} onAdd={(g) => log(picked, g)} onBack={() => setPicked(null)} error={error} />
-        ) : creating ? (
-          <CreateFood initialName={q} onCreated={(f) => { setCreating(false); setPicked(f); }} onCancel={() => setCreating(false)} />
+        {view.kind === 'amount' ? (
+          <AmountPicker
+            food={view.food}
+            initialMeal={meal}
+            lastGrams={view.lastGrams ?? lastGramsFor(view.food)}
+            submitLabel={(m) => `Add to ${MEAL_NAMES[m]}`}
+            error={error}
+            onSubmit={async (g, m) => {
+              try {
+                await log(view.food, g, m);
+                router.back();
+              } catch (e) {
+                setError(message(e));
+              }
+            }}
+          >
+            <Pressable onPress={() => { setError(null); setView({ kind: 'search' }); }} style={s.secondary}>
+              <Text style={s.link}>Pick a different food</Text>
+            </Pressable>
+          </AmountPicker>
+        ) : view.kind === 'create' ? (
+          <CreateFood
+            initialName={q}
+            barcode={view.barcode}
+            note={view.note}
+            onCreated={(f) => setView({ kind: 'amount', food: f })}
+            onCancel={() => setView({ kind: 'search' })}
+          />
+        ) : view.kind === 'scan' ? (
+          <Scanner onCode={onCode} onCancel={() => setView({ kind: 'search' })} error={error} />
         ) : (
           <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
-            <TextInput value={q} onChangeText={setQ} placeholder="Search foods or brands" autoFocus style={s.input} returnKeyType="search" />
+            <View style={s.searchRow}>
+              <TextInput
+                value={q}
+                onChangeText={setQ}
+                placeholder="Search foods or brands"
+                autoFocus={Platform.OS === 'web'}
+                style={[s.input, { flex: 1 }]}
+                returnKeyType="search"
+              />
+              <Pressable onPress={() => { setError(null); setView({ kind: 'scan' }); }} style={s.scanButton} accessibilityLabel="Scan a barcode">
+                <Text style={s.scanText}>Scan</Text>
+              </Pressable>
+            </View>
             {error && <Text style={s.error}>{error}</Text>}
-            {searching && <ActivityIndicator color={color.iron} />}
-            {found?.errors.map((m) => <Text key={m} style={type.small}>{m}</Text>)}
+            {added.length > 0 && <Text style={s.added}>Added {added.join('; ')}</Text>}
 
-            {found && found.mine.length > 0 && <Text style={s.section}>Your foods</Text>}
-            {found?.mine.map((f) => <Row key={f.id} food={f} onPress={() => setPicked(f)} />)}
+            {q.trim().length < 2 ? (
+              <RecentList data={recent} tab={tab} setTab={setTab} onPick={(r) => setView({ kind: 'amount', food: r.food, lastGrams: r.lastGrams })} onQuickAdd={quickAdd} />
+            ) : (
+              <>
+                {searching && <ActivityIndicator color={color.iron} />}
+                {found?.errors.map((m) => <Text key={m} style={type.small}>{m}</Text>)}
 
-            {found && found.results.length > 0 && <Text style={s.section}>Food databases</Text>}
-            {found?.results.map((f) => <Row key={`${f.source}:${f.sourceId}`} food={f} onPress={() => setPicked(f)} />)}
+                {found && found.mine.length > 0 && <Text style={s.section}>Your foods and common foods</Text>}
+                {found?.mine.map((f) => <Row key={f.id} food={f} onPress={() => setView({ kind: 'amount', food: f })} />)}
 
-            {found && !searching && found.mine.length + found.results.length === 0 && (
-              <Text style={type.body}>Nothing matches “{q.trim()}”. Add it as your own food below.</Text>
+                {found && found.results.length > 0 && <Text style={s.section}>Food databases</Text>}
+                {found?.results.map((f) => <Row key={`${f.source}:${f.sourceId}`} food={f} onPress={() => setView({ kind: 'amount', food: f })} />)}
+
+                {found && !searching && found.mine.length + found.results.length === 0 && (
+                  <Text style={type.body}>Nothing matches “{q.trim()}”. Add it as your own food below.</Text>
+                )}
+              </>
             )}
-            <Pressable onPress={() => setCreating(true)} style={{ paddingVertical: space(3) }}>
+            <Pressable onPress={() => setView({ kind: 'create' })} style={{ paddingVertical: space(3) }}>
               <Text style={s.link}>Create your own food</Text>
             </Pressable>
           </ScrollView>
@@ -94,8 +170,51 @@ export default function AddFood() {
   );
 }
 
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+function RecentList({
+  data,
+  tab,
+  setTab,
+  onPick,
+  onQuickAdd,
+}: {
+  data: RecentFoods | null;
+  tab: 'recent' | 'frequent';
+  setTab: (t: 'recent' | 'frequent') => void;
+  onPick: (r: RecentFood) => void;
+  onQuickAdd: (r: RecentFood) => void;
+}) {
+  if (!data) return <ActivityIndicator color={color.iron} style={{ marginTop: space(4) }} />;
+  if (!data.recent.length) return <Text style={[type.small, { marginTop: space(2) }]}>Foods you log show up here, so the next time takes one tap.</Text>;
+  const list = data[tab];
+  return (
+    <>
+      <View style={[s.searchRow, { marginTop: space(2) }]}>
+        <Chip label="Recent" on={tab === 'recent'} onPress={() => setTab('recent')} />
+        <Chip label="Most logged" on={tab === 'frequent'} onPress={() => setTab('frequent')} />
+      </View>
+      {list.length === 0 && <Text style={type.small}>Foods you log more than once show up here.</Text>}
+      {list.map((r) => (
+        <Pressable key={r.food.id} onPress={() => onPick(r)} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={type.body} numberOfLines={1}>{r.food.name}</Text>
+            <Text style={type.small} numberOfLines={1}>
+              {r.lastGrams} g · {forAmount(r.food.per100, r.lastGrams).kcal} kcal{r.food.brand ? ` · ${r.food.brand}` : ''}
+            </Text>
+          </View>
+          <Pressable onPress={() => onQuickAdd(r)} hitSlop={8} style={s.plus} accessibilityLabel={`Add ${r.lastGrams} grams of ${r.food.name}`}>
+            <Text style={s.plusText}>+</Text>
+          </Pressable>
+        </Pressable>
+      ))}
+    </>
+  );
+}
+
 function Row({ food, onPress }: { food: Pick; onPress: () => void }) {
   const serving = food.servingGrams ? forAmount(food.per100, food.servingGrams).kcal : null;
+  const portion = food.portions[0];
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
       <View style={{ flex: 1 }}>
@@ -103,81 +222,72 @@ function Row({ food, onPress }: { food: Pick; onPress: () => void }) {
         {food.brand ? <Text style={type.small} numberOfLines={1}>{food.brand}</Text> : null}
       </View>
       <Text style={[type.small, type.number, { textAlign: 'right' }]}>
-        {serving !== null ? `${serving} kcal\nper serving` : `${Math.round(food.per100.kcal)} kcal\nper 100 g`}
+        {serving !== null
+          ? `${serving} kcal\nper serving`
+          : portion
+            ? `${forAmount(food.per100, portion.grams).kcal} kcal\n${portion.label}`
+            : `${Math.round(food.per100.kcal)} kcal\nper 100 g`}
       </Text>
     </Pressable>
   );
 }
 
-function Amount({ food, meal, onAdd, onBack, error }: { food: Pick; meal: Meal; onAdd: (grams: number) => void; onBack: () => void; error: string | null }) {
-  const [grams, setGrams] = useState(String(food.servingGrams ?? 100));
-  const [busy, setBusy] = useState(false);
-  const g = Number(grams.replace(',', '.'));
-  const valid = Number.isFinite(g) && g > 0 && g <= 10000;
-  const n = useMemo(() => forAmount(food.per100, valid ? g : 0), [food, g, valid]);
+function Scanner({ onCode, onCancel, error }: { onCode: (code: string) => Promise<void>; onCancel: () => void; error: string | null }) {
+  const [typed, setTyped] = useState('');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [looking, setLooking] = useState<string | null>(null);
+  const digits = typed.replace(/\D/g, '');
 
-  const chips = [
-    ...(food.servingGrams ? [{ label: food.servingLabel ? `1 serving (${food.servingLabel})` : `1 serving (${food.servingGrams} g)`, g: food.servingGrams }] : []),
-    { label: '100 g', g: 100 },
-  ];
+  const lookUp = useCallback(
+    async (code: string) => {
+      setLooking(code);
+      await onCode(code);
+      setLooking(null);
+    },
+    [onCode],
+  );
 
   return (
     <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
-      <Text style={type.title}>{food.name}</Text>
-      {food.brand ? <Text style={type.small}>{food.brand}</Text> : null}
-
-      <View style={s.chips}>
-        {chips.map((c) => (
-          <Pressable key={c.label} onPress={() => setGrams(String(c.g))} style={[s.chip, g === c.g && s.chipOn]}>
-            <Text style={[type.small, g === c.g && { color: color.card }]}>{c.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={s.amountRow}>
-        <TextInput value={grams} onChangeText={setGrams} keyboardType="decimal-pad" style={[s.input, { flex: 1 }]} selectTextOnFocus />
-        <Text style={type.body}>grams</Text>
-      </View>
-
-      <View style={s.nutrition}>
-        <Stat label="Calories" value={`${n.kcal}`} />
-        <Stat label="Protein" value={`${n.protein} g`} tint={color.protein} />
-        <Stat label="Carbs" value={`${n.carbs} g`} tint={color.carbs} />
-        <Stat label="Fat" value={`${n.fat} g`} tint={color.fat} />
-      </View>
-
+      {looking ? (
+        <View style={{ alignItems: 'center', gap: space(3), paddingVertical: space(10) }}>
+          <ActivityIndicator color={color.iron} />
+          <Text style={type.body}>Looking up {looking}…</Text>
+        </View>
+      ) : cameraError ? (
+        <Text style={s.error}>{cameraError}</Text>
+      ) : (
+        <>
+          <BarcodeCamera onCode={lookUp} onError={setCameraError} />
+          <Text style={[type.small, { textAlign: 'center' }]}>Hold the barcode inside the box.</Text>
+        </>
+      )}
       {error && <Text style={s.error}>{error}</Text>}
-      <Pressable
-        disabled={!valid || busy}
-        onPress={async () => { setBusy(true); await onAdd(g); setBusy(false); }}
-        style={[s.button, (!valid || busy) && { opacity: 0.4 }]}
-      >
-        <Text style={s.buttonText}>Add to {MEAL_NAMES[meal]}</Text>
-      </Pressable>
-      <Pressable onPress={onBack} style={{ alignSelf: 'center', padding: space(3) }}>
-        <Text style={s.link}>Pick a different food</Text>
+
+      <Text style={[s.section, { marginTop: space(4) }]}>Or type the number</Text>
+      <View style={s.searchRow}>
+        <TextInput value={typed} onChangeText={setTyped} keyboardType="number-pad" placeholder="e.g. 0012345678905" style={[s.input, { flex: 1 }]} />
+        <Pressable disabled={digits.length < 6 || Boolean(looking)} onPress={() => lookUp(digits)} style={[s.scanButton, (digits.length < 6 || looking) && { opacity: 0.4 }]}>
+          <Text style={s.scanText}>Look up</Text>
+        </Pressable>
+      </View>
+      <Pressable onPress={onCancel} style={s.secondary}>
+        <Text style={s.link}>Back to search</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-function Stat({ label, value, tint }: { label: string; value: string; tint?: string }) {
-  return (
-    <View style={{ flex: 1, gap: space(1) }}>
-      {tint ? <View style={{ height: 4, borderRadius: 2, backgroundColor: tint }} /> : <View style={{ height: 4 }} />}
-      <Text style={[type.title, type.number]}>{value}</Text>
-      <Text style={type.small}>{label}</Text>
-    </View>
-  );
-}
-
-function CreateFood({ initialName, onCreated, onCancel }: { initialName: string; onCreated: (f: Food) => void; onCancel: () => void }) {
-  const [form, setForm] = useState({ name: initialName.trim(), brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '' });
+function CreateFood({ initialName, barcode, note, onCreated, onCancel }: { initialName: string; barcode?: string; note?: string; onCreated: (f: Food) => void; onCancel: () => void }) {
+  const [form, setForm] = useState({ name: initialName.trim(), brand: '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: barcode ?? '' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (v: string) => setForm({ ...form, [k]: v });
   const num = (v: string) => Number(v.replace(',', '.') || 0);
   const per100 = { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat) };
   const problem = form.kcal ? per100Problems(per100)[0] : null;
+  const code = form.barcode.replace(/\D/g, '');
+  const codeProblem = code && (code.length < 6 || code.length > 14) ? 'A barcode is 6 to 14 digits.' : null;
+  const blocked = !form.name.trim() || !form.kcal || Boolean(problem) || Boolean(codeProblem);
 
   const save = async () => {
     setError(null);
@@ -188,33 +298,36 @@ function CreateFood({ initialName, onCreated, onCancel }: { initialName: string;
         source: 'custom',
         per100,
         servingGrams: form.serving ? num(form.serving) : null,
+        barcode: code || null,
       });
       onCreated(food);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(e instanceof ApiError ? e.message : message(e));
     }
   };
 
-  const field = (k: keyof typeof form, label: string, numeric = true) => (
+  const field = (k: keyof typeof form, label: string, keyboard: 'decimal-pad' | 'number-pad' | 'default' = 'decimal-pad') => (
     <View style={{ flex: 1, gap: space(1) }}>
       <Text style={type.small}>{label}</Text>
-      <TextInput value={form[k]} onChangeText={set(k)} keyboardType={numeric ? 'decimal-pad' : 'default'} style={s.input} />
+      <TextInput value={form[k]} onChangeText={set(k)} keyboardType={keyboard} style={s.input} />
     </View>
   );
 
   return (
     <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
-      {field('name', 'Name', false)}
-      {field('brand', 'Brand (optional)', false)}
+      {note && <Text style={type.body}>{note}</Text>}
+      {field('name', 'Name', 'default')}
+      {field('brand', 'Brand (optional)', 'default')}
       <Text style={[type.small, { marginTop: space(2) }]}>Per 100 g, from the label’s per-100 g column</Text>
-      <View style={s.amountRow}>{field('kcal', 'Calories')}{field('protein', 'Protein g')}</View>
-      <View style={s.amountRow}>{field('carbs', 'Carbs g')}{field('fat', 'Fat g')}</View>
+      <View style={s.searchRow}>{field('kcal', 'Calories')}{field('protein', 'Protein g')}</View>
+      <View style={s.searchRow}>{field('carbs', 'Carbs g')}{field('fat', 'Fat g')}</View>
       {field('serving', 'One serving in grams (optional)')}
-      {(problem || error) && <Text style={s.error}>{error ?? problem}</Text>}
-      <Pressable disabled={!form.name.trim() || !form.kcal || Boolean(problem)} onPress={save} style={[s.button, (!form.name.trim() || !form.kcal || problem) && { opacity: 0.4 }]}>
+      {field('barcode', 'Barcode (optional, so it scans next time)', 'number-pad')}
+      {(problem || codeProblem || error) && <Text style={s.error}>{error ?? problem ?? codeProblem}</Text>}
+      <Pressable disabled={blocked} onPress={save} style={[s.button, blocked && { opacity: 0.4 }]}>
         <Text style={s.buttonText}>Save food</Text>
       </Pressable>
-      <Pressable onPress={onCancel} style={{ alignSelf: 'center', padding: space(3) }}>
+      <Pressable onPress={onCancel} style={s.secondary}>
         <Text style={s.link}>Back to search</Text>
       </Pressable>
     </ScrollView>
@@ -226,15 +339,17 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
   list: { padding: space(4), gap: space(2), paddingBottom: space(16), maxWidth: 640, width: '100%', alignSelf: 'center' },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
+  scanButton: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3) },
+  scanText: { color: color.chalk, fontWeight: '700', fontSize: 16 },
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, padding: space(3), borderRadius: 10 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginTop: space(2) },
-  chip: { borderWidth: 1, borderColor: color.line, borderRadius: 20, paddingHorizontal: space(3), paddingVertical: space(2), backgroundColor: color.card },
-  chipOn: { backgroundColor: color.iron, borderColor: color.iron },
-  amountRow: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
-  nutrition: { flexDirection: 'row', gap: space(3), backgroundColor: color.card, borderRadius: 12, padding: space(4), marginVertical: space(2) },
+  plus: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
+  plusText: { color: color.chalk, fontSize: 22, lineHeight: 24, fontWeight: '700' },
+  added: { ...type.small, color: color.fat, fontWeight: '700' },
   error: { ...type.body, color: color.over },
   button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(2) },
   buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
+  secondary: { alignSelf: 'center', padding: space(3) },
   link: { color: color.protein, fontWeight: '700', fontSize: 16 },
 });

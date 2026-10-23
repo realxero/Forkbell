@@ -5,6 +5,7 @@ import postgres from 'postgres';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { builtinFoods } from './builtin-foods.ts';
 
 const adminUrl = process.env.DATABASE_ADMIN_URL;
 const appPassword = process.env.APP_DB_PASSWORD;
@@ -35,9 +36,33 @@ try {
     });
     console.log(`applied ${file}`);
   }
+
+  await syncBuiltinFoods();
   console.log('database is up to date');
 } finally {
   await sql.end();
+}
+
+/**
+ * Insert or update the built-in foods. They have no owner, so the app role can
+ * never write them; FORCE row-level security is lifted only inside this
+ * transaction so the admin (the table owner) can.
+ */
+async function syncBuiltinFoods() {
+  await sql.begin(async (tx) => {
+    await tx`alter table foods no force row level security`;
+    for (const f of builtinFoods) {
+      const p = f.per100;
+      await tx`
+        insert into foods (owner_id, source, source_id, name, kcal, protein, carbs, fat, fiber, sugar, sodium_mg, portions)
+        values (null, 'builtin', ${f.key}, ${f.name}, ${p.kcal}, ${p.protein}, ${p.carbs}, ${p.fat}, ${p.fiber}, ${p.sugar}, ${p.sodium}, ${tx.json(f.portions)})
+        on conflict (source_id) where source = 'builtin' do update set
+          name = excluded.name, kcal = excluded.kcal, protein = excluded.protein, carbs = excluded.carbs, fat = excluded.fat,
+          fiber = excluded.fiber, sugar = excluded.sugar, sodium_mg = excluded.sodium_mg, portions = excluded.portions`;
+    }
+    await tx`alter table foods force row level security`;
+  });
+  console.log(`built-in foods: ${builtinFoods.length}`);
 }
 
 function quoteLiteral(s: string) {

@@ -40,7 +40,8 @@ export function per100Problems(p: Per100): string[] {
   if (p.kcal > 900) problems.push('More than 900 kcal per 100 g is not possible.');
   if (p.protein + p.carbs + p.fat > 100) problems.push('Protein, carbs and fat add up to more than 100 g per 100 g.');
   const fromMacros = p.protein * 4 + p.carbs * 4 + p.fat * 9;
-  if (p.kcal > 0 && fromMacros > 0) {
+  // Below 10 kcal, rounding alone can throw the ratio off (black coffee: 1 kcal).
+  if (p.kcal >= 10 && fromMacros > 0) {
     const ratio = fromMacros / p.kcal;
     // Alcohol, fiber and sugar alcohols explain some gap; this only catches big ones.
     if (ratio < 0.5 || ratio > 1.6) problems.push(`Macros add up to about ${Math.round(fromMacros)} kcal, not ${p.kcal}.`);

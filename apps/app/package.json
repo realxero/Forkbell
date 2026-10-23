@@ -14,7 +14,10 @@
   "dependencies": {
     "@expo/metro-runtime": "~58.0.15",
     "@forkbell/shared": "workspace:*",
+    "@zxing/browser": "0.2.1",
+    "@zxing/library": "0.23.0",
     "expo": "~58.0.17",
+    "expo-camera": "~58.0.12",
     "expo-constants": "~58.0.13",
     "expo-linking": "~58.0.14",
     "expo-router": "~58.0.25",

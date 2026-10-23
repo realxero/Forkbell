@@ -13,5 +13,7 @@ export function toFood(r: FoodRow): Food {
     per100: { kcal: r.kcal, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber, sugar: r.sugar, sodium: r.sodiumMg },
     servingGrams: r.servingGrams,
     servingLabel: r.servingLabel,
+    barcode: r.barcode,
+    portions: r.portions ?? [],
   };
 }

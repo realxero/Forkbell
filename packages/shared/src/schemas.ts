@@ -22,18 +22,33 @@ export const foodInputSchema = z.object({
   per100: per100Schema,
   servingGrams: z.number().positive().max(5000).nullish(),
   servingLabel: z.string().max(100).nullish(),
+  barcode: z.string().regex(/^\d{6,14}$/, 'A barcode is 6 to 14 digits.').nullish(),
+  portions: z.array(z.object({ label: z.string().trim().min(1).max(60), grams: z.number().positive().max(5000) })).max(20).nullish(),
 });
 
 export const addEntrySchema = z
   .object({
     date: dateSchema,
     meal: z.enum(MEALS),
-    grams: z.number().positive().max(10000),
+    grams: z.number().positive('Enter an amount above 0.').max(10000, 'That is more than 10 kg.'),
     foodId: z.string().uuid().optional(),
     /** An outside search hit: saved to your foods first, then logged. */
     food: foodInputSchema.optional(),
   })
   .refine((v) => Boolean(v.foodId) !== Boolean(v.food), 'Send either foodId or food');
+
+export const copyMealSchema = z.object({
+  from: dateSchema,
+  to: dateSchema,
+  /** copy one meal; leave out to copy the whole day */
+  meal: z.enum(MEALS).optional(),
+  /** put the copies in a different meal */
+  toMeal: z.enum(MEALS).optional(),
+});
+
+export const updateEntrySchema = z
+  .object({ grams: z.number().positive('Enter an amount above 0.').max(10000, 'That is more than 10 kg.').optional(), meal: z.enum(MEALS).optional() })
+  .refine((v) => v.grams !== undefined || v.meal !== undefined, 'Nothing to change.');
 
 export const goalsSchema = z.object({
   kcal: z.number().int().min(0).max(20000).nullable(),
@@ -44,3 +59,4 @@ export const goalsSchema = z.object({
 
 export type FoodInput = z.infer<typeof foodInputSchema>;
 export type AddEntryInput = z.infer<typeof addEntrySchema>;
+export type CopyMealInput = z.infer<typeof copyMealSchema>;

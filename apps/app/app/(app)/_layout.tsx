@@ -10,6 +10,7 @@ export default function SignedInLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.chalk } }}>
       <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="edit" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

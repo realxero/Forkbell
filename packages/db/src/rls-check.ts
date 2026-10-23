@@ -40,6 +40,20 @@ try {
   await assert.rejects(as(bob, (tx) => tx`insert into diary_entries (user_id, date, meal, food_id, grams) values (${alice}, '2026-10-22', 'lunch', ${aliceFood}, 1)`), "Bob can't write into Alice's diary");
   await assert.rejects(as(bob, (tx) => tx`select * from sessions`), 'the app role cannot read sessions at all');
 
+  // Copying "yesterday" as Bob must not copy Alice's entries into his diary.
+  const copied = await as(bob, (tx) => tx`insert into diary_entries (date, meal, food_id, grams) select '2026-10-23', meal, food_id, grams from diary_entries where date = '2026-10-22' returning id`);
+  assert.equal(copied.length, 0, "copying a day only copies your own entries");
+
+  // Built-in foods: everyone reads them, nobody using the app can change them.
+  const builtins = await as(bob, (tx) => tx`select id from foods where source = 'builtin'`);
+  if (builtins.length) {
+    assert.equal((await as(bob, (tx) => tx`update foods set kcal = 1 where source = 'builtin' returning id`)).length, 0, "Bob can't edit built-in foods");
+    assert.equal((await as(bob, (tx) => tx`delete from foods where source = 'builtin' returning id`)).length, 0, "Bob can't delete built-in foods");
+    await assert.rejects(as(bob, (tx) => tx`insert into foods (owner_id, name, source, source_id, kcal, protein, carbs, fat) values (null, 'Fake', 'builtin', ${tag}, 1, 0, 0, 0)`), "Bob can't add built-in foods");
+  } else {
+    console.warn('No built-in foods found; run the migrator first to check them.');
+  }
+
   // Alice still sees her own data.
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 1, 'Alice sees her entry');
   console.log('Row-level security: all checks passed.');

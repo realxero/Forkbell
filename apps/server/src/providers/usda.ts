@@ -10,6 +10,7 @@ type UsdaFood = {
   servingSize?: number;
   servingSizeUnit?: string;
   householdServingFullText?: string;
+  gtinUpc?: string;
   foodNutrients?: { nutrientNumber?: string; value?: number }[];
 };
 
@@ -35,6 +36,8 @@ export function fromUsda(f: UsdaFood): FoodCandidate | null {
     per100,
     servingGrams,
     servingLabel: f.householdServingFullText || null,
+    barcode: f.gtinUpc && /^\d{6,14}$/.test(f.gtinUpc) ? f.gtinUpc : null,
+    portions: [],
   };
 }
 

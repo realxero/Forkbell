@@ -35,6 +35,8 @@ export async function saveFood(tx: Tx, userId: string, input: FoodInput): Promis
       sodiumMg: input.per100.sodium ?? null,
       servingGrams: input.servingGrams ?? null,
       servingLabel: input.servingLabel ?? null,
+      barcode: input.barcode ?? (input.source === 'off' ? (input.sourceId ?? null) : null),
+      portions: input.portions?.length ? input.portions : null,
     })
     .returning();
   return toFood(row!);

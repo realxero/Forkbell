@@ -13,7 +13,13 @@ export interface Per100 {
   sodium?: number | null;
 }
 
-export type FoodSource = 'custom' | 'off' | 'usda';
+export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin';
+
+/** A named amount, like "1 large" = 50 g. */
+export interface Portion {
+  label: string;
+  grams: number;
+}
 
 export interface Food {
   id: string;
@@ -25,6 +31,9 @@ export interface Food {
   /** grams in one serving, if known */
   servingGrams: number | null;
   servingLabel: string | null;
+  /** EAN/UPC digits, when known */
+  barcode: string | null;
+  portions: Portion[];
 }
 
 /** A search hit from an outside database, not saved yet. */
@@ -67,4 +76,19 @@ export interface Me {
   name: string | null;
   email: string | null;
   goals: Goals;
+}
+
+/** A food you've logged before, with the amount you used last time. */
+export interface RecentFood {
+  food: Food;
+  lastGrams: number;
+  lastMeal: Meal;
+  uses: number;
+}
+
+export interface RecentFoods {
+  /** most recently logged first */
+  recent: RecentFood[];
+  /** most logged in the last 60 days first */
+  frequent: RecentFood[];
 }

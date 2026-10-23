@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, numeric, date, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, numeric, date, timestamp, jsonb } from 'drizzle-orm/pg-core';
 
 // Mirrors migrations/*.sql. The SQL files are the source of truth (they hold
 // the row-level security policies); this is only for typed queries.
@@ -20,7 +20,7 @@ export const foods = pgTable('foods', {
   ownerId: uuid('owner_id'),
   name: text('name').notNull(),
   brand: text('brand'),
-  source: text('source', { enum: ['custom', 'off', 'usda'] }).notNull(),
+  source: text('source', { enum: ['custom', 'off', 'usda', 'builtin'] }).notNull(),
   sourceId: text('source_id'),
   kcal: num('kcal').notNull(),
   protein: num('protein').notNull(),
@@ -31,6 +31,8 @@ export const foods = pgTable('foods', {
   sodiumMg: num('sodium_mg'),
   servingGrams: num('serving_grams'),
   servingLabel: text('serving_label'),
+  barcode: text('barcode'),
+  portions: jsonb('portions').$type<{ label: string; grams: number }[]>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

@@ -1,30 +1,38 @@
 import { Hono } from 'hono';
-import { and, desc, eq, ilike, isNull, or } from 'drizzle-orm';
-import { foods, type connect } from '@forkbell/db';
-import { foodInputSchema, type FoodCandidate } from '@forkbell/shared';
+import { and, desc, eq, gte, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { diaryEntries, foods, type connect } from '@forkbell/db';
+import { addDays, barcodeVariants, dateSchema, foodInputSchema, todayLocal, type FoodCandidate, type RecentFood, type RecentFoods } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { searchOff, barcodeOff } from '../providers/off.ts';
 import { searchUsda } from '../providers/usda.ts';
 import { env } from '../env.ts';
-import { saveFood } from './save-food.ts';
+import { saveFood, BadFood } from './save-food.ts';
+
+const likeEscape = (s: string) => s.replace(/[%_\\]/g, '\\$&');
 
 export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
 
-  /** Your own foods first, then outside databases. One failing source never sinks the search. */
+  /**
+   * Your own and built-in foods first, then outside databases. One failing
+   * source never sinks the search.
+   */
   r.get('/search', async (c) => {
     const q = (c.req.query('q') ?? '').trim();
     if (q.length < 2) return c.json({ mine: [], results: [], errors: [] });
     const userId = c.get('userId');
+    const like = `%${likeEscape(q)}%`;
+    const prefix = `${likeEscape(q)}%`;
 
     const minePromise = asUser(userId, (tx) =>
       tx
         .select()
         .from(foods)
-        .where(and(or(eq(foods.ownerId, userId), isNull(foods.ownerId)), ilike(foods.name, `%${q.replace(/[%_\\]/g, '\\$&')}%`)))
-        .orderBy(desc(foods.createdAt))
-        .limit(15),
+        .where(and(or(eq(foods.ownerId, userId), isNull(foods.ownerId)), or(ilike(foods.name, like), ilike(foods.brand, like))))
+        // yours before built-in, then names that start with the query, then shorter names
+        .orderBy(sql`${foods.ownerId} is null`, sql`${foods.name} not ilike ${prefix}`, sql`length(${foods.name})`, desc(foods.createdAt))
+        .limit(20),
     );
     const outside = await Promise.allSettled([
       searchOff(q),
@@ -39,24 +47,70 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
     return c.json({ mine, results, errors });
   });
 
+  /** Foods you've logged lately, with the amount you used last time. */
+  r.get('/recent', async (c) => {
+    const userId = c.get('userId');
+    // The phone's own date, so "60 days" follows your time zone, not the server's.
+    const today = dateSchema.safeParse(c.req.query('today'));
+    const since = addDays(today.success ? today.data : todayLocal(), -60);
+    const rows = await asUser(userId, (tx) =>
+      tx
+        .select({
+          food: foods,
+          lastUsed: sql<string>`max(${diaryEntries.createdAt})`,
+          uses: sql<number>`count(*)::int`,
+          lastGrams: sql<string>`(array_agg(${diaryEntries.grams} order by ${diaryEntries.createdAt} desc))[1]`,
+          lastMeal: sql<RecentFood['lastMeal']>`(array_agg(${diaryEntries.meal} order by ${diaryEntries.createdAt} desc))[1]`,
+        })
+        .from(diaryEntries)
+        .innerJoin(foods, eq(foods.id, diaryEntries.foodId))
+        .where(gte(diaryEntries.date, since))
+        .groupBy(foods.id),
+    );
+    const all: (RecentFood & { lastUsed: string })[] = rows.map((r) => ({
+      food: toFood(r.food),
+      lastGrams: Number(r.lastGrams),
+      lastMeal: r.lastMeal,
+      uses: r.uses,
+      lastUsed: r.lastUsed,
+    }));
+    const strip = ({ lastUsed: _, ...rest }: RecentFood & { lastUsed: string }): RecentFood => rest;
+    const body: RecentFoods = {
+      recent: [...all].sort((a, b) => (a.lastUsed < b.lastUsed ? 1 : -1)).slice(0, 15).map(strip),
+      frequent: all.filter((f) => f.uses >= 2).sort((a, b) => b.uses - a.uses).slice(0, 15).map(strip),
+    };
+    return c.json(body);
+  });
+
+  /** Your saved foods first (including ones you created with that barcode), then Open Food Facts. */
   r.get('/barcode/:code', async (c) => {
-    const code = c.req.param('code');
-    if (!/^\d{6,14}$/.test(code)) return c.json({ error: 'That is not a barcode number.' }, 400);
+    const codes = barcodeVariants(c.req.param('code'));
+    if (!codes.length) return c.json({ error: 'That is not a barcode number.' }, 400);
     const userId = c.get('userId');
     const [mine] = await asUser(userId, (tx) =>
-      tx.select().from(foods).where(and(eq(foods.ownerId, userId), eq(foods.source, 'off'), eq(foods.sourceId, code))).limit(1),
+      tx.select().from(foods).where(and(eq(foods.ownerId, userId), inArray(foods.barcode, codes))).orderBy(desc(foods.createdAt)).limit(1),
     );
     if (mine) return c.json({ food: toFood(mine) });
-    const found = await barcodeOff(code);
-    if (!found) return c.json({ error: 'No product with that barcode. Add it as your own food.' }, 404);
+    let found: FoodCandidate | null;
+    try {
+      found = await barcodeOff(codes);
+    } catch {
+      return c.json({ error: 'Open Food Facts is not answering. Try again, or add the food yourself.', barcode: codes[0] }, 502);
+    }
+    if (!found) return c.json({ error: 'No product with that barcode yet. Add it as your own food and it will scan next time.', barcode: codes[0] }, 404);
     return c.json({ candidate: found });
   });
 
   r.post('/', async (c) => {
     const parsed = foodInputSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the food details.' }, 400);
-    const food = await asUser(c.get('userId'), (tx) => saveFood(tx, c.get('userId'), parsed.data));
-    return c.json({ food }, 201);
+    try {
+      const food = await asUser(c.get('userId'), (tx) => saveFood(tx, c.get('userId'), parsed.data));
+      return c.json({ food }, 201);
+    } catch (err) {
+      if (err instanceof BadFood) return c.json({ error: err.message }, 400);
+      throw err;
+    }
   });
 
   return r;

@@ -1,13 +1,43 @@
 import { Hono } from 'hono';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { diaryEntries, foods, users, type connect } from '@forkbell/db';
-import { addEntrySchema, dateSchema, sumEntries, type DiaryDay, type DiaryEntry } from '@forkbell/shared';
+import { addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { saveFood, BadFood } from './save-food.ts';
 
 export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
+
+  r.get('/entry/:id', async (c) => {
+    const id = c.req.param('id');
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: 'That entry was not found.' }, 404);
+    const [row] = await asUser(c.get('userId'), (tx) =>
+      tx.select({ entry: diaryEntries, food: foods }).from(diaryEntries).innerJoin(foods, eq(foods.id, diaryEntries.foodId)).where(eq(diaryEntries.id, id)).limit(1),
+    );
+    if (!row) return c.json({ error: 'That entry was not found.' }, 404);
+    const entry: DiaryEntry = { id: row.entry.id, date: row.entry.date, meal: row.entry.meal, grams: row.entry.grams, food: toFood(row.food) };
+    return c.json({ entry });
+  });
+
+  /** Copy a meal (or a whole day) to another day. The copies are new entries you can edit freely. */
+  r.post('/copy', async (c) => {
+    const parsed = copyMealSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check what to copy.' }, 400);
+    const { from, to, meal, toMeal } = parsed.data;
+    if (from === to && (!meal || !toMeal || meal === toMeal)) return c.json({ error: 'Pick a different day or meal to copy into.' }, 400);
+    // Row-level security limits the source rows to yours; user_id defaults to you.
+    const copied = await asUser(c.get('userId'), (tx) =>
+      tx.execute(sql`
+        insert into diary_entries (date, meal, food_id, grams)
+        select ${to}::date, coalesce(${toMeal ?? null}::text, meal), food_id, grams
+        from diary_entries
+        where date = ${from}::date and (${meal ?? null}::text is null or meal = ${meal ?? null}::text)
+        order by created_at
+        returning id`),
+    );
+    return c.json({ copied: copied.length });
+  });
 
   r.get('/:date', async (c) => {
     const date = dateSchema.safeParse(c.req.param('date'));
@@ -64,13 +94,10 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   });
 
   r.patch('/:id', async (c) => {
-    const body = await c.req.json<{ grams?: number; meal?: string }>().catch(() => ({}) as { grams?: number; meal?: string });
-    const patch: { grams?: number; meal?: DiaryEntry['meal'] } = {};
-    if (typeof body.grams === 'number' && body.grams > 0 && body.grams <= 10000) patch.grams = body.grams;
-    if (body.meal && ['breakfast', 'lunch', 'dinner', 'snacks'].includes(body.meal)) patch.meal = body.meal as DiaryEntry['meal'];
-    if (!Object.keys(patch).length) return c.json({ error: 'Nothing to change.' }, 400);
+    const parsed = updateEntrySchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the change.' }, 400);
     const updated = await asUser(c.get('userId'), (tx) =>
-      tx.update(diaryEntries).set(patch).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('userId')))).returning({ id: diaryEntries.id }),
+      tx.update(diaryEntries).set(parsed.data).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('userId')))).returning({ id: diaryEntries.id }),
     );
     return updated.length ? c.json({ ok: true }) : c.json({ error: 'That entry was not found.' }, 404);
   });

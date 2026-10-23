@@ -4,9 +4,11 @@ Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
 Authelia (or any OpenID Connect provider).
 
-**Status:** phase 1. Sign in, search foods (Open Food Facts, USDA, your own),
-log them to a day, set daily goals, and see calories and macros against them.
-See [ROADMAP.md](ROADMAP.md) for what comes next.
+**Status:** phase 2. Sign in, search foods (Open Food Facts, USDA, about a
+hundred built-in common foods, your own), scan barcodes, log with one tap from
+recent and most-logged foods, copy meals from the day before, edit entries, set
+daily goals, and see calories and macros against them. See
+[ROADMAP.md](ROADMAP.md) for what comes next.
 
 ## How it fits together
 
@@ -41,6 +43,13 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
 4. Point your reverse proxy at port 3000 and open `PUBLIC_URL`.
 
 Back up `./data/postgres` (or use `pg_dump`).
+
+Updating: pull, rebuild the image, and redeploy. The `migrate` container
+upgrades the database and refreshes the built-in foods before the server
+starts.
+
+Barcode scanning in the web app needs the camera, which browsers only allow on
+an `https://` address (or `localhost`).
 
 ## Development
 
@@ -80,7 +89,9 @@ Forkbell is an original codebase. Its feature ideas were inspired by
 [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) by CodeWithCJ; it
 contains no code from either. Food data comes from
 [Open Food Facts](https://openfoodfacts.org) (ODbL) and
-[USDA FoodData Central](https://fdc.nal.usda.gov) (public domain).
+[USDA FoodData Central](https://fdc.nal.usda.gov) (public domain), which the
+built-in common foods are also based on. Barcodes are read in the browser with
+[ZXing](https://github.com/zxing-js/library) (Apache 2.0).
 
 ## Licence
 
@@ -89,30 +100,6 @@ Copyright © 2026 Nate (realxero). Forkbell is source-available under the
 purpose, such as self-hosting it for yourself or your family, you may use it,
 change it, and share it or your changed version, as long as you pass on the
 licence and its `Required Notice` line. Commercial use needs written
-permission. Ask by opening an issue.
-
-Forkbell is not open source. The copyright holder may also offer it under other
-terms, including in app stores and as a paid service.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Credits
-
-Forkbell is an original codebase. Its feature ideas were inspired by
-[NutriTrace and LiftTrace](https://github.com/TraceApps) by TraceApps and by
-[SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) by CodeWithCJ; it
-contains no code from either. Food data comes from
-[Open Food Facts](https://openfoodfacts.org) (ODbL) and
-[USDA FoodData Central](https://fdc.nal.usda.gov) (public domain).
-
-## Licence
-
-Copyright © 2026 Nate (realxero). Forkbell is source-available under the
-[PolyForm Strict License 1.0.0](LICENSE.md): you may read the code and run it
-for personal, noncommercial use, such as self-hosting it for yourself or your
-family. Changing it, sharing it, or using it commercially needs written
 permission. Ask by opening an issue.
 
 Forkbell is not open source. The copyright holder may also offer it under other

@@ -3,11 +3,11 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MEALS, addDays, forAmount, sumEntries, todayLocal, type DiaryDay, type Meal } from '@forkbell/shared';
-import { api, del } from '../../lib/api';
+import { api, post } from '../../lib/api';
 import { MacroBar } from '../../components/MacroBar';
 import { color, space, type } from '../../lib/theme';
 
-const MEAL_NAMES: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
+import { MEAL_NAMES } from '../../components/AmountPicker';
 
 function dayLabel(date: string) {
   const today = todayLocal();
@@ -22,7 +22,8 @@ export default function Diary() {
   const [date, setDate] = useState(todayLocal());
   const [day, setDay] = useState<DiaryDay | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -40,16 +41,24 @@ export default function Diary() {
     }, [load]),
   );
 
-  const remove = async (id: string) => {
-    if (!day) return;
-    const entries = day.entries.filter((e) => e.id !== id);
-    setDay({ ...day, entries, totals: sumEntries(entries) }); // show it gone right away
-    setOpen(null);
+  const prev = addDays(date, -1);
+  const prevLabel = dayLabel(prev);
+  // "today" and "yesterday" read as words; other days stay as dates.
+  const relative = ['Today', 'Yesterday', 'Tomorrow'].includes(prevLabel);
+  const prevName = relative ? prevLabel.toLowerCase() : prevLabel;
+
+  /** Copy one meal, or the whole day, from the day before. */
+  const copyFromPrev = async (meal?: Meal) => {
+    setCopying(true);
+    setNotice(null);
     try {
-      await del(`/api/diary/${id}`);
+      const { copied } = await post<{ copied: number }>('/api/diary/copy', { from: prev, to: date, ...(meal ? { meal } : {}) });
+      if (!copied) setNotice(`Nothing was logged${meal ? ` for ${MEAL_NAMES[meal].toLowerCase()}` : ''} ${relative ? prevName : `on ${prevName}`}.`);
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      load();
+    } finally {
+      setCopying(false);
     }
   };
 
@@ -76,6 +85,7 @@ export default function Diary() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
         {error && <Text style={s.error}>{error}</Text>}
+        {notice && <Text style={type.small}>{notice}</Text>}
         {!day && !error && <ActivityIndicator color={color.iron} style={{ marginTop: space(10) }} />}
 
         {day && (
@@ -98,6 +108,12 @@ export default function Diary() {
               </View>
             </View>
 
+            {day.entries.length === 0 && (
+              <Pressable disabled={copying} onPress={() => copyFromPrev()} style={[s.copyDay, copying && { opacity: 0.5 }]}>
+                <Text style={s.addText}>Copy everything from {prevName}</Text>
+              </Pressable>
+            )}
+
             {MEALS.map((meal) => {
               const entries = day.entries.filter((e) => e.meal === meal);
               const kcal = sumEntries(entries).kcal;
@@ -110,26 +126,35 @@ export default function Diary() {
                   {entries.map((e) => {
                     const n = forAmount(e.food.per100, e.grams);
                     return (
-                      <Pressable key={e.id} onPress={() => setOpen(open === e.id ? null : e.id)} style={s.entry}>
+                      <Pressable
+                        key={e.id}
+                        onPress={() => router.push({ pathname: '/edit', params: { id: e.id } })}
+                        style={({ pressed }) => [s.entry, pressed && { opacity: 0.7 }]}
+                        accessibilityHint="Change the amount or meal, or remove it"
+                      >
                         <View style={{ flex: 1 }}>
                           <Text style={type.body} numberOfLines={1}>{e.food.name}</Text>
                           <Text style={type.small} numberOfLines={1}>
                             {e.food.brand ? `${e.food.brand}, ` : ''}{e.grams} g
                           </Text>
                         </View>
-                        {open === e.id ? (
-                          <Pressable onPress={() => remove(e.id)} style={s.remove} accessibilityLabel={`Remove ${e.food.name}`}>
-                            <Text style={{ color: color.card, fontWeight: '700' }}>Remove</Text>
-                          </Pressable>
-                        ) : (
-                          <Text style={[type.body, type.number]}>{n.kcal}</Text>
-                        )}
+                        <Text style={[type.body, type.number]}>{n.kcal}</Text>
                       </Pressable>
                     );
                   })}
-                  <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date } })} style={s.add}>
-                    <Text style={s.addText}>Add food</Text>
-                  </Pressable>
+                  <View style={s.actions}>
+                    <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date } })} style={s.add}>
+                      <Text style={s.addText}>Add food</Text>
+                    </Pressable>
+                    <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date, scan: '1' } })} style={s.add}>
+                      <Text style={s.addText}>Scan</Text>
+                    </Pressable>
+                    {entries.length === 0 && (
+                      <Pressable disabled={copying} onPress={() => copyFromPrev(meal)} style={[s.add, copying && { opacity: 0.5 }]}>
+                        <Text style={s.copyText}>Copy from {prevName}</Text>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
               );
             })}
@@ -154,7 +179,9 @@ const s = StyleSheet.create({
   meal: { gap: space(1) },
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: space(1), marginBottom: space(1) },
   entry: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, paddingHorizontal: space(4), paddingVertical: space(3), borderRadius: 10 },
-  remove: { backgroundColor: color.over, borderRadius: 8, paddingHorizontal: space(3), paddingVertical: space(2) },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space(5) },
   add: { paddingVertical: space(3), paddingHorizontal: space(1) },
   addText: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  copyText: { color: color.ironSoft, fontWeight: '600', fontSize: 16 },
+  copyDay: { backgroundColor: color.card, borderRadius: 12, padding: space(4), alignItems: 'center', borderWidth: 1, borderColor: color.line, borderStyle: 'dashed' },
 });

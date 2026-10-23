@@ -42,6 +42,8 @@ export function fromOff(p: OffProduct): FoodCandidate | null {
     per100,
     servingGrams: serving && serving > 0 ? serving : null,
     servingLabel: p.serving_size?.trim() || null,
+    barcode: p.code,
+    portions: [],
   };
 }
 
@@ -54,7 +56,16 @@ export async function searchOff(query: string): Promise<FoodCandidate[]> {
   return (data.products ?? []).map(fromOff).filter((f): f is FoodCandidate => f !== null);
 }
 
-export async function barcodeOff(code: string): Promise<FoodCandidate | null> {
+/** Look a barcode up, trying the UPC-A and EAN-13 forms of the same number. */
+export async function barcodeOff(codes: string[]): Promise<FoodCandidate | null> {
+  for (const code of codes) {
+    const found = await barcodeOffOnce(code);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function barcodeOffOnce(code: string): Promise<FoodCandidate | null> {
   const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`, {
     headers: { 'User-Agent': UA },
     signal: AbortSignal.timeout(8000),
