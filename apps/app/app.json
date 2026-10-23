@@ -6,9 +6,11 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "ios": {
       "bundleIdentifier": "com.realxero.forkbell",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": "./assets/Forkbell.icon"
     },
     "android": {
       "package": "com.realxero.forkbell",
@@ -25,7 +27,8 @@
     },
     "web": {
       "output": "single",
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",

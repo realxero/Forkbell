@@ -167,6 +167,10 @@ address in the app to your computer's LAN address instead of localhost.
 
 Checks: `pnpm typecheck`, `pnpm test`, and `pnpm --filter @forkbell/db rls-check`.
 
+## App icon
+
+`apps/app/assets/Forkbell.icon` is the iPhone icon (iOS 26 and later): one flat layer, and iOS adds the Liquid Glass light and depth and switches between Light, Dark, Tinted and Clear with the home screen. It opens in Apple's Icon Composer on a Mac if you want to adjust it. `icon.png` is the Android and web version, and `forkbell-mark.svg` is the logo on its own.
+
 ## iPhone builds
 
 Actions, then *iOS IPA*, then *Run workflow*. It builds an unsigned IPA for
