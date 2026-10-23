@@ -290,6 +290,10 @@ export function milestones(opts: { loggedDates: string[]; workoutDates: string[]
     const goalHit = opts.series.find((p) => (dir < 0 ? p.trendKg <= opts.goalKg! : p.trendKg >= opts.goalKg!));
     out.push({ key: 'goal', label: 'Goal weight reached', detail: null, reached: Boolean(goalHit), date: goalHit?.date ?? null });
   }
+  // Weighing in regularly is what makes the trend (and everything built on it) work.
+  for (const n of [10, 50, 100, 250]) {
+    out.push({ key: `weighins-${n}`, label: `${n} weigh-ins`, detail: null, reached: opts.series.length >= n, date: opts.series[n - 1]?.date ?? null });
+  }
   return out;
 }
 

@@ -26,9 +26,18 @@ export const preferencesSchema = z.object({
       protein: z.boolean().default(true),
       fiber: z.boolean().default(true),
       sodium: z.boolean().default(true),
+      satFat: z.boolean().default(true),
+      sugar: z.boolean().default(true),
+      fat: z.boolean().default(true),
+      /** your own daily limits; empty uses the standard daily value (sodium, saturated fat) or isn't watched (sugar) */
+      limits: z
+        .object({ sodiumMg: z.number().min(500).max(10000).nullable().default(null), satFatG: z.number().min(5).max(100).nullable().default(null), sugarG: z.number().min(5).max(300).nullable().default(null) })
+        .default({ sodiumMg: null, satFatG: null, sugarG: null }),
     })
-    .default({ enabled: true, strictness: 'balanced', drinks: true, protein: true, fiber: true, sodium: true }),
+    .default({ enabled: true, strictness: 'balanced', drinks: true, protein: true, fiber: true, sodium: true, satFat: true, sugar: true, fat: true, limits: { sodiumMg: null, satFatG: null, sugarG: null } }),
   trainingTips: z.boolean().default(true),
+  /** the Patterns card on Progress */
+  patterns: z.boolean().default(true),
   /** equipment, areas to protect, exercises to leave out, hidden tips and strength goals */
   training: trainingSetupSchema,
   bell: z
@@ -37,8 +46,10 @@ export const preferencesSchema = z.object({
       askWhenUnsure: z.boolean().default(true),
       /** a voice message sends when you let go (off: it lands in the text box to edit) */
       voiceSends: z.boolean().default(true),
+      /** read Bell's answers out loud: always, only after you asked by voice, or never */
+      readAloud: z.enum(['always', 'voice', 'never']).default('voice'),
     })
-    .default({ askWhenUnsure: true, voiceSends: true }),
+    .default({ askWhenUnsure: true, voiceSends: true, readAloud: 'voice' }),
 });
 export type Preferences = z.infer<typeof preferencesSchema>;
 export const defaultPreferences = (): Preferences => preferencesSchema.parse({});

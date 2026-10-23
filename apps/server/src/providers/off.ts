@@ -30,6 +30,7 @@ export function fromOff(p: OffProduct): FoodCandidate | null {
     fat,
     fiber: n(nm['fiber_100g']),
     sugar: n(nm['sugars_100g']),
+    satFat: n(nm['saturated-fat_100g']),
     sodium: sodiumG === null ? null : Math.round(sodiumG * 1000),
   };
   if (per100Problems(per100).length) return null; // community data: skip clearly broken rows

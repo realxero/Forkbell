@@ -38,6 +38,7 @@ export async function saveFood(tx: Tx, userId: string, input: FoodInput): Promis
       fiber: input.per100.fiber ?? null,
       sugar: input.per100.sugar ?? null,
       sodiumMg: input.per100.sodium ?? null,
+      satFat: input.per100.satFat ?? null,
       servingGrams: input.servingGrams ?? null,
       servingLabel: input.servingLabel ?? null,
       barcode: input.barcode ?? (input.source === 'off' ? (input.sourceId ?? null) : null),

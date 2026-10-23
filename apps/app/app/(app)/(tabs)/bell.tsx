@@ -1,7 +1,8 @@
+import { speak } from '../../../lib/speak';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
 import { api, ApiError, post } from '../../../lib/api';
@@ -39,7 +40,8 @@ const forModel = (m: Message) => ({
 
 export default function Bell() {
   const { me } = useAuth();
-  const prefs = me?.preferences.bell ?? { askWhenUnsure: true, voiceSends: true };
+  const prefs = me?.preferences.bell ?? { askWhenUnsure: true, voiceSends: true, readAloud: 'voice' as const };
+  const params = useLocalSearchParams<{ ask?: string }>();
   const [status, setStatus] = useState<{ enabled: boolean; model: string | null } | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => readCache<Message[]>(KEY) ?? []);
   const [text, setText] = useState('');
@@ -128,12 +130,24 @@ export default function Bell() {
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       });
       setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined, question: r.question ?? undefined }]);
+      // Read the answer aloud: always, or when you asked by voice (Settings → Bell).
+      if (prefs.readAloud === 'always' || (prefs.readAloud !== 'never' && opts.spoken)) speak(r.reply);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 0 ? 'Bell needs a connection.' : e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
   };
+
+  // Opened with a question from elsewhere (e.g. Better option → Ask Bell): send it once.
+  const asked = useRef<string | null>(null);
+  useEffect(() => {
+    if (!params.ask || !status?.enabled || asked.current === params.ask) return;
+    asked.current = params.ask;
+    void send(params.ask);
+    router.setParams({ ask: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.ask, status?.enabled]);
 
   const heardAll = (words: string) => {
     if (!words) return;

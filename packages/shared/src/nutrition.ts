@@ -2,7 +2,7 @@ import type { Per100, Totals, DiaryEntry } from './types.ts';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-export const emptyTotals = (): Totals => ({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 });
+export const emptyTotals = (): Totals => ({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, satFat: 0 });
 
 /** Nutrition for an amount in grams, from per-100 g values. */
 export function forAmount(per100: Per100, grams: number): Totals {
@@ -15,6 +15,7 @@ export function forAmount(per100: Per100, grams: number): Totals {
     fiber: round1((per100.fiber ?? 0) * f),
     sugar: round1((per100.sugar ?? 0) * f),
     sodium: Math.round((per100.sodium ?? 0) * f),
+    satFat: round1((per100.satFat ?? 0) * f),
   };
 }
 
@@ -57,15 +58,15 @@ export function recipePer100(items: { food: { per100: Per100 }; grams: number }[
   const total = items.reduce(
     (t, i) => {
       const n = forAmount(i.food.per100, i.grams);
-      return { kcal: t.kcal + n.kcal, protein: t.protein + n.protein, carbs: t.carbs + n.carbs, fat: t.fat + n.fat, fiber: t.fiber + n.fiber, sugar: t.sugar + n.sugar, sodium: t.sodium + n.sodium };
+      return { kcal: t.kcal + n.kcal, protein: t.protein + n.protein, carbs: t.carbs + n.carbs, fat: t.fat + n.fat, fiber: t.fiber + n.fiber, sugar: t.sugar + n.sugar, sodium: t.sodium + n.sodium, satFat: t.satFat + n.satFat };
     },
-    { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 },
+    { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, satFat: 0 },
   );
   const weight = cookedGrams && cookedGrams > 0 ? cookedGrams : items.reduce((s, i) => s + i.grams, 0);
   const per = (v: number) => Math.round((v * 100 * 10) / Math.max(weight, 1)) / 10;
   return {
     weight,
-    per100: { kcal: Math.round((total.kcal * 100) / Math.max(weight, 1)), protein: per(total.protein), carbs: per(total.carbs), fat: per(total.fat), fiber: per(total.fiber), sugar: per(total.sugar), sodium: Math.round((total.sodium * 100) / Math.max(weight, 1)) },
+    per100: { kcal: Math.round((total.kcal * 100) / Math.max(weight, 1)), protein: per(total.protein), carbs: per(total.carbs), fat: per(total.fat), fiber: per(total.fiber), sugar: per(total.sugar), sodium: Math.round((total.sodium * 100) / Math.max(weight, 1)), satFat: items.some((i) => i.food.per100.satFat != null) ? per(total.satFat) : null },
     total,
   };
 }

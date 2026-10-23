@@ -48,3 +48,35 @@ export interface Pattern {
   days: number;
   overDays: number;
 }
+
+export type Watched = 'sodium' | 'satFat' | 'sugar' | 'fat';
+
+/**
+ * A lighter version of one food for a nutrient that's running high: the same
+ * kind of food with clearly less of it (at least 30% less), and not more
+ * calories. Processed meats, fries and the like are never "the better option".
+ */
+export function lighterFor(entry: { food: Food; grams: number }, foods: Food[], prefs: Preferences, nutrient: Watched): BetterOption | null {
+  const mine = kinds(entry.food.name);
+  if (!mine.size) return null;
+  const now = forAmount(entry.food.per100, entry.grams);
+  let best: BetterOption | null = null;
+  let bestCut = 0;
+  for (const f of foods) {
+    if (f.id === entry.food.id || NEVER_BETTER.test(f.name) || ![...kinds(f.name)].some((k) => mine.has(k))) continue;
+    if (nutrient !== 'fat' && f.per100[nutrient] == null) continue; // unknown isn't "less"
+    if (checkFood(`${f.name} ${f.brand ?? ''}`, prefs).skip) continue;
+    const alt = forAmount(f.per100, entry.grams);
+    const cut = now[nutrient] - alt[nutrient];
+    if (cut < now[nutrient] * 0.3 || alt.kcal > now.kcal * 1.15) continue;
+    if (cut > bestCut) {
+      bestCut = cut;
+      const unit = nutrient === 'sodium' ? 'mg' : 'g';
+      best = { food: f, grams: entry.grams, savesKcal: now.kcal - alt.kcal, moreProtein: Math.round((alt.protein - now.protein) * 10) / 10, why: `${Math.round(cut * (unit === 'g' ? 10 : 1)) / (unit === 'g' ? 10 : 1)} ${unit} less ${NAMES[nutrient]}` };
+    }
+  }
+  return best;
+}
+
+const NAMES: Record<Watched, string> = { sodium: 'sodium', satFat: 'saturated fat', sugar: 'sugar', fat: 'fat' };
+const NEVER_BETTER = /\b(bacon|sausage|salami|pepperoni|hot dog|fries|donut|doughnut|chips|candy)\b/i;

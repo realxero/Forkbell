@@ -15,7 +15,7 @@ type UsdaFood = {
 };
 
 // USDA nutrient numbers. Search results report these per 100 g for every data type.
-const NUM = { kcal: '208', protein: '203', carbs: '205', fat: '204', fiber: '291', sugar: '269', sodium: '307' } as const;
+const NUM = { kcal: '208', protein: '203', carbs: '205', fat: '204', fiber: '291', sugar: '269', sodium: '307', satFat: '606' } as const;
 
 export function fromUsda(f: UsdaFood): FoodCandidate | null {
   const get = (num: string) => f.foodNutrients?.find((x) => x.nutrientNumber === num)?.value ?? null;
@@ -24,7 +24,7 @@ export function fromUsda(f: UsdaFood): FoodCandidate | null {
   const carbs = get(NUM.carbs);
   const fat = get(NUM.fat);
   if (kcal === null || protein === null || carbs === null || fat === null) return null;
-  const per100 = { kcal, protein, carbs, fat, fiber: get(NUM.fiber), sugar: get(NUM.sugar), sodium: get(NUM.sodium) };
+  const per100 = { kcal, protein, carbs, fat, fiber: get(NUM.fiber), sugar: get(NUM.sugar), sodium: get(NUM.sodium), satFat: get(NUM.satFat) };
   if (per100Problems(per100).length) return null;
   const unit = f.servingSizeUnit?.toLowerCase();
   const servingGrams = f.servingSize && (unit === 'g' || unit === 'ml' || unit === 'grm' || unit === 'mlt') ? f.servingSize : null;

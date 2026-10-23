@@ -91,6 +91,27 @@ export default function PreferencesScreen() {
             {sw('Protein ideas', sg.protein, (v) => setP({ ...p, suggestions: { ...sg, protein: v } }))}
             {sw('Fiber ideas', sg.fiber, (v) => setP({ ...p, suggestions: { ...sg, fiber: v } }))}
             {sw('Sodium heads-up', sg.sodium, (v) => setP({ ...p, suggestions: { ...sg, sodium: v } }))}
+            {sw('Saturated fat heads-up', sg.satFat, (v) => setP({ ...p, suggestions: { ...sg, satFat: v } }))}
+            {sw('Sugar heads-up (needs a limit below)', sg.sugar, (v) => setP({ ...p, suggestions: { ...sg, sugar: v } }))}
+            {sw('Fat heads-up (uses your fat goal)', sg.fat, (v) => setP({ ...p, suggestions: { ...sg, fat: v } }))}
+            <Text style={s.label}>Your daily limits (empty uses 2,300 mg sodium and 20 g saturated fat; sugar is only watched with a limit)</Text>
+            <View style={{ flexDirection: 'row', gap: space(2) }}>
+              {([['sodiumMg', 'Sodium mg'], ['satFatG', 'Sat. fat g'], ['sugarG', 'Sugar g']] as const).map(([k, label]) => (
+                <View key={k} style={{ flex: 1, gap: 2 }}>
+                  <Text style={type.small}>{label}</Text>
+                  <TextInput
+                    defaultValue={sg.limits[k] === null ? '' : String(sg.limits[k])}
+                    onChangeText={(t) => {
+                      const v = t.trim() ? Number(t.replace(',', '.')) : null;
+                      setP((x) => ({ ...x, suggestions: { ...x.suggestions, limits: { ...x.suggestions.limits, [k]: v !== null && Number.isFinite(v) ? v : null } } }));
+                    }}
+                    keyboardType="number-pad"
+                    style={s.input}
+                    accessibilityLabel={`${label} limit`}
+                  />
+                </View>
+              ))}
+            </View>
           </>
         )}
 
@@ -98,6 +119,13 @@ export default function PreferencesScreen() {
         {sw('Ask me when it’s unsure', p.bell.askWhenUnsure, (v) => setP({ ...p, bell: { ...p.bell, askWhenUnsure: v } }))}
         <Text style={s.note}>When a portion or how something was cooked would change the calories a lot, Bell asks one quick question instead of guessing. You can always tap “Just estimate it”.</Text>
         {sw('Send voice messages when I let go', p.bell.voiceSends, (v) => setP({ ...p, bell: { ...p.bell, voiceSends: v } }))}
+        <Text style={s.label}>Read Bell’s answers aloud</Text>
+        <View style={s.chips}>
+          {(['voice', 'always', 'never'] as const).map((x) => (
+            <Chip key={x} label={x === 'voice' ? 'When I ask by voice' : x === 'always' ? 'Always' : 'Never'} on={p.bell.readAloud === x} onPress={() => setP({ ...p, bell: { ...p.bell, readAloud: x } })} />
+          ))}
+        </View>
+        {sw('Patterns card on Progress', p.patterns, (v) => setP({ ...p, patterns: v }))}
         <Text style={s.note}>Off: what you said goes into the message box so you can fix it first.</Text>
 
         <Text style={s.section}>Training</Text>

@@ -110,6 +110,15 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
                     <Pressable onPress={() => swapTo(o)} style={s.swap}><Text style={s.swapText}>Swap</Text></Pressable>
                   </View>
                 ))}
+                {/* Bell looks further: real products, or what to order at a restaurant. */}
+                {item('chatbubble-ellipses-outline', 'Ask Bell for real products', () => {
+                  close();
+                  router.push({ pathname: '/bell', params: { ask: `Find 3 real, buyable alternatives to ${entry.food.name}${entry.food.brand ? ` (${entry.food.brand})` : ''} that fit my goal better. For each, say why and give calories and protein for about ${entry.grams} g, and offer to log one instead.` } });
+                })}
+                {item('restaurant-outline', 'At a restaurant? Ask Bell for menu options', () => {
+                  close();
+                  router.push({ pathname: '/bell', params: { ask: `I'm eating out${entry.food.brand ? ` at ${entry.food.brand}` : ''}. Instead of ${entry.food.name}, suggest 3 menu items that fit what I have left today, with how to order each.` } });
+                })}
                 <Pressable onPress={() => setBetter(null)}><Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>‹ Back</Text></Pressable>
               </View>
             ) : (

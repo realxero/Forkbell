@@ -62,6 +62,7 @@ export const TOOLS: ToolSpec[] = [
               },
               estimate: { type: 'boolean' },
               note: { type: 'string', description: 'short note shown on the card, e.g. "assumed one medium bowl"' },
+              expected_kcal: { type: 'number', description: 'calories for this amount when a label, photo or the person stated them ("150 per bottle"); the item is refused if the numbers are more than 20% off' },
               amount_confirmed: { type: 'boolean', description: 'only when exactly 100 g really is what they had (they said so, it is their usual amount, or one serving is 100 g)' },
             },
             required: ['name', 'grams'],
@@ -176,6 +177,16 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
           const bad = per100Problems(item.per100);
           if (bad.length) {
             problems.push(`${item.name}: ${bad[0]} Check you used per-100 g values, not per serving.`);
+            continue;
+          }
+        }
+        // A stated calorie count must match the amount and numbers, within 20%.
+        if (item.expected_kcal) {
+          const p100 = food?.per100 ?? item.per100!;
+          const kcal = (p100.kcal * item.grams) / 100;
+          if (p100.kcal > 0 && Math.abs(kcal - item.expected_kcal) > item.expected_kcal * 0.2) {
+            const grams = Math.round((item.expected_kcal / p100.kcal) * 100);
+            problems.push(`${item.name}: ${item.grams} g is ${Math.round(kcal)} kcal, but ${item.expected_kcal} kcal was stated. Use about ${grams} g, or the label's own numbers.`);
             continue;
           }
         }

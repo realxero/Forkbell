@@ -89,6 +89,7 @@ export function recipeRoutes({ asUser }: ReturnType<typeof connect>) {
       fiber: per100.fiber,
       sugar: per100.sugar,
       sodiumMg: per100.sodium,
+      satFat: per100.satFat,
       servingGrams: serving,
       servingLabel: '1 serving',
       portions: [{ label: '1 serving', grams: serving }, ...(input.servings > 1 ? [{ label: `whole recipe (${input.servings} servings)`, grams: Math.round(weight) }] : [])],

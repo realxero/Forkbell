@@ -84,6 +84,8 @@ export const proposeArgsSchema = z.object({
         per100: per100Schema.optional(),
         estimate: z.boolean().optional(),
         note: z.string().max(300).nullish(),
+        /** calories seen on a photo or label, or said by the person, for this amount */
+        expected_kcal: z.number().positive().max(20000).optional(),
         /** set when exactly 100 g really is what they had (their usual, or the serving size) */
         amount_confirmed: z.boolean().optional(),
       }),

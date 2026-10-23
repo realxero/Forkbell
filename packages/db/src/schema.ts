@@ -35,6 +35,7 @@ export const foods = pgTable('foods', {
   fiber: num('fiber'),
   sugar: num('sugar'),
   sodiumMg: num('sodium_mg'),
+  satFat: num('sat_fat'),
   servingGrams: num('serving_grams'),
   servingLabel: text('serving_label'),
   barcode: text('barcode'),

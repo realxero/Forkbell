@@ -12,6 +12,7 @@ export const per100Schema = z.object({
   fiber: num.max(100).nullish(),
   sugar: num.max(100).nullish(),
   sodium: num.max(100000).nullish(),
+  satFat: num.max(100).nullish(),
 });
 
 export const foodInputSchema = z.object({

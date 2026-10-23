@@ -11,6 +11,8 @@ export interface Per100 {
   sugar?: number | null;
   /** milligrams */
   sodium?: number | null;
+  /** saturated fat, grams */
+  satFat?: number | null;
 }
 
 export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin' | 'recipe';
@@ -55,6 +57,7 @@ export interface Totals {
   fiber: number;
   sugar: number;
   sodium: number;
+  satFat: number;
 }
 
 export interface Goals {

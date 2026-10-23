@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { healthDaily, measurements, users, weighIns, workouts, type connect } from '@forkbell/db';
-import { foodCheckIn, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource } from '@forkbell/shared';
+import { findPatterns, foodCheckIn, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -181,7 +181,20 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       .sort((a, b) => b.overDays / b.days - a.overDays / a.days)
       .slice(0, 20)
       .map(({ base: _b, ...p }) => p);
-    return c.json({ patterns });
+    // The Patterns card: what your own history says, with a significance check.
+    const dayRows = (await asUser(c.get('profileId'), (tx) =>
+      tx.execute<{ date: string; kcal: string; bk: string; bp: string; foods: { id: string; name: string }[] }>(sql`
+        select d.date::text as date,
+               sum(d.grams / 100 * f.kcal) as kcal,
+               sum(case when d.meal = 'breakfast' then d.grams / 100 * f.kcal else 0 end) as bk,
+               sum(case when d.meal = 'breakfast' then d.grams / 100 * f.protein else 0 end) as bp,
+               json_agg(distinct jsonb_build_object('id', f.id, 'name', f.name)) as foods
+        from diary_entries d join foods f on f.id = d.food_id
+        where d.date >= ${addDays(today, -90)}::date and d.date < ${today}::date
+        group by d.date`),
+    )) as unknown as { date: string; kcal: string; bk: string; bp: string; foods: { id: string; name: string }[] }[];
+    const insights = findPatterns(dayRows.map((r) => ({ date: r.date, kcal: Number(r.kcal), breakfastKcal: Number(r.bk), breakfastProtein: Number(r.bp), foods: r.foods })));
+    return c.json({ patterns, insights, daysLooked: dayRows.length });
   });
 
   /** This month next to last month: logging, calories, protein, weight and workouts. */

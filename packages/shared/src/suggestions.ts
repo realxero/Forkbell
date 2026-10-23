@@ -3,10 +3,13 @@
 // work offline. Every food offered passes your allergies, diet and dislikes.
 import { checkFood, type Preferences } from './food-safety.ts';
 import { forAmount } from './nutrition.ts';
+import { lighterFor, type Watched } from './better.ts';
 import type { DiaryDay, DiaryEntry, Food, RecentFood } from './types.ts';
 
 export const SODIUM_LIMIT_MG = 2300;
 export const FIBER_TARGET_G = 28;
+/** daily value for saturated fat */
+export const SAT_FAT_LIMIT_G = 20;
 
 export interface SuggestedItem {
   food: Food;
@@ -15,7 +18,7 @@ export interface SuggestedItem {
 export interface Suggestion {
   /** stable per day, for "hide for today" */
   key: string;
-  kind: 'swap' | 'protein' | 'fiber' | 'sodium' | 'pattern';
+  kind: 'swap' | 'protein' | 'fiber' | 'sodium' | 'nutrient' | 'pattern';
   title: string;
   detail: string;
   items: SuggestedItem[];
@@ -124,17 +127,31 @@ export function suggestForDay(opts: {
     }
   }
 
-  if (prefs.suggestions.sodium && day.totals.sodium >= SODIUM_LIMIT_MG * t.sodium) {
-    const top = [...day.entries].sort((a, b) => forAmount(b.food.per100, b.grams).sodium - forAmount(a.food.per100, a.grams).sodium)[0];
-    if (top) {
-      out.push({
-        key: 'sodium',
-        kind: 'sodium',
-        title: `Sodium is at ${Math.round((100 * day.totals.sodium) / SODIUM_LIMIT_MG)}% of the daily limit`,
-        detail: `${top.food.name} is the biggest part (${forAmount(top.food.per100, top.grams).sodium.toLocaleString()} mg). Water and fresh foods help balance the rest of the day.`,
-        items: [],
-      });
-    }
+  // Nutrient watch: sodium and saturated fat against your limit (or the daily
+  // value); sugar and fat only when you've set a limit or goal for them.
+  const sg = prefs.suggestions;
+  const limits = sg.limits ?? { sodiumMg: null, satFatG: null, sugarG: null };
+  const watch: { key: Watched; on: boolean; limit: number | null; label: string; unit: string }[] = [
+    { key: 'sodium', on: sg.sodium, limit: limits.sodiumMg ?? SODIUM_LIMIT_MG, label: 'Sodium', unit: 'mg' },
+    { key: 'satFat', on: sg.satFat ?? true, limit: limits.satFatG ?? SAT_FAT_LIMIT_G, label: 'Saturated fat', unit: 'g' },
+    { key: 'sugar', on: sg.sugar ?? true, limit: limits.sugarG, label: 'Sugar', unit: 'g' },
+    { key: 'fat', on: sg.fat ?? true, limit: day.goals.fat, label: 'Fat', unit: 'g' },
+  ];
+  for (const w of watch) {
+    if (!w.on || !w.limit || day.totals[w.key] < w.limit * t.sodium) continue;
+    const amount = (e: (typeof day.entries)[number]) => forAmount(e.food.per100, e.grams)[w.key];
+    const top = [...day.entries].sort((a, b) => amount(b) - amount(a))[0];
+    if (!top || amount(top) <= 0) continue;
+    const alt = lighterFor(top, opts.foods, prefs, w.key);
+    const pct = Math.round((100 * day.totals[w.key]) / w.limit);
+    out.push({
+      key: w.key,
+      kind: w.key === 'sodium' ? 'sodium' : 'nutrient',
+      title: `${w.label} is at ${pct}% of your ${w.key === 'fat' ? 'goal' : 'limit'}`,
+      detail: `${top.food.name} is the biggest part (${amount(top).toLocaleString()} ${w.unit}).${alt ? ` ${alt.food.name} has ${alt.why}.` : w.key === 'sodium' ? ' Water and fresh foods help balance the rest of the day.' : ''}`,
+      items: alt ? [{ food: alt.food, grams: alt.grams }] : [],
+      ...(alt ? { replaces: top } : {}),
+    });
   }
   return out.filter((s) => !(opts.hidden ?? []).includes(s.key));
 }

@@ -45,7 +45,7 @@ const banana = food('Banana', 89, 1.1, 22.8, 0.3, { portions: [{ label: '1 mediu
 const salmon = food('Salmon, cooked', 206, 22.1, 0, 12.4);
 const potato = food('Potato, baked', 93, 2.5, 21.2, 0.1);
 const library = [cola, zero, chicken, rice, broccoli, eggs, oats, banana, salmon, potato, food('Vegetable oil', 884, 0, 0, 100), food('Orange juice', 45, 0.7, 10.4, 0.2)];
-const dayWith = (entries: { food: Food; grams: number; meal?: string }[], goals = { kcal: 2200, protein: 150, carbs: null, fat: null }): DiaryDay => {
+const dayWith = (entries: { food: Food; grams: number; meal?: string }[], goals: DiaryDay['goals'] = { kcal: 2200, protein: 150, carbs: null, fat: null }): DiaryDay => {
   const es = entries.map((e, i) => ({ id: `e${i}`, date: '2026-10-23', meal: (e.meal ?? 'lunch') as 'lunch', grams: e.grams, food: e.food }));
   return { date: '2026-10-23', entries: es, totals: sumEntries(es), goals };
 };
@@ -102,4 +102,21 @@ test('better option: lighter versions of the same kind of food', () => {
   assert.equal(opts.length, 1);
   assert.equal(opts[0]!.food, nonfat);
   assert.match(opts[0]!.why, /76 kcal less/);
+});
+
+import { lighterFor } from './better.ts';
+test('nutrient watch: saturated fat names the biggest part and a lighter version', () => {
+  const sat = (f: Food, satFat: number) => ({ ...f, per100: { ...f.per100, satFat } });
+  const pepperoni = sat(food('Pizza, pepperoni', 290, 12, 32, 13), 5.5);
+  const veggie = sat(food('Pizza, veggie, thin crust', 240, 10, 30, 8), 3.2);
+  const sausage = sat(food('Pizza, sausage', 300, 12, 30, 14), 6);
+  const day = dayWith([{ food: pepperoni, grams: 400 }], { kcal: 2200, protein: null, carbs: null, fat: null });
+  const s = suggestForDay({ day, foods: [pepperoni, veggie, sausage], recent: [], prefs: prefs(), hour: 19, isToday: true });
+  const w = s.find((x) => x.key === 'satFat')!;
+  assert.match(w.title, /Saturated fat is at 110% of your limit/);
+  assert.equal(w.items[0]!.food, veggie, 'never "upgrade" to sausage, and it must have less');
+  assert.equal(w.replaces?.food, pepperoni);
+  assert.equal(lighterFor({ food: pepperoni, grams: 400 }, [sausage], prefs(), 'satFat'), null);
+  // sugar isn't watched without a limit
+  assert.ok(!s.some((x) => x.key === 'sugar'));
 });

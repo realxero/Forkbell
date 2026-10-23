@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, dateSchema, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
@@ -13,6 +13,7 @@ import { NumberField } from '../../../components/NumberField';
 import { CalorieBars, LogCalendar, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
 import { WellbeingCard } from '../../../components/WellbeingCard';
 import { RecapCard } from '../../../components/RecapCard';
+import { PatternsCard } from '../../../components/PatternsCard';
 import { FoodCheckInCard } from '../../../components/CheckInCards';
 import type { FoodCheckIn } from '@forkbell/shared';
 import { HealthCard } from '../../../components/HealthCard';
@@ -220,6 +221,8 @@ export default function ProgressScreen() {
 
             <RecapCard unit={units.unit} />
 
+            <PatternsCard />
+
             <WellbeingCard healthSleepMin={p.activity?.metrics?.find((m) => m.kind === 'sleep_min' && m.latestDate === p.today)?.latest ?? null} />
 
             <Milestones list={p.milestones} />
@@ -292,12 +295,21 @@ function GoalCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (bo
 }
 
 function Milestones({ list }: { list: Milestone[] }) {
+  const [timeline, setTimeline] = useState(false);
   const reached = list.filter((m) => m.reached).sort((a, b) => ((a.date ?? '') < (b.date ?? '') ? 1 : -1));
   const next = ['days', 'workouts', 'weight'].map((k) => list.find((m) => !m.reached && m.key.startsWith(k))).filter(Boolean) as Milestone[];
   if (!reached.length && !next.length) return null;
   return (
     <View style={s.card}>
-      <Text style={type.title}>Milestones</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={type.title}>Milestones</Text>
+        {reached.length > 0 && (
+          <Pressable onPress={() => setTimeline(true)} hitSlop={8}>
+            <Text style={{ color: color.accent, fontWeight: '700' }}>Timeline</Text>
+          </Pressable>
+        )}
+      </View>
+      <TimelineSheet visible={timeline} reached={reached} next={list.filter((m) => !m.reached)} onClose={() => setTimeline(false)} />
       {reached.slice(0, 6).map((m) => (
         <View key={m.key} style={s.milestone}>
           <Text style={type.body}>✓ {m.label}</Text>
@@ -312,6 +324,41 @@ function Milestones({ list }: { list: Milestone[] }) {
         <Text key={m.key} style={type.small}>○ {m.label}</Text>
       ))}
     </View>
+  );
+}
+
+/** Everything you've reached, by date, newest first; then what's ahead. */
+function TimelineSheet({ visible, reached, next, onClose }: { visible: boolean; reached: Milestone[]; next: Milestone[]; onClose: () => void }) {
+  const icon = (m: Milestone) => (m.key.startsWith('weight') ? '⚖️' : m.key.startsWith('workouts') ? '🏋️' : m.key.startsWith('weighins') ? '📏' : '🔥');
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: color.chalk }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) }}>
+          <Text style={type.title}>Timeline</Text>
+          <Pressable onPress={onClose} hitSlop={10}><Text style={{ color: color.accent, fontWeight: '700', fontSize: 16 }}>Done</Text></Pressable>
+        </View>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: space(4), paddingBottom: space(10) }}>
+          {reached.map((m, i) => (
+            <View key={m.key} style={{ flexDirection: 'row', gap: space(3) }}>
+              <View style={{ alignItems: 'center', width: 32 }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: color.successBg, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text>{icon(m)}</Text>
+                </View>
+                {i < reached.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: color.line, minHeight: 18 }} />}
+              </View>
+              <View style={{ flex: 1, paddingBottom: space(4) }}>
+                <Text style={[type.body, { fontWeight: '700' }]}>{m.label}</Text>
+                <Text style={type.small}>{m.date ? longDate(m.date) : ''}{m.detail ? ` · ${m.detail}` : ''}</Text>
+              </View>
+            </View>
+          ))}
+          {next.length > 0 && <Text style={[type.label, { marginTop: space(3), marginBottom: space(2) }]}>Ahead</Text>}
+          {next.slice(0, 8).map((m) => (
+            <Text key={m.key} style={[type.body, { color: color.ironSoft, paddingVertical: 4 }]}>○ {m.label}{m.detail ? `  ·  ${m.detail}` : ''}</Text>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
   );
 }
 

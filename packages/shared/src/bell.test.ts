@@ -70,5 +70,5 @@ test('image links are found in pasted text', () => {
 
 test('old saved preferences get the Bell defaults', () => {
   const p = preferencesSchema.parse({ allergies: ['milk'] });
-  assert.deepEqual(p.bell, { askWhenUnsure: true, voiceSends: true });
+  assert.deepEqual(p.bell, { askWhenUnsure: true, voiceSends: true, readAloud: 'voice' });
 });
