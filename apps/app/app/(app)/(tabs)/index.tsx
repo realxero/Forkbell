@@ -7,7 +7,7 @@ import { SuggestionsCard } from '../../../components/SuggestionsCard';
 import { useAuth } from '../../../lib/auth';
 import { useViewing } from '../../../lib/profile';
 import { cachedGet, readCache, writeCache } from '../../../lib/sync';
-import { copyDay } from '../../../lib/actions';
+import { copyDay, setDayFinished } from '../../../lib/actions';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { MacroRing, Ring } from '../../../components/Ring';
@@ -207,6 +207,22 @@ export default function Diary() {
               );
             })}
 
+            {day.entries.length > 0 && date <= todayLocal() && (
+              <FinishDay
+                date={date}
+                finished={Boolean(day.complete)}
+                onChange={async (finished) => {
+                  setDay({ ...day, complete: finished });
+                  try {
+                    await setDayFinished(date, finished);
+                    if (finished) showToast(date === todayLocal() ? 'Today’s finished. Nice logging.' : 'Day finished.', { tone: 'celebrate', action: { label: 'Undo', run: () => { setDay((d) => d && { ...d, complete: false }); void setDayFinished(date, false); } } });
+                  } catch (e) {
+                    setDay({ ...day, complete: !finished });
+                    setError(e instanceof Error ? e.message : String(e));
+                  }
+                }}
+              />
+            )}
           </>
         )}
       </ScrollView>
@@ -233,7 +249,42 @@ export default function Diary() {
   );
 }
 
+/**
+ * Marking a day finished tells Forkbell everything eaten is logged, so the
+ * daily-burn estimate can trust it and the calendar can show it as complete.
+ */
+function FinishDay({ date, finished, onChange }: { date: string; finished: boolean; onChange: (finished: boolean) => void }) {
+  const today = date === todayLocal();
+  if (finished)
+    return (
+      <View style={[s.finish, s.finished]} accessibilityLiveRegion="polite">
+        <Ionicons name="checkmark-circle" size={24} color={color.fat} />
+        <Text style={[type.body, { flex: 1, fontWeight: '700' }]}>{today ? 'Today is finished' : 'This day is finished'}</Text>
+        <Pressable onPress={() => onChange(false)} hitSlop={10} style={s.finishLink} accessibilityLabel="Reopen this day">
+          <Text style={s.link}>Reopen</Text>
+        </Pressable>
+      </View>
+    );
+  return (
+    <View style={s.finish}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[type.body, { fontWeight: '700' }]}>{today ? 'Done eating for today?' : 'Is this day fully logged?'}</Text>
+        <Text style={type.small}>Finished days make your daily-burn estimate more accurate.</Text>
+      </View>
+      <Pressable onPress={() => onChange(true)} style={s.finishButton} accessibilityRole="button">
+        <Text style={s.finishButtonText}>{today ? 'Finish today' : 'Finish day'}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  finish: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
+  finished: { backgroundColor: color.infoBg, borderColor: color.infoBg },
+  finishButton: { minHeight: 44, paddingHorizontal: space(4), borderRadius: 22, backgroundColor: color.accent, justifyContent: 'center' },
+  finishButtonText: { color: color.onAccent, fontWeight: '700', fontSize: 16 },
+  finishLink: { minHeight: 44, justifyContent: 'center' },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   screen: { flex: 1, backgroundColor: color.chalk },
   dateBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space(5), paddingVertical: space(3) },
   arrow: { fontSize: 32, lineHeight: 34, color: color.iron, paddingHorizontal: space(2) },

@@ -69,6 +69,8 @@ export interface DiaryDay {
   entries: DiaryEntry[];
   totals: Totals;
   goals: Goals;
+  /** you marked this day finished: everything eaten is logged */
+  complete?: boolean;
 }
 
 export interface Me {

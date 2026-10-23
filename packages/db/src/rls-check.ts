@@ -27,6 +27,9 @@ try {
     await tx`insert into diary_entries (date, meal, food_id, grams) values ('2026-10-22', 'breakfast', ${f!.id}, 50)`;
     return f!.id as string;
   });
+  await as(alice, (tx) => tx`insert into day_status (date) values ('2026-10-22')`);
+  assert.equal((await as(bob, (tx) => tx`select * from day_status`)).length, 0, "Bob can't see Alice's finished days");
+  await assert.rejects(as(bob, (tx) => tx`insert into day_status (user_id, date) values (${alice}, '2026-10-21')`), "Bob can't finish a day for Alice");
 
   // No user set: nothing visible, nothing writable.
   assert.equal((await as(null, (tx) => tx`select * from diary_entries`)).length, 0, 'anonymous sees no diary rows');
@@ -104,6 +107,7 @@ try {
   await as(alice, (tx) => tx`insert into check_ins (date, mood) values ('2026-10-22', 4)`);
   assert.equal((await asBobViewingAlice((tx) => tx`select * from diary_entries`)).length, 0, 'no share: nothing of Alice is visible');
   assert.equal((await asBobViewingAlice((tx) => tx`select * from users where id = ${alice}`)).length, 0, 'no share: not even her name');
+  assert.equal((await asBobViewingAlice((tx) => tx`select * from day_status`)).length, 0, 'no share: not her finished days');
   await assert.rejects(as(bob, (tx) => tx`insert into shares (owner_id, grantee_id, permissions) values (${alice}, ${bob}, '{food_read}')`), 'Bob cannot grant himself a share');
 
   await as(alice, (tx) => tx`insert into share_invites (code_hash, permissions, expires_at) values (${`${tag}-h1`}, '{food_read,progress_read}', now() + interval '1 day')`);
@@ -116,6 +120,8 @@ try {
   assert.equal((await asBobViewingAlice((tx) => tx`select * from check_ins`)).length, 0, 'wellbeing was not shared');
   assert.equal((await asBobViewingAlice((tx) => tx`update weigh_ins set weight_kg = 1 returning id`)).length, 0, 'shared progress is read-only');
   await assert.rejects(asBobViewingAlice((tx) => tx`insert into diary_entries (date, meal, food_id, grams) values ('2026-10-22', 'lunch', ${aliceFood}, 5)`), 'food_read does not allow logging');
+  assert.equal((await asBobViewingAlice((tx) => tx`select * from day_status`)).length, 1, 'shared food: her finished days');
+  await assert.rejects(asBobViewingAlice((tx) => tx`insert into day_status (date) values ('2026-10-23')`), 'food_read does not allow finishing her day');
   assert.equal((await as(bob, (tx) => tx`select * from diary_entries`)).length, 0, "viewing himself, Bob doesn't get Alice's rows mixed in");
   const carol = (await app`select auth_upsert_user(${tag}, 'carol', null, 'Carol') as id`)[0]!.id as string;
   assert.equal((await as(carol, (tx) => tx`select * from diary_entries`, alice)).length, 0, "Carol wasn't invited");
@@ -124,6 +130,8 @@ try {
   await as(alice, (tx) => tx`update shares set permissions = '{food_read,food_write}' where grantee_id = ${bob}`);
   await asBobViewingAlice((tx) => tx`insert into diary_entries (date, meal, food_id, grams) values ('2026-10-22', 'snacks', ${aliceFood}, 20)`);
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 2, "Bob's entry is in Alice's diary");
+  await asBobViewingAlice((tx) => tx`insert into day_status (date) values ('2026-10-23')`);
+  assert.equal((await as(alice, (tx) => tx`select * from day_status`)).length, 2, 'food_write: Bob can finish her day');
   assert.equal((await asBobViewingAlice((tx) => tx`select * from weigh_ins`)).length, 0, 'progress was taken off the share');
 
   // Bob leaves; nothing is visible again.

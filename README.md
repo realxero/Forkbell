@@ -167,6 +167,12 @@ address in the app to your computer's LAN address instead of localhost.
 
 Checks: `pnpm typecheck`, `pnpm test`, and `pnpm --filter @forkbell/db rls-check`.
 
+## Finishing a day and reminders
+
+- **Finish the day.** Once everything you ate is logged, tap *Finish today* at the bottom of the diary (or *Finish day* on a past day). The calendar shows finished days with a solid dot and logged-but-unfinished days with an outline, so gaps are easy to spot.
+- **A better burn estimate.** Once you have ten finished days in the last four weeks, the daily-burn estimate uses only finished days, so a half-logged day can't make it look like you burn less than you do.
+- **Smart reminders (phone only).** In Settings, *Reminders on this phone*. Forkbell learns when you usually log each meal and only nudges about meals you log most days, about an hour after your usual time, and only if that meal is still empty. An evening nudge to finish the day comes around when you usually do. They're local notifications scheduled on the phone, replanned whenever the app opens or you log something, so nothing goes through a push service. If you log on the web instead, the phone hears about it next time Forkbell opens there.
+
 ## Training suggestions
 
 Rules, not AI, so they're instant and work offline. Set them up in Settings, Food and suggestions, under Training: the equipment you have, areas to go easy on (shoulders, elbows, wrists, lower back, knees), and exercises never to suggest.

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { diaryEntries, foods, users, type connect } from '@forkbell/db';
+import { dayStatus, diaryEntries, foods, users, type connect } from '@forkbell/db';
 import { addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
@@ -29,9 +29,13 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         .innerJoin(foods, eq(foods.id, diaryEntries.foodId))
         .where(sql`${diaryEntries.date} between ${from.data}::date and ${to.data}::date`),
     );
+    const finished = await asUser(c.get('profileId'), (tx) =>
+      tx.select({ date: dayStatus.date }).from(dayStatus).where(sql`${dayStatus.date} between ${from.data}::date and ${to.data}::date`),
+    );
+    const done = new Set(finished.map((f) => f.date));
     const byDate = new Map<string, { grams: number; food: ReturnType<typeof toFood> }[]>();
     for (const { entry, food } of rows) byDate.set(entry.date, [...(byDate.get(entry.date) ?? []), { grams: entry.grams, food: toFood(food) }]);
-    return c.json({ days: [...byDate.entries()].sort().map(([date, entries]) => ({ date, totals: sumEntries(entries) })) });
+    return c.json({ days: [...byDate.entries()].sort().map(([date, entries]) => ({ date, totals: sumEntries(entries), complete: done.has(date) })) });
   });
 
   r.get('/entry/:id', async (c) => {
@@ -64,6 +68,40 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
     return c.json({ copied: copied.length });
   });
 
+  /** Mark a day finished (everything eaten is logged), or reopen it. */
+  r.put('/:date/complete', async (c) => {
+    const date = dateSchema.safeParse(c.req.param('date'));
+    if (!date.success) return c.json({ error: 'Use a date like 2026-10-22.' }, 400);
+    await asUser(c.get('profileId'), (tx) => tx.execute(sql`insert into day_status (date) values (${date.data}::date) on conflict do nothing`));
+    return c.json({ date: date.data, complete: true });
+  });
+  r.delete('/:date/complete', async (c) => {
+    const date = dateSchema.safeParse(c.req.param('date'));
+    if (!date.success) return c.json({ error: 'Use a date like 2026-10-22.' }, 400);
+    await asUser(c.get('profileId'), (tx) => tx.delete(dayStatus).where(eq(dayStatus.date, date.data)));
+    return c.json({ date: date.data, complete: false });
+  });
+
+  /**
+   * When you usually log each meal and finish your day, as raw times over the
+   * last four weeks. The phone works out typical times in its own time zone.
+   */
+  r.get('/habits', async (c) => {
+    const rows = await asUser(c.get('profileId'), (tx) =>
+      tx.execute<{ date: string; meal: string; at: string }>(sql`
+        select date::text as date, meal, min(created_at) as at from diary_entries
+        where date >= current_date - 28 and created_at is not null
+        group by date, meal`),
+    );
+    const finished = await asUser(c.get('profileId'), (tx) =>
+      tx.execute<{ date: string; at: string }>(sql`select date::text as date, completed_at as at from day_status where date >= current_date - 28`),
+    );
+    return c.json({
+      firsts: [...rows].map((r) => ({ date: r.date, meal: r.meal, at: new Date(r.at).toISOString() })),
+      finished: [...finished].map((r) => ({ date: r.date, at: new Date(r.at).toISOString() })),
+    });
+  });
+
   r.get('/:date', async (c) => {
     const date = dateSchema.safeParse(c.req.param('date'));
     if (!date.success) return c.json({ error: 'Use a date like 2026-10-22.' }, 400);
@@ -76,6 +114,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         .where(eq(diaryEntries.date, date.data))
         .orderBy(asc(diaryEntries.createdAt));
       const [me] = await tx.select().from(users).where(eq(users.id, c.get('profileId'))).limit(1);
+      const [finished] = await tx.select({ date: dayStatus.date }).from(dayStatus).where(eq(dayStatus.date, date.data)).limit(1);
       const entries: DiaryEntry[] = rows.map(({ entry, food }) => ({
         id: entry.id,
         date: entry.date,
@@ -88,6 +127,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         entries,
         totals: sumEntries(entries),
         goals: goalsFor(date.data, me),
+        complete: Boolean(finished),
       };
     });
     return c.json(day);

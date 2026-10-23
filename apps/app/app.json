@@ -71,6 +71,12 @@
           "microphonePermission": "Forkbell uses the microphone so you can talk to Bell instead of typing.",
           "speechRecognitionPermission": "Forkbell turns what you say to Bell into text. On iPhone this happens on the device when it can."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false
+        }
       ]
     ],
     "experiments": {

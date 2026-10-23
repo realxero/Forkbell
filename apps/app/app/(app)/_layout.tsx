@@ -4,6 +4,7 @@ import { todayLocal } from '@forkbell/shared';
 import { warmCache } from '../../lib/sync';
 import { AppState } from 'react-native';
 import { healthSupported, syncHealth } from '../../lib/health-sync';
+import { refreshReminders } from '../../lib/reminders';
 import { SyncBanner } from '../../components/SyncBanner';
 import { ProfileBar } from '../../components/ProfileBar';
 import { ToastHost } from '../../components/ToastHost';
@@ -15,10 +16,17 @@ export default function SignedInLayout() {
   const { status } = useAuth();
   useEffect(() => {
     if (status === 'signedIn') void warmCache(todayLocal());
-    if (status !== 'signedIn' || !healthSupported) return;
+    if (status !== 'signedIn') return;
+    // Replan reminders whenever the app comes back: a new day, or food logged elsewhere.
+    void refreshReminders().catch(() => {});
+    const remind = AppState.addEventListener('change', (s) => s === 'active' && void refreshReminders().catch(() => {}));
+    if (!healthSupported) return () => remind.remove();
     void syncHealth();
     const sub = AppState.addEventListener('change', (s) => s === 'active' && void syncHealth());
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      remind.remove();
+    };
   }, [status]);
   if (status === 'loading') return <ActivityIndicator style={{ flex: 1 }} color={color.iron} />;
   if (status === 'signedOut') return <Redirect href="/login" />;

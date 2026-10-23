@@ -66,6 +66,8 @@ export interface EnergyEstimate {
   confidence: 'low' | 'medium' | 'high' | null;
   /** what's missing, when kcal is null */
   needs: string | null;
+  /** true when only days you marked finished were used */
+  usesFinishedDays?: boolean;
 }
 
 /**
@@ -74,7 +76,12 @@ export interface EnergyEstimate {
  * you burn about 2,500 + 0.5 × 7,700 / 7 ≈ 3,050. Today is left out because
  * it isn't finished. Days with nothing logged are skipped, not counted as zero.
  */
-export function estimateEnergy(intake: Record<string, number>, series: TrendPoint[], today: string, windowDays = 28): EnergyEstimate {
+/**
+ * `finished` is the days you marked complete. Once there are ten of them in the
+ * window, only those count: a half-logged day would make it look like you burn
+ * less than you do.
+ */
+export function estimateEnergy(intake: Record<string, number>, series: TrendPoint[], today: string, windowDays = 28, finished?: Set<string>): EnergyEstimate {
   const end = addDays(today, -1);
   let start = addDays(end, -(windowDays - 1));
   const first = series[0];
@@ -84,7 +91,10 @@ export function estimateEnergy(intake: Record<string, number>, series: TrendPoin
   const startPoint = trendOn(series, start);
   const endPoint = trendOn(series, end);
   const spanDays = startPoint && endPoint ? daysBetween(startPoint.date, endPoint.date) : 0;
-  const logged = Object.entries(intake).filter(([d, kcal]) => d >= start && d <= end && kcal > 0);
+  const allLogged = Object.entries(intake).filter(([d, kcal]) => d >= start && d <= end && kcal > 0);
+  const finishedLogged = finished ? allLogged.filter(([d]) => finished.has(d)) : [];
+  const usesFinishedDays = finishedLogged.length >= 10;
+  const logged = usesFinishedDays ? finishedLogged : allLogged;
   if (!startPoint || !endPoint || spanDays < 10) {
     const have = series.filter((p) => p.date <= end).length;
     return empty(have < 2 ? 'Weigh in a few times a week for two weeks.' : `Keep weighing in: ${Math.max(1, 10 - spanDays)} more days of weigh-ins needed.`, logged.length, spanDays);
@@ -97,6 +107,7 @@ export function estimateEnergy(intake: Record<string, number>, series: TrendPoin
   if (!(kcal > 800 && kcal < 7000)) return empty('The numbers so far don’t add up yet. Keep logging every day.', logged.length, spanDays);
   const score = Math.min(logged.length, spanDays);
   return {
+    usesFinishedDays,
     kcal: Math.round(kcal / 10) * 10,
     rateKgPerWeek: (changeKg / spanDays) * 7,
     loggedDays: logged.length,

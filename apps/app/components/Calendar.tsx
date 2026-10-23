@@ -6,12 +6,13 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { color, radius, space, type } from '../lib/theme';
 
-type DayTotal = { date: string; totals: { kcal: number } };
+type DayTotal = { date: string; totals: { kcal: number }; complete?: boolean };
 const pad = (n: number) => String(n).padStart(2, '0');
 const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * A month calendar. Logged days get a dot: green within your goal, red over.
+ * A month calendar. Finished days get a solid dot (green within your goal, red
+ * over); days with food logged but not finished get a hollow one.
  * Used to jump to a day, and to pick where to copy food.
  */
 export function CalendarSheet({
@@ -32,6 +33,7 @@ export function CalendarSheet({
   const { me } = useAuth();
   const [month, setMonth] = useState(selected.slice(0, 7));
   const [totals, setTotals] = useState<Record<string, number>>({});
+  const [finished, setFinished] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (visible) setMonth(selected.slice(0, 7));
   }, [visible, selected]);
@@ -40,7 +42,10 @@ export function CalendarSheet({
     const from = `${month}-01`;
     const to = addDays(`${month}-01`, 40);
     api<{ days: DayTotal[] }>(`/api/diary/totals?from=${from}&to=${to}`).then(
-      (r) => setTotals(Object.fromEntries((r.days ?? []).map((d) => [d.date, d.totals?.kcal ?? 0]))),
+      (r) => {
+        setTotals(Object.fromEntries((r.days ?? []).map((d) => [d.date, d.totals?.kcal ?? 0])));
+        setFinished(new Set((r.days ?? []).filter((d) => d.complete).map((d) => d.date)));
+      },
       () => setTotals({}),
     );
   }, [visible, month]);
@@ -80,19 +85,22 @@ export function CalendarSheet({
               const kcal = totals[d];
               const goal = goalFor(d);
               const dot = kcal ? (goal && kcal > goal * 1.05 ? color.over : color.fat) : null;
+              // Logged but not finished: an outline, so half-logged days stand out.
+              const open = Boolean(kcal) && !finished.has(d) && d <= today;
               const on = d === selected;
               return (
-                <Pressable key={d} onPress={() => onPick(d)} style={s.cell} accessibilityLabel={`${d}${kcal ? `, ${kcal} kcal logged` : ''}`}>
+                <Pressable key={d} onPress={() => onPick(d)} style={s.cell} accessibilityLabel={`${d}${kcal ? `, ${kcal} kcal logged${finished.has(d) ? ', finished' : open ? ', not finished' : ''}` : ''}`}>
                   <View style={[s.day, on && { backgroundColor: color.accent }, d === today && !on && { borderWidth: 1.5, borderColor: color.accent }]}>
                     <Text style={[type.body, type.number, on && { color: color.onAccent, fontWeight: '800' }]}>{Number(d.slice(8))}</Text>
                   </View>
-                  <View style={[s.dot, { backgroundColor: dot ?? 'transparent' }]} />
+                  <View style={[s.dot, open ? { borderWidth: 1.5, borderColor: dot ?? color.ironSoft } : { backgroundColor: dot ?? 'transparent' }]} />
                 </Pressable>
               );
             })}
           </View>
-          <View style={{ flexDirection: 'row', gap: space(4) }}>
-            <Text style={type.small}><Text style={{ color: color.fat }}>●</Text> logged</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4), rowGap: space(1) }}>
+            <Text style={type.small}><Text style={{ color: color.fat }}>●</Text> finished</Text>
+            <Text style={type.small}><Text style={{ color: color.fat }}>○</Text> logged, not finished</Text>
             <Text style={type.small}><Text style={{ color: color.over }}>●</Text> over goal</Text>
           </View>
           {footer}

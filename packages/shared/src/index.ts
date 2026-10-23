@@ -14,3 +14,4 @@ export * from './training-tips.ts';
 export * from './emoji.ts';
 export * from './better.ts';
 export * from './training-coach.ts';
+export * from './reminders.ts';

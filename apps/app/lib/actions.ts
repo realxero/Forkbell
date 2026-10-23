@@ -54,8 +54,12 @@ export async function addEntry(input: { date: string; meal: Meal; grams: number;
     const real = r.data.entry;
     updateCache<DiaryDay>(`/api/diary/${input.date}`, (day) => day && withEntries(day, day.entries.map((e) => (e.id === id ? real : e))));
   }
+  nudgeReminders();
   return r;
 }
+
+/** A meal just got logged (or removed): replan this phone's reminders. */
+const nudgeReminders = () => void import('./reminders').then((m) => m.refreshReminders()).catch(() => {});
 
 export async function updateEntry(entry: DiaryEntry, patch: { grams: number; meal: Meal }) {
   updateCache<DiaryDay>(`/api/diary/${entry.date}`, (day) => day && withEntries(day, day.entries.map((e) => (e.id === entry.id ? { ...e, ...patch } : e))));
@@ -64,6 +68,7 @@ export async function updateEntry(entry: DiaryEntry, patch: { grams: number; mea
 
 export async function deleteEntry(entry: DiaryEntry) {
   updateCache<DiaryDay>(`/api/diary/${entry.date}`, (day) => day && withEntries(day, day.entries.filter((e) => e.id !== entry.id)));
+  nudgeReminders();
   return send('DELETE', `/api/diary/${entry.id}`, undefined, { label: `Remove ${entry.food.name}` });
 }
 
@@ -220,3 +225,17 @@ export async function saveWeighIn(date: string, weightKg: number) {
 }
 
 export const yesterdayOf = (date: string) => addDays(date, -1);
+
+/**
+ * Mark a day finished (everything eaten is logged) or reopen it. Works offline:
+ * the day changes here at once and the server catches up. Repeating it is harmless.
+ */
+export async function setDayFinished(date: string, finished: boolean) {
+  updateCache<DiaryDay>(`/api/diary/${date}`, (day) => day && { ...day, complete: finished });
+  const r = await send(finished ? 'PUT' : 'DELETE', `/api/diary/${date}/complete`, finished ? {} : undefined, {
+    label: finished ? 'Finish the day' : 'Reopen the day',
+    coalesceKey: `day-finished:${date}`,
+  });
+  nudgeReminders();
+  return r;
+}

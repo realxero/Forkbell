@@ -11,6 +11,7 @@ import { put } from '../../../lib/api';
 import { color, space, type } from '../../../lib/theme';
 import { Chip } from '../../../components/AmountPicker';
 import { Platform, Switch } from 'react-native';
+import { reminderSettings, remindersSupported, setReminderSettings, type ReminderSettings } from '../../../lib/reminders';
 import { connectHealth, getHealthSettings, healthName, healthSupported, setHealthSettings, syncHealth, type HealthSettings } from '../../../lib/health-sync';
 
 export default function Settings() {
@@ -79,6 +80,8 @@ export default function Settings() {
 
         <Appearance />
 
+        {remindersSupported && <Reminders />}
+
         <WeekdayGoals />
 
         <Pressable onPress={() => router.push('/preferences')} style={{ marginTop: space(6) }}>
@@ -98,6 +101,36 @@ export default function Settings() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Smart reminders, set per device: they're notifications on this phone. */
+function Reminders() {
+  const [r, setR] = useState<ReminderSettings>(reminderSettings);
+  const [problem, setProblem] = useState<string | null>(null);
+  const change = async (next: ReminderSettings) => {
+    setR(next);
+    const err = await setReminderSettings(next);
+    setProblem(err);
+    if (err) setR(reminderSettings());
+  };
+  return (
+    <View style={{ gap: space(2), marginTop: space(6) }}>
+      <Text style={type.small}>Reminders on this phone</Text>
+      <View style={s.switchRow}>
+        <Text style={[type.body, { flex: 1 }]}>Meals I usually log</Text>
+        <Switch value={r.meals} onValueChange={(v) => change({ ...r, meals: v })} accessibilityLabel="Meal reminders" />
+      </View>
+      <Text style={type.small}>
+        Only for meals you log most days, about an hour after your usual time, and only if that meal is still empty. They start once Forkbell has a week or two of your logging to learn from.
+      </Text>
+      <View style={s.switchRow}>
+        <Text style={[type.body, { flex: 1 }]}>Finish the day</Text>
+        <Switch value={r.finish} onValueChange={(v) => change({ ...r, finish: v })} accessibilityLabel="Finish-the-day reminder" />
+      </View>
+      <Text style={type.small}>An evening nudge to mark the day finished, around when you usually do. Skipped on days with nothing logged.</Text>
+      {problem && <Text style={[type.small, { color: color.over }]}>{problem}</Text>}
+    </View>
   );
 }
 
@@ -288,6 +321,7 @@ function HealthSection() {
 }
 
 const s = StyleSheet.create({
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space(3), minHeight: 44 },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space(2) },

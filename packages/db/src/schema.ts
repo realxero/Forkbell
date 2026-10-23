@@ -52,6 +52,13 @@ export const diaryEntries = pgTable('diary_entries', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
+/** A row means that day's food log is finished. */
+export const dayStatus = pgTable('day_status', {
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const exercises = pgTable('exercises', {
   id: uuid('id').primaryKey().defaultRandom(),
   ownerId: uuid('owner_id'),

@@ -36,7 +36,8 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       const done = await tx.select({ date: workouts.date }).from(workouts).where(isNotNull(workouts.finishedAt)).orderBy(asc(workouts.date));
       const ms = await tx.select().from(measurements).orderBy(asc(measurements.date));
       const health = await tx.select().from(healthDaily).where(sql`${healthDaily.date} >= ${addDays(today, -8)}::date`);
-      return { me: me!, weights, intakeRows, done, ms, health };
+      const finished = await tx.execute<{ date: string }>(sql`select date::text as date from day_status where date >= ${addDays(today, -60)}::date`);
+      return { me: me!, weights, intakeRows, done, ms, health, finished };
     });
 
     const unit = data.me.weightUnit;
@@ -45,7 +46,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     for (const row of data.intakeRows) intake[row.date] = Number(row.kcal);
     const loggedDates = Object.keys(intake).filter((d) => intake[d]! > 0);
     const workoutDates = data.done.map((w) => w.date);
-    const energy = estimateEnergy(intake, series, today);
+    const energy = estimateEnergy(intake, series, today, 28, new Set([...data.finished].map((f) => f.date)));
     const current = series.at(-1) ?? null;
     const goalKg = data.me.goalWeightKg;
     const plan = current && goalKg !== null ? planGoal({ currentKg: current.trendKg, goalKg, goalDate: data.me.goalDate, today, energy, unit }) : null;
