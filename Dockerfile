@@ -5,6 +5,8 @@ RUN corepack enable
 COPY . .
 # Files keep their host permissions; make sure the runtime user can read them.
 RUN chmod -R a+rX packages/db/migrations
+# Files keep their host permissions; make sure the runtime user can read them.
+RUN chmod -R a+rX packages/db/migrations
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @forkbell/server build
 RUN cd apps/app && CI=1 npx expo export --platform web --output-dir /out/web
