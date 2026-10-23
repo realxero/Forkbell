@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { presetGoals, todayLocal } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../../../lib/sync';
-import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice } from '../../../lib/theme';
+import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent } from '../../../lib/theme';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -149,7 +149,7 @@ function Reminders() {
 /** Light, dark, or follow the phone, and an accent. Instant on the web; iPhone reloads its screens. */
 function Appearance() {
   const [choice, setChoice] = useState<SchemeChoice>(Platform.OS === 'web' ? (readCache<SchemeChoice>('device:theme') ?? 'system') : nativeChoice);
-  const [accent, setAccent] = useState<AccentName>(readCache<AccentName>('device:accent') ?? 'blue');
+  const [accent, setAccent] = useState<AccentName>((Platform.OS === 'web' ? readCache<AccentName>('device:accent') : savedNativeAccent()) ?? 'blue');
   const pick = (c: SchemeChoice) => {
     setChoice(c);
     writeCache('device:theme', c);
@@ -188,7 +188,7 @@ function Appearance() {
           </Pressable>
         ))}
       </View>
-      {Platform.OS !== 'web' && <Text style={type.small}>Colours apply on the web now; the phone app gets them in a later update.</Text>}
+      {Platform.OS !== 'web' && !nativeThemeSupported && <Text style={type.small}>On this phone the accent colour shows in the web version of Forkbell.</Text>}
     </View>
   );
 }

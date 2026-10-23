@@ -118,6 +118,9 @@ if (!isWeb && nativeAccent && nativeAccent in ACCENTS) color.accent = ACCENTS[na
 /** Can this phone save a look and switch to it? (iPhone yes; Android follows the system.) */
 export const nativeThemeSupported = isIos;
 /** Whether a look has ever been saved in the instant store. */
+/** The accent saved on this phone, if any. */
+export const savedNativeAccent = () => (nativeAccent && nativeAccent in ACCENTS ? (nativeAccent as AccentName) : null);
+
 export const nativeThemeSaved = () => savedNative<string>('fb.theme') !== null || nativeAccent !== null;
 
 /**
