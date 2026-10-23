@@ -18,6 +18,7 @@ import {
   type WorkoutSummary,
 } from '@forkbell/shared';
 import { cachedGet, cachedPaths, newId, readCache, send, updateCache, writeCache } from './sync';
+import { haptic } from './haptics';
 
 const emptyDay = (date: string): DiaryDay => {
   const me = readCache<Me>('/api/me');
@@ -55,6 +56,7 @@ export async function addEntry(input: { date: string; meal: Meal; grams: number;
     updateCache<DiaryDay>(`/api/diary/${input.date}`, (day) => day && withEntries(day, day.entries.map((e) => (e.id === id ? real : e))));
   }
   nudgeReminders();
+  haptic.success();
   return r;
 }
 

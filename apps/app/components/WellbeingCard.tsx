@@ -103,7 +103,7 @@ export function WellbeingCard() {
             <Text style={type.small}>Last 7 days: {m.lastWeek.taken} of {m.lastWeek.planned}</Text>
           </View>
           {m.today.map((t, slot) => (
-            <Pressable key={slot} disabled={Boolean(viewing)} onPress={() => dose(m, slot)} style={[s.dose, t === 'taken' && s.doseOn]} accessibilityRole="checkbox" accessibilityState={{ checked: t === 'taken' }} accessibilityLabel={`${m.name} dose ${slot + 1} taken`}>
+            <Pressable key={slot} disabled={Boolean(viewing)} onPress={() => dose(m, slot)} hitSlop={6} style={[s.dose, t === 'taken' && s.doseOn]} accessibilityRole="checkbox" accessibilityState={{ checked: t === 'taken' }} accessibilityLabel={`${m.name} dose ${slot + 1} taken`}>
               <Text style={{ color: t === 'taken' ? color.card : color.ironSoft, fontWeight: '800' }}>{t === 'taken' ? '✓' : slot + 1}</Text>
             </Pressable>
           ))}

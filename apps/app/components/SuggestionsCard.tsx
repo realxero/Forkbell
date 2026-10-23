@@ -94,7 +94,7 @@ export function SuggestionsCard({ day, onChanged }: { day: DiaryDay; onChanged: 
               <Pressable onPress={() => never(it.food.name)} hitSlop={6}>
                 <Text style={[type.small, { color: color.ironSoft }]}>Never</Text>
               </Pressable>
-              <Pressable onPress={() => add(sg, it.food, it.grams)} style={s.plus} accessibilityLabel={sg.replaces ? `Swap to ${it.food.name}` : `Add ${it.food.name}`}>
+              <Pressable onPress={() => add(sg, it.food, it.grams)} hitSlop={8} style={s.plus} accessibilityLabel={sg.replaces ? `Swap to ${it.food.name}` : `Add ${it.food.name}`}>
                 <Text style={s.plusText}>{sg.replaces ? 'Swap' : '+'}</Text>
               </Pressable>
             </View>

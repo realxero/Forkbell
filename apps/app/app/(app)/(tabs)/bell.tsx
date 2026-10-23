@@ -359,6 +359,7 @@ function Proposals({ items, added, onAdded }: { items: FoodProposal[]; added: bo
               <Pressable
                 disabled={added}
                 onPress={() => setList((l) => l.map((x, j) => (j === i ? { ...x, keep: !x.keep } : x)))}
+                hitSlop={10}
                 style={[s.tick, p.keep && s.tickOn]}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: p.keep }}

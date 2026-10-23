@@ -129,9 +129,9 @@ function Stepper({ label, value, min, max, step = 1, format = String, onChange }
   return (
     <View style={s.row}>
       <Text style={[type.body, { flex: 1 }]}>{label}</Text>
-      <Pressable onPress={() => onChange(Math.max(min, value - step))} style={s.step} accessibilityLabel={`Less ${label}`}><Text style={s.stepText}>−</Text></Pressable>
+      <Pressable onPress={() => onChange(Math.max(min, value - step))} hitSlop={6} style={s.step} accessibilityLabel={`Less ${label}`}><Text style={s.stepText}>−</Text></Pressable>
       <Text style={[type.body, type.number, { minWidth: 48, textAlign: 'center', fontWeight: '700' }]}>{format(value)}</Text>
-      <Pressable onPress={() => onChange(Math.min(max, value + step))} style={s.step} accessibilityLabel={`More ${label}`}><Text style={s.stepText}>+</Text></Pressable>
+      <Pressable onPress={() => onChange(Math.min(max, value + step))} hitSlop={6} style={s.step} accessibilityLabel={`More ${label}`}><Text style={s.stepText}>+</Text></Pressable>
     </View>
   );
 }

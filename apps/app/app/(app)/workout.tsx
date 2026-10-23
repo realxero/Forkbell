@@ -14,6 +14,7 @@ import { SwapSheet } from '../../components/SwapSheet';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, space, type } from '../../lib/theme';
+import { haptic, hapticsOn } from '../../lib/haptics';
 
 /**
  * What an empty box means: the same set last time, else the set above, else
@@ -74,7 +75,8 @@ export default function WorkoutScreen() {
   const restLeft = restEnd ? Math.max(0, Math.ceil((restEnd - now) / 1000)) : null;
   useEffect(() => {
     if (restEnd && restLeft === 0) {
-      Vibration.vibrate(500);
+      if (hapticsOn()) haptic.alert();
+      else Vibration.vibrate(500);
       const t = setTimeout(() => setRestEnd(null), 4000);
       return () => clearTimeout(t);
     }
@@ -130,6 +132,7 @@ export default function WorkoutScreen() {
     if (s.done) return updateSet(i, k, { done: false });
     const ph = placeholderFor(e, k);
     const patch: Partial<SetEntry> = { done: true };
+    haptic.tap();
     if (e.exercise.kind === 'time') {
       const secs = s.seconds ?? ph.seconds;
       if (!secs) return setHint('Enter the time first.');

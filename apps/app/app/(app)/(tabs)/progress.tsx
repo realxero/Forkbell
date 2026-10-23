@@ -284,9 +284,9 @@ function GoalCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (bo
       </View>
       <View style={s.row}>
         <Text style={[type.body, { flex: 1 }]}>Workouts a week</Text>
-        <Pressable onPress={() => setWeekly(Math.max(1, weekly - 1))} style={s.step}><Text style={s.stepText}>−</Text></Pressable>
+        <Pressable onPress={() => setWeekly(Math.max(1, weekly - 1))} hitSlop={6} style={s.step} accessibilityLabel="Fewer workouts a week"><Text style={s.stepText}>−</Text></Pressable>
         <Text style={[type.body, type.number, { minWidth: 24, textAlign: 'center', fontWeight: '700' }]}>{weekly}</Text>
-        <Pressable onPress={() => setWeekly(Math.min(14, weekly + 1))} style={s.step}><Text style={s.stepText}>+</Text></Pressable>
+        <Pressable onPress={() => setWeekly(Math.min(14, weekly + 1))} hitSlop={6} style={s.step} accessibilityLabel="More workouts a week"><Text style={s.stepText}>+</Text></Pressable>
       </View>
       <Pressable
         disabled={!dateOk}

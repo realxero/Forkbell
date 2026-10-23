@@ -4,8 +4,11 @@
 //
 // On the web every colour is a CSS variable, so switching light/dark is
 // instant and follows the system setting (see ThemeStyle). On phones the
-// palette is picked when the app starts.
-import { Appearance, Platform } from 'react-native';
+// palette is fixed when the app's code loads, because every screen's styles
+// are built from it then. So the choice is kept in the iPhone's own settings
+// store, which can be read instantly at that moment, and changing it reloads
+// the app's screens (a second, with no sign-in or data lost).
+import { Appearance, Platform, Settings } from 'react-native';
 
 const light = {
   chalk: '#F4F5F2',
@@ -57,11 +60,16 @@ export type ColorName = keyof typeof light;
 export type SchemeChoice = 'system' | 'light' | 'dark';
 const isWeb = Platform.OS === 'web';
 
-/** The saved choice, read once at start-up on phones (web switches live). */
-let nativeScheme: 'light' | 'dark' = Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
-export function applyNativeScheme(choice: SchemeChoice) {
-  nativeScheme = choice === 'system' ? (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light') : choice;
-}
+const isIos = Platform.OS === 'ios';
+/** The phone's saved look. Only iPhone has an instant store; elsewhere, follow the system. */
+const savedNative = <T,>(key: string): T | null => (isIos ? ((Settings.get(key) as T | undefined) ?? null) : null);
+const systemScheme = () => (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light');
+export const nativeChoice: SchemeChoice = savedNative<SchemeChoice>('fb.theme') ?? 'system';
+const nativeAccent = savedNative<string>('fb.accent');
+/** The scheme the phone's colours were built with, at start-up. */
+export const nativeScheme: 'light' | 'dark' = nativeChoice === 'system' ? systemScheme() : nativeChoice;
+/** Kept for older callers: phones now read their choice at start-up by themselves. */
+export function applyNativeScheme(_choice: SchemeChoice) {}
 
 export const color = Object.fromEntries(
   (Object.keys(light) as ColorName[]).map((k) => [k, isWeb ? `var(--fb-${k})` : (nativeScheme === 'dark' ? dark : light)[k]]),
@@ -104,7 +112,49 @@ export const ACCENTS = {
 } as const;
 export type AccentName = keyof typeof ACCENTS;
 
-/** Apply an accent on the web, for light and dark. (Phones use the default for now.) */
+// Phones: the picked accent, in the version for this scheme.
+if (!isWeb && nativeAccent && nativeAccent in ACCENTS) color.accent = ACCENTS[nativeAccent as AccentName][nativeScheme];
+
+/** Can this phone save a look and switch to it? (iPhone yes; Android follows the system.) */
+export const nativeThemeSupported = isIos;
+/** Whether a look has ever been saved in the instant store. */
+export const nativeThemeSaved = () => savedNative<string>('fb.theme') !== null || nativeAccent !== null;
+
+/**
+ * Save the phone's look and reload the app's screens so every colour updates.
+ * Returns false when nothing changed (no reload needed).
+ */
+export async function setNativeTheme(next: { scheme?: SchemeChoice; accent?: AccentName }) {
+  if (!isIos) return false;
+  const changes: Record<string, string> = {};
+  if (next.scheme && next.scheme !== nativeChoice) changes['fb.theme'] = next.scheme;
+  if (next.accent && next.accent !== (nativeAccent ?? 'blue')) changes['fb.accent'] = next.accent;
+  if (!Object.keys(changes).length) {
+    // Nothing visible changes, but remember that a look was chosen.
+    if (next.scheme && savedNative<string>('fb.theme') === null) Settings.set({ 'fb.theme': next.scheme });
+    return false;
+  }
+  Settings.set(changes);
+  // Only reload if it really saved, or the reload would bring back the old look (and could repeat).
+  if (Object.entries(changes).some(([k, v]) => Settings.get(k) !== v)) return false;
+  const { reloadAppAsync } = await import('expo');
+  await reloadAppAsync('Forkbell look changed');
+  return true;
+}
+
+/** True when the system switched light/dark since start-up and the phone follows the system. */
+export function nativeSchemeOutdated() {
+  return !isWeb && nativeChoice === 'system' && systemScheme() !== nativeScheme;
+}
+
+/** Catch up with a system light/dark switch (call when the app comes back to the front). */
+export async function followSystemScheme() {
+  if (!nativeSchemeOutdated()) return;
+  const { reloadAppAsync } = await import('expo');
+  await reloadAppAsync('System appearance changed');
+}
+
+/** Apply an accent on the web, for light and dark. */
 export function setWebAccent(name: AccentName) {
   if (!isWeb) return;
   const a = ACCENTS[name] ?? ACCENTS.blue;

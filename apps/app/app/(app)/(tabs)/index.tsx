@@ -11,7 +11,8 @@ import { copyDay, setDayFinished } from '../../../lib/actions';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { MacroRing, Ring } from '../../../components/Ring';
-import { EntryMenu } from '../../../components/EntryMenu';
+import { EntryMenu, removeWithUndo } from '../../../components/EntryMenu';
+import { SwipeRow } from '../../../components/SwipeRow';
 import { CalendarSheet } from '../../../components/Calendar';
 import { showToast } from '../../../lib/toast';
 import { FoodIcon } from '../../../components/FoodIcon';
@@ -165,7 +166,7 @@ export default function Diary() {
                     <Text style={[type.title, { fontSize: 18, flex: 1 }]}>{MEAL_NAMES[meal]}</Text>
                     {kcal > 0 && <Text style={[type.small, type.number, { fontWeight: '700' }]}>{kcal} kcal</Text>}
                     {(
-                      <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date } })} style={s.addRound} accessibilityLabel={`Add food to ${MEAL_NAMES[meal]}`}>
+                      <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date } })} hitSlop={8} style={s.addRound} accessibilityLabel={`Add food to ${MEAL_NAMES[meal]}`}>
                         <Ionicons name="add" size={20} color={color.onAccent} />
                       </Pressable>
                     )}
@@ -173,13 +174,17 @@ export default function Diary() {
                   {entries.map((e) => {
                     const n = forAmount(e.food.per100, e.grams);
                     return (
-                      <Pressable
+                      <SwipeRow
                         key={e.id}
+                        left={{ label: 'Copy', icon: 'copy-outline', tint: color.accent, run: () => setMenu(e) }}
+                        right={{ label: 'Remove', icon: 'trash-outline', tint: color.over, run: () => void removeWithUndo(e, load) }}
+                      >
+                      <Pressable
                         onPress={() => router.push({ pathname: '/edit', params: { id: e.id } })}
                         onLongPress={() => setMenu(e)}
                         delayLongPress={350}
                         style={({ pressed }) => [s.entry, pressed && { opacity: 0.7 }]}
-                        accessibilityHint="Tap to change it. Hold to copy it to another day or remove it."
+                        accessibilityHint="Tap to change it. Swipe or hold to copy or remove it."
                       >
                         <FoodIcon name={e.food.name} brand={e.food.brand} size={38} />
                         <View style={{ flex: 1 }}>
@@ -195,6 +200,7 @@ export default function Diary() {
                         </View>
                         <Text style={[type.body, type.number, { fontWeight: '700' }]}>{n.kcal}</Text>
                       </Pressable>
+                      </SwipeRow>
                     );
                   })}
                   <View style={s.actions}>

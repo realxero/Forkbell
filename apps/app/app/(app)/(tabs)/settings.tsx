@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { presetGoals, todayLocal } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../../../lib/sync';
-import { ACCENTS, setWebAccent, setWebScheme, type AccentName, type SchemeChoice } from '../../../lib/theme';
+import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice } from '../../../lib/theme';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { put } from '../../../lib/api';
 import { color, space, type } from '../../../lib/theme';
 import { Chip } from '../../../components/AmountPicker';
 import { Platform, Switch } from 'react-native';
+import { hapticsOn, hapticsSupported, setHapticsOn } from '../../../lib/haptics';
 import { reminderSettings, remindersSupported, setReminderSettings, type ReminderSettings } from '../../../lib/reminders';
 import { connectHealth, getHealthSettings, healthName, healthSupported, setHealthSettings, syncHealth, type HealthSettings } from '../../../lib/health-sync';
 
@@ -104,6 +105,17 @@ export default function Settings() {
   );
 }
 
+/** A light tap for ticked sets, logged food, rest over and celebrations. */
+function HapticsSwitch() {
+  const [on, setOn] = useState(hapticsOn);
+  return (
+    <View style={s.switchRow}>
+      <Text style={[type.body, { flex: 1 }]}>Haptics</Text>
+      <Switch value={on} onValueChange={(v) => { setOn(v); setHapticsOn(v); }} accessibilityLabel="Haptics" />
+    </View>
+  );
+}
+
 /** Smart reminders, set per device: they're notifications on this phone. */
 function Reminders() {
   const [r, setR] = useState<ReminderSettings>(reminderSettings);
@@ -134,14 +146,15 @@ function Reminders() {
   );
 }
 
-/** Light, dark, or follow the phone. Instant on the web; phones apply it on the next launch. */
+/** Light, dark, or follow the phone, and an accent. Instant on the web; iPhone reloads its screens. */
 function Appearance() {
-  const [choice, setChoice] = useState<SchemeChoice>(readCache<SchemeChoice>('device:theme') ?? 'system');
+  const [choice, setChoice] = useState<SchemeChoice>(Platform.OS === 'web' ? (readCache<SchemeChoice>('device:theme') ?? 'system') : nativeChoice);
   const [accent, setAccent] = useState<AccentName>(readCache<AccentName>('device:accent') ?? 'blue');
   const pick = (c: SchemeChoice) => {
     setChoice(c);
     writeCache('device:theme', c);
     setWebScheme(c);
+    void setNativeTheme({ scheme: c });
   };
   return (
     <View style={{ gap: space(2), marginTop: space(6) }}>
@@ -151,7 +164,10 @@ function Appearance() {
           <Chip key={c} label={c === 'system' ? 'Match device' : c === 'light' ? 'Light' : 'Dark'} on={choice === c} onPress={() => pick(c)} />
         ))}
       </View>
-      {Platform.OS !== 'web' && <Text style={type.small}>Takes effect the next time you open the app.</Text>}
+      {hapticsSupported && <HapticsSwitch />}
+      {Platform.OS !== 'web' && (
+        <Text style={type.small}>{nativeThemeSupported ? 'Forkbell refreshes for a second to change colours. Nothing is lost.' : 'On this phone Forkbell follows the system’s light and dark setting.'}</Text>
+      )}
       <Text style={[type.small, { marginTop: space(3) }]}>Accent colour</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(3) }}>
         {(Object.keys(ACCENTS) as AccentName[]).map((k) => (
@@ -161,6 +177,7 @@ function Appearance() {
               setAccent(k);
               writeCache('device:accent', k);
               setWebAccent(k);
+              void setNativeTheme({ accent: k });
             }}
             accessibilityRole="radio"
             accessibilityState={{ checked: accent === k }}
