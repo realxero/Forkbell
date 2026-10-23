@@ -11,6 +11,7 @@ import { put } from '../../../lib/api';
 import { color, space, type } from '../../../lib/theme';
 import { Chip } from '../../../components/AmountPicker';
 import { AiSettings } from '../../../components/AiSettings';
+import { Logo } from '../../../components/Logo';
 import { Platform, Switch } from 'react-native';
 import { hapticsOn, hapticsSupported, setHapticsOn } from '../../../lib/haptics';
 import { reminderSettings, remindersSupported, setReminderSettings, type ReminderSettings } from '../../../lib/reminders';
@@ -86,6 +87,9 @@ export default function Settings() {
 
         <WeekdayGoals />
 
+        <Pressable onPress={() => router.push({ pathname: '/onboarding', params: { from: 'settings' } })} style={{ marginTop: space(6) }}>
+          <Text style={s.link}>Recalculate my targets (goal, training, macros) ›</Text>
+        </Pressable>
         <Pressable onPress={() => router.push('/preferences')} style={{ marginTop: space(6) }}>
           <Text style={s.link}>Food preferences and suggestions ›</Text>
         </Pressable>
@@ -96,6 +100,12 @@ export default function Settings() {
         <AiSettings />
 
         <HealthSection />
+
+        <View style={{ alignItems: 'center', gap: space(1), marginTop: space(8) }}>
+          <Logo size={44} />
+          <Text style={[type.body, { fontWeight: '800' }]}>Forkbell</Text>
+          <Text style={type.small}>Food and training, on your own server.</Text>
+        </View>
 
         <View style={s.account}>
           <Text style={type.body}>Signed in as {me?.name ?? me?.email ?? 'you'}</Text>

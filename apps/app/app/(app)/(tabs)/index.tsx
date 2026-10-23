@@ -17,6 +17,8 @@ import { SelectionBar } from '../../../components/SelectionBar';
 import { CalendarSheet } from '../../../components/Calendar';
 import { showToast } from '../../../lib/toast';
 import { FoodIcon } from '../../../components/FoodIcon';
+import { Logo } from '../../../components/Logo';
+import { MealQuickActions } from '../../../components/MealQuickActions';
 
 const MEAL_ICONS: Record<Meal, ComponentProps<typeof Ionicons>['name']> = { breakfast: 'sunny-outline', lunch: 'partly-sunny-outline', dinner: 'moon-outline', snacks: 'cafe-outline' };
 
@@ -112,6 +114,7 @@ export default function Diary() {
           <Text style={s.arrow}>‹</Text>
         </Pressable>
         <Pressable onPress={() => { setPickDay(date); setCalendar(true); }} accessibilityLabel="Open the calendar" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Logo size={26} />
           <Text style={type.title}>{dayLabel(date)}</Text>
           <Ionicons name="calendar-outline" size={18} color={color.accent} />
         </Pressable>
@@ -214,12 +217,7 @@ export default function Diary() {
                       </SwipeRow>
                     );
                   })}
-                  <View style={s.actions}>
-                    <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date, scan: '1' } })} style={s.chipBtn}>
-                      <Ionicons name="barcode-outline" size={16} color={color.accent} />
-                      <Text style={s.chipText}>Scan</Text>
-                    </Pressable>
-                  </View>
+                  <MealQuickActions date={date} meal={meal} onChanged={load} />
                 </View>
               );
             })}

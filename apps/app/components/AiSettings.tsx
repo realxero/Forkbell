@@ -54,7 +54,8 @@ export function AiSettings() {
       const r = await post<{ models: string[] }>('/api/ai/models', { provider, ...(key.trim() ? { apiKey: key.trim() } : {}), ...(provider === 'custom' ? { baseUrl } : {}) });
       setModels(r.models);
       // Keep the current model if it's offered; else a sensible default (a "flash" or "sonnet"/"mini" model is fast and cheap).
-      const pick = r.models.includes(model) ? model : (r.models.find((m) => /flash(?!-lite)/.test(m) && !/preview|exp/.test(m)) ?? r.models.find((m) => /sonnet|mini/.test(m)) ?? r.models[0] ?? '');
+      // Default to the everyday model: Gemini Flash (the "latest" alias keeps up with Google), Claude Sonnet, or a GPT mini.
+      const pick = r.models.includes(model) ? model : (r.models.find((m) => m === 'gemini-flash-latest') ?? r.models.find((m) => /flash/.test(m) && !/lite|preview|exp|omni/.test(m)) ?? r.models.find((m) => /sonnet|mini/.test(m)) ?? r.models[0] ?? '');
       setModel(pick);
       setMsg({ text: r.models.length ? `Key works. ${r.models.length} models available.` : 'Key works, but no suitable models were listed. Type a model name below.' });
     } catch (e) {

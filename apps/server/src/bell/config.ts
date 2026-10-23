@@ -51,8 +51,11 @@ export async function listModels(format: 'anthropic' | 'openai', baseUrl: string
   const data = (await res.json()) as { data?: { id: string }[] };
   let ids = (data.data ?? []).map((m) => m.id.replace(/^models\//, ''));
   // Only chat models that can see photos and use tools.
-  if (provider === 'gemini') ids = ids.filter((id) => id.startsWith('gemini') && !/embedding|imagen|tts|image|audio|live|aqa/i.test(id));
+  // Gemini lists robotics, image-making ("nano banana"), speech and embedding models too; Bell needs a chat model that sees photos and uses tools.
+  if (provider === 'gemini') ids = ids.filter((id) => id.startsWith('gemini') && !/embedding|imagen|tts|image|audio|live|aqa|robotics|banana|nano|learnlm/i.test(id));
   if (provider === 'openai') ids = ids.filter((id) => /^(gpt|o\d|chatgpt)/.test(id) && !/audio|realtime|search|transcribe|tts|image|instruct/i.test(id));
   if (provider === 'anthropic') ids = ids.filter((id) => id.startsWith('claude'));
-  return [...new Set(ids)].sort((a, b) => b.localeCompare(a)).slice(0, 40);
+  // "…-latest" aliases first (they follow Google's current model), then newest versions first.
+  const rank = (id: string) => (/-latest$/.test(id) ? 0 : /preview|exp/.test(id) ? 2 : 1);
+  return [...new Set(ids)].sort((a, b) => rank(a) - rank(b) || b.localeCompare(a, undefined, { numeric: true })).slice(0, 40);
 }

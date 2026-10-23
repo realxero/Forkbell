@@ -38,6 +38,19 @@ export const preferencesSchema = z.object({
   trainingTips: z.boolean().default(true),
   /** the Patterns card on Progress */
   patterns: z.boolean().default(true),
+  /** finished (or skipped) the first-launch setup */
+  onboarded: z.boolean().default(false),
+  /** for starting targets: an estimate of your burn until your own numbers take over */
+  body: z
+    .object({
+      sex: z.enum(['male', 'female']).nullable().default(null),
+      birthYear: z.number().int().min(1900).max(2100).nullable().default(null),
+      heightCm: z.number().min(100).max(250).nullable().default(null),
+      activity: z.enum(['sedentary', 'light', 'moderate', 'very']).default('light'),
+      goal: z.enum(['lose', 'recomp', 'maintain', 'gain']).nullable().default(null),
+      focus: z.enum(['none', 'health', 'size', 'strength', 'both']).default('health'),
+    })
+    .default({ sex: null, birthYear: null, heightCm: null, activity: 'light', goal: null, focus: 'health' }),
   /** equipment, areas to protect, exercises to leave out, hidden tips and strength goals */
   training: trainingSetupSchema,
   bell: z

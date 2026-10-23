@@ -339,7 +339,7 @@ function Question({ q, answered, live, onAnswer }: { q: BellQuestion; answered?:
 }
 
 /** Bell's suggested foods: change amounts or meals, untick any, then add them. */
-function Proposals({ items, added, onAdded }: { items: FoodProposal[]; added: boolean; onAdded: () => void }) {
+export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; added: boolean; onAdded: () => void }) {
   const [list, setList] = useState(items.map((p) => ({ ...p, keep: true })));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

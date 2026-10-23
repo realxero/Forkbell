@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Logo } from '../components/Logo';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +25,7 @@ export default function Login() {
   return (
     <SafeAreaView style={s.screen}>
       <View style={s.body}>
+        <Logo size={88} />
         <Text style={s.wordmark}>Forkbell</Text>
         <Text style={s.lede}>Food and training, logged in one place on your own server.</Text>
 

@@ -14,7 +14,7 @@ import { useAuth } from '../../lib/auth';
 import { color } from '../../lib/theme';
 
 export default function SignedInLayout() {
-  const { status } = useAuth();
+  const { status, me } = useAuth();
   const path = usePathname();
   const pathRef = useRef(path);
   pathRef.current = path;
@@ -39,6 +39,8 @@ export default function SignedInLayout() {
   }, [status]);
   if (status === 'loading') return <ActivityIndicator style={{ flex: 1 }} color={color.iron} />;
   if (status === 'signedOut') return <Redirect href="/login" />;
+  // First launch (or never set up): the setup wizard, once. Skip counts as done.
+  if (me && !me.preferences.onboarded && path !== '/onboarding') return <Redirect href="/onboarding" />;
   return (
     <View style={{ flex: 1 }}>
     <ProfileBar />
