@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { forAmount, mealForTime, suggestForDay, todayLocal, type DiaryDay, type Food, type Meal, type RecentFood, type Suggestion } from '@forkbell/shared';
+import { forAmount, mealForTime, suggestForDay, todayLocal, type DiaryDay, type Food, type Meal, type Pattern, type RecentFood, type Suggestion } from '@forkbell/shared';
 import { put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { addEntry, deleteEntry, foodLibrary } from '../lib/actions';
@@ -23,15 +23,35 @@ export function SuggestionsCard({ day, onChanged }: { day: DiaryDay; onChanged: 
   const today = todayLocal();
   const isToday = day.date === today;
 
+  const [patterns, setPatterns] = useState<Pattern[]>([]);
+  useEffect(() => {
+    cachedGet<{ patterns: Pattern[] }>(`/api/progress/patterns?today=${today}`).then((r) => setPatterns(r.patterns), () => {});
+  }, [today]);
   useEffect(() => {
     foodLibrary().then(setFoods);
     cachedGet<{ recent: RecentFood[]; frequent: RecentFood[] }>(`/api/foods/recent?today=${today}`).then((r) => setRecent([...r.frequent, ...r.recent]), () => {});
   }, [today]);
 
-  const list = useMemo(
-    () => (me && day.date >= today ? suggestForDay({ day, foods, recent, prefs: me.preferences, hour: new Date().getHours(), isToday, hidden }) : []),
-    [me, day, foods, recent, isToday, hidden, today],
-  );
+  const list = useMemo(() => {
+    if (!me || day.date < today) return [];
+    const out = suggestForDay({ day, foods, recent, prefs: me.preferences, hour: new Date().getHours(), isToday, hidden });
+    // Your own patterns: a food you've logged that usually comes with going over.
+    if (me.preferences.suggestions.enabled) {
+      const left = day.goals.kcal !== null ? day.goals.kcal - day.totals.kcal : null;
+      for (const p of patterns) {
+        const key = `pattern:${p.foodId}`;
+        if (hidden.includes(key) || !day.entries.some((e) => e.food.id === p.foodId)) continue;
+        out.unshift({
+          key,
+          kind: 'pattern',
+          title: `Heads-up: ${p.name}`,
+          detail: `On ${p.overDays} of the ${p.days} days you had it, you ended over your goal.${left !== null ? ` You have ${Math.max(0, left).toLocaleString()} kcal left, so a lighter dinner keeps today on track.` : ''}`,
+          items: [],
+        });
+      }
+    }
+    return out;
+  }, [me, day, foods, recent, isToday, hidden, today, patterns]);
   if (!list.length) return null;
 
   const hide = (key: string) => {

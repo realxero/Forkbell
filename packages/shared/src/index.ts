@@ -12,3 +12,4 @@ export * from './suggestions.ts';
 export * from './planner.ts';
 export * from './training-tips.ts';
 export * from './emoji.ts';
+export * from './better.ts';

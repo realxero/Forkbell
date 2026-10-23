@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 import { healthSupported, syncHealth } from '../../lib/health-sync';
 import { SyncBanner } from '../../components/SyncBanner';
 import { ProfileBar } from '../../components/ProfileBar';
+import { ToastHost } from '../../components/ToastHost';
 import { Redirect, Stack } from 'expo-router';
 import { useAuth } from '../../lib/auth';
 import { color } from '../../lib/theme';
@@ -30,6 +31,7 @@ export default function SignedInLayout() {
       <Stack.Screen name="edit" options={{ presentation: 'modal' }} />
     </Stack>
     <SyncBanner />
+    <ToastHost />
     </View>
   );
 }

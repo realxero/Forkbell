@@ -1,16 +1,19 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MEALS, addDays, checkFood, forAmount, sumEntries, todayLocal, type DiaryDay, type Meal } from '@forkbell/shared';
+import { MEALS, addDays, checkFood, forAmount, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal } from '@forkbell/shared';
 import { SuggestionsCard } from '../../../components/SuggestionsCard';
 import { useAuth } from '../../../lib/auth';
 import { useViewing } from '../../../lib/profile';
-import { cachedGet } from '../../../lib/sync';
+import { cachedGet, readCache, writeCache } from '../../../lib/sync';
 import { copyDay } from '../../../lib/actions';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { MacroRing, Ring } from '../../../components/Ring';
+import { EntryMenu } from '../../../components/EntryMenu';
+import { CalendarSheet } from '../../../components/Calendar';
+import { showToast } from '../../../lib/toast';
 import { FoodIcon } from '../../../components/FoodIcon';
 
 const MEAL_ICONS: Record<Meal, ComponentProps<typeof Ionicons>['name']> = { breakfast: 'sunny-outline', lunch: 'partly-sunny-outline', dinner: 'moon-outline', snacks: 'cafe-outline' };
@@ -46,7 +49,6 @@ export default function Diary() {
   const [day, setDay] = useState<DiaryDay | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [copying, setCopying] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -64,26 +66,35 @@ export default function Diary() {
     }, [load]),
   );
 
-  const prev = addDays(date, -1);
-  const prevLabel = dayLabel(prev);
-  // "today" and "yesterday" read as words; other days stay as dates.
-  const relative = ['Today', 'Yesterday', 'Tomorrow'].includes(prevLabel);
-  const prevName = relative ? prevLabel.toLowerCase() : prevLabel;
+  const [calendar, setCalendar] = useState(false);
+  const [pickDay, setPickDay] = useState(date);
+  const [menu, setMenu] = useState<DiaryEntry | null>(null);
 
-  /** Copy one meal, or the whole day, from the day before. */
-  const copyFromPrev = async (meal?: Meal) => {
-    setCopying(true);
+  /** Copy all of another day's food into this one (from the calendar). */
+  const copyWholeDay = async (from: string) => {
+    setCalendar(false);
     setNotice(null);
     try {
-      const copied = await copyDay(prev, date, meal);
-      if (!copied) setNotice(`Nothing was logged${meal ? ` for ${MEAL_NAMES[meal].toLowerCase()}` : ''} ${relative ? prevName : `on ${prevName}`}.`);
+      const copied = await copyDay(from, date);
+      if (!copied) setNotice(`Nothing was logged on ${dayLabel(from).toLowerCase()}.`);
+      else showToast(`Copied ${copied} ${copied === 1 ? 'food' : 'foods'} from ${dayLabel(from).toLowerCase()}`);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setCopying(false);
     }
   };
+
+  // A small celebration the first time a goal is reached on a day.
+  useEffect(() => {
+    if (!day || viewing) return;
+    const key = `device:celebrated:${day.date}`;
+    const done = readCache<string[]>(key) ?? [];
+    const hit = (['protein'] as const).filter((m) => day.goals[m] && day.totals[m] >= day.goals[m]! && !done.includes(m));
+    if (hit.length) {
+      writeCache(key, [...done, ...hit]);
+      showToast(`🎉 Protein goal hit: ${Math.round(day.totals.protein)} g`, { tone: 'celebrate' });
+    }
+  }, [day, viewing]);
 
   const goal = day?.goals.kcal ?? null;
   const eaten = day?.totals.kcal ?? 0;
@@ -95,8 +106,9 @@ export default function Diary() {
         <Pressable onPress={() => setDate(addDays(date, -1))} hitSlop={12} accessibilityLabel="Previous day">
           <Text style={s.arrow}>‹</Text>
         </Pressable>
-        <Pressable onPress={() => setDate(todayLocal())} accessibilityLabel="Go to today">
+        <Pressable onPress={() => { setPickDay(date); setCalendar(true); }} accessibilityLabel="Open the calendar" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={type.title}>{dayLabel(date)}</Text>
+          <Ionicons name="calendar-outline" size={18} color={color.accent} />
         </Pressable>
         <Pressable onPress={() => setDate(addDays(date, 1))} hitSlop={12} accessibilityLabel="Next day">
           <Text style={s.arrow}>›</Text>
@@ -142,11 +154,6 @@ export default function Diary() {
               </Pressable>
             )}
 
-            {day.entries.length === 0 && (
-              <Pressable disabled={copying} onPress={() => copyFromPrev()} style={[s.copyDay, copying && { opacity: 0.5 }]}>
-                <Text style={s.addText}>Copy everything from {prevName}</Text>
-              </Pressable>
-            )}
 
             {MEALS.map((meal) => {
               const entries = day.entries.filter((e) => e.meal === meal);
@@ -169,8 +176,10 @@ export default function Diary() {
                       <Pressable
                         key={e.id}
                         onPress={() => router.push({ pathname: '/edit', params: { id: e.id } })}
+                        onLongPress={() => setMenu(e)}
+                        delayLongPress={350}
                         style={({ pressed }) => [s.entry, pressed && { opacity: 0.7 }]}
-                        accessibilityHint="Change the amount or meal, or remove it"
+                        accessibilityHint="Tap to change it. Hold to copy it to another day or remove it."
                       >
                         <FoodIcon name={e.food.name} brand={e.food.brand} size={38} />
                         <View style={{ flex: 1 }}>
@@ -193,23 +202,33 @@ export default function Diary() {
                       <Ionicons name="barcode-outline" size={16} color={color.accent} />
                       <Text style={s.chipText}>Scan</Text>
                     </Pressable>
-                    {entries.length === 0 && (
-                      <Pressable disabled={copying} onPress={() => copyFromPrev(meal)} style={[s.chipBtn, copying && { opacity: 0.5 }]}>
-                        <Ionicons name="copy-outline" size={16} color={color.accent} />
-                        <Text style={s.chipText}>Copy from {prevName}</Text>
-                      </Pressable>
-                    )}
                   </View>
                 </View>
               );
             })}
 
-            <Pressable onPress={() => router.push('/settings')} style={{ alignSelf: 'center', padding: space(4) }}>
-              <Text style={type.small}>Goals and settings</Text>
-            </Pressable>
           </>
         )}
       </ScrollView>
+      <EntryMenu entry={menu} onClose={() => setMenu(null)} onChanged={load} />
+      <CalendarSheet
+        visible={calendar}
+        selected={pickDay}
+        onPick={setPickDay}
+        onClose={() => setCalendar(false)}
+        footer={
+          <View style={{ gap: space(2) }}>
+            <Pressable onPress={() => { setDate(pickDay); setCalendar(false); }} style={s.sheetButton}>
+              <Text style={s.sheetButtonText}>Go to {dayLabel(pickDay).toLowerCase()}</Text>
+            </Pressable>
+            {pickDay !== date && !viewing && (
+              <Pressable onPress={() => copyWholeDay(pickDay)} style={{ alignItems: 'center', padding: space(2) }}>
+                <Text style={s.addText}>Copy {dayLabel(pickDay).toLowerCase()}’s food into {dayLabel(date).toLowerCase()}</Text>
+              </Pressable>
+            )}
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -226,6 +245,8 @@ const s = StyleSheet.create({
   macros: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: space(3), borderTopWidth: 1, borderTopColor: color.line },
   mealIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: color.infoBg, alignItems: 'center', justifyContent: 'center' },
   addRound: { width: 32, height: 32, borderRadius: 16, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
+  sheetButton: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
+  sheetButtonText: { color: color.onAccent, fontSize: 16, fontWeight: '700' },
   chipBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: space(2), paddingHorizontal: space(3), borderRadius: radius.pill, borderWidth: 1, borderColor: color.line },
   chipText: { color: color.accent, fontWeight: '700', fontSize: 14 },
   meal: { gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },

@@ -104,6 +104,75 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
   });
 
   /** Log a weight. A second one on the same day replaces the first. */
+  /**
+   * Patterns from the last 90 days: foods that, on the days you ate them,
+   * usually came with going over your calorie goal. Needs 3+ such days, and
+   * a clearly higher rate than your days overall.
+   */
+  r.get('/patterns', async (c) => {
+    const t = dateSchema.safeParse(c.req.query('today'));
+    const today = t.success ? t.data : todayLocal();
+    const rows = await asUser(c.get('profileId'), async (tx) => {
+      const [me] = await tx.select({ goal: users.goalKcal }).from(users).where(eq(users.id, c.get('profileId'))).limit(1);
+      if (!me?.goal) return { goal: null, rows: [] as { food_id: string; name: string; days: string; over_days: string; base: string }[] };
+      const result = await tx.execute<{ food_id: string; name: string; days: string; over_days: string; base: string }>(sql`
+        with day_totals as (
+          select d.date, sum(d.grams / 100 * f.kcal) as kcal
+          from diary_entries d join foods f on f.id = d.food_id
+          where d.date >= ${addDays(today, -90)}::date and d.date < ${today}::date
+          group by d.date
+        ),
+        base as (select avg(case when kcal > ${me.goal} * 1.05 then 1.0 else 0 end) as rate from day_totals),
+        food_days as (
+          select distinct d.date, d.food_id, f.name
+          from diary_entries d join foods f on f.id = d.food_id
+          where d.date >= ${addDays(today, -90)}::date and d.date < ${today}::date
+        )
+        select fd.food_id, fd.name, count(*) as days,
+               sum(case when dt.kcal > ${me.goal} * 1.05 then 1 else 0 end) as over_days,
+               (select rate from base) as base
+        from food_days fd join day_totals dt on dt.date = fd.date
+        group by fd.food_id, fd.name
+        having count(*) >= 3
+      `);
+      return { goal: me.goal, rows: result as unknown as { food_id: string; name: string; days: string; over_days: string; base: string }[] };
+    });
+    const patterns = rows.rows
+      .map((r) => ({ foodId: r.food_id, name: r.name, days: Number(r.days), overDays: Number(r.over_days), base: Number(r.base) }))
+      .filter((p) => p.overDays / p.days >= 0.6 && p.overDays / p.days >= p.base + 0.25)
+      .sort((a, b) => b.overDays / b.days - a.overDays / a.days)
+      .slice(0, 20)
+      .map(({ base: _b, ...p }) => p);
+    return c.json({ patterns });
+  });
+
+  /** This month next to last month: logging, calories, protein, weight and workouts. */
+  r.get('/recap', async (c) => {
+    const t = dateSchema.safeParse(c.req.query('today'));
+    const today = t.success ? t.data : todayLocal();
+    const thisStart = `${today.slice(0, 7)}-01`;
+    const lastStart = addDays(thisStart, -1).slice(0, 7) + '-01';
+    const month = async (from: string, to: string) =>
+      asUser(c.get('profileId'), async (tx) => {
+        const [food] = (await tx.execute<{ days: string; kcal: string | null; protein: string | null }>(sql`
+          select count(*) as days, avg(kcal) as kcal, avg(protein) as protein from (
+            select d.date, sum(d.grams / 100 * f.kcal) as kcal, sum(d.grams / 100 * f.protein) as protein
+            from diary_entries d join foods f on f.id = d.food_id
+            where d.date between ${from}::date and ${to}::date group by d.date) x`)) as unknown as { days: string; kcal: string | null; protein: string | null }[];
+        const w = await tx.select({ date: weighIns.date, kg: weighIns.weightKg }).from(weighIns).where(sql`${weighIns.date} between ${from}::date and ${to}::date`).orderBy(asc(weighIns.date));
+        const [wk] = (await tx.execute<{ n: string }>(sql`select count(*) as n from workouts where finished_at is not null and date between ${from}::date and ${to}::date`)) as unknown as { n: string }[];
+        return {
+          daysLogged: Number(food?.days ?? 0),
+          avgKcal: food?.kcal ? Math.round(Number(food.kcal)) : null,
+          avgProtein: food?.protein ? Math.round(Number(food.protein)) : null,
+          weightChangeKg: w.length >= 2 ? Math.round((w.at(-1)!.kg - w[0]!.kg) * 10) / 10 : null,
+          workouts: Number(wk?.n ?? 0),
+        };
+      });
+    const lastEnd = addDays(thisStart, -1);
+    return c.json({ thisMonth: { start: thisStart, ...(await month(thisStart, today)) }, lastMonth: { start: lastStart, ...(await month(lastStart, lastEnd)) } });
+  });
+
   r.put('/weigh-ins', async (c) => {
     const parsed = weighInSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: 'Enter a weight between 20 and 400 kg (44 and 880 lb).' }, 400);

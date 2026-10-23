@@ -92,3 +92,14 @@ test('food pictures: the dish wins over an ingredient', () => {
   assert.equal(foodEmoji('Egg, whole'), '🥚');
   assert.equal(foodEmoji('Something unusual'), '🍽️');
 });
+
+import { betterOptions } from './better.ts';
+test('better option: lighter versions of the same kind of food', () => {
+  const regular = food('Greek yogurt, whole milk', 97, 9, 4, 5);
+  const nonfat = food('Greek yogurt, plain, nonfat', 59, 10.3, 3.6, 0.4);
+  const bread = food('Bread, white', 266, 8, 49, 3.3);
+  const opts = betterOptions({ food: regular, grams: 200 }, [regular, nonfat, bread, eggs], defaultPreferences());
+  assert.equal(opts.length, 1);
+  assert.equal(opts[0]!.food, nonfat);
+  assert.match(opts[0]!.why, /76 kcal less/);
+});

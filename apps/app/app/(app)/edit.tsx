@@ -4,7 +4,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { DiaryEntry } from '@forkbell/shared';
 import { api, ApiError } from '../../lib/api';
-import { deleteEntry, findCachedEntry, updateEntry } from '../../lib/actions';
+import { findCachedEntry, updateEntry } from '../../lib/actions';
+import { removeWithUndo } from '../../components/EntryMenu';
 import { AmountPicker } from '../../components/AmountPicker';
 import { color, space, type } from '../../lib/theme';
 
@@ -24,8 +25,8 @@ export default function EditEntry() {
 
   const remove = async () => {
     try {
-      await deleteEntry(entry!);
       router.back();
+      await removeWithUndo(entry!);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

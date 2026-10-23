@@ -15,7 +15,7 @@ export interface SuggestedItem {
 export interface Suggestion {
   /** stable per day, for "hide for today" */
   key: string;
-  kind: 'swap' | 'protein' | 'fiber' | 'sodium';
+  kind: 'swap' | 'protein' | 'fiber' | 'sodium' | 'pattern';
   title: string;
   detail: string;
   items: SuggestedItem[];

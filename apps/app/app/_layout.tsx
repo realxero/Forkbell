@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../lib/auth';
-import { color, isDark, setWebScheme, themeCss, applyNativeScheme, type SchemeChoice } from '../lib/theme';
+import { color, isDark, setWebAccent, setWebScheme, themeCss, applyNativeScheme, type AccentName, type SchemeChoice } from '../lib/theme';
 import { initSync, readCache } from '../lib/sync';
 
 export default function RootLayout() {
@@ -14,6 +14,7 @@ export default function RootLayout() {
     initSync().then(() => {
       const choice = readCache<SchemeChoice>('device:theme') ?? 'system';
       setWebScheme(choice);
+      setWebAccent(readCache<AccentName>('device:accent') ?? 'blue');
       applyNativeScheme(choice);
       setScheme(choice);
     });

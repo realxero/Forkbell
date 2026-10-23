@@ -92,6 +92,37 @@ export function isDark(choice: SchemeChoice) {
   return isWeb ? window.matchMedia?.('(prefers-color-scheme: dark)').matches === true : nativeScheme === 'dark';
 }
 
+/** Accent colours you can pick in Settings, each with a light and a dark version. */
+export const ACCENTS = {
+  blue: { label: 'Blue', light: '#2B6BD6', dark: '#5C9BFF' },
+  teal: { label: 'Teal', light: '#0F8B8D', dark: '#3CC9C4' },
+  green: { label: 'Green', light: '#2E8B57', dark: '#4CC38A' },
+  orange: { label: 'Orange', light: '#D9661F', dark: '#FF9A52' },
+  red: { label: 'Red', light: '#C8382E', dark: '#FF6B61' },
+  pink: { label: 'Pink', light: '#C2407E', dark: '#FF7AB6' },
+  purple: { label: 'Purple', light: '#6A4BD1', dark: '#A48BFF' },
+} as const;
+export type AccentName = keyof typeof ACCENTS;
+
+/** Apply an accent on the web, for light and dark. (Phones use the default for now.) */
+export function setWebAccent(name: AccentName) {
+  if (!isWeb) return;
+  const a = ACCENTS[name] ?? ACCENTS.blue;
+  let el = document.getElementById('fb-accent');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'fb-accent';
+    document.head.appendChild(el);
+  }
+  // html:root beats the base theme's :root rules wherever they sit in the page.
+  el.textContent = [
+    `html:root{--fb-accent:${a.light}}`,
+    `@media (prefers-color-scheme: dark){html:root:not([data-theme="light"]){--fb-accent:${a.dark}}}`,
+    `html:root[data-theme="dark"]{--fb-accent:${a.dark}}`,
+    `html:root[data-theme="light"]{--fb-accent:${a.light}}`,
+  ].join('\n');
+}
+
 export const space = (n: number) => n * 4;
 
 export const radius = { card: 18, row: 12, pill: 999 };

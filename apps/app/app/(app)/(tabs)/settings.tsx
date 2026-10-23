@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { presetGoals, todayLocal } from '@forkbell/shared';
-import { cachedGet, readCache, writeCache } from '../../lib/sync';
-import { setWebScheme, type SchemeChoice } from '../../lib/theme';
+import { cachedGet, readCache, writeCache } from '../../../lib/sync';
+import { ACCENTS, setWebAccent, setWebScheme, type AccentName, type SchemeChoice } from '../../../lib/theme';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Goals } from '@forkbell/shared';
-import { useAuth } from '../../lib/auth';
-import { put } from '../../lib/api';
-import { color, space, type } from '../../lib/theme';
-import { Chip } from '../../components/AmountPicker';
+import { useAuth } from '../../../lib/auth';
+import { put } from '../../../lib/api';
+import { color, space, type } from '../../../lib/theme';
+import { Chip } from '../../../components/AmountPicker';
 import { Platform, Switch } from 'react-native';
-import { connectHealth, getHealthSettings, healthName, healthSupported, setHealthSettings, syncHealth, type HealthSettings } from '../../lib/health-sync';
+import { connectHealth, getHealthSettings, healthName, healthSupported, setHealthSettings, syncHealth, type HealthSettings } from '../../../lib/health-sync';
 
 export default function Settings() {
   const { me, signOut, refreshMe } = useAuth();
@@ -45,9 +45,7 @@ export default function Settings() {
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.head}>
           <Text style={type.title}>Goals and settings</Text>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={s.link}>Done</Text>
-          </Pressable>
+
         </View>
         <Text style={type.small}>Daily goals. Leave one empty to just track it.</Text>
         <Presets onPick={(g) => setForm({ kcal: String(g.kcal), protein: String(g.protein), carbs: String(g.carbs), fat: String(g.fat) })} />
@@ -106,6 +104,7 @@ export default function Settings() {
 /** Light, dark, or follow the phone. Instant on the web; phones apply it on the next launch. */
 function Appearance() {
   const [choice, setChoice] = useState<SchemeChoice>(readCache<SchemeChoice>('device:theme') ?? 'system');
+  const [accent, setAccent] = useState<AccentName>(readCache<AccentName>('device:accent') ?? 'blue');
   const pick = (c: SchemeChoice) => {
     setChoice(c);
     writeCache('device:theme', c);
@@ -120,6 +119,26 @@ function Appearance() {
         ))}
       </View>
       {Platform.OS !== 'web' && <Text style={type.small}>Takes effect the next time you open the app.</Text>}
+      <Text style={[type.small, { marginTop: space(3) }]}>Accent colour</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(3) }}>
+        {(Object.keys(ACCENTS) as AccentName[]).map((k) => (
+          <Pressable
+            key={k}
+            onPress={() => {
+              setAccent(k);
+              writeCache('device:accent', k);
+              setWebAccent(k);
+            }}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: accent === k }}
+            accessibilityLabel={ACCENTS[k].label}
+            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENTS[k].light, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: accent === k ? color.iron : 'transparent' }}
+          >
+            {accent === k && <Text style={{ color: '#fff', fontWeight: '900' }}>✓</Text>}
+          </Pressable>
+        ))}
+      </View>
+      {Platform.OS !== 'web' && <Text style={type.small}>Colours apply on the web now; the phone app gets them in a later update.</Text>}
     </View>
   );
 }

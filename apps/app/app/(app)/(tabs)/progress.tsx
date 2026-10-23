@@ -12,6 +12,7 @@ import { Chip } from '../../../components/AmountPicker';
 import { NumberField } from '../../../components/NumberField';
 import { CalorieBars, LogCalendar, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
 import { WellbeingCard } from '../../../components/WellbeingCard';
+import { RecapCard } from '../../../components/RecapCard';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
 
@@ -225,6 +226,8 @@ export default function ProgressScreen() {
               </Text>
             </View>
 
+            <RecapCard unit={units.unit} />
+
             <WellbeingCard />
 
             <Milestones list={p.milestones} />
@@ -358,9 +361,11 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
         </View>
       ))}
       {!viewing && (
+        <>
+        <Text style={[type.small, { marginTop: space(2) }]}>Track something else</Text>
+        <TextInput value={newKind} onChangeText={setNewKind} placeholder="Name, e.g. resting heart rate" style={s.input} />
         <View style={s.row}>
-          <TextInput value={newKind} onChangeText={setNewKind} placeholder="Track something else" style={[s.input, { flex: 2 }]} />
-          <TextInput value={newUnit} onChangeText={setNewUnit} placeholder="unit" style={[s.input, { flex: 1 }]} autoCapitalize="none" />
+          <TextInput value={newUnit} onChangeText={setNewUnit} placeholder="Unit, e.g. bpm" style={[s.input, { flex: 1 }]} autoCapitalize="none" />
           <NumberField
             key={`${newKind}-${newUnit}`}
             label="New measurement value"
@@ -377,6 +382,7 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
             style={[s.input, { width: 72, textAlign: 'center' }]}
           />
         </View>
+        </>
       )}
     </View>
   );
