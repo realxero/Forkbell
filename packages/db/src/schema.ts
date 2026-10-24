@@ -265,3 +265,14 @@ export const aiSettings = pgTable('ai_settings', {
   keyHint: text('key_hint'),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).defaultNow(),
 });
+
+/** Keys for Siri and the Shortcuts app: sessions that only work on /api/shortcuts. */
+export const shortcutKeys = pgTable('shortcut_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  label: text('label').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  hint: text('hint').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true, mode: 'string' }),
+});

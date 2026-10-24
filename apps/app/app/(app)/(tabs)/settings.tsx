@@ -41,6 +41,7 @@ export default function Settings() {
         { icon: 'chatbubble-ellipses-outline', tint: '#2B6BD6', title: 'Bell (AI)', detail: bell ?? '', href: '/setting/bell' },
         { icon: 'heart-outline', tint: '#D2423A', title: healthName ?? 'Apple Health and Health Connect', detail: healthSupported ? (getHealthSettings().connected ? 'Connected' : 'Not connected') : 'In the phone app', href: '/setting/health' },
         { icon: 'people-outline', tint: '#0F8B8D', title: 'Sharing with family', detail: 'Who can see your data', href: '/sharing' },
+        { icon: 'mic-outline', tint: '#C2185B', title: 'Siri and Shortcuts', detail: 'Ask Bell and log food hands-free', href: '/setting/shortcuts' },
       ],
     },
     {

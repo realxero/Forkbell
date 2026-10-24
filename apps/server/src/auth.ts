@@ -11,6 +11,8 @@ export type AppEnv = { Variables: { userId: string; profileId: string; tokenHash
 
 const COOKIE = 'fb_session';
 const NATIVE_REDIRECT = 'forkbell://auth';
+/** Shortcut keys start with this, and only work on /api/shortcuts. */
+export const SHORTCUT_PREFIX = 'fbk_';
 
 /**
  * Where to send the phone app after sign-in. Only the app's own scheme, plus
@@ -25,7 +27,7 @@ function nativeReturn(requested: string | undefined) {
 }
 
 /** Session tokens are random; only an HMAC of them is stored. */
-const hashToken = (token: string) => createHmac('sha256', env.sessionSecret).update(token).digest('base64url');
+export const hashToken = (token: string) => createHmac('sha256', env.sessionSecret).update(token).digest('base64url');
 
 // Short-lived, in-memory: a login in progress and native hand-off codes.
 // Fine for a single server process; move to Postgres if you ever run several.
@@ -137,6 +139,9 @@ export function requireUser(db: Database): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const token = readToken(c.req.header('authorization'), getCookie(c, COOKIE));
     if (!token) return c.json({ error: 'Sign in to continue.' }, 401);
+    // A Shortcut key can ask Bell and log what you confirm, nothing else, and can't make more keys.
+    if (token.startsWith(SHORTCUT_PREFIX) && (!c.req.path.startsWith('/api/shortcuts/') || c.req.path.startsWith('/api/shortcuts/keys')))
+      return c.json({ error: 'A Shortcut key only works for Siri and Shortcuts.' }, 403);
     const tokenHash = hashToken(token);
     const [row] = await db.execute<{ id: string | null }>(sql`select auth_session_user(${tokenHash}) as id`);
     if (!row?.id) return c.json({ error: 'Your session ended. Sign in again.' }, 401);

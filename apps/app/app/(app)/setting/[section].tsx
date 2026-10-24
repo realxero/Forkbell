@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AiSettings, AppearanceSection, GoalsSection, HealthSection, PhoneSection } from '../../../components/SettingsSections';
 import { DataSection } from '../../../components/DataSection';
+import { ShortcutsSection } from '../../../components/ShortcutsSection';
 import { color, space, type } from '../../../lib/theme';
 
 const SECTIONS = {
@@ -13,6 +14,7 @@ const SECTIONS = {
   health: { title: 'Apple Health and Health Connect', body: HealthSection },
   phone: { title: 'This phone', body: PhoneSection },
   data: { title: 'Export and backup', body: DataSection },
+  shortcuts: { title: 'Siri and Shortcuts', body: ShortcutsSection },
 } as const;
 
 /** One group of settings, opened from the Settings tab. */

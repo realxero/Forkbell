@@ -25,6 +25,7 @@ import { aiRoutes } from './routes/ai.ts';
 import { wellbeingRoutes } from './routes/wellbeing.ts';
 import { stretchRoutes } from './routes/stretches.ts';
 import { exportRoutes } from './routes/export.ts';
+import { shortcutRoutes } from './routes/shortcuts.ts';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
@@ -104,13 +105,20 @@ internalApi.route('/api/foods', foodRoutes(database));
 internalApi.route('/api/exercises', exerciseRoutes(database));
 internalApi.route('/api/workouts', workoutRoutes(database));
 internalApi.route('/api/progress', progressRoutes(database));
-const internal = async (path: string, userId: string) => {
-  const res = await internalApi.request(path, { headers: { 'x-forkbell-user': userId } });
+const internal = async (path: string, userId: string, init?: { method: string; body: unknown }) => {
+  const res = await internalApi.request(path, {
+    method: init?.method ?? 'GET',
+    headers: { 'x-forkbell-user': userId, ...(init ? { 'content-type': 'application/json' } : {}) },
+    ...(init ? { body: JSON.stringify(init.body) } : {}),
+  });
   const data = await res.json();
   if (!res.ok) throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
   return data;
 };
 api.route('/bell', bellRoutes(database, internal));
+// Siri and Shortcuts ask Bell through this in-process copy, as the key's owner.
+internalApi.route('/api/bell', bellRoutes(database, internal));
+api.route('/shortcuts', shortcutRoutes(database, internal));
 app.route('/api', api);
 
 app.onError((err, c) => {
