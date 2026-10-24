@@ -73,10 +73,9 @@ export function QuickBell() {
           <VoiceButton
             big
             onTap={() => setOpen(true)}
-            onHearing={(t, on) => {
-              if (on) setOpen(true);
-              setHearing(on ? t : null);
-            }}
+            // Don't open the sheet while the button is held: a Modal appearing under your finger
+            // takes the touch away and ends the listening. It opens when you let go.
+            onHearing={(t, on) => setHearing(on ? t : null)}
             onDone={(t) => void ask(t, true)}
             onError={(m) => {
               setOpen(true);
@@ -89,6 +88,13 @@ export function QuickBell() {
           </Pressable>
         )}
       </View>
+
+      {hearing !== null && !open && (
+        <View pointerEvents="none" style={s.bubble} accessibilityLiveRegion="polite">
+          <Ionicons name="mic" size={18} color={color.over} />
+          <Text style={[type.body, { flexShrink: 1 }]} numberOfLines={4}>{hearing || 'Listening… let go when you’re done'}</Text>
+        </View>
+      )}
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable style={s.backdrop} onPress={() => !busy && setOpen(false)}>
@@ -136,6 +142,7 @@ export function QuickBell() {
 
 const s = StyleSheet.create({
   fabWrap: { position: 'absolute', right: space(4), bottom: 96 },
+  bubble: { position: 'absolute', right: space(4), bottom: 96 + 58 + 12, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   fab: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },

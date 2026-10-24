@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Ellipse, G, Rect, Text as SvgText } from 'react-native-svg';
+import { useCallback, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
 import { muscleStatuses, todayLocal, trainNext, type Exercise, type MapMuscle, type MuscleStat, type MuscleState, type MuscleStatus } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
+import { BODY_PATHS, type BodyView } from '../lib/body-paths';
 import { useAuth } from '../lib/auth';
 import { HowToSheet } from './HowTo';
 import { Thumb } from './ExercisePicker';
@@ -16,53 +17,67 @@ const OPACITY: Record<MuscleState, number> = { due: 1, some: 0.45, good: 1, reco
 const LABEL: Record<MuscleState, string> = { due: 'Due', some: 'Some work', good: 'On track', recovering: 'Recovering', plenty: 'Plenty' };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-type Shape = { m: MapMuscle; kind: 'e'; cx: number; cy: number; rx: number; ry: number } | { m: MapMuscle; kind: 'r'; x: number; y: number; w: number; h: number; r: number };
-// Two simple figures, front and back, in a 120 × 250 box each. Symmetric pairs share a muscle.
-const pair = (m: MapMuscle, cx: number, cy: number, rx: number, ry: number): Shape[] => [
-  { m, kind: 'e', cx: 60 - cx, cy, rx, ry },
-  { m, kind: 'e', cx: 60 + cx, cy, rx, ry },
-];
-const FRONT: Shape[] = [
-  ...pair('shoulders', 24, 50, 10, 9),
-  ...pair('chest', 10, 58, 10, 10),
-  ...pair('biceps', 31, 76, 6, 13),
-  { m: 'core', kind: 'r', x: 47, y: 72, w: 26, h: 42, r: 8 },
-  ...pair('quads', 11, 150, 10, 28),
-  ...pair('calves', 11, 206, 7, 20),
-];
-const BACK: Shape[] = [
-  ...pair('shoulders', 24, 50, 10, 9),
-  { m: 'back', kind: 'e', cx: 60, cy: 74, rx: 22, ry: 28 },
-  ...pair('triceps', 31, 76, 6, 13),
-  ...pair('glutes', 10, 122, 11, 10),
-  ...pair('hamstrings', 11, 158, 9, 22),
-  ...pair('calves', 11, 206, 8, 20),
-];
+// Body outlines come from MuscleMap (MIT, see THIRD_PARTY_NOTICES.md). Each shape is
+// a MuscleMap muscle; this table says which of Forkbell's ten muscles it counts as.
+// Shapes that aren't listed (head, hands, feet, forearms, shins...) are drawn but not tappable.
+const SLUG_TO_MUSCLE: Record<string, MapMuscle> = {
+  chest: 'chest',
+  deltoids: 'shoulders',
+  rotatorCuff: 'shoulders',
+  trapezius: 'back',
+  upperBack: 'back',
+  lowerBack: 'back',
+  rhomboids: 'back',
+  biceps: 'biceps',
+  triceps: 'triceps',
+  abs: 'core',
+  obliques: 'core',
+  serratus: 'core',
+  quadriceps: 'quads',
+  hamstring: 'hamstrings',
+  gluteal: 'glutes',
+  calves: 'calves',
+};
+// MuscleMap also has finer regions (upper chest, inner quad...) drawn on top of the ones
+// above. Forkbell tracks whole muscles, so those are left out.
+const FINER = new Set(['frontDeltoid', 'rearDeltoid', 'upperTrapezius', 'lowerTrapezius', 'upperChest', 'lowerChest', 'upperAbs', 'lowerAbs', 'innerQuad', 'outerQuad', 'hipFlexors']);
 
-function Figure({ shapes, x, label, fill, opacity, onPick, picked }: { shapes: Shape[]; x: number; label: string; fill: (m: MapMuscle) => string; opacity: (m: MapMuscle) => number; onPick: (m: MapMuscle) => void; picked: MapMuscle | null }) {
-  const base = color.raised;
+type Piece = { key: string; d: string; m: MapMuscle | null };
+function piecesOf(view: BodyView): Piece[] {
+  return view.parts
+    .filter((p) => !FINER.has(p.slug))
+    .flatMap((p) => p.d.map((d, i) => ({ key: `${p.slug}${i}`, d, m: SLUG_TO_MUSCLE[p.slug] ?? null })));
+}
+
+function Figure({ view, label, fill, opacity, onPick, picked }: { view: BodyView; label: string; fill: (m: MapMuscle) => string; opacity: (m: MapMuscle) => number; onPick: (m: MapMuscle) => void; picked: MapMuscle | null }) {
+  const pieces = useMemo(() => piecesOf(view), [view]);
+  const [, , w, h] = view.viewBox.split(' ').map(Number);
+  // The picked muscle is drawn last so its outline isn't hidden by its neighbours.
+  const ordered = picked ? [...pieces.filter((p) => p.m !== picked), ...pieces.filter((p) => p.m === picked)] : pieces;
   return (
-    <G transform={`translate(${x} 0)`}>
-      {/* The body itself, behind the muscles */}
-      <Circle cx={60} cy={18} r={12} fill={base} />
-      <Rect x={55} y={28} width={10} height={10} fill={base} />
-      <Rect x={38} y={40} width={44} height={78} rx={14} fill={base} />
-      <Rect x={20} y={62} width={14} height={60} rx={7} fill={base} />
-      <Rect x={86} y={62} width={14} height={60} rx={7} fill={base} />
-      <Rect x={38} y={112} width={20} height={118} rx={9} fill={base} />
-      <Rect x={62} y={112} width={20} height={118} rx={9} fill={base} />
-      {shapes.map((s, i) => {
-        const props = {
-          fill: fill(s.m),
-          fillOpacity: opacity(s.m),
-          stroke: picked === s.m ? color.iron : color.line,
-          strokeWidth: picked === s.m ? 2 : 1,
-          onPress: () => onPick(s.m),
-        };
-        return s.kind === 'e' ? <Ellipse key={i} cx={s.cx} cy={s.cy} rx={s.rx} ry={s.ry} {...props} /> : <Rect key={i} x={s.x} y={s.y} width={s.w} height={s.h} rx={s.r} {...props} />;
-      })}
-      <SvgText x={60} y={246} fontSize={11} fill={color.ironSoft} textAnchor="middle" {...(Platform.OS === 'web' ? { fontFamily: 'system-ui, -apple-system, sans-serif' } : {})}>{label}</SvgText>
-    </G>
+    <View style={{ flex: 1, maxWidth: 170, alignItems: 'center', gap: space(1) }}>
+      <View style={{ width: '100%', aspectRatio: w / h }}>
+        <Svg width="100%" height="100%" viewBox={view.viewBox}>
+          {ordered.map((p) =>
+            p.m ? (
+              <Path
+                key={p.key}
+                d={p.d}
+                fill={fill(p.m)}
+                fillOpacity={opacity(p.m)}
+                stroke={picked === p.m ? color.iron : color.line}
+                strokeWidth={picked === p.m ? 7 : 2}
+                strokeLinejoin="round"
+                onPress={() => onPick(p.m!)}
+              />
+            ) : (
+              <Path key={p.key} d={p.d} fill={color.raised} />
+            ),
+          )}
+        </Svg>
+      </View>
+      <Text style={type.small}>{label}</Text>
+    </View>
   );
 }
 
@@ -89,6 +104,7 @@ export function BodyMap() {
   const by = Object.fromEntries(stats.map((s) => [s.muscle, s])) as Record<MapMuscle, MuscleStatus>;
   const { next, rest } = trainNext(stats);
   const owned = me?.preferences.training?.equipment ?? [];
+  const body = BODY_PATHS[me?.preferences.body?.sex ?? 'male'];
   const sel = picked ? by[picked] : null;
   // Exercises for the picked muscle: ones you do first, then ones with pictures, using equipment you have.
   const forMuscle = picked
@@ -102,11 +118,9 @@ export function BodyMap() {
   return (
     <View style={s.card}>
       <Text style={type.title}>Muscles this week</Text>
-      <View style={{ alignItems: 'center' }}>
-        <Svg width="100%" height={250} viewBox="0 0 250 250" style={{ maxWidth: 360 }}>
-          <Figure shapes={FRONT} x={0} label="Front" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} onPick={setPicked} picked={picked} />
-          <Figure shapes={BACK} x={130} label="Back" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} onPick={setPicked} picked={picked} />
-        </Svg>
+      <View style={s.figures}>
+        <Figure view={body.front} label="Front" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} onPick={setPicked} picked={picked} />
+        <Figure view={body.back} label="Back" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} onPick={setPicked} picked={picked} />
       </View>
       <View style={s.legend}>
         {(['due', 'some', 'good', 'recovering', 'plenty'] as MuscleState[]).map((k) => (
@@ -159,6 +173,7 @@ export function BodyMap() {
 
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line },
+  figures: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: space(3), width: '100%', maxWidth: 360, alignSelf: 'center' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: space(3), justifyContent: 'center' },
   key: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   swatch: { width: 12, height: 12, borderRadius: 4, borderWidth: 1, borderColor: color.line },
