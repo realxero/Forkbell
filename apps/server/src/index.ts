@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { serve } from '@hono/node-server';
@@ -150,9 +150,20 @@ if (env.webDir) {
       c.header('content-type', 'text/javascript; charset=utf-8');
       return c.body(sw);
     });
-  app.use('*', serveStatic({ root }));
+  // The page itself (/, /index.html and every client-side route) is always checked
+  // with the server, so a new version shows on the next load; the hashed app files
+  // it points at never change and can be kept.
   const index = await readFile(path.join(root, 'index.html'), 'utf8');
-  app.get('*', (c) => c.html(index)); // client-side routes
+  const page = (c: Context) => {
+    c.header('cache-control', 'no-cache');
+    return c.html(index);
+  };
+  app.get('/', page);
+  app.get('/index.html', page);
+  app.use('*', serveStatic({ root }));
+  // A missing file (an old page asking for an old build's script) is a plain 404,
+  // not the page: a page where a script should be breaks with a confusing error.
+  app.get('*', (c) => (/\.[a-z0-9]{1,8}$/i.test(c.req.path) ? c.text('Not found', 404) : page(c))); // client-side routes
 }
 
 serve({ fetch: app.fetch, port: env.port }, (info) => {
