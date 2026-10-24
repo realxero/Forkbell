@@ -20,6 +20,7 @@ import { NumberField } from '../../components/NumberField';
 import { color, space, type } from '../../lib/theme';
 import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
+import { WorkoutBell } from '../../components/WorkoutBell';
 
 /**
  * What an empty box means: the same set last time, else the set above, else
@@ -360,6 +361,7 @@ export default function WorkoutScreen() {
             )}
           </View>
         )}
+        {!w.finishedAt && <WorkoutBell workoutId={w.id} beforeAsk={flush} lifted={restLeft !== null} />}
       </KeyboardAvoidingView>
       <HowToSheet exercise={howToFor} onClose={() => setHowToFor(null)} />
       <FormCheck

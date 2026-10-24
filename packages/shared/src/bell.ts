@@ -35,6 +35,8 @@ export const bellChatSchema = z.object({
   /** the meal that fits the time on the phone, for "log a coffee" */
   meal: z.enum(MEALS),
   localTime: z.string().max(40).optional(),
+  /** asked from inside a workout: Bell sees that session */
+  workoutId: z.string().uuid().optional(),
 });
 export type BellChatInput = z.infer<typeof bellChatSchema>;
 

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
 import { z } from 'zod';
-import { bellChatSchema, extractJson, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
+import { bellChatSchema, extractJson, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
 import { aiConfigFor } from '../bell/config.ts';
@@ -74,7 +74,7 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
     if (!allowed(userId)) return c.json({ error: 'That’s a lot of messages in a short time. Try again in a few minutes.' }, 429);
     const parsed = bellChatSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the message.' }, 400);
-    const { messages, today, meal, localTime } = parsed.data;
+    const { messages, today, meal, localTime, workoutId } = parsed.data;
 
     const [me] = await asUser(userId, (tx) => tx.select({ name: users.name, unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1));
     // Only the newest photo goes to the model; older ones are just mentioned.
@@ -87,7 +87,12 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
       image: i === lastImage ? m.image : undefined,
     }));
     const prefs = preferencesSchema.parse(me?.prefs ?? {});
-    const system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null, prefs });
+    let system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null, prefs });
+    // Asked from inside a workout: the session as it stands, so "next set?" needs no lookup.
+    if (workoutId) {
+      const w = await internal(`/api/workouts/${workoutId}`, userId).then((r) => (r as { workout: Workout }).workout, () => null);
+      if (w) system += workoutContext(w, me?.unit ?? 'lb', localTime);
+    }
     const cfg = { apiKey: ai.apiKey, model: ai.model, baseUrl: ai.baseUrl };
     const tools = toolsFor(prefs);
     const model = ai.format === 'anthropic' ? anthropic(cfg, system, turns, tools) : openai(cfg, system, turns, tools);
@@ -216,4 +221,35 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
   });
 
   return r;
+}
+
+/** The workout in progress, in plain lines, for Bell's instructions. Weights in their unit. */
+export function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string): string {
+  const show = (kg: number | null) => (kg === null ? 'bodyweight' : `${Math.round((unit === 'lb' ? kg * 2.20462 : kg) * 2) / 2} ${unit}`);
+  const set = (x: Workout['exercises'][number]['sets'][number]) =>
+    `${x.warmup ? 'warm-up ' : ''}${x.seconds ? `${x.seconds} s` : `${show(x.weightKg)} × ${x.reps ?? '?'}`}${x.rpe ? ` @ RPE ${x.rpe}` : ''}`;
+  const current = w.exercises.findIndex((e) => e.sets.some((x) => !x.done));
+  const lines = w.exercises.map((e, i) => {
+    const done = e.sets.filter((x) => x.done);
+    const target = e.repMin ? ` (target ${e.targetSets ?? e.sets.length} sets of ${e.repMin}${e.repMax && e.repMax !== e.repMin ? `-${e.repMax}` : ''})` : '';
+    return [
+      `${i === current ? '-> NOW: ' : '- '}${e.exercise.name} [${e.exercise.muscle}, ${e.exercise.equipment}]${target}, rest ${e.restSeconds} s`,
+      `  done: ${done.length ? done.map(set).join('; ') : 'nothing yet'}; ${e.sets.length - done.length} set(s) left`,
+      e.previous.length ? `  last time: ${e.previous.map(set).join('; ')}` : '',
+      e.pain ? `  they flagged pain here${e.painNote ? `: ${e.painNote}` : ''}` : '',
+    ].filter(Boolean).join('\n');
+  });
+  const minutes = Math.round((Date.now() - Date.parse(w.startedAt)) / 60000);
+  return `
+
+They're in the middle of a workout right now${localTime ? ` (${localTime})` : ''}, asking between sets. "${w.name}", started ${minutes} min ago:
+${lines.join('\n') || '(no exercises yet)'}
+
+In the workout:
+- Answer in one to three short sentences; they're resting with the phone in their hand. Lead with the number or the answer.
+- Next-set weight: base it on what they just did and the rep target. Hit the top of the range with reps to spare: add the smallest jump (${unit === 'lb' ? '5 lb for upper body, 10 lb for lower' : '2.5 kg for upper body, 5 kg for lower'}). Missed the bottom of the range or the last set was a grind: stay or drop about 10%. When unsure, stay.
+- Swaps: suggest a similar exercise for the same muscle with equipment they have, in plain names they can find in the library.
+- Rest: usually 2-3 min for heavy compound lifts, 60-90 s for small isolation work.
+- If they mention pain (not normal effort burn), tell them to stop that exercise, and suggest a pain-free alternative or calling it for today. Never push through pain.
+- Use get_exercise for their records and older history when it helps.`;
 }
