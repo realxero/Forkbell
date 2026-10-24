@@ -98,3 +98,90 @@ export function planReminders(opts: {
   }
   return out.sort((a, b) => (a.date === b.date ? a.minutes - b.minutes : a.date < b.date ? -1 : 1));
 }
+
+// Medication reminders --------------------------------------------------------
+// Unlike the meal nudges these are at the times you set, every day, because a
+// dose isn't a habit to learn. Today's skip any dose you've already ticked off.
+
+/**
+ * A time as typed ("8", "8:30", "830", "8:30pm", "8 pm", "20:30") to "HH:MM",
+ * or null if it isn't one.
+ */
+export function parseClock(input: string): string | null {
+  const t = input.trim().toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
+  const m = /^(\d{1,2})(?::?(\d{2}))?\s*(am|pm|a|p)?$/.exec(t);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = m[2] === undefined ? 0 : Number(m[2]);
+  const half = m[3]?.[0];
+  if (min > 59) return null;
+  if (half) {
+    if (h < 1 || h > 12) return null;
+    if (half === 'a' && h === 12) h = 0;
+    if (half === 'p' && h < 12) h += 12;
+  } else if (h > 23) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/** "20:30" to "8:30 PM" (or "20:30" for a 24-hour phone). */
+export function formatClock(hhmm: string, twentyFour = false): string {
+  const [h, m] = hhmm.split(':').map(Number) as [number, number];
+  if (twentyFour) return hhmm;
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+const clockMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number) as [number, number];
+  return h * 60 + m;
+};
+
+export interface MedForReminders {
+  id: string;
+  name: string;
+  dose: string | null;
+  notes: string | null;
+  active: boolean;
+  /** "HH:MM" per dose; a dose without a time has no reminder */
+  reminderTimes: (string | null)[];
+  /** today's doses: taken, skipped, or not yet */
+  today: ('taken' | 'skipped' | null)[];
+}
+
+export interface PlannedDose {
+  id: string;
+  date: string;
+  minutes: number;
+  medicationId: string;
+  slot: number;
+  title: string;
+  body: string;
+}
+
+/** Each dose with a time, today and the next days. Paused medications and ticked-off doses are left out. */
+export function planMedReminders(opts: { meds: MedForReminders[]; today: string; nowMinutes: number; days?: number; max?: number }): PlannedDose[] {
+  const out: PlannedDose[] = [];
+  for (let i = 0; i < (opts.days ?? 3); i++) {
+    const date = addDays(opts.today, i);
+    for (const m of opts.meds) {
+      if (!m.active) continue;
+      m.reminderTimes.forEach((time, slot) => {
+        if (!time) return;
+        const minutes = clockMinutes(time);
+        if (i === 0 && (m.today[slot] || minutes <= opts.nowMinutes)) return;
+        const doses = m.reminderTimes.filter(Boolean).length;
+        out.push({
+          id: `forkbell-med-${m.id}-${date}-${slot}`,
+          date,
+          minutes,
+          medicationId: m.id,
+          slot,
+          title: `Time for ${m.name}`,
+          body: [m.dose, doses > 1 ? `dose ${slot + 1} of ${doses}` : null, m.notes].filter(Boolean).join(' · ') || 'Tap Taken once you’ve had it.',
+        });
+      });
+    }
+  }
+  out.sort((a, b) => (a.date === b.date ? a.minutes - b.minutes : a.date < b.date ? -1 : 1));
+  // Phones only keep so many scheduled notifications; the soonest matter most.
+  return out.slice(0, opts.max ?? 40);
+}

@@ -20,6 +20,8 @@ const medSchema = z.object({
   timesPerDay: z.number().int().min(1).max(6),
   notes: z.string().trim().max(500).nullable(),
   active: z.boolean().default(true),
+  /** a local time per dose ("HH:MM"), or '' for no reminder */
+  reminderTimes: z.array(z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time like 08:30.'), z.literal('')])).max(6).optional(), // left as it is when not sent
 });
 const logSchema = z.object({ medicationId: z.string().uuid(), date: dateSchema, slot: z.number().int().min(0).max(5), status: z.enum(['taken', 'skipped']).nullable() });
 
@@ -48,6 +50,7 @@ export function wellbeingRoutes({ asUser }: ReturnType<typeof connect>) {
           timesPerDay: m.timesPerDay,
           notes: m.notes,
           active: m.active,
+          reminderTimes: Array.from({ length: m.timesPerDay }, (_, slot) => m.reminderTimes[slot] || null),
           today: Array.from({ length: m.timesPerDay }, (_, slot) => mine.find((l) => l.date === today && l.slot === slot)?.status ?? null),
           lastWeek: { taken: taken7, planned: m.timesPerDay * 7 },
         };

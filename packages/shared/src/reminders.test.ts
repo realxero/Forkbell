@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { estimateEnergy, planReminders, usualFinishTime, usualMealTimes, type HabitPoint } from './index.ts';
+import { estimateEnergy, formatClock, parseClock, planMedReminders, planReminders, usualFinishTime, usualMealTimes, type HabitPoint, type MedForReminders } from './index.ts';
 
 const days = (n: number, meal: string, minutes: (i: number) => number): HabitPoint[] =>
   Array.from({ length: n }, (_, i) => ({ date: `2026-10-${String(i + 1).padStart(2, '0')}`, meal, minutes: minutes(i) }));
@@ -62,4 +62,28 @@ test('the burn estimate switches to finished days once there are ten', () => {
   assert.equal(fin.kcal, 2500);
   assert.ok((all.kcal ?? 0) < 2000, 'half-logged days drag it down');
   assert.equal(estimateEnergy(intake, series as never, '2026-09-30', 28, new Set([...finished].slice(0, 5))).usesFinishedDays, false);
+});
+
+test('times are read the way people type them', () => {
+  const cases: [string, string | null][] = [
+    ['8', '08:00'], ['8:30', '08:30'], ['830', '08:30'], ['8:30pm', '20:30'], ['8 PM', '20:00'], ['12am', '00:00'],
+    ['12 pm', '12:00'], ['20:30', '20:30'], ['7.15 a.m.', '07:15'], ['24:00', null], ['13pm', null], ['8:75', null], ['soon', null],
+  ];
+  for (const [input, want] of cases) assert.equal(parseClock(input), want, input);
+  assert.equal(formatClock('20:30'), '8:30 PM');
+  assert.equal(formatClock('00:05'), '12:05 AM');
+});
+
+test('medication reminders: each timed dose, skipping ticked and past ones today', () => {
+  const meds: MedForReminders[] = [
+    { id: 'a', name: 'Vitamin D', dose: '1000 IU', notes: null, active: true, reminderTimes: ['08:00', '20:00'], today: ['taken', null] },
+    { id: 'b', name: 'Paused', dose: null, notes: null, active: false, reminderTimes: ['09:00'], today: [null] },
+    { id: 'c', name: 'No time', dose: null, notes: null, active: true, reminderTimes: [null], today: [null] },
+  ];
+  const r = planMedReminders({ meds, today: '2026-10-23', nowMinutes: 7 * 60, days: 2 });
+  assert.deepEqual(r.map((x) => `${x.date} ${x.minutes / 60}`), ['2026-10-23 20', '2026-10-24 8', '2026-10-24 20']);
+  assert.equal(r[0]!.title, 'Time for Vitamin D');
+  assert.equal(r[0]!.body, '1000 IU · dose 2 of 2');
+  assert.equal(planMedReminders({ meds, today: '2026-10-23', nowMinutes: 21 * 60, days: 1 }).length, 0, 'the evening dose has passed');
+  assert.equal(planMedReminders({ meds, today: '2026-10-23', nowMinutes: 0, days: 3, max: 2 }).length, 2);
 });

@@ -207,6 +207,16 @@ function Reminders() {
         <Switch value={r.finish} onValueChange={(v) => change({ ...r, finish: v })} accessibilityLabel="Finish-the-day reminder" />
       </View>
       <Text style={type.small}>An evening nudge to mark the day finished, around when you usually do. Skipped on days with nothing logged.</Text>
+      <View style={s.switchRow}>
+        <Text style={[type.body, { flex: 1 }]}>Medication times</Text>
+        <Switch value={r.meds} onValueChange={(v) => change({ ...r, meds: v })} accessibilityLabel="Medication reminders" />
+      </View>
+      <Text style={type.small}>At the times you set on each medication, with Taken and Skip buttons. Doses you’ve already ticked off stay quiet.</Text>
+      <View style={s.switchRow}>
+        <Text style={[type.body, { flex: 1 }]}>Rest timer</Text>
+        <Switch value={r.rest} onValueChange={(v) => change({ ...r, rest: v })} accessibilityLabel="Rest timer alert" />
+      </View>
+      <Text style={type.small}>A buzz and a notification when your rest is up, even with the phone locked or Forkbell in the background.</Text>
       {problem && <Text style={[type.small, { color: color.over }]}>{problem}</Text>}
     </View>
   );

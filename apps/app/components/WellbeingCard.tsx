@@ -8,7 +8,7 @@ import { Chip } from './AmountPicker';
 import { color, space, type } from '../lib/theme';
 
 export type CheckIn = { date: string; sleepHours: number | null; sleepQuality: number | null; mood: number | null; energy: number | null; note: string | null };
-export type Med = { id: string; name: string; dose: string | null; timesPerDay: number; notes: string | null; active: boolean; today: ('taken' | 'skipped' | null)[]; lastWeek: { taken: number; planned: number } };
+export type Med = { id: string; name: string; dose: string | null; timesPerDay: number; notes: string | null; active: boolean; reminderTimes?: (string | null)[]; today: ('taken' | 'skipped' | null)[]; lastWeek: { taken: number; planned: number } };
 export type Wellbeing = { today: string; checkIns: CheckIn[]; medications: Med[] };
 
 const FACES = ['😞', '🙁', '😐', '🙂', '😄'];
@@ -69,6 +69,8 @@ export function WellbeingCard({ healthSleepMin = null }: { healthSleepMin?: numb
     const next = m.today[slot] === 'taken' ? null : 'taken';
     setW({ ...w, medications: w.medications.map((x) => (x.id === m.id ? { ...x, today: x.today.map((t, i) => (i === slot ? next : t)) } : x)) });
     await send('PUT', '/api/wellbeing/medication-logs', { medicationId: m.id, date: w.today, slot, status: next }, { label: `${m.name} dose`, coalesceKey: `dose:${m.id}:${w.today}:${slot}` });
+    // A dose ticked off doesn't need its reminder any more (and an unticked one gets it back).
+    void import('../lib/reminders').then((r) => r.refreshReminders()).catch(() => {});
   };
   const active = w.medications.filter((m) => m.active);
 

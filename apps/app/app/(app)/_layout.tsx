@@ -4,7 +4,7 @@ import { todayLocal } from '@forkbell/shared';
 import { warmCache } from '../../lib/sync';
 import { AppState } from 'react-native';
 import { healthSupported, syncHealth } from '../../lib/health-sync';
-import { refreshReminders } from '../../lib/reminders';
+import { listenForReminderTaps, refreshReminders } from '../../lib/reminders';
 import { followSystemScheme } from '../../lib/theme';
 import { keepEverydayPictures } from '../../lib/picture-cache';
 import { SyncBanner } from '../../components/SyncBanner';
@@ -24,6 +24,8 @@ export default function SignedInLayout() {
     if (status !== 'signedIn') return;
     // Replan reminders whenever the app comes back: a new day, or food logged elsewhere.
     void refreshReminders().catch(() => {});
+    // Taken / Skip on a medication reminder, and opening the right page from any reminder.
+    const stopTaps = listenForReminderTaps();
     // Your everyday exercises' how-to pictures, kept on the phone for the gym.
     void keepEverydayPictures().catch(() => {});
     const remind = AppState.addEventListener('change', (s) => {
@@ -32,12 +34,17 @@ export default function SignedInLayout() {
       // The system went light/dark while away: refresh the colours, unless mid-workout.
       if (!pathRef.current.startsWith('/workout')) void followSystemScheme().catch(() => {});
     });
-    if (!healthSupported) return () => remind.remove();
+    if (!healthSupported)
+      return () => {
+        remind.remove();
+        stopTaps();
+      };
     void syncHealth();
     const sub = AppState.addEventListener('change', (s) => s === 'active' && void syncHealth());
     return () => {
       sub.remove();
       remind.remove();
+      stopTaps();
     };
   }, [status]);
   if (status === 'loading') return <ActivityIndicator style={{ flex: 1 }} color={color.iron} />;

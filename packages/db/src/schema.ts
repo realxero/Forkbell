@@ -210,6 +210,8 @@ export const medications = pgTable('medications', {
   timesPerDay: integer('times_per_day').notNull(),
   notes: text('notes'),
   active: boolean('active').notNull(),
+  /** "HH:MM" per dose, '' for a dose without a reminder */
+  reminderTimes: text('reminder_times').array().notNull().default([]),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
 });
 

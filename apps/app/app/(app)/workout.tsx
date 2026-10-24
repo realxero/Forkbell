@@ -19,6 +19,7 @@ import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, space, type } from '../../lib/theme';
 import { haptic, hapticsOn } from '../../lib/haptics';
+import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
 
 /**
  * What an empty box means: the same set last time, else the set above, else
@@ -90,6 +91,14 @@ export default function WorkoutScreen() {
     }
   }, [restEnd, restLeft]);
 
+  // The phone buzzes when the rest is up, even locked or with Forkbell in the background.
+  // Leaving the screen keeps it; Skip, Finish and Discard cancel it.
+  const restNext = useRef<string | null>(null);
+  useEffect(() => {
+    if (restEnd) void scheduleRestAlert(restEnd, restNext.current).catch(() => {});
+    else void cancelRestAlert();
+  }, [restEnd]);
+
   // Saving: the whole session goes up shortly after each change.
   const save = useCallback(async () => {
     const cur = latest.current;
@@ -155,6 +164,9 @@ export default function WorkoutScreen() {
     setHint(null);
     updateSet(i, k, patch);
     if (!w!.finishedAt && e.restSeconds > 0) {
+      // What's next, for the notification: another set of this, or the next exercise.
+      const more = e.sets.some((x, j) => j !== k && !x.done);
+      restNext.current = more ? e.exercise.name : (w!.exercises.slice(i + 1).find((x) => x.sets.some((y) => !y.done))?.exercise.name ?? null);
       setRestTotal(e.restSeconds);
       setRestEnd(Date.now() + e.restSeconds * 1000);
     }
@@ -225,6 +237,7 @@ export default function WorkoutScreen() {
     if (!(await confirm(w!.finishedAt ? 'Delete this workout?' : 'Discard this workout?', 'Its sets will be deleted. This can’t be undone.', 'Delete'))) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
+    void cancelRestAlert();
     await discardWorkout(w!).catch(() => {});
     router.back();
   };
