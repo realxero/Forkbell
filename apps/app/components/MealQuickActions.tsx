@@ -14,7 +14,7 @@ import { color, radius, space, type } from '../lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-/** The small buttons on each meal card: scan, quick add, photo. */
+/** The small buttons on each meal card: scan, quick add, photo, weigh. */
 export function MealQuickActions({ date, meal, onChanged }: { date: string; meal: Meal; onChanged: () => void }) {
   const [quick, setQuick] = useState(false);
   const [photo, setPhoto] = useState(false);
@@ -29,6 +29,7 @@ export function MealQuickActions({ date, meal, onChanged }: { date: string; meal
       {chip('barcode-outline', 'Scan', () => router.push({ pathname: '/add', params: { meal, date, scan: '1' } }))}
       {chip('flash-outline', 'Quick add', () => setQuick(true))}
       {chip('camera-outline', 'Photo', () => setPhoto(true))}
+      {chip('scale-outline', 'Weigh', () => router.push({ pathname: '/weigh', params: { meal, date } }))}
       <QuickAdd visible={quick} date={date} meal={meal} onClose={() => setQuick(false)} onAdded={onChanged} />
       {photo && <PhotoLog date={date} meal={meal} onClose={() => setPhoto(false)} onAdded={onChanged} />}
     </View>

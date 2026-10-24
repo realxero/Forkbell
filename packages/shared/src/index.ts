@@ -23,3 +23,4 @@ export * from './cues.ts';
 export * from './form.ts';
 export * from './muscle-map.ts';
 export * from './stretches.ts';
+export * from './weigh.ts';

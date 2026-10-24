@@ -35,6 +35,11 @@ export const preferencesSchema = z.object({
         .default({ sodiumMg: null, satFatG: null, sugarG: null }),
     })
     .default({ enabled: true, strictness: 'balanced', drinks: true, protein: true, fiber: true, sodium: true, satFat: true, sugar: true, fat: true, limits: { sodiumMg: null, satFatG: null, sugarG: null } }),
+  /** plates and bowls weighed empty once, so a full one can be weighed without taring */
+  containers: z
+    .array(z.object({ id: z.string().min(1).max(40), name: z.string().trim().min(1).max(40), grams: z.number().min(1).max(5000) }))
+    .max(30)
+    .default([]),
   trainingTips: z.boolean().default(true),
   /** the Patterns card on Progress */
   patterns: z.boolean().default(true),
