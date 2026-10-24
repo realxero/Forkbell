@@ -16,6 +16,11 @@ const textOf = (m) => (typeof m.content === 'string' ? m.content : (m.content ||
 const hasImage = (m) => Array.isArray(m.content) && m.content.some((c) => c.type === 'image' || c.type === 'image_url');
 
 function plan(messages, toolResults) {
+  // "What's this machine?" asks for one JSON object.
+  const sys = JSON.stringify(messages[0] ?? '');
+  if (/gym equipment/.test(sys) || messages.some((m) => /gym equipment/.test(textOf(m)))) {
+    return { text: JSON.stringify({ recognized: true, name: 'Lat pulldown machine', what: 'Trains your lats and upper back by pulling a bar down to your chest.', setup: ['Set the thigh pad so your legs are locked in', 'Pick a light weight with the pin'], how: ['Grip the bar a little wider than shoulders', 'Pull it to your upper chest, elbows down', 'Let it up slowly'], safety: ['Don’t pull behind your neck', 'Start light'], exercises: ['Lat pulldown', 'Close-grip pulldown', 'Straight-arm pulldown'] }) };
+  }
   const user = lastUser(messages.filter((m) => !(Array.isArray(m.content) && m.content.some((c) => c.type === 'tool_result'))));
   const text = textOf(user).toLowerCase();
   const n = toolResults.length;

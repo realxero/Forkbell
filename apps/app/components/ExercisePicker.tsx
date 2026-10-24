@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAuth } from '../lib/auth';
+import { pictureSource } from '../lib/picture-cache';
+import { IdentifyEquipment } from './IdentifyEquipment';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MUSCLES, type Exercise, type ExerciseKind, type Muscle } from '@forkbell/shared';
+import { MUSCLES, picturePath, type Exercise, type ExerciseKind, type Muscle } from '@forkbell/shared';
 import { post } from '../lib/api';
 import { cachedGet, updateCache } from '../lib/sync';
 import { Chip } from './AmountPicker';
@@ -43,6 +47,13 @@ export function ExercisePicker({
   const [creating, setCreating] = useState(false);
   const [full, setFull] = useState(false);
   const [limit, setLimit] = useState(120);
+  const { me } = useAuth();
+  // Equipment filter: any, what you have (Settings → Food preferences → Training), or one kind.
+  const owned = me?.preferences.training?.equipment ?? [];
+  const [gear, setGear] = useState<string | null>(owned.length ? 'mine' : null);
+  const [identify, setIdentify] = useState(false);
+  const gearOk = (e: Listed) =>
+    !gear || (gear === 'mine' ? e.equipment === 'bodyweight' || e.equipment === 'other' || owned.includes(e.equipment as never) : e.equipment === gear);
 
   // The whole library is small, so it's loaded once (and kept for offline) and searched here.
   useEffect(() => {
@@ -63,6 +74,7 @@ export function ExercisePicker({
   const shown = (list ?? []).filter(
     (e) =>
       (!muscle || e.muscle === muscle) &&
+      gearOk(e) &&
       (full || words.length > 0 || !e.library || e.uses > 0) &&
       words.every((w) => `${e.name} ${e.muscle} ${e.equipment}`.toLowerCase().includes(w)),
   );
@@ -74,9 +86,17 @@ export function ExercisePicker({
       <SafeAreaView style={s.screen}>
         <View style={s.head}>
           <Text style={type.title}>{creating ? 'New exercise' : title}</Text>
-          <Pressable onPress={creating ? () => setCreating(false) : onClose} hitSlop={12}>
-            <Text style={s.link}>{creating ? 'Back' : 'Close'}</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(4) }}>
+            {!creating && (
+              <Pressable onPress={() => setIdentify(true)} hitSlop={10} accessibilityLabel="What's this machine? Take a photo" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="camera-outline" size={22} color={color.accent} />
+                <Text style={[s.link, { fontSize: 14 }]}>What’s this?</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={creating ? () => setCreating(false) : onClose} hitSlop={12}>
+              <Text style={s.link}>{creating ? 'Back' : 'Close'}</Text>
+            </Pressable>
+          </View>
         </View>
         {creating ? (
           <CreateExercise
@@ -93,6 +113,13 @@ export function ExercisePicker({
               <Chip label="All" on={!muscle} onPress={() => setMuscle(null)} />
               {MUSCLES.map((m) => (
                 <Chip key={m} label={cap(m)} on={muscle === m} onPress={() => setMuscle(muscle === m ? null : m)} />
+              ))}
+            </ScrollView>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space(2) }}>
+              <Chip label="Any equipment" on={!gear} onPress={() => setGear(null)} />
+              {owned.length > 0 && <Chip label="What I have" on={gear === 'mine'} onPress={() => setGear(gear === 'mine' ? null : 'mine')} />}
+              {EQUIPMENT.filter((x) => x !== 'other').map((x) => (
+                <Chip key={x} label={cap(x)} on={gear === x} onPress={() => setGear(gear === x ? null : x)} />
               ))}
             </ScrollView>
             {libraryCount > 0 && !words.length && (
@@ -117,6 +144,15 @@ export function ExercisePicker({
             </Pressable>
           </ScrollView>
         )}
+        {identify && (
+          <IdentifyEquipment
+            onClose={() => setIdentify(false)}
+            onPick={(e) => {
+              setIdentify(false);
+              onPick(e);
+            }}
+          />
+        )}
       </SafeAreaView>
   );
   if (inline) return body;
@@ -131,7 +167,8 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function Row({ e, onPress }: { e: Listed; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [s.row, { flexDirection: 'row', alignItems: 'center', gap: space(3) }, pressed && { opacity: 0.7 }]}>
+      <Thumb e={e} />
       <View style={{ flex: 1 }}>
         <Text style={type.body}>{e.name}</Text>
         <Text style={type.small}>
@@ -141,6 +178,36 @@ function Row({ e, onPress }: { e: Listed; onPress: () => void }) {
         </Text>
       </View>
     </Pressable>
+  );
+}
+
+const GEAR_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  barbell: 'barbell-outline',
+  dumbbell: 'barbell-outline',
+  kettlebell: 'fitness-outline',
+  machine: 'cog-outline',
+  cable: 'git-pull-request-outline',
+  band: 'infinite-outline',
+  bodyweight: 'body-outline',
+};
+
+/** The exercise's first how-to picture, or an icon for its equipment. */
+export function Thumb({ e, size = 52 }: { e: Pick<Exercise, 'howToRef' | 'pictures' | 'equipment' | 'name'>; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  if (e.howToRef && (e.pictures ?? 0) > 0 && !failed)
+    return (
+      <Image
+        source={pictureSource(picturePath(e.howToRef, 0))}
+        onError={() => setFailed(true)}
+        style={{ width: size, height: size, borderRadius: 10, backgroundColor: color.raised }}
+        resizeMode="cover"
+        accessibilityLabel={`${e.name} start position`}
+      />
+    );
+  return (
+    <View style={{ width: size, height: size, borderRadius: 10, backgroundColor: color.raised, alignItems: 'center', justifyContent: 'center' }}>
+      <Ionicons name={GEAR_ICONS[e.equipment] ?? 'barbell-outline'} size={size * 0.45} color={color.ironSoft} />
+    </View>
   );
 }
 

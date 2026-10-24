@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type SetEntry } from '@forkbell/shared';
 import { useTrainingSetup } from '../../lib/training-setup';
-import { HowToCard } from '../../components/HowTo';
+import { HowToCard, CuesCard } from '../../components/HowTo';
 import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
@@ -78,6 +78,9 @@ export default function ExerciseDetail() {
                 <HowToCard howTo={d.howTo} name={d.exercise.name} short={d.sessions.length > 0} />
               </View>
             )}
+            <View style={s.card}>
+              <CuesCard exercise={d.exercise} />
+            </View>
 
             {d.records.length > 0 ? (
               <View style={s.records}>

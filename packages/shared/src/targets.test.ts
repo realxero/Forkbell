@@ -24,3 +24,11 @@ test('gaining for size vs strength; never under 1,200', () => {
   assert.equal(tiny.kcal, 1200);
   assert.match(tiny.why.join(' '), /floor/);
 });
+
+import { exerciseCues } from './cues.ts';
+test('exercise cues by movement, with a fallback by muscle', () => {
+  assert.match(exerciseCues({ name: 'Barbell Romanian deadlift', muscle: 'hamstrings' }).feel, /Back of your thighs/);
+  assert.ok(exerciseCues({ name: 'Back squat', muscle: 'quads' }).tooHeavy.includes('Knees cave inward'));
+  assert.equal(exerciseCues({ name: 'Mystery machine', muscle: 'calves' }).feel, 'Your calves.');
+  assert.match(exerciseCues({ name: 'Anything', muscle: 'chest' }).stop, /Sharp/);
+});

@@ -21,6 +21,27 @@ function allowed(userId: string) {
 
 const labelSchema = z.object({ image: z.string().max(4_000_000).regex(/^data:image\/(jpeg|png|webp|gif);base64,/, 'Send a JPEG, PNG, WebP or GIF photo.') });
 
+const EQUIPMENT_PROMPT = `You identify gym equipment from photos and explain it to a beginner. Be accurate; if unsure, say so.
+Answer with one JSON object and nothing else:
+{"recognized": boolean, "name": string|null, "what": string, "setup": string[], "how": string[], "safety": string[], "exercises": string[]}
+- name: the usual name (e.g. "Seated cable row", "Leg press", "Smith machine", "Lat pulldown").
+- what: one or two sentences on what it trains and why you'd use it.
+- setup: up to 4 short steps to adjust it (seat height, pads, pin, grip), in order.
+- how: up to 5 short steps to do the main exercise with good form.
+- safety: up to 3 short points (e.g. don't lock your knees, use the safety stops, start light).
+- exercises: up to 6 common exercise names done on it, main one first, in plain names like "Lat pulldown", "Seated cable row", "Cable fly".
+If the photo isn't gym equipment, set recognized false and explain briefly in what.`;
+
+const equipmentSchema = z.object({
+  recognized: z.boolean(),
+  name: z.string().max(120).nullable().optional(),
+  what: z.string().max(600).nullable().optional(),
+  setup: z.array(z.string().max(200)).max(6).default([]),
+  how: z.array(z.string().max(200)).max(8).default([]),
+  safety: z.array(z.string().max(200)).max(5).default([]),
+  exercises: z.array(z.string().max(80)).max(8).default([]),
+});
+
 const LABEL_PROMPT = `You read nutrition labels from photos for a food tracker. Report only what is printed; never estimate or fill in missing numbers.
 Answer with one JSON object and nothing else:
 {"readable": boolean, "name": string|null, "brand": string|null, "serving_label": string|null, "serving_g": number|null,
@@ -146,6 +167,52 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
     const result = labelToFood(read.data);
     if ('error' in result) return c.json({ error: result.error }, 422);
     return c.json(result);
+  });
+
+  /**
+   * "What's this machine?": a photo of gym equipment. The model names it, says
+   * what it's for and how to set it up and use it safely, and suggests
+   * exercises; those are matched to your exercise library so you can open
+   * their how-to pictures or add them to a workout.
+   */
+  r.post('/equipment', async (c) => {
+    const ai = await aiConfigFor(db, c.get('userId'));
+    if (!ai || 'error' in ai) return c.json({ error: ai && 'error' in ai ? ai.error : 'This uses Bell: add an AI key in Settings → Bell.' }, 503);
+    if (!allowed(c.get('userId'))) return c.json({ error: 'That’s a lot of requests in a short time. Try again in a few minutes.' }, 429);
+    const parsed = labelSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Send a photo of the equipment.' }, 400);
+    let answer = '';
+    try {
+      const cfg = { apiKey: ai.apiKey, model: ai.model, baseUrl: ai.baseUrl };
+      const turns = [{ role: 'user' as const, text: 'What is this gym equipment and how do I use it?', image: parsed.data.image }];
+      const model = ai.format === 'anthropic' ? anthropic(cfg, EQUIPMENT_PROMPT, turns, []) : openai(cfg, EQUIPMENT_PROMPT, turns, []);
+      answer = (await model.step()).text;
+    } catch (e) {
+      console.error('Bell equipment:', e);
+      return c.json({ error: 'Couldn’t reach the AI service. Try again in a moment.' }, 502);
+    }
+    const read = equipmentSchema.safeParse(extractJson(answer));
+    if (!read.success) return c.json({ error: 'Bell couldn’t make sense of that photo. Try one that shows the whole machine.' }, 422);
+    const out = read.data;
+    if (!out.recognized) return c.json({ recognized: false, name: null, what: out.what ?? 'That doesn’t look like gym equipment Bell can recognise. Try another angle that shows the whole thing.', setup: [], how: [], safety: [], exercises: [] });
+    // Match the suggested exercises to the library (yours and the built-in ones), best first.
+    const list = (await internal('/api/exercises', c.get('userId'))) as { exercises: { id: string; name: string; muscle: string; equipment: string; howToRef?: string | null; pictures?: number; library?: boolean }[] };
+    const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const matched: typeof list.exercises = [];
+    for (const want of out.exercises) {
+      const w = norm(want);
+      const words = w.split(' ').filter((x) => x.length > 2);
+      const scored = list.exercises
+        .map((e) => {
+          const n = norm(e.name);
+          const hits = words.filter((x) => n.includes(x)).length;
+          return { e, score: n === w ? 100 : hits / Math.max(words.length, 1) + (e.library ? 0 : 0.05) + (e.pictures ? 0.05 : 0) };
+        })
+        .filter((x) => x.score >= 0.75 && !matched.some((m) => m.id === x.e.id))
+        .sort((a, b) => b.score - a.score);
+      if (scored[0]) matched.push(scored[0].e);
+    }
+    return c.json({ recognized: true, name: out.name, what: out.what, setup: out.setup, how: out.how, safety: out.safety, exercises: matched.slice(0, 6), suggested: out.exercises });
   });
 
   return r;

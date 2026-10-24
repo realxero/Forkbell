@@ -26,9 +26,13 @@ type Props = {
   /** everything it heard, once listening stops */
   onDone: (text: string) => void;
   onError: (message: string) => void;
+  /** bigger, accent-coloured, for the floating Ask Bell button */
+  big?: boolean;
+  /** a quick tap does this instead of hands-free listening (hold still talks) */
+  onTap?: () => void;
 };
 
-export function VoiceButton({ disabled, onHearing, onDone, onError }: Props) {
+export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }: Props) {
   const [listening, setListening] = useState(false);
   const finals = useRef<string[]>([]);
   const interim = useRef('');
@@ -94,6 +98,7 @@ export function VoiceButton({ disabled, onHearing, onDone, onError }: Props) {
 
   const pressIn = async () => {
     if (disabled) return;
+    pressedAt.current = Date.now();
     if (listening) return; // a second tap ends hands-free mode, in pressOut
     pressedAt.current = Date.now();
     const perm = await ExpoSpeechRecognitionModule.getPermissionsAsync();
@@ -110,6 +115,15 @@ export function VoiceButton({ disabled, onHearing, onDone, onError }: Props) {
       ExpoSpeechRecognitionModule.stop();
       return;
     }
+    if (Date.now() - pressedAt.current < HOLD_MS && onTap) {
+      try {
+        ExpoSpeechRecognitionModule.abort();
+      } catch {
+        /* wasn't listening yet */
+      }
+      onTap();
+      return;
+    }
     if (Date.now() - pressedAt.current < HOLD_MS) {
       handsFree.current = true; // a tap: keep listening until the next tap
       return;
@@ -122,13 +136,13 @@ export function VoiceButton({ disabled, onHearing, onDone, onError }: Props) {
       onPressIn={pressIn}
       onPressOut={pressOut}
       disabled={disabled}
-      style={[s.button, listening && s.on, disabled && { opacity: 0.4 }]}
+      style={[s.button, big && s.big, listening && s.on, disabled && { opacity: 0.4 }]}
       accessibilityRole="button"
       accessibilityLabel={listening ? 'Stop listening' : 'Talk to Bell'}
       accessibilityHint="Hold to talk and let go to finish, or tap to start and tap again to finish."
       accessibilityState={{ busy: listening }}
     >
-      <Ionicons name={listening ? 'mic' : 'mic-outline'} size={22} color={listening ? color.onAccent : color.iron} />
+      <Ionicons name={listening ? 'mic' : big ? 'chatbubble-ellipses' : 'mic-outline'} size={big ? 26 : 22} color={listening || big ? color.onAccent : color.iron} />
     </Pressable>
   );
 }
@@ -136,4 +150,5 @@ export function VoiceButton({ disabled, onHearing, onDone, onError }: Props) {
 const s = StyleSheet.create({
   button: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.chalk },
   on: { backgroundColor: color.over },
+  big: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
 });

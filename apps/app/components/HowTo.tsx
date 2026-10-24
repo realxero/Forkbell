@@ -4,13 +4,38 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { Exercise, ExerciseHowTo } from '@forkbell/shared';
+import { EFFORT_GUIDE, exerciseCues, type Exercise, type ExerciseHowTo } from '@forkbell/shared';
 import { pictureSource } from '../lib/picture-cache';
 import { cachedGet } from '../lib/sync';
 import { color, radius, space, type } from '../lib/theme';
 
 // Saved on this phone when it can be (works with no signal), otherwise from your server.
 const src = pictureSource;
+
+/** Where you should feel it, signs it's too heavy, and when to stop. */
+export function CuesCard({ exercise }: { exercise: { name: string; muscle: string } }) {
+  const c = exerciseCues(exercise);
+  return (
+    <View style={s.cues}>
+      <View style={s.cueRow}>
+        <Ionicons name="body-outline" size={18} color={color.fat} />
+        <View style={{ flex: 1 }}>
+          <Text style={type.label}>Where you should feel it</Text>
+          <Text style={type.body}>{c.feel}</Text>
+        </View>
+      </View>
+      <View style={s.cueRow}>
+        <Ionicons name="warning-outline" size={18} color={color.warnText} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={type.label}>Too heavy if</Text>
+          {c.tooHeavy.map((t) => <Text key={t} style={type.body}>• {t}</Text>)}
+        </View>
+      </View>
+      <Text style={type.small}>{EFFORT_GUIDE}</Text>
+      <Text style={[type.small, { color: color.over, fontWeight: '700' }]}>{c.stop}</Text>
+    </View>
+  );
+}
 
 /** The movement, as its start and end positions fading into each other. */
 export function HowToFrames({ images, name }: { images: string[]; name: string }) {
@@ -108,6 +133,7 @@ export function HowToSheet({ exercise, onClose }: { exercise: Exercise | null; o
             {howTo === undefined && <ActivityIndicator color={color.iron} style={{ marginVertical: space(8) }} />}
             {howTo === null && <Text style={type.body}>No steps or pictures for this one yet.</Text>}
             {howTo && exercise && <HowToCard howTo={howTo} name={exercise.name} />}
+            {howTo !== undefined && exercise && <CuesCard exercise={exercise} />}
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -116,6 +142,8 @@ export function HowToSheet({ exercise, onClose }: { exercise: Exercise | null; o
 }
 
 const s = StyleSheet.create({
+  cues: { gap: space(3), marginTop: space(4), padding: space(3), borderRadius: radius.card, backgroundColor: color.raised },
+  cueRow: { flexDirection: 'row', gap: space(2), alignItems: 'flex-start' },
   stage: { width: '100%', aspectRatio: 3 / 2, borderRadius: radius.row, overflow: 'hidden', backgroundColor: color.raised },
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   pair: { flexDirection: 'row', gap: space(2) },

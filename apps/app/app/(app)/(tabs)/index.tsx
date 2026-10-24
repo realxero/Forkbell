@@ -114,9 +114,9 @@ export default function Diary() {
           <Text style={s.arrow}>‹</Text>
         </Pressable>
         <Pressable onPress={() => { setPickDay(date); setCalendar(true); }} accessibilityLabel="Open the calendar" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Logo size={26} />
+          <Logo size={22} />
           <Text style={type.title}>{dayLabel(date)}</Text>
-          <Ionicons name="calendar-outline" size={18} color={color.accent} />
+          <Ionicons name="calendar-outline" size={20} color={color.accent} />
         </Pressable>
         <Pressable onPress={() => setDate(addDays(date, 1))} hitSlop={12} accessibilityLabel="Next day">
           <Text style={s.arrow}>›</Text>

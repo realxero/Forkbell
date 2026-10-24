@@ -1,4 +1,6 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
+import { View } from 'react-native';
+import { QuickBell } from '../../../components/QuickBell';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { Platform, type ColorValue } from 'react-native';
@@ -11,7 +13,11 @@ const icon = (on: IconName, off: IconName) =>
   };
 
 export default function TabsLayout() {
+  const path = usePathname();
+  // Ask Bell floats over Food, Train and Progress (Bell has its own chat; Settings stays clean).
+  const quickBell = !path.startsWith('/bell') && !path.startsWith('/settings');
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -34,5 +40,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="bell" options={{ title: 'Bell', tabBarIcon: icon('chatbubble-ellipses', 'chatbubble-ellipses-outline') }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: icon('settings', 'settings-outline') }} />
     </Tabs>
+    {quickBell && <QuickBell />}
+    </View>
   );
 }
