@@ -2,14 +2,16 @@
 // the words show up live so you can see it heard you. A quick tap starts
 // listening hands-free instead; tap again to finish (this is also how it
 // works with VoiceOver).
-import { useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { color } from '../lib/theme';
 import { BellAvatar } from './BellAvatar';
 
 const HOLD_MS = 350;
+// If the phone never reports that listening ended after you let go, stop waiting after this long.
+const STOP_TIMEOUT_MS = 2500;
 
 /** Whether this device or browser can turn speech into text at all. */
 export function voiceAvailable() {
@@ -57,6 +59,7 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
   const failed = useRef(false); // an error came in during this session
   const restarts = useRef(0);
   const last = useRef({ text: '', at: 0 });
+  const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heard = () => [carry.current, ...finals.current, interim.current].join(' ').replace(/\s+/g, ' ').trim();
 
   const begin = (resume = false) => {
@@ -93,6 +96,17 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
     if (phase.current === 'listening') {
       phase.current = 'stopping';
       ExpoSpeechRecognitionModule.stop();
+      // Safety net: if 'end' never arrives, finish up anyway instead of staying stuck.
+      if (stopTimer.current) clearTimeout(stopTimer.current);
+      stopTimer.current = setTimeout(() => {
+        if (phase.current !== 'stopping') return;
+        try {
+          ExpoSpeechRecognitionModule.abort();
+        } catch {
+          /* already stopped */
+        }
+        wrapUp();
+      }, STOP_TIMEOUT_MS);
     } else if (phase.current === 'starting') {
       stopWhenStarted.current = true;
     }
@@ -130,6 +144,12 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
       begin(true);
       return;
     }
+    wrapUp();
+  });
+
+  function wrapUp() {
+    if (stopTimer.current) clearTimeout(stopTimer.current);
+    stopTimer.current = null;
     const words = discard.current ? '' : heard();
     phase.current = 'idle';
     handsFree.current = false;
@@ -144,7 +164,7 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
       last.current = { text: words, at: Date.now() };
       onDone(words);
     }
-  });
+  }
   useSpeechRecognitionEvent('error', (e) => {
     if (phase.current === 'idle') return;
     if (e.error === 'aborted') return;
@@ -184,6 +204,7 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
   };
 
   const pressOut = () => {
+    if (!held.current) return; // already handled (the web backup below and the button both report it)
     held.current = false;
     if (handsFree.current) {
       finish();
@@ -210,6 +231,38 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
     finish();
   };
 
+  // Web backup: if the browser loses track of the press, still notice the finger lifting.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const up = () => {
+      if (held.current) pressOut();
+    };
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    window.addEventListener('touchend', up);
+    return () => {
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('touchend', up);
+    };
+  });
+
+  // Leaving the screen mid-listen: stop the mic rather than leave it running.
+  useEffect(
+    () => () => {
+      if (stopTimer.current) clearTimeout(stopTimer.current);
+      if (phase.current !== 'idle') {
+        discard.current = true;
+        try {
+          ExpoSpeechRecognitionModule.abort();
+        } catch {
+          /* not listening */
+        }
+      }
+    },
+    [],
+  );
+
   return (
     <Pressable
       onPressIn={pressIn}
@@ -222,7 +275,20 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
       accessibilityHint="Hold to talk and let go to finish, or tap to start and tap again to finish."
       accessibilityState={{ busy: listening }}
     >
-      {big && !listening ? <BellAvatar size={38} tint={color.onAccent} face={color.accent} /> : <Ionicons name={listening ? 'mic' : 'mic-outline'} size={big ? 26 : 22} color={listening || big ? color.onAccent : color.iron} />}
+      {/* The finger must land on the button itself, never on the picture inside it. The picture
+          changes when listening starts; if it was what you touched, the phone (and the browser)
+          lose the touch and never report you letting go. So the pictures can't be touched, and
+          both stay mounted: only one is shown at a time. */}
+      <View pointerEvents="none" style={s.face}>
+        {big && (
+          <View style={[s.layer, listening && s.hidden]}>
+            <BellAvatar size={38} tint={color.onAccent} face={color.accent} />
+          </View>
+        )}
+        <View style={[s.layer, big && !listening && s.hidden]}>
+          <Ionicons name={listening ? 'mic' : 'mic-outline'} size={big ? 26 : 22} color={listening || big ? color.onAccent : color.iron} />
+        </View>
+      </View>
     </Pressable>
   );
 }
@@ -230,6 +296,9 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
 const s = StyleSheet.create({
   button: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.chalk },
   on: { backgroundColor: color.over },
+  face: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  layer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  hidden: { opacity: 0 },
   // web only (ignored elsewhere): no text selection, callout or browser touch gestures on the button
   noSelect: { userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none', touchAction: 'none' } as object,
   big: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
