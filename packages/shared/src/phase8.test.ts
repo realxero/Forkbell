@@ -120,3 +120,21 @@ test('nutrient watch: saturated fat names the biggest part and a lighter version
   // sugar isn't watched without a limit
   assert.ok(!s.some((x) => x.key === 'sugar'));
 });
+
+test('more dishes and drinks get their own picture', () => {
+  const cases: [string, string][] = [
+    ['Lemongrass chicken banh mi', '🥖'],
+    ['Quesabirrias', '🌮'],
+    ['Horchata', '🥛'],
+    ['Passion fruit iced tea (lightly sweetened)', '🧋'],
+    ['Twirly fries', '🍟'],
+    ['Chicken burrito bowl', '🌯'],
+    ['Pork dumplings', '🥟'],
+    ['Margarita', '🍹'],
+    ['Pad thai', '🍜'],
+    ['Green tea', '🍵'],
+    ['Pita', '🫓'],
+    ['Crab cakes', '🦀'],
+  ];
+  for (const [name, want] of cases) assert.equal(foodEmoji(name), want, name);
+});
