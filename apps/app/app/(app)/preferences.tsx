@@ -119,6 +119,12 @@ export default function PreferencesScreen() {
         {sw('Ask me when it’s unsure', p.bell.askWhenUnsure, (v) => setP({ ...p, bell: { ...p.bell, askWhenUnsure: v } }))}
         <Text style={s.note}>When a portion or how something was cooked would change the calories a lot, Bell asks one quick question instead of guessing. You can always tap “Just estimate it”.</Text>
         {sw('Send voice messages when I let go', p.bell.voiceSends, (v) => setP({ ...p, bell: { ...p.bell, voiceSends: v } }))}
+        <Text style={s.label}>Bell’s personality</Text>
+        <View style={s.chips}>
+          {([['buddy', 'Gym buddy'], ['coach', 'Straight-talking coach'], ['hype', 'Hype partner'], ['calm', 'Calm and gentle']] as const).map(([k, l]) => (
+            <Chip key={k} label={l} on={(p.bell.style ?? 'buddy') === k} onPress={() => setP({ ...p, bell: { ...p.bell, style: k } })} />
+          ))}
+        </View>
         <Text style={s.label}>Read Bell’s answers aloud</Text>
         <View style={s.chips}>
           {(['voice', 'always', 'never'] as const).map((x) => (

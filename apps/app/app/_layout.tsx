@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../lib/auth';
@@ -34,7 +34,11 @@ export default function RootLayout() {
       <AuthProvider>
         {Platform.OS === 'web' && <style>{themeCss()}</style>}
         <StatusBar style={isDark(scheme) ? 'light' : 'dark'} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.chalk } }} />
+        {/* Navigation draws its own backgrounds (white by default) before a screen
+            renders; giving it Forkbell's colours stops the white flash on new tabs. */}
+        <ThemeProvider value={{ ...(isDark(scheme) ? DarkTheme : DefaultTheme), colors: { ...(isDark(scheme) ? DarkTheme : DefaultTheme).colors, background: color.chalk, card: color.card, text: color.iron, border: color.line, primary: color.accent, notification: color.over } }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.chalk } }} />
+        </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

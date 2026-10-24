@@ -7,6 +7,7 @@ import { Platform, Pressable, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { color } from '../lib/theme';
+import { BellAvatar } from './BellAvatar';
 
 const HOLD_MS = 350;
 
@@ -142,7 +143,7 @@ export function VoiceButton({ disabled, onHearing, onDone, onError, big, onTap }
       accessibilityHint="Hold to talk and let go to finish, or tap to start and tap again to finish."
       accessibilityState={{ busy: listening }}
     >
-      <Ionicons name={listening ? 'mic' : big ? 'chatbubble-ellipses' : 'mic-outline'} size={big ? 26 : 22} color={listening || big ? color.onAccent : color.iron} />
+      {big && !listening ? <BellAvatar size={38} tint={color.onAccent} face={color.accent} /> : <Ionicons name={listening ? 'mic' : 'mic-outline'} size={big ? 26 : 22} color={listening || big ? color.onAccent : color.iron} />}
     </Pressable>
   );
 }

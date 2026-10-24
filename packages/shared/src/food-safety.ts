@@ -61,8 +61,10 @@ export const preferencesSchema = z.object({
       voiceSends: z.boolean().default(true),
       /** read Bell's answers out loud: always, only after you asked by voice, or never */
       readAloud: z.enum(['always', 'voice', 'never']).default('voice'),
+      /** how Bell talks: a friendly gym buddy, a no-fluff coach, a hype partner, or calm and gentle */
+      style: z.enum(['buddy', 'coach', 'hype', 'calm']).default('buddy'),
     })
-    .default({ askWhenUnsure: true, voiceSends: true, readAloud: 'voice' }),
+    .default({ askWhenUnsure: true, voiceSends: true, readAloud: 'voice', style: 'buddy' }),
 });
 export type Preferences = z.infer<typeof preferencesSchema>;
 export const defaultPreferences = (): Preferences => preferencesSchema.parse({});

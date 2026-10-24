@@ -52,3 +52,22 @@ test('stays honest with too little to go on', () => {
   const still = squatSet([]).concat(squatSet([]));
   assert.match(analyzeForm(still, 'Back squat').summary.join(' '), /No clear reps/);
 });
+
+import { muscleStatuses, trainNext } from './muscle-map.ts';
+test('muscle map: due, on track, recovering, too much', () => {
+  const s = muscleStatuses([
+    { muscle: 'chest', sets7: 12, last: '2026-10-23' },
+    { muscle: 'back', sets7: 12, last: '2026-10-20' },
+    { muscle: 'quads', sets7: 24, last: '2026-10-21' },
+    { muscle: 'biceps', sets7: 4, last: '2026-10-19' },
+  ], '2026-10-23');
+  const by = Object.fromEntries(s.map((x) => [x.muscle, x.state]));
+  assert.equal(by.chest, 'recovering');
+  assert.equal(by.back, 'good');
+  assert.equal(by.quads, 'plenty');
+  assert.equal(by.biceps, 'some');
+  assert.equal(by.hamstrings, 'due');
+  const { next, rest } = trainNext(s);
+  assert.equal(next[0]!.sets7, 0);
+  assert.deepEqual(rest.map((x) => x.muscle).sort(), ['chest', 'quads']);
+});

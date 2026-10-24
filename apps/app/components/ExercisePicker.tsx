@@ -9,6 +9,7 @@ import { MUSCLES, picturePath, type Exercise, type ExerciseKind, type Muscle } f
 import { post } from '../lib/api';
 import { cachedGet, updateCache } from '../lib/sync';
 import { Chip } from './AmountPicker';
+import { ChipRow } from './ChipRow';
 import { color, space, type } from '../lib/theme';
 
 type Listed = Exercise & { uses: number };
@@ -109,19 +110,19 @@ export function ExercisePicker({
         ) : (
           <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
             <TextInput value={q} onChangeText={setQ} placeholder="Search exercises" style={s.input} autoCorrect={false} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space(2) }}>
+            <ChipRow>
               <Chip label="All" on={!muscle} onPress={() => setMuscle(null)} />
               {MUSCLES.map((m) => (
                 <Chip key={m} label={cap(m)} on={muscle === m} onPress={() => setMuscle(muscle === m ? null : m)} />
               ))}
-            </ScrollView>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space(2) }}>
+            </ChipRow>
+            <ChipRow>
               <Chip label="Any equipment" on={!gear} onPress={() => setGear(null)} />
               {owned.length > 0 && <Chip label="What I have" on={gear === 'mine'} onPress={() => setGear(gear === 'mine' ? null : 'mine')} />}
               {EQUIPMENT.filter((x) => x !== 'other').map((x) => (
                 <Chip key={x} label={cap(x)} on={gear === x} onPress={() => setGear(gear === x ? null : x)} />
               ))}
-            </ScrollView>
+            </ChipRow>
             {libraryCount > 0 && !words.length && (
               <Pressable onPress={() => { setFull(!full); setLimit(120); }} style={{ minHeight: 44, justifyContent: 'center' }}>
                 <Text style={s.link}>{full ? 'Just the everyday list' : `Show the full library (${libraryCount} more, with how-to pictures)`}</Text>

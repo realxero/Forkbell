@@ -9,6 +9,7 @@ import { startWorkout } from '../../../lib/actions';
 import { formatDuration, useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { YourWeek } from '../../../components/YourWeek';
+import { BodyMap } from '../../../components/BodyMap';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
 import { color, space, type } from '../../../lib/theme';
 
@@ -128,6 +129,7 @@ export default function Train() {
           finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
           onChanged={load}
         />
+        <BodyMap />
 
         {!open && (
           <View style={s.row}>

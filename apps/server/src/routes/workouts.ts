@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, users, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
 import {
+  todayLocal,
   dateSchema,
   findRecords,
   incrementKg,
@@ -26,6 +27,25 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
 
   /** Working sets per muscle between two dates, and how many workouts, for "this week" gaps. */
+  /** For the muscle map: working sets per muscle this past week, and when each was last trained. */
+  r.get('/muscle-map', async (c) => {
+    const t = dateSchema.safeParse(c.req.query('today'));
+    const today = t.success ? t.data : todayLocal();
+    const rows = (await asUser(c.get('profileId'), (tx) =>
+      tx.execute<{ muscle: string; sets7: string; last: string | null }>(sql`
+        select e.muscle,
+               count(*) filter (where w.date > ${today}::date - 7) as sets7,
+               max(w.date)::text as last
+        from workout_sets s
+        join workout_exercises we on we.id = s.workout_exercise_id
+        join workouts w on w.id = we.workout_id
+        join exercises e on e.id = we.exercise_id
+        where w.finished_at is not null and s.done and not s.warmup and w.date > ${today}::date - 60 and w.date <= ${today}::date
+        group by e.muscle`),
+    )) as unknown as { muscle: string; sets7: string; last: string | null }[];
+    return c.json({ today, muscles: rows.map((r) => ({ muscle: r.muscle, sets7: Number(r.sets7), last: r.last })) });
+  });
+
   r.get('/muscles', async (c) => {
     const from = dateSchema.safeParse(c.req.query('from'));
     const to = dateSchema.safeParse(c.req.query('to'));

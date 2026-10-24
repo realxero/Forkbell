@@ -7,6 +7,7 @@ import { api, ApiError, post } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { speak, stopSpeaking } from '../lib/speak';
 import { VoiceButton, voiceAvailable } from './VoiceButton';
+import { BellAvatar } from './BellAvatar';
 import { Proposals } from '../app/(app)/(tabs)/bell';
 import { color, radius, space, type } from '../lib/theme';
 
@@ -84,7 +85,7 @@ export function QuickBell() {
           />
         ) : (
           <Pressable onPress={() => setOpen(true)} style={s.fab} accessibilityLabel="Ask Bell">
-            <Ionicons name="chatbubble-ellipses" size={26} color={color.onAccent} />
+            <BellAvatar size={38} tint={color.onAccent} face={color.accent} />
           </Pressable>
         )}
       </View>
@@ -93,7 +94,10 @@ export function QuickBell() {
         <Pressable style={s.backdrop} onPress={() => !busy && setOpen(false)}>
           <Pressable style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
-              <Text style={type.title}>Ask Bell</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+                <BellAvatar size={30} mood={busy ? 'thinking' : hearing !== null ? 'listening' : 'happy'} />
+                <Text style={type.title}>Ask Bell</Text>
+              </View>
               <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
             </View>
             <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">

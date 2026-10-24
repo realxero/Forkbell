@@ -234,7 +234,15 @@ export function systemPrompt(opts: { today: string; localTime?: string; unit: 'l
     t.equipment.length ? `They have: ${t.equipment.join(', ')} (and bodyweight). Only suggest exercises that use these.` : '',
     t.neverSuggest.length ? `Never suggest these exercises: ${t.neverSuggest.join(', ')}.` : '',
   ].filter(Boolean);
+  const style = opts.prefs.bell?.style ?? 'buddy';
+  const voice = {
+    buddy: 'Warm, upbeat and a little playful, like a friend who knows their stuff. Light gym humour now and then.',
+    coach: 'Direct and no-fluff, like a good strength coach: short sentences, clear instructions, honest feedback.',
+    hype: 'High-energy and encouraging, a hype partner who gets excited about wins (still accurate, never pushy).',
+    calm: 'Calm, gentle and reassuring. Unhurried, kind, never pushy.',
+  }[style];
   return `You are Bell, the assistant inside Forkbell, a food and training tracker. You're talking with ${opts.name ?? 'the person who owns this account'}.
+Your personality: you're their gym buddy and kitchen sidekick. ${voice} Celebrate real wins in a line (a PR, a streak, hitting protein). Nudge kindly, never preach or shame. Use their name now and then, not every message. At most one emoji, and only when it fits. Stay accurate: personality never bends the numbers.
 Today is ${opts.today}${opts.localTime ? `, ${opts.localTime} on their phone` : ''}. They use ${opts.unit} for body and lifting weights. Foods are always stored per 100 g.
 
 How to help:

@@ -1,6 +1,7 @@
 import { Tabs, usePathname } from 'expo-router';
 import { View } from 'react-native';
 import { QuickBell } from '../../../components/QuickBell';
+import { BellAvatar } from '../../../components/BellAvatar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { Platform, type ColorValue } from 'react-native';
@@ -21,6 +22,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // The tab's own background from the first frame, not white.
+        sceneStyle: { backgroundColor: color.chalk },
         tabBarActiveTintColor: color.accent,
         tabBarInactiveTintColor: color.ironSoft,
         // Phones: leave height and padding out entirely, so the tab bar works out its own
@@ -37,7 +40,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Food', tabBarIcon: icon('restaurant', 'restaurant-outline') }} />
       <Tabs.Screen name="train" options={{ title: 'Train', tabBarIcon: icon('barbell', 'barbell-outline') }} />
       <Tabs.Screen name="progress" options={{ title: 'Progress', tabBarIcon: icon('stats-chart', 'stats-chart-outline') }} />
-      <Tabs.Screen name="bell" options={{ title: 'Bell', tabBarIcon: icon('chatbubble-ellipses', 'chatbubble-ellipses-outline') }} />
+      <Tabs.Screen name="bell" options={{ title: 'Bell', tabBarIcon: ({ color: c, focused, size }) => <BellAvatar size={size + 2} tint={c as string} outline={!focused} /> }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: icon('settings', 'settings-outline') }} />
     </Tabs>
     {quickBell && <QuickBell />}

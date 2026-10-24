@@ -14,6 +14,7 @@ import { Chip, MEAL_NAMES } from '../../../components/AmountPicker';
 import { NumberField } from '../../../components/NumberField';
 import { FoodIcon } from '../../../components/FoodIcon';
 import { VoiceButton, voiceAvailable } from '../../../components/VoiceButton';
+import { BellAvatar } from '../../../components/BellAvatar';
 import { color, space, type } from '../../../lib/theme';
 
 type Message = {
@@ -182,7 +183,10 @@ export default function Bell() {
     <SafeAreaView style={s.screen} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
         <View style={s.head}>
-          <Text style={[type.hero, { fontSize: 34 }]}>Bell</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+            <BellAvatar size={36} mood={busy ? 'thinking' : 'happy'} />
+            <Text style={[type.hero, { fontSize: 34 }]}>Bell</Text>
+          </View>
           {messages.length > 0 && (
             <Pressable onPress={() => setMessages([])} hitSlop={12} style={s.headButton}>
               <Text style={s.link}>New chat</Text>
@@ -192,9 +196,15 @@ export default function Bell() {
         <ScrollView ref={scroll} contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
           {messages.length === 0 && (
             <View style={{ gap: space(2) }}>
-              <Text style={type.body}>
-                Ask about your food, training and progress, or tell me what you ate{canTalk ? ' (hold the mic to say it)' : ''}. You check everything before it’s logged.
-              </Text>
+              <View style={s.hello}>
+                <BellAvatar size={56} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[type.body, { fontWeight: '800' }]}>Hey{me?.name ? ` ${me.name.split(' ')[0]}` : ''}! I’m Bell, your gym buddy.</Text>
+                  <Text style={type.small}>
+                    Ask me about your food, training and progress, or tell me what you ate{canTalk ? ' (hold the mic to say it)' : ''}. You check everything before it’s logged.
+                  </Text>
+                </View>
+              </View>
               {SUGGESTIONS.map((q) => (
                 <Pressable key={q} onPress={() => send(q)} style={s.suggestion}>
                   <Text style={type.body}>{q}</Text>
@@ -203,7 +213,9 @@ export default function Bell() {
             </View>
           )}
           {messages.map((m, i) => (
-            <View key={i} style={[s.bubble, m.role === 'user' ? s.mine : s.theirs]}>
+            <View key={i} style={m.role === 'user' ? undefined : s.theirRow}>
+            {m.role !== 'user' && <BellAvatar size={28} />}
+            <View style={[s.bubble, m.role === 'user' ? s.mine : s.theirs]}>
               {m.image?.startsWith('data:') && <Image source={{ uri: m.image }} style={s.photo} accessibilityLabel="Your photo" />}
               {m.image === 'photo' && <Text style={[type.small, m.role === 'user' && { color: color.chalk }]}>[photo]</Text>}
               {!!m.text && (
@@ -221,11 +233,15 @@ export default function Bell() {
               )}
               {m.question && <Question q={m.question} answered={m.answered} live={i === lastIndex && !busy} onAnswer={(a) => send(a, { answering: i })} />}
             </View>
+            </View>
           ))}
           {busy && (
-            <View style={[s.bubble, s.theirs, { flexDirection: 'row', gap: space(2), alignItems: 'center' }]}>
-              <ActivityIndicator color={color.iron} />
-              <Text style={type.small}>Bell is thinking…</Text>
+            <View style={s.theirRow}>
+              <BellAvatar size={28} mood="thinking" />
+              <View style={[s.bubble, s.theirs, { flexDirection: 'row', gap: space(2), alignItems: 'center' }]}>
+                <ActivityIndicator color={color.iron} />
+                <Text style={type.small}>Bell is thinking…</Text>
+              </View>
             </View>
           )}
           {error && <Text style={s.error}>{error}</Text>}
@@ -432,6 +448,8 @@ export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; ad
 }
 
 const s = StyleSheet.create({
+  theirRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space(2), maxWidth: '100%' },
+  hello: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingTop: space(4), maxWidth: 640, width: '100%', alignSelf: 'center' },
