@@ -39,6 +39,11 @@ export async function setToken(value: string | null) {
   else await SecureStore.deleteItemAsync('token');
 }
 
+/** For downloads that aren't JSON (exports): the same sign-in the API calls use. */
+export function authHeaders(): Record<string, string> {
+  return token ? { authorization: `Bearer ${token}` } : {};
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!serverUrl) throw new ApiError('Add your Forkbell server address first.', 0);
   let res: Response;

@@ -24,6 +24,7 @@ import { mealRoutes, recipeRoutes } from './routes/meals.ts';
 import { aiRoutes } from './routes/ai.ts';
 import { wellbeingRoutes } from './routes/wellbeing.ts';
 import { stretchRoutes } from './routes/stretches.ts';
+import { exportRoutes } from './routes/export.ts';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
@@ -88,6 +89,7 @@ api.route('/ai', aiRoutes(database));
 api.route('/recipes', recipeRoutes(database));
 api.route('/wellbeing', wellbeingRoutes(database));
 api.route('/stretches', stretchRoutes());
+api.route('/export', exportRoutes(database));
 
 // Bell reads data through the same routes as the app, as the signed-in person.
 // This copy of the API is never served; only Bell's tools call it, in-process.

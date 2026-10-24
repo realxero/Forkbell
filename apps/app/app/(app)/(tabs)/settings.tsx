@@ -43,6 +43,10 @@ export default function Settings() {
         { icon: 'people-outline', tint: '#0F8B8D', title: 'Sharing with family', detail: 'Who can see your data', href: '/sharing' },
       ],
     },
+    {
+      title: 'Your data',
+      rows: [{ icon: 'download-outline', tint: '#5B6B73', title: 'Export and backup', detail: 'Everything as JSON, diary and workouts as CSV', href: '/setting/data' }],
+    },
     ...(remindersSupported || pictureCacheSupported
       ? [{ title: 'This phone', rows: [{ icon: 'notifications-outline' as IconName, tint: '#D99A00', title: 'Reminders and offline pictures', detail: 'Notifications, saved exercise pictures', href: '/setting/phone' as Href }] }]
       : []),

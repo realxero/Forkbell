@@ -26,6 +26,32 @@ services:
       db: { condition: service_healthy }
     restart: "no"
 
+  # A nightly copy of the whole database, kept for BACKUP_KEEP_DAYS (14) days.
+  # Restore steps: docs/BACKUP.md. Copy the backups folder off this machine too.
+  backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./data/backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/forkbell-$$(date +%Y-%m-%d_%H%M).dump
+          if pg_dump -h db -U forkbell_admin -d forkbell -Fc -f "$$f.tmp"; then
+            mv "$$f.tmp" "$$f" && echo "backup: saved $$f"
+          else
+            rm -f "$$f.tmp"; echo "backup: FAILED"
+          fi
+          find /backups -name 'forkbell-*.dump' -mtime +$$KEEP_DAYS -delete
+          sleep 86400
+        done
+    depends_on:
+      db: { condition: service_healthy }
+
   server:
     build: .
     restart: unless-stopped
