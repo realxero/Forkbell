@@ -16,6 +16,7 @@ import { confirm } from '../../lib/confirm';
 import { showToast } from '../../lib/toast';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { VoiceButton, voiceAvailable } from '../../components/VoiceButton';
+import { lidarSupported } from '../../modules/forkbell-depth';
 import { color, radius, space, type } from '../../lib/theme';
 
 type Pick = Food | FoodCandidate;
@@ -88,6 +89,13 @@ export default function Weigh() {
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
           <Text style={[type.hero, { fontSize: 30 }]}>Weigh your meal</Text>
+          {lidarSupported && (
+            <Pressable onPress={() => router.push({ pathname: '/scan', params: { meal, date } })} style={s.lidar} accessibilityHint="Measures each food on the plate with the LiDAR camera">
+              <Ionicons name="scan-outline" size={20} color={color.accent} />
+              <Text style={[s.link, { flex: 1 }]}>Measure the plate with LiDAR instead</Text>
+              <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
+            </Pressable>
+          )}
 
           <View style={s.chips}>
             {MEALS.map((m) => <Chip key={m} label={MEAL_NAMES[m]} on={meal === m} onPress={() => setMeal(m)} />)}
@@ -334,5 +342,6 @@ const s = StyleSheet.create({
   secondary: { minHeight: 44, justifyContent: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), gap: space(3), height: '80%', width: '100%', maxWidth: 640, alignSelf: 'center' },
+  lidar: { flexDirection: 'row', alignItems: 'center', gap: space(2), backgroundColor: color.card, borderRadius: radius.row, padding: space(3) },
   pick: { paddingVertical: space(3), borderBottomWidth: 1, borderBottomColor: color.line },
 });

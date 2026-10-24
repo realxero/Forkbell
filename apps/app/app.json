@@ -46,7 +46,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Forkbell uses the camera to scan food barcodes.",
+          "cameraPermission": "Forkbell uses the camera to scan food barcodes, and to measure the food on your plate with LiDAR.",
           "recordAudioAndroid": false
         }
       ],

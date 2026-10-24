@@ -32,6 +32,30 @@ Answer with one JSON object and nothing else:
 - exercises: up to 6 common exercise names done on it, main one first, in plain names like "Lat pulldown", "Seated cable row", "Cable fly".
 If the photo isn't gym equipment, set recognized false and explain briefly in what.`;
 
+const PLATE_PROMPT = `You find each separate food in a photo of a meal taken from straight above, so a depth sensor can measure each one. The photo may be sideways; that's fine.
+Answer with one JSON object and nothing else:
+{"container": "plate"|"bowl"|"tray"|"other"|null, "items": [{"name": string, "box": [left, top, right, bottom], "density": number, "note": string|null}]}
+- name: the food as someone would log it ("white rice", "grilled chicken thigh", "steamed broccoli", "quesabirria taco").
+- box: a tight box around that food only, as fractions of the image width and height measured from the top-left corner, each from 0 to 1, left < right and top < bottom. Boxes of different foods should overlap as little as possible.
+- density: grams per millilitre of the food as it sits there, air gaps included. Rough guide: cooked rice 0.8, pasta 0.6, mashed potato 1.0, fries 0.4, leafy salad 0.15, chopped raw veg 0.5, steamed broccoli 0.35, meat or fish 1.0, beans or stew 1.0, bread 0.25, tortilla wrap 0.6, soup 1.0, cake 0.5.
+- note: anything that matters for calories you can see (fried, creamy sauce, cheese on top), else null.
+- Up to 8 items. Leave out the plate, cutlery, napkins, drinks in cups and packaging. A sauce gets its own item only if it's a separate pile.
+- If there's no food, items is [].`;
+
+const plateSchema = z.object({
+  container: z.enum(['plate', 'bowl', 'tray', 'other']).nullable().optional(),
+  items: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(80),
+        box: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+        density: z.number().min(0.05).max(3).catch(0.8),
+        note: z.string().max(200).nullable().optional(),
+      }),
+    )
+    .max(8),
+});
+
 const equipmentSchema = z.object({
   recognized: z.boolean(),
   name: z.string().max(120).nullable().optional(),
@@ -172,6 +196,39 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
     const result = labelToFood(read.data);
     if ('error' in result) return c.json({ error: result.error }, 422);
     return c.json(result);
+  });
+
+  /**
+   * The foods on a plate, boxed in the photo, for measuring each with the
+   * phone's LiDAR. Bell only finds and names them (and how dense they are);
+   * the phone measures their size. Nothing is saved.
+   */
+  r.post('/plate', async (c) => {
+    const ai = await aiConfigFor(db, c.get('userId'));
+    if (!ai || 'error' in ai) return c.json({ error: ai && 'error' in ai ? ai.error : 'Scanning a plate uses Bell: add an AI key in Settings → Bell.' }, 503);
+    if (!allowed(c.get('userId'))) return c.json({ error: 'That’s a lot of requests in a short time. Try again in a few minutes.' }, 429);
+    const parsed = labelSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Send a photo of the plate.' }, 400);
+    let answer = '';
+    try {
+      const cfg = { apiKey: ai.apiKey, model: ai.model, baseUrl: ai.baseUrl };
+      const turns = [{ role: 'user' as const, text: 'Find each food on this plate.', image: parsed.data.image }];
+      const model = ai.format === 'anthropic' ? anthropic(cfg, PLATE_PROMPT, turns, []) : openai(cfg, PLATE_PROMPT, turns, []);
+      answer = (await model.step()).text;
+    } catch (e) {
+      console.error('Bell plate:', e);
+      return c.json({ error: 'Couldn’t reach the AI service. Try again in a moment.' }, 502);
+    }
+    const read = plateSchema.safeParse(extractJson(answer));
+    if (!read.success) return c.json({ error: 'Bell couldn’t make sense of that photo. Try again with the whole plate in view.' }, 422);
+    const clamp = (n: number) => Math.min(1, Math.max(0, n > 1 && n <= 1000 ? n / 1000 : n)); // some models answer in thousandths
+    const items = read.data.items
+      .map((i) => {
+        const [l, t, r2, b] = i.box.map(clamp) as [number, number, number, number];
+        return { ...i, note: i.note ?? null, box: [Math.min(l, r2), Math.min(t, b), Math.max(l, r2), Math.max(t, b)] as [number, number, number, number] };
+      })
+      .filter((i) => i.box[2] - i.box[0] > 0.02 && i.box[3] - i.box[1] > 0.02);
+    return c.json({ container: read.data.container ?? null, items });
   });
 
   /**
