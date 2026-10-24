@@ -120,6 +120,9 @@ api.route('/bell', bellRoutes(database, internal));
 internalApi.route('/api/bell', bellRoutes(database, internal));
 api.route('/shortcuts', shortcutRoutes(database, internal));
 app.route('/api', api);
+// An /api path this server doesn't have (often: the app is newer than the server)
+// answers in JSON, instead of falling through to the web app's page below.
+app.all('/api/*', (c) => c.json({ error: 'Your Forkbell server doesn’t have this yet. Update the server to the same version as the app.' }, 404));
 
 app.onError((err, c) => {
   console.error(err);
