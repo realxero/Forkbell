@@ -1,0 +1,13 @@
+{
+  "name": "forkbell-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Monkey test for the Forkbell web app. Kept outside the pnpm workspace so the Docker image never installs a browser.",
+  "scripts": {
+    "monkey": "node monkey.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.64.0",
+    "postgres": "3.4.9"
+  }
+}

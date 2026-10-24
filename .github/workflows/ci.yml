@@ -28,3 +28,45 @@ jobs:
           pnpm --filter @forkbell/db rls-check
       - name: Web build
         run: cd apps/app && CI=1 npx expo export --platform web --output-dir dist
+      # Real requests against a real server: every path the app calls exists,
+      # and things that broke before stay fixed (apps/server/test).
+      - name: API regression tests
+        env:
+          WEB_DIR: ${{ github.workspace }}/apps/app/dist
+          TEST_PORT: 3998
+        run: pnpm --filter @forkbell/server test:api
+      - name: Start the server with the web app, for the monkey test
+        working-directory: apps/server
+        env:
+          PORT: 3999
+          PUBLIC_URL: http://localhost:3999
+          WEB_DIR: ${{ github.workspace }}/apps/app/dist
+          SESSION_SECRET: ci-session-secret-that-is-long-enough-0123456789
+          OIDC_ISSUER: http://localhost:1/not-used
+          OIDC_CLIENT_ID: ci
+          OIDC_CLIENT_SECRET: ci
+          PREFETCH_PICTURES: 'off'
+        run: |
+          nohup node --import tsx src/index.ts > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3999/healthz && exit 0; sleep 1; done
+          cat "$RUNNER_TEMP/server.log"; exit 1
+      # A phone-sized browser taps, types and scrolls at random on every screen (e2e/monkey.mjs).
+      - name: Monkey test
+        working-directory: e2e
+        env:
+          BASE_URL: http://localhost:3999
+          SESSION_SECRET: ci-session-secret-that-is-long-enough-0123456789
+          MONKEY_STEPS: 25
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          npm run monkey
+      - name: Keep the monkey report and the server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            e2e/monkey-report.json
+            ${{ runner.temp }}/server.log
+          if-no-files-found: ignore
