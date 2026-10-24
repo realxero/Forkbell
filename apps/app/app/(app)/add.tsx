@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { forAmount, mealForTime, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
+import { forAmount, mealForTime, type NutritionCheck, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
 import { api, ApiError, post } from '../../lib/api';
 import { pickImage } from '../../lib/images';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -16,8 +16,8 @@ import { color, space, type } from '../../lib/theme';
 
 type Pick = Food | FoodCandidate;
 type SearchResult = { mine: Food[]; results: FoodCandidate[]; errors: string[] };
-type BarcodeResult = { food?: Food; candidate?: FoodCandidate };
-type Screen = { kind: 'search' } | { kind: 'scan' } | { kind: 'amount'; food: Pick; lastGrams?: number } | { kind: 'create'; barcode?: string; note?: string; prefill?: { name: string; brand: string | null } };
+type BarcodeResult = { food?: Food; candidate?: FoodCandidate; check?: NutritionCheck | null };
+type Screen = { kind: 'search' } | { kind: 'scan' } | { kind: 'amount'; food: Pick; lastGrams?: number; check?: NutritionCheck | null } | { kind: 'create'; barcode?: string; note?: string; prefill?: { name: string; brand: string | null } };
 
 export default function AddFood() {
   const params = useLocalSearchParams<{ meal?: Meal; date?: string; scan?: string }>();
@@ -86,7 +86,7 @@ export default function AddFood() {
     try {
       const r = await api<BarcodeResult>(`/api/foods/barcode/${encodeURIComponent(code)}`);
       const food = r.food ?? r.candidate;
-      if (food) setView({ kind: 'amount', food });
+      if (food) setView({ kind: 'amount', food, check: r.check ?? null });
     } catch (e) {
       if (e instanceof ApiError && e.status === 0) {
         const known = await findByBarcodeOffline(code);
@@ -128,6 +128,13 @@ export default function AddFood() {
               }
             }}
           >
+            {view.check && (
+              // A scanned product checked against a second database.
+              <View style={[s.check, !view.check.agrees && s.checkOff]} accessibilityLiveRegion="polite">
+                <Ionicons name={view.check.agrees ? 'checkmark-circle' : 'alert-circle'} size={18} color={view.check.agrees ? color.fat : color.carbs} />
+                <Text style={[type.small, { flex: 1, color: color.iron }]}>{view.check.text}</Text>
+              </View>
+            )}
             {view.food.barcode ? (
               // Barcode data is crowd-sourced and sometimes wrong. Your corrected copy is what scans from then on.
               <Pressable
@@ -423,6 +430,8 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
 }
 
 const s = StyleSheet.create({
+  check: { flexDirection: 'row', gap: space(2), alignItems: 'flex-start', padding: space(3), borderRadius: 10, backgroundColor: color.infoBg },
+  checkOff: { backgroundColor: color.raised, borderWidth: 1, borderColor: color.carbs },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
   list: { padding: space(4), gap: space(2), paddingBottom: space(16), maxWidth: 640, width: '100%', alignSelf: 'center' },

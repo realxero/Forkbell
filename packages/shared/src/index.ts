@@ -18,3 +18,4 @@ export * from './reminders.ts';
 export * from './checkins.ts';
 export * from './patterns.ts';
 export * from './targets.ts';
+export * from './food-sources.ts';

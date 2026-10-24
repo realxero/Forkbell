@@ -192,6 +192,14 @@ Rules, not AI, so they're instant and work offline. Set them up in Settings, Foo
 
 Bell follows the same setup when it suggests exercises.
 
+## Food data and barcode checks
+
+Search covers your own foods, about a hundred built-in common foods, Open Food Facts, and USDA FoodData Central (with a free `USDA_API_KEY`). USDA brings lab-analysed basics (Foundation, SR Legacy), everyday dishes with household portions like "1 cup" (Survey, FNDDS), and branded foods.
+
+**Scanning a barcode** asks Open Food Facts and USDA at the same time. USDA's branded foods come from the manufacturer's own label data, so they win when both have the product, and the screen says whether the two agree ("Checked against Open Food Facts: the numbers match", or what differs). Anything still wrong can be fixed from a photo of the label, and your corrected copy is what scans from then on.
+
+fatsecret was considered and left out: its API terms only allow keeping food IDs, not nutrition, for more than 24 hours, and Forkbell keeps a copy of every food you log so your history and offline mode work.
+
 ## Exercise library and how-to pictures
 
 Every built-in exercise shows how to do it: the start and end positions fading back and forth so you can see the movement (side by side with Reduce Motion on), plus step-by-step instructions and the level. Tap **?** on an exercise during a workout, or see it on the exercise's page.

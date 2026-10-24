@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { and, desc, eq, gte, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { diaryEntries, foods, type connect } from '@forkbell/db';
-import { addDays, barcodeVariants, dateSchema, foodInputSchema, todayLocal, type FoodCandidate, type RecentFood, type RecentFoods } from '@forkbell/shared';
+import { addDays, barcodeVariants, chooseBarcodeMatch, crossCheck, dateSchema, foodInputSchema, todayLocal, type FoodCandidate, type RecentFood, type RecentFoods } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { searchOff, barcodeOff } from '../providers/off.ts';
-import { searchUsda } from '../providers/usda.ts';
+import { barcodeUsda, searchUsda } from '../providers/usda.ts';
 import { env } from '../env.ts';
 import { saveFood, BadFood } from './save-food.ts';
 
@@ -91,7 +91,11 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
     return c.json(body);
   });
 
-  /** Your saved foods first (including ones you created with that barcode), then Open Food Facts. */
+  /**
+   * Your saved foods first (including ones you created with that barcode). Then
+   * Open Food Facts and USDA together: USDA's branded foods come from the maker's
+   * label, so they win when both have it, and the other is used as a check.
+   */
   r.get('/barcode/:code', async (c) => {
     const codes = barcodeVariants(c.req.param('code'));
     if (!codes.length) return c.json({ error: 'That is not a barcode number.' }, 400);
@@ -100,14 +104,16 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
       tx.select().from(foods).where(and(eq(foods.ownerId, userId), inArray(foods.barcode, codes))).orderBy(desc(foods.createdAt)).limit(1),
     );
     if (mine) return c.json({ food: toFood(mine) });
-    let found: FoodCandidate | null;
-    try {
-      found = await barcodeOff(codes);
-    } catch {
-      return c.json({ error: 'Open Food Facts is not answering. Try again, or add the food yourself.', barcode: codes[0] }, 502);
+    const [off, usda] = await Promise.allSettled([barcodeOff(codes), env.usdaApiKey ? barcodeUsda(codes, env.usdaApiKey) : Promise.resolve(null)]);
+    const found = { off: off.status === 'fulfilled' ? off.value : null, usda: usda.status === 'fulfilled' ? usda.value : null };
+    const { pick, other } = chooseBarcodeMatch(found);
+    if (!pick) {
+      const down = off.status === 'rejected' && (usda.status === 'rejected' || !env.usdaApiKey);
+      return down
+        ? c.json({ error: 'The food databases aren’t answering. Try again, or add the food yourself.', barcode: codes[0] }, 502)
+        : c.json({ error: 'No product with that barcode yet. Add it as your own food and it will scan next time.', barcode: codes[0] }, 404);
     }
-    if (!found) return c.json({ error: 'No product with that barcode yet. Add it as your own food and it will scan next time.', barcode: codes[0] }, 404);
-    return c.json({ candidate: found });
+    return c.json({ candidate: { ...pick, barcode: pick.barcode ?? codes[0] }, check: crossCheck(pick, other) });
   });
 
   r.post('/', async (c) => {
