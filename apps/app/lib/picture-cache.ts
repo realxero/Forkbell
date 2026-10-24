@@ -5,7 +5,7 @@
 // The web keeps using the browser's own cache.
 import { Platform } from 'react-native';
 import { Directory, File, Paths } from 'expo-file-system';
-import { picturePaths, type Exercise } from '@forkbell/shared';
+import { picturePaths, type Exercise, type Stretch } from '@forkbell/shared';
 import { getServerUrl } from './api';
 import { cachedGet, readCache, writeCache } from './sync';
 
@@ -88,11 +88,13 @@ export function downloadPictures(paths: string[]): Promise<{ saved: number; fail
 type Listed = Exercise & { uses?: number };
 const everydayPaths = (list: Listed[]) => list.filter((e) => !e.library || (e.uses ?? 0) > 0).flatMap(picturePaths);
 const allPaths = (list: Listed[]) => list.flatMap(picturePaths);
+/** Warm-up and stretch pictures; part of the whole library. */
+const stretchPaths = async () => ((await cachedGet<{ stretches: Stretch[] }>('/api/stretches').catch(() => null))?.stretches ?? []).flatMap(picturePaths);
 
 /** What's saved on this phone, and what the full library would add. */
 export async function pictureStats() {
   const list = (await cachedGet<{ exercises: Listed[] }>('/api/exercises').catch(() => ({ exercises: [] }))).exercises;
-  const all = allPaths(list);
+  const all = [...allPaths(list), ...(await stretchPaths())];
   let saved = 0;
   let bytes = 0;
   try {
@@ -112,7 +114,7 @@ export async function pictureStats() {
 /** Download the whole library's pictures. */
 export async function downloadAllPictures() {
   const list = (await cachedGet<{ exercises: Listed[] }>('/api/exercises')).exercises;
-  return downloadPictures(allPaths(list));
+  return downloadPictures([...allPaths(list), ...(await stretchPaths())]);
 }
 
 /** Free the space; everyday pictures come back by themselves next time. */

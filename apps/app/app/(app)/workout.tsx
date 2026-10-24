@@ -61,6 +61,7 @@ export default function WorkoutScreen() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [skipWarmup, setSkipWarmup] = useState(false);
 
   const latest = useRef<Workout | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -278,6 +279,23 @@ export default function WorkoutScreen() {
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           {error && <Text style={s.error}>{error}</Text>}
           {hint && <Text style={s.hint}>{hint}</Text>}
+          {!w.finishedAt && !skipWarmup && w.exercises.length > 0 && !w.exercises.some((e) => e.sets.some((x) => x.done)) && (
+            <View style={s.warmup}>
+              <Ionicons name="flame-outline" size={22} color={color.fat} />
+              <View style={{ flex: 1, gap: space(1) }}>
+                <Text style={[type.body, { fontWeight: '700' }]}>Warm up first?</Text>
+                <Text style={type.small}>A few minutes of moving stretches for {trained(w).join(', ') || 'your whole body'}, with pictures and a timer.</Text>
+                <View style={{ flexDirection: 'row', gap: space(4) }}>
+                  <Pressable onPress={() => router.push({ pathname: '/stretches', params: { kind: 'dynamic', muscles: trained(w).join(','), start: '1' } })} style={{ minHeight: 40, justifyContent: 'center' }}>
+                    <Text style={s.link}>Start warm-up</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setSkipWarmup(true)} style={{ minHeight: 40, justifyContent: 'center' }}>
+                    <Text style={[s.link, { color: color.ironSoft }]}>Not now</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          )}
           {w.exercises.length === 0 && <Text style={[type.body, { textAlign: 'center', marginTop: space(6) }]}>Add your first exercise to get going.</Text>}
 
           {w.exercises.map((e, i) => (
@@ -624,6 +642,10 @@ function SummaryView({ w, summary }: { w: Workout; summary: Summary }) {
         ) : (
           <Text style={type.small}>No new records this time. Showing up is how they happen.</Text>
         )}
+        <Pressable onPress={() => router.replace({ pathname: '/stretches', params: { kind: 'static', muscles: trained(w).join(','), start: '1' } })} style={s.coolDown}>
+          <Ionicons name="body-outline" size={20} color={color.accent} />
+          <Text style={[s.link, { flex: 1 }]}>Cool down: stretch {trained(w).slice(0, 3).join(', ') || 'what you trained'}</Text>
+        </Pressable>
         <Pressable onPress={() => router.back()} style={s.button}>
           <Text style={s.buttonText}>Done</Text>
         </Pressable>
@@ -631,6 +653,9 @@ function SummaryView({ w, summary }: { w: Workout; summary: Summary }) {
     </SafeAreaView>
   );
 }
+
+/** The muscles a workout works, main ones first. */
+const trained = (w: Workout) => [...new Set(w.exercises.map((e) => e.exercise.muscle))].filter((m) => m !== 'full body').slice(0, 5);
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -642,6 +667,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
+  warmup: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start', backgroundColor: color.card, borderRadius: 14, padding: space(4) },
+  coolDown: { flexDirection: 'row', alignItems: 'center', gap: space(2), backgroundColor: color.card, borderRadius: 14, padding: space(4) },
   howToButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: space(1) },
   tipActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   tipButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: space(3), borderRadius: 18, borderWidth: 1, borderColor: color.line },

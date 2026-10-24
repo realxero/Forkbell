@@ -6,7 +6,9 @@
 //
 // It maps the dataset onto Forkbell's own muscles, equipment, kinds and rest
 // times, attaches pictures and steps to the built-in exercises, and adds the
-// rest as the "full library". Stretches are left out (nothing to log).
+// rest as the "full library". Stretches aren't logged, so they go in their
+// own list instead, sorted into warm-up moves, stretches to hold, and foam
+// rolling, with their pictures and steps.
 import { readFile, writeFile } from 'node:fs/promises';
 
 export const SOURCE_COMMIT = 'f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5';
@@ -101,6 +103,21 @@ const EQUIPMENT = {
 };
 const TIMED = /\b(plank|hold|wall sit|isometric)\b/i;
 
+// The dataset files these under "stretching" without saying which kind. These move
+// (circles, swings, flowing reps): warm-ups before training. Foam rolling is the
+// "-SMR" (self-myofascial release) entries. Everything else is held: after training.
+const DYNAMIC = new Set([
+  'Ankle_Circles', 'Arm_Circles', 'Cat_Stretch', 'Crossover_Reverse_Lunge', 'Dynamic_Back_Stretch', 'Dynamic_Chest_Stretch',
+  'Elbow_Circles', 'Frog_Hops', 'Front_Leg_Raises', 'Groiners', 'Hip_Circles_prone', 'Inchworm', 'Iron_Crosses_stretch',
+  'Knee_Circles', 'Pelvic_Tilt_Into_Bridge', 'Rear_Leg_Raises', 'Shoulder_Circles', 'Shoulder_Raise', 'Side_Leg_Raises',
+  'Sit_Squats', 'Split_Squats', 'Standing_Hip_Circles', 'Standing_Pelvic_Tilt', 'Torso_Rotation', 'Windmills',
+  'Worlds_Greatest_Stretch', 'Wrist_Circles',
+]);
+// Filed as stretches but really ab or back exercises; they're already in the library.
+const NOT_STRETCHES = new Set(['Lower_Back_Curl', 'Scissor_Kick', 'Stomach_Vacuum', 'Superman', 'Toe_Touchers']);
+const SIDED = /\b(switch|other side|each side|opposite side|other leg|other arm|both sides|alternate|alternating|repeat on|then the other)\b/i;
+const STRETCH_EQUIPMENT = { 'foam roll': 'foam roller', 'exercise ball': 'exercise ball', 'body only': 'none', other: 'something to hold' };
+
 const raw = JSON.parse(process.argv[2] ? await readFile(process.argv[2], 'utf8') : await (await fetch(url)).text());
 const byId = new Map(raw.map((e) => [e.id, e]));
 for (const [key, id] of Object.entries(CORE)) if (!byId.has(id)) throw new Error(`No dataset entry ${id} for ${key}`);
@@ -129,13 +146,31 @@ for (const e of raw) {
 }
 library.sort((a, b) => a.name.localeCompare(b.name));
 
+const stretches = [];
+for (const e of raw) {
+  if (e.category !== 'stretching' || NOT_STRETCHES.has(e.id) || !(e.images ?? []).length || !(e.instructions ?? []).length) continue;
+  const kind = e.id.endsWith('-SMR') || e.equipment === 'foam roll' ? 'roll' : DYNAMIC.has(e.id) ? 'dynamic' : 'static';
+  const muscles = [...new Set([...(e.primaryMuscles ?? []), ...(e.secondaryMuscles ?? [])].map((m) => MUSCLE[m]).filter(Boolean))];
+  stretches.push({
+    key: `str:${e.id}`,
+    name: clean(e.name).replace(/\s*-\s*SMR$/, ' (foam roll)'),
+    kind,
+    muscles: muscles.length ? muscles : ['full body'],
+    equipment: kind === 'roll' ? 'foam roller' : (STRETCH_EQUIPMENT[e.equipment ?? 'body only'] ?? 'something to hold'),
+    sides: SIDED.test(e.instructions.join(' ')),
+    ...howTo(e),
+  });
+}
+stretches.sort((a, b) => a.name.localeCompare(b.name));
+
 const core = Object.fromEntries(Object.entries(CORE).map(([key, id]) => [key, howTo(byId.get(id))]));
 const out = {
   source: 'Free Exercise DB by yuhonas, released into the public domain (Unlicense): https://github.com/yuhonas/free-exercise-db',
   commit: SOURCE_COMMIT,
   core,
   library,
+  stretches,
 };
 const path = new URL('../data/exercise-library.json', import.meta.url);
 await writeFile(path, JSON.stringify(out) + '\n');
-console.log(`core with how-to: ${Object.keys(core).length}, full library: ${library.length}`);
+console.log(`core with how-to: ${Object.keys(core).length}, full library: ${library.length}, stretches: ${stretches.length}`);

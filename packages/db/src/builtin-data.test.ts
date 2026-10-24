@@ -64,5 +64,19 @@ test('the full library fits Forkbell and never clashes with built-ins', async ()
     assert.ok(e.steps.length > 0 && e.images > 0, `${e.name} has steps and pictures`);
     assert.match(e.ref, /^[A-Za-z0-9_\-(),']+$/, `${e.ref} is a safe picture folder name`);
   }
-  assert.equal(howToImages.size, Object.keys(exerciseLibrary.core).length + exerciseLibrary.library.length);
+  assert.equal(howToImages.size, Object.keys(exerciseLibrary.core).length + exerciseLibrary.library.length + exerciseLibrary.stretches.length);
+});
+
+test('stretches are sorted into warm-ups, holds and foam rolling, with pictures', async () => {
+  const { exerciseLibrary } = await import('./exercise-library.ts');
+  const { MUSCLES } = await import('@forkbell/shared');
+  const s = exerciseLibrary.stretches;
+  for (const kind of ['dynamic', 'static', 'roll'] as const) assert.ok(s.filter((x) => x.kind === kind).length >= 10, `enough ${kind}`);
+  for (const x of s) {
+    assert.ok(x.key.startsWith('str:'), x.key);
+    assert.ok(x.muscles.length && x.muscles.every((m) => (MUSCLES as readonly string[]).includes(m)), `${x.name}: ${x.muscles}`);
+    assert.ok(x.steps.length > 0 && x.images > 0, `${x.name} has steps and pictures`);
+    assert.match(x.ref, /^[A-Za-z0-9_\-(),']+$/);
+  }
+  assert.equal(new Set(s.map((x) => x.key)).size, s.length);
 });

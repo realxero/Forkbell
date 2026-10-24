@@ -24,15 +24,27 @@ export interface LibraryExercise extends HowTo {
   restSeconds: number;
 }
 
+/** Warm-up moves, stretches and foam rolling. Not logged; followed with a timer. */
+export interface LibraryStretch extends HowTo {
+  key: string;
+  name: string;
+  kind: 'dynamic' | 'static' | 'roll';
+  muscles: Muscle[];
+  equipment: string;
+  sides: boolean;
+}
+
 export const exerciseLibrary = data as unknown as {
   source: string;
   commit: string;
   core: Record<string, HowTo>;
   library: LibraryExercise[];
+  stretches: LibraryStretch[];
 };
 
 /** Picture folders that exist, with how many pictures each has. Nothing else can be fetched. */
 export const howToImages: ReadonlyMap<string, number> = new Map([
   ...Object.values(exerciseLibrary.core).map((h) => [h.ref, h.images] as const),
   ...exerciseLibrary.library.map((h) => [h.ref, h.images] as const),
+  ...exerciseLibrary.stretches.map((h) => [h.ref, h.images] as const),
 ]);

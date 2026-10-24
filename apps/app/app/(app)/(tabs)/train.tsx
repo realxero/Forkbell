@@ -84,9 +84,14 @@ export default function Train() {
       >
         <View style={s.head}>
           <Text style={[type.hero, { fontSize: 34 }]}>Train</Text>
-          <Pressable onPress={() => router.push('/exercises')} hitSlop={10}>
-            <Text style={s.link}>Exercises</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: space(4) }}>
+            <Pressable onPress={() => router.push('/stretches')} hitSlop={10}>
+              <Text style={s.link}>Stretches</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/exercises')} hitSlop={10}>
+              <Text style={s.link}>Exercises</Text>
+            </Pressable>
+          </View>
         </View>
         {error && <Text style={s.error}>{error}</Text>}
         {!history && !error && <ActivityIndicator color={color.iron} />}
