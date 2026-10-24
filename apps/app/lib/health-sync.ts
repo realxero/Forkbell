@@ -3,7 +3,7 @@
 //   out: each day's calories and macros, and finished workouts
 import { addDays, todayLocal, type WorkoutSummary } from '@forkbell/shared';
 import { api } from './api';
-import { healthAvailable, healthName, healthSource, readHealth, requestHealthAccess, writeNutrition, writeWorkout } from './health';
+import { healthAvailable, healthName, healthSource, readHealth, readWeights, requestHealthAccess, writeNutrition, writeWorkout } from './health';
 import { readCache, writeCache } from './sync';
 
 export interface HealthSettings {
@@ -17,6 +17,9 @@ export interface HealthSettings {
   lastError: string | null;
   /** which set of health types we've asked for; new types are asked for once */
   permVersion?: number;
+  /** your weigh-in history (two years) has been brought in once */
+  weightHistoryImported?: boolean;
+  weightHistoryCount?: number;
 }
 
 const KEY = 'device:health';
@@ -55,6 +58,14 @@ export function syncHealth(force = false): Promise<string | null> {
       if ((s.permVersion ?? 1) < 2) {
         await requestHealthAccess();
         setHealthSettings({ permVersion: 2 });
+      }
+      if (s.readActivity && !s.weightHistoryImported) {
+        // Once: your weigh-in history (two years), so the trend and chart start with it
+        // instead of "weigh in a few more times". In batches the server accepts.
+        const history = await readWeights(addDays(today, -730), today);
+        for (let i = 0; i < history.length; i += 300)
+          await api('/api/health/import', { method: 'POST', body: JSON.stringify({ source: healthSource, days: [], weights: history.slice(i, i + 300) }) });
+        setHealthSettings({ weightHistoryImported: true, weightHistoryCount: history.length });
       }
       if (s.readActivity) {
         const data = await readHealth(addDays(today, -13), today);

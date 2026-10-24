@@ -104,14 +104,20 @@ export async function readHealth(from: string, to: string): Promise<Omit<HealthI
     /* not allowed */
   }
 
-  // Weights: the last reading of each day. Body fat comes as a fraction (0.2 = 20%).
+  return { days, weights: await readWeights(from, to) };
+}
+
+/** Weigh-ins between two dates: the last reading of each day. Body fat comes as a fraction (0.2 = 20%). */
+export async function readWeights(from: string, to: string): Promise<HealthImport['weights']> {
+  const filter = { date: { startDate: startOf(from), endDate: startOf(addDays(to, 1)) } };
   const weights = new Map<string, { date: string; weightKg: number; bodyFat: number | null }>();
   try {
-    for (const s of await queryQuantitySamples('HKQuantityTypeIdentifierBodyMass', { limit: 500, ascending: true, unit: 'kg', filter })) {
+    // Oldest first, so a later reading the same day replaces an earlier one.
+    for (const s of await queryQuantitySamples('HKQuantityTypeIdentifierBodyMass', { limit: 20000, ascending: true, unit: 'kg', filter })) {
       const date = todayLocal(new Date(s.startDate));
       if (s.quantity >= 20 && s.quantity <= 400) weights.set(date, { date, weightKg: Math.round(s.quantity * 100) / 100, bodyFat: null });
     }
-    for (const s of await queryQuantitySamples('HKQuantityTypeIdentifierBodyFatPercentage', { limit: 500, ascending: true, unit: '%', filter })) {
+    for (const s of await queryQuantitySamples('HKQuantityTypeIdentifierBodyFatPercentage', { limit: 20000, ascending: true, unit: '%', filter })) {
       const w = weights.get(todayLocal(new Date(s.startDate)));
       const pct = s.quantity <= 1 ? s.quantity * 100 : s.quantity;
       if (w && pct >= 2 && pct <= 70) w.bodyFat = Math.round(pct * 10) / 10;
@@ -119,7 +125,7 @@ export async function readHealth(from: string, to: string): Promise<Omit<HealthI
   } catch {
     /* not allowed */
   }
-  return { days, weights: [...weights.values()] };
+  return [...weights.values()];
 }
 
 /**

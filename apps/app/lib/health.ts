@@ -28,5 +28,8 @@ export async function requestHealthAccess(): Promise<boolean> {
 export async function readHealth(_from: string, _to: string): Promise<Omit<HealthImport, 'source'>> {
   return { days: [], weights: [] };
 }
+export async function readWeights(_from: string, _to: string): Promise<HealthImport['weights']> {
+  return [];
+}
 export async function writeNutrition(_days: NutritionDay[]): Promise<void> {}
 export async function writeWorkout(_w: WorkoutForHealth): Promise<void> {}

@@ -117,21 +117,41 @@ export async function readHealth(from: string, to: string): Promise<Omit<HealthI
   await minutes('SleepSession', 'sleep_min');
   await minutes('ExerciseSession', 'exercise_min');
 
+  return { days, weights: await readWeights(from, to) };
+}
+
+/** Weigh-ins between two dates: the last reading of each day, every page of them. */
+export async function readWeights(from: string, to: string): Promise<HealthImport['weights']> {
+  await init();
+  const timeRangeFilter = { operator: 'between' as const, startTime: startOf(from).toISOString(), endTime: startOf(addDays(to, 1)).toISOString() };
   const weights = new Map<string, { date: string; weightKg: number; bodyFat: number | null }>();
   try {
-    const { records } = await readRecords('Weight', { timeRangeFilter });
-    for (const r of records) {
+    let pageToken: string | undefined;
+    const weightRecords: { time: string; weight: { inKilograms: number } }[] = [];
+    do {
+      const page: { records: { time: string; weight: { inKilograms: number } }[]; pageToken?: string } = await readRecords('Weight', { timeRangeFilter, pageToken });
+      weightRecords.push(...page.records);
+      pageToken = page.pageToken || undefined;
+    } while (pageToken);
+    // Oldest first, so a later reading the same day replaces an earlier one.
+    for (const r of weightRecords.sort((a, b) => (a.time < b.time ? -1 : 1))) {
       const date = todayLocal(new Date(r.time));
       const kg = r.weight.inKilograms;
       if (kg >= 20 && kg <= 400) weights.set(date, { date, weightKg: Math.round(kg * 100) / 100, bodyFat: null });
     }
-    const fat = await readRecords('BodyFat', { timeRangeFilter });
-    for (const r of fat.records) {
-      const w = weights.get(todayLocal(new Date(r.time)));
-      if (w && r.percentage >= 2 && r.percentage <= 70) w.bodyFat = Math.round(r.percentage * 10) / 10;
-    }
-  } catch { /* not allowed */ }
-  return { days, weights: [...weights.values()] };
+    pageToken = undefined;
+    do {
+      const fat: { records: { time: string; percentage: number }[]; pageToken?: string } = await readRecords('BodyFat', { timeRangeFilter, pageToken });
+      for (const r of fat.records) {
+        const w = weights.get(todayLocal(new Date(r.time)));
+        if (w && r.percentage >= 2 && r.percentage <= 70) w.bodyFat = Math.round(r.percentage * 10) / 10;
+      }
+      pageToken = fat.pageToken || undefined;
+    } while (pageToken);
+  } catch {
+    /* not allowed */
+  }
+  return [...weights.values()];
 }
 
 /** One record per day; the same client record id with a newer version replaces it. */

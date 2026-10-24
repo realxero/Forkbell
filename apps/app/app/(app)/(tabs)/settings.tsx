@@ -393,6 +393,7 @@ function HealthSection() {
           {toggle('writeWorkouts', `Send workouts to ${healthName}`)}
           <Text style={type.small}>
             {h.lastSync ? `Last synced ${new Date(h.lastSync).toLocaleString()}.` : 'Not synced yet.'} Syncs when you open the app.
+            {h.weightHistoryImported && h.weightHistoryCount ? ` Brought in ${h.weightHistoryCount} past weigh-ins.` : ''}
             {h.lastError ? ` Last problem: ${h.lastError}` : ''}
           </Text>
           <View style={{ flexDirection: 'row', gap: space(5) }}>

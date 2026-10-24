@@ -81,6 +81,8 @@ yourself; one you typed into Forkbell is never replaced. The iOS build is
 ad-hoc signed with the HealthKit entitlement so a sideloading tool can keep it
 when it re-signs the app.
 
+The first sync after connecting (or after updating) also brings in up to two years of past weigh-ins, once, so the weight trend and chart start with your history.
+
 ## Family sharing
 
 Share with someone who has an account on the same server: pick what they can
