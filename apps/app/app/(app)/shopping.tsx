@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { shareText } from '../../lib/share';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { aisleOf, nextDays, shoppingList, todayLocal, type DiaryDay, type ShoppingItem } from '@forkbell/shared';
@@ -43,7 +44,7 @@ export default function Shopping() {
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.head}>
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-          <Pressable onPress={() => Share.share({ message: asText() })} hitSlop={12}><Text style={s.link}>Share</Text></Pressable>
+          <Pressable onPress={() => void shareText(asText())} hitSlop={12}><Text style={s.link}>Share</Text></Pressable>
         </View>
         <Text style={[type.hero, { fontSize: 30 }]}>Shopping list</Text>
         <Text style={type.small}>Everything planned or logged for today and the next 6 days, added up. Amounts are what you’ll eat, not package sizes.</Text>

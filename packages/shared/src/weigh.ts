@@ -13,14 +13,16 @@ export type WeighMode = 'tare' | 'total';
  * A reading lower than the one before is a mistake (returned as null).
  */
 export function gramsFromScale(mode: WeighMode, values: (number | null)[], start = 0): (number | null)[] {
-  if (mode === 'tare') return values.map((v) => (v !== null && v > 0 ? round1(v) : null));
-  let prev = start;
+  // Anything that isn't a real number, or rounds to nothing, counts as not weighed yet.
+  const real = (v: number | null): v is number => v !== null && Number.isFinite(v);
+  if (mode === 'tare') return values.map((v) => (real(v) && round1(v) > 0 ? round1(v) : null));
+  let prev = Number.isFinite(start) ? start : 0;
   return values.map((v) => {
-    if (v === null) return null;
-    const g = v - prev;
+    if (!real(v)) return null;
+    const g = round1(v - prev);
     if (g <= 0) return null;
     prev = v;
-    return round1(g);
+    return g;
   });
 }
 

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { shareText } from '../../lib/share';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api, del, post, put } from '../../lib/api';
@@ -110,7 +111,7 @@ export default function Sharing() {
           {code && (
             <View style={s.code}>
               <Text style={[type.hero, { fontSize: 30, letterSpacing: 2 }]}>{code}</Text>
-              <Pressable onPress={() => Share.share({ message: `Join me on Forkbell: Settings → Sharing → enter code ${code}` })}><Text style={s.link}>Send it</Text></Pressable>
+              <Pressable onPress={() => void shareText(`Join me on Forkbell: Settings → Sharing → enter code ${code}`)}><Text style={s.link}>Send it</Text></Pressable>
             </View>
           )}
           {data && data.invites.length > 0 && (
