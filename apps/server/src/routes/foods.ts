@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, desc, eq, gte, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { diaryEntries, foods, type connect } from '@forkbell/db';
-import { addDays, barcodeVariants, chooseBarcodeMatch, crossCheck, dateSchema, foodInputSchema, todayLocal, type FoodCandidate, type RecentFood, type RecentFoods } from '@forkbell/shared';
+import { addDays, barcodeVariants, chooseBarcodeMatch, crossCheck, rankResults, dateSchema, foodInputSchema, todayLocal, type FoodCandidate, type RecentFood, type RecentFoods } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { searchOff, barcodeOff } from '../providers/off.ts';
@@ -40,9 +40,11 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
     ]);
     const mine = (await minePromise).map(toFood);
     const saved = new Set(mine.map((f) => `${f.source}:${f.sourceId}`));
-    const results = outside
-      .flatMap((o) => (o.status === 'fulfilled' ? o.value : []))
-      .filter((f) => !saved.has(`${f.source}:${f.sourceId}`));
+    // Best match first, and among similar matches the more trustworthy data.
+    const results = rankResults(
+      q,
+      outside.flatMap((o) => (o.status === 'fulfilled' ? o.value : [])).filter((f) => !saved.has(`${f.source}:${f.sourceId}`)),
+    );
     const errors = outside.flatMap((o, i) => (o.status === 'rejected' ? [i === 0 ? 'Open Food Facts is not answering.' : 'USDA is not answering.'] : []));
     return c.json({ mine, results, errors });
   });

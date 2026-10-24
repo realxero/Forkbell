@@ -51,6 +51,7 @@ export function fromUsda(f: UsdaFood): FoodCandidate | null {
     servingLabel: f.householdServingFullText || null,
     barcode: f.gtinUpc && /^\d{6,14}$/.test(f.gtinUpc) ? f.gtinUpc : null,
     portions: portionsOf(f),
+    kind: f.dataType === 'Branded' ? 'label' : f.dataType?.startsWith('Survey') ? 'survey' : 'lab',
   };
 }
 

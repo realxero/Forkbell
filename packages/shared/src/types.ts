@@ -36,7 +36,16 @@ export interface Food {
   /** EAN/UPC digits, when known */
   barcode: string | null;
   portions: Portion[];
+  /** what kind of data this is, on search results (see food-sources.ts) */
+  kind?: DataKind;
 }
+
+/**
+ * How a food's numbers were made, most trustworthy first: lab analysis (USDA
+ * Foundation and SR Legacy), USDA's survey of everyday dishes, a maker's
+ * label (USDA branded foods), or community-entered (Open Food Facts).
+ */
+export type DataKind = 'lab' | 'survey' | 'label' | 'community' | 'builtin' | 'yours' | 'recipe';
 
 /** A search hit from an outside database, not saved yet. */
 export type FoodCandidate = Omit<Food, 'id'>;

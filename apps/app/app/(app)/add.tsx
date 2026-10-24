@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { forAmount, mealForTime, type NutritionCheck, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
+import { dataKind, forAmount, KIND_INFO, mealForTime, type NutritionCheck, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
 import { api, ApiError, post } from '../../lib/api';
 import { pickImage } from '../../lib/images';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -200,7 +200,12 @@ export default function AddFood() {
                 {found && found.mine.length > 0 && <Text style={s.section}>Your foods and common foods</Text>}
                 {found?.mine.map((f) => <Row key={f.id} food={f} onPress={() => setView({ kind: 'amount', food: f })} />)}
 
-                {found && found.results.length > 0 && <Text style={s.section}>Food databases</Text>}
+                {found && found.results.length > 0 && (
+                  <>
+                    <Text style={s.section}>Food databases</Text>
+                    <Text style={type.small}>Best match first; among similar ones, lab-measured and makers’ labels before community entries.</Text>
+                  </>
+                )}
                 {found?.results.map((f) => <Row key={`${f.source}:${f.sourceId}`} food={f} onPress={() => setView({ kind: 'amount', food: f })} />)}
 
                 {found && !searching && found.mine.length + found.results.length === 0 && (
@@ -264,12 +269,22 @@ function RecentList({
 function Row({ food, onPress }: { food: Pick; onPress: () => void }) {
   const serving = food.servingGrams ? forAmount(food.per100, food.servingGrams).kcal : null;
   const portion = food.portions[0];
+  // Where the numbers come from, so a lab-measured food and a community entry don't look the same.
+  const kind = KIND_INFO[dataKind(food)];
+  const trusted = kind.trust >= 1.2;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
+      accessibilityLabel={`${food.name}${food.brand ? `, ${food.brand}` : ''}. ${kind.about}`}
+    >
       <FoodIcon name={food.name} brand={food.brand} size={36} />
       <View style={{ flex: 1 }}>
         <Text style={type.body} numberOfLines={2}>{food.name}</Text>
-        {food.brand ? <Text style={type.small} numberOfLines={1}>{food.brand}</Text> : null}
+        <Text style={type.small} numberOfLines={1}>
+          {food.brand ? `${food.brand} · ` : ''}
+          <Text style={{ color: trusted ? color.fat : color.ironSoft, fontWeight: '700' }}>{trusted ? '✓ ' : ''}{kind.tag}</Text>
+        </Text>
       </View>
       <Text style={[type.small, type.number, { textAlign: 'right' }]}>
         {serving !== null

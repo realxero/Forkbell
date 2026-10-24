@@ -194,7 +194,7 @@ Bell follows the same setup when it suggests exercises.
 
 ## Food data and barcode checks
 
-Search covers your own foods, about a hundred built-in common foods, Open Food Facts, and USDA FoodData Central (with a free `USDA_API_KEY`). USDA brings lab-analysed basics (Foundation, SR Legacy), everyday dishes with household portions like "1 cup" (Survey, FNDDS), and branded foods.
+Search covers your own foods, about a hundred built-in common foods, Open Food Facts, and USDA FoodData Central (with a free `USDA_API_KEY`). Every result is tagged with where its numbers come from (**USDA lab**, **USDA** everyday dishes, **Maker's label**, **Community** for Open Food Facts, **Forkbell**, **Yours**), and results are ordered by how well they match, then by how trustworthy the data is, with repeats shown once. Open Food Facts text search uses its newer Search-a-licious service, falling back to the old search when that's busy. USDA brings lab-analysed basics (Foundation, SR Legacy), everyday dishes with household portions like "1 cup" (Survey, FNDDS), and branded foods.
 
 **Scanning a barcode** asks Open Food Facts and USDA at the same time. USDA's branded foods come from the manufacturer's own label data, so they win when both have the product, and the screen says whether the two agree ("Checked against Open Food Facts: the numbers match", or what differs). Anything still wrong can be fixed from a photo of the label, and your corrected copy is what scans from then on.
 

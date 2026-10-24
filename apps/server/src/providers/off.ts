@@ -7,7 +7,9 @@ const FIELDS = 'code,product_name,brands,nutriments,serving_quantity,serving_siz
 type OffProduct = {
   code?: string;
   product_name?: string;
-  brands?: string;
+  product_name_en?: string;
+  /** a comma-separated string from the product API, a list from Search-a-licious */
+  brands?: string | string[];
   serving_quantity?: number | string;
   serving_size?: string;
   nutriments?: Record<string, number | string | undefined>;
@@ -21,7 +23,8 @@ export function fromOff(p: OffProduct): FoodCandidate | null {
   const protein = n(nm['proteins_100g']);
   const carbs = n(nm['carbohydrates_100g']);
   const fat = n(nm['fat_100g']);
-  if (!p.product_name || !p.code || kcal === null || protein === null || carbs === null || fat === null) return null;
+  const name = (p.product_name || p.product_name_en)?.trim();
+  if (!name || !p.code || kcal === null || protein === null || carbs === null || fat === null) return null;
   const sodiumG = n(nm['sodium_100g']);
   const per100 = {
     kcal: Math.round(kcal * 10) / 10,
@@ -36,8 +39,8 @@ export function fromOff(p: OffProduct): FoodCandidate | null {
   if (per100Problems(per100).length) return null; // community data: skip clearly broken rows
   const serving = n(p.serving_quantity);
   return {
-    name: p.product_name.trim(),
-    brand: p.brands?.split(',')[0]?.trim() || null,
+    name,
+    brand: (Array.isArray(p.brands) ? p.brands[0] : p.brands?.split(',')[0])?.trim() || null,
     source: 'off',
     sourceId: p.code,
     per100,
@@ -45,10 +48,40 @@ export function fromOff(p: OffProduct): FoodCandidate | null {
     servingLabel: p.serving_size?.trim() || null,
     barcode: p.code,
     portions: [],
+    kind: 'community',
   };
 }
 
+/**
+ * Text search. Search-a-licious (search.openfoodfacts.org) is Open Food Facts'
+ * own full-text search, faster than the old one; the old one is the fallback
+ * when it's down or finds nothing.
+ */
 export async function searchOff(query: string): Promise<FoodCandidate[]> {
+  try {
+    const found = await searchOffNew(query);
+    if (found.length) return found;
+  } catch {
+    /* fall back below */
+  }
+  return searchOffLegacy(query);
+}
+
+// Lucene treats these as syntax; a food name should be plain words.
+const lucene = (s: string) => s.replace(/[+\-&|!(){}\[\]^"~*?:\\/]/g, ' ').replace(/\s+/g, ' ').trim();
+
+async function searchOffNew(query: string): Promise<FoodCandidate[]> {
+  const q = lucene(query);
+  if (!q) return [];
+  const url = new URL('https://search.openfoodfacts.org/search');
+  url.search = new URLSearchParams({ q, page_size: '24', langs: 'en', fields: `${FIELDS},product_name_en` }).toString();
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(6000) });
+  if (!res.ok) throw new Error(`Open Food Facts search answered ${res.status}`);
+  const data = (await res.json()) as { hits?: OffProduct[] };
+  return (data.hits ?? []).map(fromOff).filter((f): f is FoodCandidate => f !== null);
+}
+
+async function searchOffLegacy(query: string): Promise<FoodCandidate[]> {
   const url = new URL('https://world.openfoodfacts.org/cgi/search.pl');
   url.search = new URLSearchParams({ search_terms: query, search_simple: '1', action: 'process', json: '1', page_size: '20', fields: FIELDS }).toString();
   const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
