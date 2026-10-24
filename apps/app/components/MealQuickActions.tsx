@@ -170,7 +170,7 @@ function PhotoLog({ date, meal, onClose, onAdded }: { date: string; meal: Meal; 
           )}
           {error && <Text style={{ color: color.over }}>{error}</Text>}
           {error?.includes('Settings') && (
-            <Pressable onPress={() => { onClose(); router.push('/settings'); }}><Text style={{ color: color.accent, fontWeight: '700' }}>Open Settings ›</Text></Pressable>
+            <Pressable onPress={() => { onClose(); router.push('/setting/bell'); }}><Text style={{ color: color.accent, fontWeight: '700' }}>Open Settings ›</Text></Pressable>
           )}
         </ScrollView>
       </View>

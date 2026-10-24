@@ -167,7 +167,7 @@ export default function Bell() {
             Bell is Forkbell’s assistant: ask about your own data, log food by describing it or snapping a photo, and review everything before it’s added.
           </Text>
           <Text style={type.small}>{status.error ?? 'Add an AI key to turn it on. Google Gemini, Anthropic and OpenAI all work; Gemini has a free tier.'}</Text>
-          <Pressable onPress={() => router.push('/settings')} style={{ backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' }}>
+          <Pressable onPress={() => router.push('/setting/bell')} style={{ backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' }}>
             <Text style={{ color: color.onAccent, fontWeight: '700', fontSize: 16 }}>Add a key in Settings</Text>
           </Pressable>
         </View>

@@ -119,10 +119,11 @@ export default function Onboarding() {
   return (
     <SafeAreaView style={s.screen}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* Back and Skip sit in equal-width slots, so the progress dashes stay centred. */}
         <View style={s.top}>
-          {index > 0 ? <Pressable onPress={back} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable> : <View />}
+          <View style={s.side}>{index > 0 && <Pressable onPress={back} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>}</View>
           <View style={s.dots}>{STEPS.slice(1).map((x, i) => <View key={x} style={[s.dot, i < index && { backgroundColor: color.accent }]} />)}</View>
-          <Pressable onPress={() => finish(true)} hitSlop={12}><Text style={[s.link, { color: color.ironSoft }]}>Skip</Text></Pressable>
+          <View style={[s.side, { alignItems: 'flex-end' }]}><Pressable onPress={() => finish(true)} hitSlop={12}><Text style={[s.link, { color: color.ironSoft }]}>Skip</Text></Pressable></View>
         </View>
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           {step === 'welcome' && (
@@ -277,7 +278,8 @@ function Macro({ label, value, tint }: { label: string; value: number; tint: str
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space(4), paddingVertical: space(3) },
-  dots: { flexDirection: 'row', gap: 6 },
+  side: { width: 72 },
+  dots: { flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 6 },
   dot: { width: 22, height: 5, borderRadius: 3, backgroundColor: color.track },
   link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   content: { padding: space(4), paddingBottom: space(10), gap: space(3), maxWidth: 560, width: '100%', alignSelf: 'center' },
