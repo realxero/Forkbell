@@ -20,3 +20,4 @@ export * from './patterns.ts';
 export * from './targets.ts';
 export * from './food-sources.ts';
 export * from './cues.ts';
+export * from './form.ts';

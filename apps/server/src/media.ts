@@ -14,6 +14,32 @@ const dir = process.env.MEDIA_DIR || path.join(tmpdir(), 'forkbell-media');
 const upstream = (ref: string, n: number) =>
   `https://raw.githubusercontent.com/yuhonas/free-exercise-db/${exerciseLibrary.commit}/exercises/${encodeURIComponent(ref)}/${n}.jpg`;
 
+/** MediaPipe's pose model for Form check, pinned to one version, kept like the pictures. */
+const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+let poseJob: Promise<Buffer | null> | null = null;
+async function poseModel(): Promise<Buffer | null> {
+  const file = path.join(dir, 'pose_landmarker_lite.task');
+  try {
+    return await readFile(file);
+  } catch {
+    /* not kept yet */
+  }
+  poseJob ??= (async () => {
+    const res = await fetch(POSE_MODEL, { signal: AbortSignal.timeout(60_000) });
+    if (!res.ok) return null;
+    const body = Buffer.from(await res.arrayBuffer());
+    if (body.length < 1_000_000 || body.length > 50_000_000) return null;
+    await mkdir(dir, { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    await writeFile(tmp, body);
+    await rename(tmp, file);
+    return body;
+  })().finally(() => {
+    poseJob = null;
+  });
+  return poseJob;
+}
+
 /** In-flight downloads, so ten people opening the same exercise make one request. */
 const pending = new Map<string, Promise<Buffer | null>>();
 
@@ -76,6 +102,14 @@ export async function prefetchPictures() {
 
 export function mediaRoutes() {
   const r = new Hono();
+  // Form check's pose model (Apache 2.0, from Google). Fetched once and kept.
+  r.get('/pose-model', async (c) => {
+    const body = await poseModel().catch(() => null);
+    if (!body) return c.json({ error: 'Couldn’t fetch the pose model right now. Try again in a minute.' }, 502);
+    c.header('content-type', 'application/octet-stream');
+    c.header('cache-control', 'public, max-age=31536000, immutable');
+    return c.body(new Uint8Array(body));
+  });
   // Public on purpose: these are public-domain pictures, and phones load them like any image.
   r.get('/exercise/:ref/:file', async (c) => {
     const ref = c.req.param('ref');

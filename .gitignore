@@ -7,3 +7,7 @@ android/
 .env
 *.log
 .DS_Store
+
+# Built by apps/app/scripts/build-form.mjs
+apps/app/public/form/form.js
+apps/app/public/form/wasm/

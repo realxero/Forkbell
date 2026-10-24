@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>Form check · Forkbell</title>
+<style>
+  :root { --bg:#F4F5F2; --card:#fff; --ink:#1C252B; --soft:#5F6B73; --line:#DDE2E4; --accent:#2B6BD6; --good:#2E9E62; --bad:#D2423A; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0E1215; --card:#171C20; --ink:#E9EDEF; --soft:#9BA7AE; --line:#283036; --accent:#5C9BFF; --good:#4CC38A; --bad:#FF6B61; } }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin:0; font: 16px/1.4 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); padding: env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 22px; margin: 12px 0 4px; }
+  .small { color: var(--soft); font-size: 13px; }
+  .stage { position: relative; width: 100%; aspect-ratio: 3/4; max-height: 60vh; background: #000; border-radius: 16px; overflow: hidden; margin: 12px 0; }
+  video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button, label.btn { flex: 1; min-height: 48px; border: 0; border-radius: 12px; font: 700 16px system-ui, sans-serif; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0 12px; cursor: pointer; }
+  button.secondary, label.btn { background: var(--card); color: var(--accent); border: 1px solid var(--line); }
+  button.stop { background: var(--bad); }
+  button:disabled { opacity: .45; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-top: 12px; }
+  .big { font-size: 40px; font-weight: 900; }
+  .live { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.55); color: #fff; border-radius: 999px; padding: 4px 12px; font-weight: 800; }
+  ul { margin: 6px 0 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+</style>
+</head>
+<body>
+  <h1 id="title">Form check</h1>
+  <div class="small" id="tip">Prop your phone up side-on, about 3 m away, with your whole body in view. Everything stays on this phone.</div>
+  <div class="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="live" id="live" hidden>0 reps</div>
+  </div>
+  <div class="row">
+    <button id="camera">Use the camera</button>
+    <label class="btn" for="file">Choose a video</label>
+    <input type="file" id="file" accept="video/*" hidden />
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button id="flip" class="secondary" hidden>Switch camera</button>
+    <button id="stop" class="stop" hidden>Finish set</button>
+  </div>
+  <div class="small" id="status" style="margin-top:8px">Loading the pose model…</div>
+  <div class="card" id="result" hidden></div>
+  <script type="module" src="./form.js"></script>
+</body>
+</html>

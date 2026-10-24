@@ -12,6 +12,8 @@ import { formatDuration, useUnit } from '../../lib/units';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SwapSheet } from '../../components/SwapSheet';
+import { showToast } from '../../lib/toast';
+import { FormCheck } from '../../components/FormCheck';
 import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
@@ -48,6 +50,8 @@ export default function WorkoutScreen() {
   const [swapSheet, setSwapSheet] = useState<number | null>(null);
   /** "How to do it" for this exercise, over the workout */
   const [howToFor, setHowToFor] = useState<Exercise | null>(null);
+  /** which exercise card is being filmed for a form check */
+  const [formFor, setFormFor] = useState<number | null>(null);
   const training = useTrainingSetup();
   const [menu, setMenu] = useState<number | null>(null);
   const [restEnd, setRestEnd] = useState<number | null>(null);
@@ -291,6 +295,10 @@ export default function WorkoutScreen() {
                 setMenu(null);
                 setSwapSheet(i);
               }}
+              onFormCheck={() => {
+                setMenu(null);
+                setFormFor(i);
+              }}
               onHideTips={async () => {
                 // Pain notes keep showing; the rest stop for this exercise, everywhere.
                 updateExercise(i, (x) => ({ ...x, tips: x.tips?.filter((t) => t.kind === 'pain') }));
@@ -323,6 +331,21 @@ export default function WorkoutScreen() {
         )}
       </KeyboardAvoidingView>
       <HowToSheet exercise={howToFor} onClose={() => setHowToFor(null)} />
+      <FormCheck
+        exercise={formFor !== null ? (w.exercises[formFor]?.exercise.name ?? null) : null}
+        onClose={() => setFormFor(null)}
+        onResult={(r) => {
+          // Fill the reps into the next set that isn't ticked yet (you still tick it yourself).
+          const i = formFor;
+          if (i === null || !r.reps) return;
+          updateExercise(i, (x) => {
+            const k = x.sets.findIndex((st) => !st.done && !st.warmup);
+            if (k < 0) return x;
+            return { ...x, sets: x.sets.map((st, j) => (j === k ? { ...st, reps: r.reps } : st)) };
+          });
+          showToast(`Form check: ${r.summary[0] ?? `${r.reps} reps`}`);
+        }}
+      />
       <SwapSheet
         target={swapSheet !== null ? (w.exercises[swapSheet]?.exercise ?? null) : null}
         onPick={(ex) => {
@@ -366,6 +389,7 @@ function ExerciseCard(props: {
   onMove: (by: number) => void;
   onRemove: () => void;
   onSwap: () => void;
+  onFormCheck: () => void;
   onHowTo: () => void;
   onHideTips: () => void;
   onPain: (pain: boolean, note: string | null) => void;
@@ -401,6 +425,7 @@ function ExerciseCard(props: {
           <Pressable onPress={() => props.onRest(15)}><Text style={s.menuItem}>Rest +15 s</Text></Pressable>
           <Pressable onPress={() => props.onMove(-1)}><Text style={s.menuItem}>Move up</Text></Pressable>
           <Pressable onPress={() => props.onMove(1)}><Text style={s.menuItem}>Move down</Text></Pressable>
+          <Pressable onPress={props.onFormCheck}><Text style={s.menuItem}>Check my form (camera)</Text></Pressable>
           <Pressable onPress={props.onSwap}><Text style={s.menuItem}>Swap for a similar exercise</Text></Pressable>
           <Pressable onPress={() => props.onPain(!e.pain, e.pain ? null : e.painNote ?? null)}>
             <Text style={[s.menuItem, { color: color.over }]}>{e.pain ? 'Clear pain flag' : 'Flag pain or discomfort'}</Text>

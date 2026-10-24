@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.pathname === '/sw-assets.json') return;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.pathname.startsWith('/form/') || url.pathname === '/sw-assets.json') return;
 
   if (req.mode === 'navigate') {
     // The page itself: fresh when online, the saved copy when not.

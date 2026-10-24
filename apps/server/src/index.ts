@@ -120,7 +120,9 @@ if (env.webDir) {
   // Every file of the web app, so the service worker can keep all of it for offline use.
   const assets = (await readdir(root, { recursive: true, withFileTypes: true }))
     .filter((f) => f.isFile() && !f.name.endsWith('.map') && f.name !== 'sw.js')
-    .map((f) => '/' + path.relative(root, path.join(f.parentPath, f.name)).split(path.sep).join('/'));
+    .map((f) => '/' + path.relative(root, path.join(f.parentPath, f.name)).split(path.sep).join('/'))
+    // The Form check page (with ~20 MB of pose model code) loads only when you use it.
+    .filter((p) => !p.startsWith('/form/'));
   app.get('/sw-assets.json', (c) => {
     c.header('cache-control', 'no-store');
     return c.json(assets);
