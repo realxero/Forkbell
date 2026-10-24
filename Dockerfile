@@ -10,6 +10,8 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @forkbell/server build
 RUN pnpm --filter @forkbell/app build:form
 RUN cd apps/app && CI=1 npx expo export --platform web --output-dir /out/web
+# Same for the exported web app (public/form keeps its host permissions): the runtime user must be able to read every folder.
+RUN chmod -R a+rX /out/web
 
 FROM node:22-bookworm-slim
 WORKDIR /app
