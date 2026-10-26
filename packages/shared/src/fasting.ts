@@ -1,6 +1,6 @@
 // Fasting: a timer from your last meal toward a goal in hours, and a streak of
 // fasts that reached their goal. Optional, and off until you turn it on.
-import { addDays } from './dates.ts';
+import { addDays, instant } from './dates.ts';
 
 export const FAST_PRESETS = [12, 14, 16, 18, 20, 24] as const;
 
@@ -29,8 +29,8 @@ export interface FastProgress {
 }
 
 export function fastProgress(f: Pick<Fast, 'startedAt' | 'endedAt' | 'targetHours'>, now = Date.now()): FastProgress {
-  const end = f.endedAt ? Date.parse(f.endedAt) : now;
-  const hours = Math.max(0, end - Date.parse(f.startedAt)) / 3_600_000;
+  const end = f.endedAt ? instant(f.endedAt) : now;
+  const hours = Math.max(0, end - instant(f.startedAt)) / 3_600_000;
   return { hours, fraction: Math.min(1, hours / f.targetHours), done: hours >= f.targetHours - 1e-6, remainingMinutes: Math.max(0, Math.ceil((f.targetHours - hours) * 60)) };
 }
 
@@ -39,7 +39,7 @@ export const hoursText = (hours: number) => `${Math.floor(hours)}h ${String(Math
 
 /** The local day an instant falls on, in this device's (or server's) time zone. */
 const localDay = (iso: string, offsetMinutes?: number) => {
-  const t = new Date(Date.parse(iso) - (offsetMinutes ?? new Date(iso).getTimezoneOffset()) * 60_000);
+  const t = new Date(instant(iso) - (offsetMinutes ?? new Date(iso).getTimezoneOffset()) * 60_000);
   return t.toISOString().slice(0, 10);
 };
 

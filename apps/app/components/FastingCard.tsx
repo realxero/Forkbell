@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { FAST_PRESETS, fastProgress, hoursText, todayLocal, type Fasts } from '@forkbell/shared';
+import { FAST_PRESETS, instant, fastProgress, hoursText, todayLocal, type Fasts } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { cachedGet, readCache } from '../lib/sync';
 import { endFast, removeFast, startFast } from '../lib/actions';
@@ -94,7 +94,7 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
         </View>
         <Text style={type.small}>
           {p.done ? `Goal of ${f.open.targetHours} hours reached.` : `${hoursText(p.remainingMinutes / 60)} to go of ${f.open.targetHours} hours.`} Started{' '}
-          {new Date(f.open.startedAt).toLocaleTimeString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.
+          {new Date(instant(f.open.startedAt)).toLocaleTimeString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}.
         </Text>
         {!readOnly && (
           <View style={s.row}>

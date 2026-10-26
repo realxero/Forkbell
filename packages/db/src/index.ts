@@ -11,9 +11,17 @@ export const withRequestUser = <T>(userId: string, fn: () => T) => requestUser.r
 export { schema };
 export * from './schema.ts';
 
+/** "2026-10-21 00:10:00.123456+00" → "2026-10-21T00:10:00.123+00:00" (milliseconds, like JavaScript). */
+export const isoTimestamp = (v: string) => v.replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1').replace(/([+-]\d\d)$/, '$1:00');
+
 export function connect(url: string) {
   const client = postgres(url, { max: 10 });
   const db = drizzle(client, { schema });
+  // Times with a time zone come out of Postgres as "2026-10-21 00:10:00+00".
+  // Phones (Hermes) can't read that, so a workout's clock showed NaN:NaN and
+  // times sent back were refused. Send them on as ISO 8601 instead:
+  // "2026-10-21T00:10:00+00:00", which every JavaScript engine reads.
+  client.options.parsers[1184] = isoTimestamp;
 
   /**
    * Run fn inside a transaction where Postgres knows who the user is. Every

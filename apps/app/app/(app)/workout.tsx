@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { afterSet, bigJump, recoveredAt, restAdvice, restCue, setFeedback, cardioKcal, distanceText, durationText, fromDistanceUnit, paceText, parseDuration, toDistanceUnit, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { afterSet, bigJump, instant, recoveredAt, restAdvice, restCue, setFeedback, cardioKcal, distanceText, durationText, fromDistanceUnit, paceText, parseDuration, toDistanceUnit, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet } from '../../lib/sync';
@@ -173,11 +173,27 @@ export default function WorkoutScreen() {
   const awake = Boolean(w && !w.finishedAt) && me?.preferences.keepAwake !== false;
   useEffect(() => {
     if (!awake) return;
-    activateKeepAwakeAsync('workout').catch(() => {});
+    // Only let go of a wake lock that was really taken: on the web it can be refused
+    // (a hidden tab, an older browser), and letting go of one never taken throws.
+    let held = false;
+    let live = true;
+    activateKeepAwakeAsync('workout').then(
+      () => {
+        held = true;
+        if (!live) release();
+      },
+      () => {},
+    );
+    const release = () => {
+      if (!held) return;
+      held = false;
+      Promise.resolve()
+        .then(() => deactivateKeepAwake('workout'))
+        .catch(() => {});
+    };
     return () => {
-      try {
-        deactivateKeepAwake('workout');
-      } catch {}
+      live = false;
+      release();
     };
   }, [awake]);
 
@@ -442,7 +458,7 @@ export default function WorkoutScreen() {
       </SafeAreaView>
     );
 
-  const elapsed = Math.max(0, Math.floor(((w.finishedAt ? Date.parse(w.finishedAt) : now) - Date.parse(w.startedAt)) / 1000));
+  const elapsed = Math.max(0, Math.floor(((w.finishedAt ? instant(w.finishedAt) : now) - instant(w.startedAt)) / 1000)) || 0;
 
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>

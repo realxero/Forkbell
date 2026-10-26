@@ -24,6 +24,8 @@ import {
   fastProgress,
   fastStreak,
   todayLocal,
+  instant,
+  toIso,
 } from '@forkbell/shared';
 import { cachedGet, cachedPaths, newId, readCache, send, updateCache, writeCache } from './sync';
 import { post } from './api';
@@ -181,7 +183,7 @@ export async function saveWorkout(w: Workout) {
       date: w.date,
       notes: w.notes,
       // A finished workout can have its times fixed; one that's going keeps the clock running.
-      ...(w.finishedAt ? { startedAt: w.startedAt, finishedAt: w.finishedAt } : {}),
+      ...(w.finishedAt ? { startedAt: toIso(w.startedAt), finishedAt: toIso(w.finishedAt) } : {}),
       exercises: w.exercises.map((e) => ({ exerciseId: e.exercise.id, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, sets: e.sets, pain: e.pain ?? false, painNote: e.painNote ?? null, superset: e.superset ?? null })),
     },
     { label: `Save ${w.name}`, coalesceKey: `workout:${w.id}` },
@@ -206,7 +208,7 @@ export async function finishWorkout(w: Workout): Promise<{ discarded: boolean; s
   writeCache(`/api/workouts/${w.id}`, { workout: finished });
   const sets = kept.flatMap((e) => e.sets).filter((s) => !s.warmup);
   const summary: FinishSummary = {
-    durationSeconds: Math.round((Date.parse(finishedAt) - Date.parse(w.startedAt)) / 1000),
+    durationSeconds: Math.round((instant(finishedAt) - instant(w.startedAt)) / 1000),
     sets: sets.length,
     volumeKg: Math.round(sets.reduce((v, s) => v + setVolumeKg(s), 0)),
     records: [],

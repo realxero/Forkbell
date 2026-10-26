@@ -18,3 +18,21 @@ export function mealForTime(now = new Date()): 'breakfast' | 'lunch' | 'dinner' 
   if (h < 21) return 'dinner';
   return 'snacks';
 }
+
+/**
+ * Milliseconds for a time from the server or the phone, whether ISO 8601
+ * ("2026-10-21T00:10:00Z") or how older servers sent it ("2026-10-21
+ * 00:10:00+00", which iPhones can't read on their own). NaN if neither.
+ */
+export function instant(t: string | null | undefined): number {
+  if (!t) return NaN;
+  const direct = Date.parse(t);
+  if (!Number.isNaN(direct) && t.includes('T')) return direct;
+  return Date.parse(t.replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1').replace(/([+-]\d\d)$/, '$1:00'));
+}
+
+/** The same time as ISO 8601, for sending back. */
+export const toIso = (t: string) => {
+  const ms = instant(t);
+  return Number.isNaN(ms) ? t : new Date(ms).toISOString();
+};

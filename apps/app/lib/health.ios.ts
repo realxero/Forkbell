@@ -10,7 +10,7 @@ import {
   saveWorkoutSample,
   WorkoutActivityType,
 } from '@kingstinct/react-native-healthkit';
-import { addDays, todayLocal, type HealthImport, type HealthKind, type HealthSource } from '@forkbell/shared';
+import { addDays, todayLocal, type HealthImport, type HealthKind, type HealthSource, instant } from '@forkbell/shared';
 import type { NutritionDay, WorkoutForHealth } from './health';
 
 export type { NutritionDay, WorkoutForHealth } from './health';
@@ -155,7 +155,7 @@ export async function writeNutrition(days: NutritionDay[]) {
 }
 
 export async function writeWorkout(w: WorkoutForHealth) {
-  await saveWorkoutSample(WorkoutActivityType.traditionalStrengthTraining, [], new Date(w.startedAt), new Date(w.finishedAt), undefined, {
+  await saveWorkoutSample(WorkoutActivityType.traditionalStrengthTraining, [], new Date(instant(w.startedAt)), new Date(instant(w.finishedAt)), undefined, {
     HKMetadataKeySyncIdentifier: `forkbell:workout:${w.id}`,
     HKMetadataKeySyncVersion: 1,
   });

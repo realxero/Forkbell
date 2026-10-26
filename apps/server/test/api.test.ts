@@ -402,3 +402,12 @@ test('importing workouts from another app: preview, then once only, matching nam
   assert.equal(again.body.workouts, 0);
   assert.equal(again.body.skipped, 2, 'the same file twice adds nothing');
 });
+
+test('times come back as ISO 8601, which phones can read', async () => {
+  const u = await newUser();
+  const w = (await u.call('POST', '/api/workouts', { date: '2026-10-25' })).body.workout;
+  assert.match(w.startedAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?[+-]\d{2}:\d{2}$/, w.startedAt);
+  const fast = await u.call('POST', '/api/wellbeing/fasts', { targetHours: 16 });
+  assert.equal(fast.status, 201);
+  assert.match((await u.call('GET', '/api/wellbeing/fasts')).body.open.startedAt, /T.*[+-]\d{2}:\d{2}$/);
+});

@@ -3,7 +3,7 @@
 // as it now stands, so moving a workout moves its records with it.
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { addDays, formatClock, parseClock, todayLocal } from '@forkbell/shared';
+import { addDays, formatClock, instant, parseClock, todayLocal } from '@forkbell/shared';
 import { CalendarSheet } from './Calendar';
 import { color, radius, space, type } from '../lib/theme';
 
@@ -13,8 +13,6 @@ export const atLocal = (date: string, hhmm: string) => {
   const [h, min] = hhmm.split(':').map(Number) as [number, number];
   return new Date(y, m - 1, d, h, min).toISOString();
 };
-/** Postgres can send "2026-10-21 00:10:00+00"; make it something every phone's Date reads. */
-export const instant = (t: string) => Date.parse(t.includes('T') ? t : t.replace(' ', 'T').replace(/([+-]\d\d)$/, '$1:00'));
 const clockOf = (iso: string) => {
   const t = new Date(instant(iso));
   return `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, todayLocal, weekStart, weeklyGaps, type Program, type Workout, type WorkoutSummary } from '@forkbell/shared';
+import { addDays, todayLocal, weekStart, weeklyGaps, type Program, type Workout, type WorkoutSummary, instant } from '@forkbell/shared';
 import { ApiError } from '../../../lib/api';
 import { cachedGet } from '../../../lib/sync';
 import { startWorkout } from '../../../lib/actions';
@@ -107,7 +107,7 @@ export default function Train() {
 
         {open ? (
           <Pressable onPress={() => router.push({ pathname: '/workout', params: { id: open.id } })} style={[s.card, s.live]}>
-            <Text style={[type.small, { color: color.chalk }]}>In progress · {formatDuration((Date.now() - Date.parse(open.startedAt)) / 1000)}</Text>
+            <Text style={[type.small, { color: color.chalk }]}>In progress · {formatDuration((Date.now() - instant(open.startedAt)) / 1000)}</Text>
             <Text style={[type.title, { color: color.chalk }]}>{open.name}</Text>
             <Text style={[s.buttonText, { marginTop: space(2) }]}>Resume workout ›</Text>
           </Pressable>
@@ -174,7 +174,7 @@ export default function Train() {
               <Text style={type.body}>{w.name}</Text>
               <Text style={type.small}>
                 {dayName(w.date)} · {w.sets} {w.sets === 1 ? 'set' : 'sets'}{w.volumeKg ? ` · ${units.label(w.volumeKg)}` : ''}
-                {w.finishedAt ? ` · ${formatDuration((Date.parse(w.finishedAt) - Date.parse(w.startedAt)) / 1000)}` : ''}
+                {w.finishedAt ? ` · ${formatDuration((instant(w.finishedAt) - instant(w.startedAt)) / 1000)}` : ''}
               </Text>
             </View>
             <Text style={type.small}>›</Text>

@@ -5,7 +5,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { router, type Href } from 'expo-router';
-import { planMedReminders, planReminders, reminderText, todayLocal, usualFinishTime, usualMealTimes, type DiaryDay, type Meal, type MedForReminders } from '@forkbell/shared';
+import { planMedReminders, planReminders, reminderText, todayLocal, usualFinishTime, usualMealTimes, type DiaryDay, type Meal, type MedForReminders, instant } from '@forkbell/shared';
 import { cachedGet, readCache, send, writeCache } from './sync';
 import { getViewing } from './profile';
 import { showToast } from './toast';
@@ -196,7 +196,7 @@ export async function scheduleFastAlert(f: { startedAt: string; endedAt: string 
   if (!remindersSupported) return;
   await Notifications.cancelScheduledNotificationAsync(FAST_ID).catch(() => {});
   if (!f || f.endedAt) return;
-  const seconds = Math.round((Date.parse(f.startedAt) + f.targetHours * 3_600_000 - Date.now()) / 1000);
+  const seconds = Math.round((instant(f.startedAt) + f.targetHours * 3_600_000 - Date.now()) / 1000);
   if (seconds < 5) return;
   const perm = await Notifications.getPermissionsAsync().catch(() => null);
   if (!perm?.granted) {
