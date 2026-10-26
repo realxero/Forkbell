@@ -26,6 +26,10 @@ Since then (0.11): password sign-in alongside Authelia or instead of it,
 sign-up codes, a list of your sign-ins with sign-out, and version markers in the
 app, the server and every build.
 
+0.12: the quick Bell keeps the conversation, Bell's faces and reactions,
+streak celebrations, exercise variations and ways to progress besides weight,
+and a better voice for Bell (the phone's best voice, or Kokoro on your server).
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
