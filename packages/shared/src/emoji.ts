@@ -43,7 +43,7 @@ const RULES: [RegExp, string][] = [
   [/\b(fried chicken|chicken tenders?|nuggets?|chicken strips?|popcorn chicken)\b/i, '🍗'],
   [/\b(ribs|brisket|barbecue|bbq|pulled pork)\b/i, '🍖'],
   [/\b(meatballs?|meatloaf)\b/i, '🧆'],
-  [/\b(mac and cheese|mac ?n ?cheese)\b/i, '🧀'],
+  [/\b(mac and cheese|mac ?n ?cheese|mac bites|mac & cheese|cheese bites)\b/i, '🧀'],
   [/\b(fried egg|scrambled eggs?|eggs benedict|frittata)\b/i, '🍳'],
   [/\b(pretzels?)\b/i, '🥨'],
   [/\b(pie|tart|cobbler)\b/i, '🥧'],
@@ -51,7 +51,8 @@ const RULES: [RegExp, string][] = [
   [/\b(churros?|mochi|dango)\b/i, '🍡'],
   [/\b(shaved ice|snow cone|italian ice|sorbet|popsicle)\b/i, '🍧'],
   [/\b(lollipop|gummies|gummy|jelly beans?|licorice)\b/i, '🍭'],
-  [/\b(burger|cheeseburger)\b/i, '🍔'],
+  // "ShackBurger", "Whopper", "Big Mac": burgers by name, inside a word too
+  [/burgers?\b|\b(whopper|big mac|quarter pounder|baconator|double double)\b/i, '🍔'],
   [/\b(hot dog)\b/i, '🌭'],
   [/\b(sandwich|sub|panini|wrap)\b/i, '🥪'],
   [/\b(taco|burrito|quesadilla)\b/i, '🌮'],
@@ -138,8 +139,13 @@ const RULES: [RegExp, string][] = [
   [/\b(salt)\b/i, '🧂'],
 ];
 
+/**
+ * The food's own name decides first, and the brand only when the name says
+ * nothing: a ShackBurger from Shake Shack is a burger, not a shake, and a
+ * Starbucks sandwich is a sandwich.
+ */
 export function foodEmoji(name: string, brand?: string | null): string {
-  const text = `${name} ${brand ?? ''}`;
-  for (const [re, e] of RULES) if (re.test(text)) return e;
+  for (const [re, e] of RULES) if (re.test(name)) return e;
+  if (brand) for (const [re, e] of RULES) if (re.test(brand)) return e;
   return '🍽️';
 }
