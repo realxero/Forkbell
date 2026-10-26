@@ -166,7 +166,13 @@ export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
 
 /** Replace a workout's exercises and sets with what the app sent. */
 export async function saveWorkout(tx: Tx, id: string, input: SaveWorkoutInput) {
-  const updated = await tx.update(workouts).set({ name: input.name, date: input.date, notes: input.notes }).where(eq(workouts.id, id)).returning({ id: workouts.id });
+  // Times can be fixed afterwards (never in the future); a workout still going can't be finished this way.
+  const past = (iso: string) => new Date(Math.min(Date.parse(iso), Date.now())).toISOString();
+  const times = {
+    ...(input.startedAt ? { startedAt: past(input.startedAt) } : {}),
+    ...(input.finishedAt ? { finishedAt: sql`case when ${workouts.finishedAt} is null then null else ${past(input.finishedAt)}::timestamptz end` } : {}),
+  };
+  const updated = await tx.update(workouts).set({ name: input.name, date: input.date, notes: input.notes, ...times } as Partial<typeof workouts.$inferInsert>).where(eq(workouts.id, id)).returning({ id: workouts.id });
   if (!updated.length) return false;
   await tx.delete(workoutExercises).where(eq(workoutExercises.workoutId, id)); // sets go with them
   const groups = tidySupersets(input.exercises.map((e) => e.superset ?? null));

@@ -6,6 +6,7 @@ import { addDays, todayLocal, weekStart, weeklyGaps, type Program, type Workout,
 import { ApiError } from '../../../lib/api';
 import { cachedGet } from '../../../lib/sync';
 import { startWorkout } from '../../../lib/actions';
+import { LogPastWorkout } from '../../../components/LogPastWorkout';
 import { formatDuration, useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { YourWeek } from '../../../components/YourWeek';
@@ -33,6 +34,7 @@ export default function Train() {
   const [refreshing, setRefreshing] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
   const [gaps, setGaps] = useState<string[]>([]);
+  const [logPast, setLogPast] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -179,7 +181,12 @@ export default function Train() {
           </Pressable>
         ))}
         {history && history.length === 0 && !open && <Text style={type.small}>Finished workouts show up here.</Text>}
+        <Pressable onPress={() => setLogPast(true)} style={{ alignSelf: 'center', padding: space(3) }} accessibilityRole="button">
+          <Text style={s.link}>+ Log a past workout</Text>
+        </Pressable>
+        <Text style={[type.small, { textAlign: 'center' }]}>Open any workout in History to change its sets, day or time.</Text>
       </ScrollView>
+      <LogPastWorkout visible={logPast} program={program} onClose={() => setLogPast(false)} />
       <PlateCalculator visible={plates} weightKg={null} exercise={null} unit={meForPlates?.weightUnit ?? 'lb'} onClose={() => setPlates(false)} />
     </SafeAreaView>
   );

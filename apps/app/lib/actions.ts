@@ -26,6 +26,7 @@ import {
   todayLocal,
 } from '@forkbell/shared';
 import { cachedGet, cachedPaths, newId, readCache, send, updateCache, writeCache } from './sync';
+import { post } from './api';
 import { haptic } from './haptics';
 
 const emptyDay = (date: string): DiaryDay => {
@@ -179,6 +180,8 @@ export async function saveWorkout(w: Workout) {
       name: w.name,
       date: w.date,
       notes: w.notes,
+      // A finished workout can have its times fixed; one that's going keeps the clock running.
+      ...(w.finishedAt ? { startedAt: w.startedAt, finishedAt: w.finishedAt } : {}),
       exercises: w.exercises.map((e) => ({ exerciseId: e.exercise.id, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, sets: e.sets, pain: e.pain ?? false, painNote: e.painNote ?? null, superset: e.superset ?? null })),
     },
     { label: `Save ${w.name}`, coalesceKey: `workout:${w.id}` },
@@ -352,4 +355,14 @@ export async function endFast(fast: Fast) {
 export async function removeFast(fast: Fast) {
   updateCache<Fasts>(FASTS, (f) => ({ ...(f ?? fastsNow()), open: null }));
   await send('DELETE', `${FASTS}/${fast.id}`, undefined, { label: 'Remove fast' });
+}
+
+/**
+ * Log a workout you already did: saved straight away as finished, on the day
+ * and at the times you give, empty or from a program day. Needs a connection.
+ */
+export async function logPastWorkout(o: { date: string; startedAt: string; finishedAt: string; routineId?: string }) {
+  const r = await post<{ workout: Workout }>('/api/workouts', { id: newId(), ...o });
+  writeCache(`/api/workouts/${r.workout.id}`, { workout: r.workout });
+  return r.workout;
 }

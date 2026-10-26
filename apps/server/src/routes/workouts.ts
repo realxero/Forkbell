@@ -147,8 +147,13 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
         const [prior] = await tx.select({ id: workouts.id }).from(workouts).where(eq(workouts.id, parsed.data.id)).limit(1);
         if (prior) return { workout: await loadWorkout(tx, prior.id) }; // started earlier, offline
       }
-      const [open] = await tx.select({ id: workouts.id }).from(workouts).where(isNull(workouts.finishedAt)).limit(1);
-      if (open) return { conflict: open.id };
+      // A workout logged afterwards is saved finished, so it never clashes with one that's going.
+      const past = parsed.data.finishedAt && parsed.data.startedAt ? { startedAt: pastOrNow(parsed.data.startedAt), finishedAt: pastOrNow(parsed.data.finishedAt) } : null;
+      if (past && past.finishedAt <= past.startedAt) return { bad: 'The end is before the start.' };
+      if (!past) {
+        const [open] = await tx.select({ id: workouts.id }).from(workouts).where(isNull(workouts.finishedAt)).limit(1);
+        if (open) return { conflict: open.id };
+      }
 
       let name = 'Workout';
       let plan: SaveWorkoutInput['exercises'] = [];
@@ -179,13 +184,14 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
       }
       const [w] = await tx
         .insert(workouts)
-        .values({ ...(parsed.data.id ? { id: parsed.data.id } : {}), ...(parsed.data.startedAt ? { startedAt: pastOrNow(parsed.data.startedAt) } : {}), date: parsed.data.date, name, routineId: parsed.data.routineId ?? null } as typeof workouts.$inferInsert)
+        .values({ ...(parsed.data.id ? { id: parsed.data.id } : {}), ...(parsed.data.startedAt ? { startedAt: pastOrNow(parsed.data.startedAt) } : {}), ...(past ?? {}), date: parsed.data.date, name, routineId: parsed.data.routineId ?? null } as typeof workouts.$inferInsert)
         .returning({ id: workouts.id });
       await saveWorkout(tx, w!.id, { name, date: parsed.data.date, notes: null, exercises: plan });
       return { workout: await loadWorkout(tx, w!.id) };
     });
     if ('conflict' in result) return c.json({ error: 'You already have a workout going. Finish or discard it first.', id: result.conflict }, 409);
     if ('missing' in result) return c.json({ error: 'That routine was not found.' }, 404);
+    if ('bad' in result) return c.json({ error: result.bad }, 400);
     return c.json(result, 201);
   });
 

@@ -312,6 +312,9 @@ export const saveWorkoutSchema = z.object({
   name: z.string().trim().min(1).max(120),
   date: dateSchema,
   notes: z.string().max(2000).nullable(),
+  /** for a finished workout: when it really started and ended (fixing the time, or one logged afterwards) */
+  startedAt: z.string().datetime({ offset: true }).optional(),
+  finishedAt: z.string().datetime({ offset: true }).optional(),
   exercises: z
     .array(
       z.object({
@@ -327,7 +330,7 @@ export const saveWorkoutSchema = z.object({
       }),
     )
     .max(40),
-});
+}).refine((w) => !w.startedAt || !w.finishedAt || Date.parse(w.finishedAt) > Date.parse(w.startedAt), 'The end is before the start.');
 
 export const startWorkoutSchema = z.object({
   /** made on the device for workouts started offline */
@@ -336,6 +339,8 @@ export const startWorkoutSchema = z.object({
   routineId: z.string().uuid().nullish(),
   /** when the workout really started, for ones started offline and sent later */
   startedAt: z.string().datetime({ offset: true }).optional(),
+  /** logging a workout you already did: when it ended (it's saved as finished) */
+  finishedAt: z.string().datetime({ offset: true }).optional(),
 });
 
 export const finishWorkoutSchema = z.object({ finishedAt: z.string().datetime({ offset: true }).optional() });

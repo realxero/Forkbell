@@ -25,6 +25,7 @@ import { color, space, type } from '../../lib/theme';
 import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
 import { WorkoutBell } from '../../components/WorkoutBell';
+import { WhenCard } from '../../components/WhenCard';
 import { useAuth } from '../../lib/auth';
 import { speak } from '../../lib/speak';
 import { latestHeartRate, latestRestingHeartRate } from '../../lib/health';
@@ -435,6 +436,18 @@ export default function WorkoutScreen() {
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           {error && <Text style={s.error}>{error}</Text>}
           {hint && <Text style={s.hint}>{hint}</Text>}
+          {w.finishedAt && (
+            <WhenCard
+              key={`${w.date}${w.startedAt}${w.finishedAt}`}
+              date={w.date}
+              startedAt={w.startedAt}
+              finishedAt={w.finishedAt}
+              onChange={(t) => update((x) => ({ ...x, ...t }))}
+            />
+          )}
+          {w.finishedAt && w.exercises.some((e) => e.sets.some((x) => !x.done)) && (
+            <Text style={type.small}>Tick each set you did. Unticked sets don’t count toward your records or history.</Text>
+          )}
           {!w.finishedAt && !skipWarmup && w.exercises.length > 0 && !w.exercises.some((e) => e.sets.some((x) => x.done)) && (
             <View style={s.warmup}>
               <Ionicons name="flame-outline" size={22} color={color.fat} />

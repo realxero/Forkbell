@@ -257,6 +257,16 @@ the exercise's record, and the workouts CSV has a distance column.
 - **Drop sets.** Tap a set's number to cycle it: working, warm-up (W), drop set (D). A drop set starts straight after the set before it, with no rest. Drop sets count toward your volume but not toward records or next time's targets, since they're lighter on purpose.
 - **Plates.** Barbell exercises and plate-loaded machines have a *Plates* button that draws what to load on each side. Pick the bar (45, 35 or 15 lb; 20, 15 or 10 kg; or EZ, trap bar, machines, your own), set the plates your gym has, and it says when a weight can't be loaded exactly and offers the nearest ones.
 
+## Past workouts
+
+*+ Log a past workout* at the bottom of Train is for one you did without
+logging it: pick the day, start time and minutes, and optionally a program
+day. It's saved as finished (even with another workout going) and opens so
+you can add exercises and tick the sets you did. Any workout in History can
+be opened to change its sets, and *Change* at the top fixes its day and
+times. Records and history are read from the workouts as they now stand, so
+fixing one fixes those too.
+
 ## Rest coach
 
 Off until you pick it in Settings → Training setup. *Timings* speaks in Bell's voice during rests: "Ten seconds", then

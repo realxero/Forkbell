@@ -342,3 +342,29 @@ test('a program day keeps its supersets, and a workout started from it has them'
   const old = await u.call('PUT', `/api/routines/${day}`, { name: 'Arm day', exercises: [{ exerciseId: a!.id, sets: 3, repMin: 8, repMax: 12, restSeconds: 60 }] });
   assert.equal(old.status, 200, 'an older app that sends no supersets still saves');
 });
+
+test('a past workout: logged finished, beside one going, and its day and times can be fixed', async () => {
+  const u = await newUser();
+  const going = (await u.call('POST', '/api/workouts', { date: '2026-10-25' })).body.workout;
+  const startedAt = '2026-10-20T23:00:00.000Z';
+  const finishedAt = '2026-10-21T00:10:00.000Z';
+  const r = await u.call('POST', '/api/workouts', { date: '2026-10-20', startedAt, finishedAt });
+  assert.equal(r.status, 201, r.text);
+  const w = r.body.workout;
+  assert.equal(Date.parse(w.finishedAt), Date.parse(finishedAt), 'saved finished, even with another workout going');
+  assert.equal((await u.call('POST', '/api/workouts', { date: '2026-10-20', startedAt: finishedAt, finishedAt: startedAt })).status, 400, 'an end before the start');
+  const ex = (await u.call('GET', '/api/exercises')).body.exercises.find((x: { kind: string }) => x.kind === 'weight');
+  const set = { weightKg: 100, reps: 5, seconds: null, rpe: null, warmup: false, done: true };
+  const moved = await u.call('PUT', `/api/workouts/${w.id}`, {
+    name: 'Paper log', date: '2026-10-18', notes: null, startedAt: '2026-10-18T17:00:00.000Z', finishedAt: '2026-10-18T18:00:00.000Z',
+    exercises: [{ exerciseId: ex.id, restSeconds: 90, targetSets: null, repMin: null, repMax: null, sets: [set] }],
+  });
+  assert.equal(moved.status, 200, moved.text);
+  const after = (await u.call('GET', `/api/workouts/${w.id}`)).body.workout;
+  assert.deepEqual([after.date, Date.parse(after.startedAt), Date.parse(after.finishedAt)], ['2026-10-18', Date.parse('2026-10-18T17:00:00Z'), Date.parse('2026-10-18T18:00:00Z')]);
+  const sessions = (await u.call('GET', `/api/exercises/${ex.id}`)).body.sessions as { date: string }[];
+  assert.ok(sessions.some((x) => x.date === '2026-10-18'), 'the history reads the new day');
+  // A workout that's going can't be finished by saving it with a finish time.
+  await u.call('PUT', `/api/workouts/${going.id}`, { name: 'Workout', date: '2026-10-25', notes: null, finishedAt: '2026-10-20T00:00:00.000Z', exercises: [] });
+  assert.equal((await u.call('GET', `/api/workouts/${going.id}`)).body.workout.finishedAt, null);
+});
