@@ -35,6 +35,8 @@ export const foods = pgTable('foods', {
   fiber: num('fiber'),
   sugar: num('sugar'),
   sodiumMg: num('sodium_mg'),
+  /** vitamins and minerals per 100 g, mg or µg */
+  micros: jsonb('micros').$type<Record<string, number | null>>(),
   satFat: num('sat_fat'),
   servingGrams: num('serving_grams'),
   servingLabel: text('serving_label'),

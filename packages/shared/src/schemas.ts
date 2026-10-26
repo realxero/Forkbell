@@ -1,3 +1,4 @@
+import { microsSchema } from './micros.ts';
 import { z } from 'zod';
 import { MEALS } from './types.ts';
 
@@ -13,6 +14,7 @@ export const per100Schema = z.object({
   sugar: num.max(100).nullish(),
   sodium: num.max(100000).nullish(),
   satFat: num.max(100).nullish(),
+  micros: microsSchema.nullish(),
 });
 
 export const foodInputSchema = z.object({

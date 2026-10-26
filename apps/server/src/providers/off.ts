@@ -1,5 +1,5 @@
 import type { FoodCandidate } from '@forkbell/shared';
-import { per100Problems } from '@forkbell/shared';
+import { per100Problems, microsFromOff } from '@forkbell/shared';
 
 const UA = 'Forkbell/0.1 (self-hosted nutrition and fitness tracker)';
 const FIELDS = 'code,product_name,brands,nutriments,serving_quantity,serving_size';
@@ -34,6 +34,7 @@ export function fromOff(p: OffProduct): FoodCandidate | null {
     fiber: n(nm['fiber_100g']),
     sugar: n(nm['sugars_100g']),
     satFat: n(nm['saturated-fat_100g']),
+    micros: microsFromOff(nm),
     sodium: sodiumG === null ? null : Math.round(sodiumG * 1000),
   };
   if (per100Problems(per100).length) return null; // community data: skip clearly broken rows

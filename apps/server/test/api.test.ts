@@ -458,3 +458,14 @@ test('make an amount one serving of your own food; built-in foods stay as they a
   const other = await newUser();
   assert.equal((await other.call('PATCH', `/api/foods/${mine.id}/serving`, { servingGrams: 1 })).status, 404, "not someone else's food");
 });
+
+test('vitamins and minerals are kept with a food, and only real numbers', async () => {
+  const u = await newUser();
+  const r = await u.call('POST', '/api/foods', { name: 'Milk', brand: null, source: 'custom', per100: { kcal: 62, protein: 3.3, carbs: 5, fat: 3.3, micros: { calcium: 125, vitaminD: 1.04, iron: null } }, servingGrams: 240, barcode: null });
+  assert.equal(r.status, 201, r.text);
+  assert.deepEqual(r.body.food.per100.micros, { calcium: 125, vitaminD: 1.04 });
+  await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'breakfast', grams: 240, foodId: r.body.food.id });
+  const e = (await u.call('GET', '/api/diary/2026-10-25')).body.entries[0];
+  assert.equal(e.food.per100.micros.calcium, 125, 'the diary has them for the day’s totals');
+  assert.equal((await u.call('POST', '/api/foods', { name: 'Bad', brand: null, source: 'custom', per100: { kcal: 1, protein: 0, carbs: 0, fat: 0, micros: { calcium: -5 } }, servingGrams: null, barcode: null })).status, 400);
+});

@@ -1,5 +1,5 @@
 import type { FoodCandidate } from '@forkbell/shared';
-import { per100Problems, sameBarcode } from '@forkbell/shared';
+import { per100Problems, sameBarcode, microsFromUsda } from '@forkbell/shared';
 
 type UsdaFood = {
   fdcId: number;
@@ -37,7 +37,7 @@ export function fromUsda(f: UsdaFood): FoodCandidate | null {
   const carbs = get(NUM.carbs);
   const fat = get(NUM.fat);
   if (kcal === null || protein === null || carbs === null || fat === null) return null;
-  const per100 = { kcal, protein, carbs, fat, fiber: get(NUM.fiber), sugar: get(NUM.sugar), sodium: get(NUM.sodium), satFat: get(NUM.satFat) };
+  const per100 = { kcal, protein, carbs, fat, fiber: get(NUM.fiber), sugar: get(NUM.sugar), sodium: get(NUM.sodium), satFat: get(NUM.satFat), micros: microsFromUsda(get) };
   if (per100Problems(per100).length) return null;
   const unit = f.servingSizeUnit?.toLowerCase();
   const servingGrams = f.servingSize && (unit === 'g' || unit === 'ml' || unit === 'grm' || unit === 'mlt') ? f.servingSize : null;

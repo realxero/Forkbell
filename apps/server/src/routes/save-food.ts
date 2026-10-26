@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { foods, type Tx } from '@forkbell/db';
-import { per100Problems, type FoodInput, type Food } from '@forkbell/shared';
+import { per100Problems, type FoodInput, type Food, cleanMicros } from '@forkbell/shared';
 import { toFood } from '../serialize.ts';
 
 export class BadFood extends Error {}
@@ -38,6 +38,7 @@ export async function saveFood(tx: Tx, userId: string, input: FoodInput): Promis
       fiber: input.per100.fiber ?? null,
       sugar: input.per100.sugar ?? null,
       sodiumMg: input.per100.sodium ?? null,
+      micros: cleanMicros(input.per100.micros),
       satFat: input.per100.satFat ?? null,
       servingGrams: input.servingGrams ?? null,
       servingLabel: input.servingLabel ?? null,

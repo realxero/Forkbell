@@ -13,6 +13,8 @@ export interface Per100 {
   sodium?: number | null;
   /** saturated fat, grams */
   satFat?: number | null;
+  /** vitamins and minerals, in mg or µg per 100 g (see MICROS), when the food lists them */
+  micros?: import('./micros.ts').Micros | null;
 }
 
 export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin' | 'recipe';

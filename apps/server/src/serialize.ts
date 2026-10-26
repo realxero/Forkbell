@@ -1,3 +1,4 @@
+import { cleanMicros } from '@forkbell/shared';
 import type { Food } from '@forkbell/shared';
 import type { foods } from '@forkbell/db';
 
@@ -10,7 +11,7 @@ export function toFood(r: FoodRow): Food {
     brand: r.brand,
     source: r.source,
     sourceId: r.sourceId,
-    per100: { kcal: r.kcal, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber, sugar: r.sugar, sodium: r.sodiumMg, satFat: r.satFat },
+    per100: { kcal: r.kcal, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber, sugar: r.sugar, sodium: r.sodiumMg, satFat: r.satFat, micros: cleanMicros(r.micros) },
     servingGrams: r.servingGrams,
     servingLabel: r.servingLabel,
     barcode: r.barcode,

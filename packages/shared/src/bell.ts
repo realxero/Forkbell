@@ -1,3 +1,4 @@
+import { cleanMicros, microsSchema } from './micros.ts';
 import { z } from 'zod';
 import { dateSchema, per100Schema } from './schemas.ts';
 import { MEALS, type Food, type Meal, type Per100 } from './types.ts';
@@ -131,6 +132,8 @@ const labelNumbers = z
     sodium_mg: z.number().nonnegative().nullish(),
     /** grams of salt, on European labels */
     salt_g: z.number().nonnegative().nullish(),
+    /** vitamins and minerals as printed, in mg or µg (see MICROS) */
+    micros: microsSchema.nullish(),
   })
   .nullish();
 
@@ -185,6 +188,7 @@ export function labelToFood(read: LabelRead): { food: LabelFood } | { error: str
     fiber: scale(source.fiber),
     sugar: scale(source.sugar),
     sodium: sodium == null ? null : Math.round(sodium * factor),
+    micros: cleanMicros(source.micros ? Object.fromEntries(Object.entries(source.micros).map(([k, v]) => [k, v == null ? null : v * factor])) : null),
   };
   return {
     food: {

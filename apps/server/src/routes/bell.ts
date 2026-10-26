@@ -98,13 +98,14 @@ const equipmentSchema = z.object({
 const LABEL_PROMPT = `You read nutrition labels from photos for a food tracker. Report only what is printed; never estimate or fill in missing numbers.
 Answer with one JSON object and nothing else:
 {"readable": boolean, "name": string|null, "brand": string|null, "serving_label": string|null, "serving_g": number|null,
- "per100": {"kcal","kj","protein","carbs","fat","fiber","sugar","sodium_mg","salt_g"} | null,
+ "per100": {"kcal","kj","protein","carbs","fat","fiber","sugar","sodium_mg","salt_g","micros"} | null,
  "per_serving": {same keys} | null, "note": string|null}
 Rules:
 - per100 is the "per 100 g" or "per 100 ml" column. per_serving is the "per serving" or "amount per serving" column. Fill whichever columns are printed; use null for anything not printed.
 - serving_g is the serving size in grams or ml, e.g. "2/3 cup (55g)" gives 55. If no gram or ml amount is printed, use null.
 - kcal is food energy in kcal (US "Calories"). If only kJ is printed, put it in kj and set kcal to null.
 - carbs is total carbohydrate. sodium_mg in milligrams; salt_g only if salt is printed instead of sodium.
+- micros: the vitamins and minerals printed as amounts (not just %), as {"vitaminA": µg, "vitaminC": mg, "vitaminD": µg, "vitaminB12": µg, "folate": µg, "calcium": mg, "iron": mg, "potassium": mg, "magnesium": mg, "zinc": mg}; only those printed; null if none.
 - name and brand only if you can read them on the pack; otherwise null.
 - If the photo isn't a nutrition label, or you can't read the numbers clearly, set readable to false and say why in note.`;
 

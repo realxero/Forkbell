@@ -258,6 +258,16 @@ unit buttons to change it, and is saved that way. Recent and most-logged
 foods, meal shortcuts and plans show amounts in these units too, and a quick
 re-log uses last time's wording.
 
+## Vitamins and minerals
+
+Today has a *Vitamins and minerals* card once you've logged something that
+lists them: vitamins A, C, D and B12, folate, calcium, iron, potassium,
+magnesium and zinc, each with its % of the daily value on US labels. They
+come from Open Food Facts and USDA when those have them, and from label
+photos (the amounts printed, read per serving and stored per 100 g). Many
+foods don't list them, so the card says how many of the day's foods counted,
+and the real day is likely higher.
+
 ## Water
 
 A Water card on Today. Tap +8, +16.9 or +24 oz (+250, +500 or +750 ml if you
