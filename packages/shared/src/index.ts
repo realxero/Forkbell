@@ -34,3 +34,4 @@ export * from './supersets.ts';
 export * from './photos.ts';
 export * from './fasting.ts';
 export * from './cardio.ts';
+export * from './rest-coach.ts';

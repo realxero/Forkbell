@@ -137,6 +137,16 @@ export default function PreferencesScreen() {
         <Text style={s.section}>Training</Text>
         {sw('Safety tips on exercises', p.trainingTips, (v) => setP({ ...p, trainingTips: v }))}
         <Text style={s.note}>Lighter-day, check-up and stalled-lift tips, and big-jump heads-ups. Pain you flag always shows next time.</Text>
+
+        <Text style={s.label}>Rest coach (spoken, in Bell’s voice)</Text>
+        <View style={s.chips}>
+          <Chip label="Off" on={p.workoutVoice === 'off'} onPress={() => setP({ ...p, workoutVoice: 'off' })} />
+          <Chip label="Timings" on={p.workoutVoice === 'cues'} onPress={() => setP({ ...p, workoutVoice: 'cues' })} />
+          <Chip label="Timings and encouragement" on={p.workoutVoice === 'coach'} onPress={() => setP({ ...p, workoutVoice: 'coach' })} />
+        </View>
+        <Text style={s.note}>
+          Timings: “Ten seconds”, then “Rest’s up. Next: bench press, set 3, 185 pounds for 8.” On iPhone, with a fresh heart rate in Apple Health (an Apple Watch writes one every few seconds while it’s tracking a workout), it also says when you’ve recovered early, or adds 30 seconds once if you haven’t. Garmin and other watches sync to Apple Health in batches, so with them it’s usually just the timings. Encouragement adds a few words after a set that beats last time.
+        </Text>
         {t.hiddenTips.length > 0 && (
           <Pressable onPress={() => setP({ ...p, training: { ...t, hiddenTips: [] } })} style={{ minHeight: 44, justifyContent: 'center' }}>
             <Text style={s.link}>Show tips again for the {t.hiddenTips.length} {t.hiddenTips.length === 1 ? 'exercise' : 'exercises'} you hid them on</Text>

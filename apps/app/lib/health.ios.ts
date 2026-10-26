@@ -159,3 +159,30 @@ export async function writeWorkout(w: WorkoutForHealth) {
     HKMetadataKeySyncVersion: 1,
   });
 }
+
+/**
+ * The newest heart-rate reading in Apple Health, and when it was taken. An
+ * Apple Watch in a workout writes one every few seconds; other watches (a
+ * Garmin through Garmin Connect) sync in batches, which is why callers check
+ * how old it is.
+ */
+export async function latestHeartRate(): Promise<{ bpm: number; at: number } | null> {
+  try {
+    const since = new Date(Date.now() - 30 * 60_000);
+    const [s] = await queryQuantitySamples('HKQuantityTypeIdentifierHeartRate', { limit: 1, ascending: false, unit: 'count/min', filter: { date: { startDate: since, endDate: new Date(Date.now() + 60_000) } } });
+    return s ? { bpm: s.quantity, at: new Date(s.endDate ?? s.startDate).getTime() } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Your latest resting heart rate from Apple Health, if any. */
+export async function latestRestingHeartRate(): Promise<number | null> {
+  try {
+    const since = new Date(Date.now() - 14 * 86_400_000);
+    const [s] = await queryQuantitySamples('HKQuantityTypeIdentifierRestingHeartRate', { limit: 1, ascending: false, unit: 'count/min', filter: { date: { startDate: since, endDate: new Date() } } });
+    return s ? s.quantity : null;
+  } catch {
+    return null;
+  }
+}

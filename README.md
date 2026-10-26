@@ -252,6 +252,22 @@ the exercise's record, and the workouts CSV has a distance column.
 - **Drop sets.** Tap a set's number to cycle it: working, warm-up (W), drop set (D). A drop set starts straight after the set before it, with no rest. Drop sets count toward your volume but not toward records or next time's targets, since they're lighter on purpose.
 - **Plates.** Barbell exercises and plate-loaded machines have a *Plates* button that draws what to load on each side. Pick the bar (45, 35 or 15 lb; 20, 15 or 10 kg; or EZ, trap bar, machines, your own), set the plates your gym has, and it says when a weight can't be loaded exactly and offers the nearest ones.
 
+## Rest coach
+
+Off until you pick it in Settings → Food preferences and suggestions →
+Training. *Timings* speaks in Bell's voice during rests: "Ten seconds", then
+"Rest's up. Next: bench press, set 3, 185 pounds for 8." *Timings and
+encouragement* adds a few words after a set that beats last time.
+
+On iPhone, with Apple Health connected, the rest bar shows your heart rate
+when there's a reading less than a minute old. Recovered means 40% of the
+way from your resting heart rate (from Apple Health) to your max (from your
+birth year in your profile). Recovered early, it says you're ready; still
+high with a few seconds to go, it adds 30 seconds, once. An Apple Watch
+tracking a workout writes a reading every few seconds. Garmin and most
+other watches sync to Apple Health in batches, so with them the coach
+usually just keeps time.
+
 ## Training suggestions
 
 Rules, not AI, so they're instant and work offline. Set them up in Settings, Food and suggestions, under Training: the equipment you have, areas to go easy on (shoulders, elbows, wrists, lower back, knees), and exercises never to suggest.

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { afterSet, bigJump, cardioKcal, distanceText, durationText, fromDistanceUnit, paceText, parseDuration, toDistanceUnit, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { afterSet, bigJump, recoveredAt, restAdvice, restCue, setFeedback, cardioKcal, distanceText, durationText, fromDistanceUnit, paceText, parseDuration, toDistanceUnit, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet } from '../../lib/sync';
@@ -25,6 +25,27 @@ import { color, space, type } from '../../lib/theme';
 import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
 import { WorkoutBell } from '../../components/WorkoutBell';
+import { useAuth } from '../../lib/auth';
+import { speak } from '../../lib/speak';
+import { latestHeartRate, latestRestingHeartRate } from '../../lib/health';
+import { getHealthSettings, healthSupported } from '../../lib/health-sync';
+
+/** "bench press, set 3, 185 pounds for 8": what's next, for the rest coach and the notification. */
+function nextLabel(list: WorkoutExercise[], i: number | null, unit: 'lb' | 'kg', show: (kg: number | null) => string): string | null {
+  if (i === null) return null;
+  const e = list[i];
+  if (!e) return null;
+  const k = e.sets.findIndex((x) => !x.done);
+  if (k < 0) return e.exercise.name;
+  const n = e.sets.slice(0, k + 1).filter((x) => !x.warmup && !x.drop).length;
+  const ph = placeholderFor(e, k);
+  const set = e.sets[k]!;
+  const kg = set.weightKg ?? ph.weightKg;
+  const reps = set.reps ?? ph.reps;
+  const kind = set.warmup ? 'warm-up' : set.drop ? 'drop set' : `set ${n}`;
+  const load = e.exercise.kind === 'weight' && kg ? `, ${show(kg)} ${unit === 'lb' ? 'pounds' : 'kilos'}${reps ? ` for ${reps}` : ''}` : reps && e.exercise.kind === 'bodyweight' ? `, ${reps} reps` : '';
+  return `${e.exercise.name.toLowerCase()}, ${kind}${load}`;
+}
 
 /**
  * What an empty box means: the same set last time, else the set above, else
@@ -47,6 +68,13 @@ const blankSet = (): SetEntry => ({ weightKg: null, reps: null, seconds: null, r
 export default function WorkoutScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const units = useUnit();
+  const { me } = useAuth();
+  const voice = me?.preferences.workoutVoice ?? 'off';
+  /** the rest coach: what's been said this rest, and the rest's plan */
+  const told = useRef(new Set<string>());
+  const restPlan = useRef({ planned: 0, startedAt: 0, extended: false });
+  const [hr, setHr] = useState<{ bpm: number; at: number } | null>(null);
+  const [recoveredBpm, setRecoveredBpm] = useState(recoveredAt(null, null));
   const [w, setW] = useState<Workout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
@@ -108,6 +136,50 @@ export default function WorkoutScreen() {
     if (restEnd) void scheduleRestAlert(restEnd, restNext.current).catch(() => {});
     else void cancelRestAlert();
   }, [restEnd]);
+
+  // Heart rate (iPhone with Apple Health connected): your recovered rate once, then the newest reading every few seconds while resting.
+  const hrOn = healthSupported && getHealthSettings().connected;
+  useEffect(() => {
+    if (!hrOn) return;
+    const age = me?.preferences.body.birthYear ? new Date().getFullYear() - me.preferences.body.birthYear : null;
+    void latestRestingHeartRate().then((r) => setRecoveredBpm(recoveredAt(r, age)));
+  }, [hrOn, me?.preferences.body.birthYear]);
+  useEffect(() => {
+    if (!hrOn || !restEnd) return;
+    let live = true;
+    const read = () => void latestHeartRate().then((r) => live && setHr(r));
+    read();
+    const t = setInterval(read, 5000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [hrOn, restEnd !== null]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hrFresh = hr && now - hr.at <= 60_000 ? hr : null;
+
+  // The rest coach: timing cues, and a nudge from your heart rate when it's fresh.
+  useEffect(() => {
+    if (!restEnd || voice === 'off') return;
+    const left = Math.max(0, Math.ceil((restEnd - now) / 1000));
+    const plan = restPlan.current;
+    const say = (key: string, text: string) => {
+      if (told.current.has(key)) return;
+      told.current.add(key);
+      void speak(text);
+    };
+    // Not recovered with a few seconds to go: 30 more seconds, once.
+    if (hrFresh && left <= 3 && left > 0 && !plan.extended && hrFresh.bpm > recoveredBpm + 8) {
+      plan.extended = true;
+      setRestEnd((t) => (t ? t + 30_000 : t));
+      setRestTotal((t) => t + 30);
+      say('too-soon', `Heart rate's still ${Math.round(hrFresh.bpm)}. Give it about 30 more seconds.`);
+      return;
+    }
+    const advice = restAdvice({ plannedSeconds: plan.planned, elapsedSeconds: Math.round((now - plan.startedAt) / 1000), hr: hrFresh?.bpm ?? null, hrAgeSeconds: hrFresh ? Math.round((now - hrFresh.at) / 1000) : null, recoveredBpm, told: told.current });
+    if (advice.say && advice.state === 'ready') say('ready-early', advice.say);
+    const cue = restCue(left, plan.planned, restNext.current);
+    if (cue) say(cue.key, cue.say);
+  }, [now, restEnd, voice, hrFresh, recoveredBpm]);
 
   // Saving: the whole session goes up shortly after each change.
   const save = useCallback(async () => {
@@ -191,9 +263,27 @@ export default function WorkoutScreen() {
       showToast(`Superset: straight on to ${nextName}.`);
       return;
     }
+    // A few words after a set that beats last time (Timings and encouragement).
+    const doneSet = { ...s, ...patch };
+    if (voice === 'coach' && !doneSet.warmup && !doneSet.drop && (e.exercise.kind === 'weight' || e.exercise.kind === 'bodyweight')) {
+      const working = e.previous.filter((x) => !x.warmup && !x.drop);
+      const n = e.sets.slice(0, k + 1).filter((x) => !x.warmup && !x.drop).length;
+      const line = setFeedback({
+        reps: doneSet.reps,
+        weightKg: doneSet.weightKg,
+        previous: working[n - 1] ?? null,
+        repMax: e.repMax,
+        bestWeightKg: working.length ? Math.max(...working.map((x) => x.weightKg ?? 0)) : null,
+        lastSetOfExercise: !e.sets.some((x, j) => j !== k && !x.done),
+        exerciseName: e.exercise.name.toLowerCase(),
+      });
+      if (line) void speak(line);
+    }
     if (then.rest > 0) {
-      // For the notification: another set of this, or the next exercise.
-      restNext.current = nextName;
+      // For the notification and the coach: another set of this, or the next exercise.
+      restNext.current = nextLabel(list, then.next, units.unit, units.show) ?? nextName;
+      told.current = new Set();
+      restPlan.current = { planned: then.rest, startedAt: Date.now(), extended: false };
       setRestTotal(then.rest);
       setRestEnd(Date.now() + then.rest * 1000);
     }
@@ -425,7 +515,14 @@ export default function WorkoutScreen() {
         {restLeft !== null && (
           <View style={[s.rest, restLeft === 0 && { backgroundColor: color.fat }]}>
             <View style={[s.restFill, { width: `${restTotal ? (100 * restLeft) / restTotal : 0}%` }]} />
-            <Text style={s.restText}>{restLeft === 0 ? 'Rest over. Next set!' : `Rest ${formatDuration(restLeft)}`}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[s.restText, { flex: 1 }]}>{restLeft === 0 ? 'Rest over. Next set!' : `Rest ${formatDuration(restLeft)}`}</Text>
+              {hrFresh && (
+                <Text style={[s.hr, hrFresh.bpm <= recoveredBpm && { backgroundColor: color.fat }]} accessibilityLabel={`Heart rate ${Math.round(hrFresh.bpm)}${hrFresh.bpm <= recoveredBpm ? ', recovered' : ''}`}>
+                  ♥ {Math.round(hrFresh.bpm)}
+                </Text>
+              )}
+            </View>
             {restLeft > 0 && (
               <View style={s.restButtons}>
                 <Pressable onPress={() => setRestEnd((t) => (t ? t - 15000 : t))} hitSlop={8}><Text style={s.restButton}>−15</Text></Pressable>
@@ -814,6 +911,7 @@ const s = StyleSheet.create({
   addExercise: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },
   rest: { position: 'absolute', left: space(3), right: space(3), bottom: space(3), backgroundColor: color.iron, borderRadius: 14, padding: space(3), overflow: 'hidden', maxWidth: 616, alignSelf: 'center' },
   restFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: color.restFill },
+  hr: { color: '#fff', fontWeight: '800', backgroundColor: color.over, borderRadius: 10, overflow: 'hidden', paddingHorizontal: space(2), paddingVertical: 2 },
   restText: { color: color.chalk, fontWeight: '800', fontSize: 18, fontVariant: ['tabular-nums'] },
   restButtons: { flexDirection: 'row', gap: space(5), marginTop: space(2) },
   restButton: { color: color.chalk, fontWeight: '700', fontSize: 15 },

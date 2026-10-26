@@ -191,3 +191,11 @@ export async function writeWorkout(w: WorkoutForHealth) {
     },
   ]);
 }
+
+/** Live heart rate during a workout: Apple Health only, for now. */
+export async function latestHeartRate(): Promise<{ bpm: number; at: number } | null> {
+  return null;
+}
+export async function latestRestingHeartRate(): Promise<number | null> {
+  return null;
+}
