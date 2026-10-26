@@ -3,7 +3,7 @@ import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getServerUrl } from '../lib/api';
-import { color, space, type } from '../lib/theme';
+import { color, nativeScheme, space, type } from '../lib/theme';
 
 export type FormCheckResult = { exercise: string; reps: number; goodReps: number; summary: string[]; pattern: string };
 
@@ -15,7 +15,8 @@ export type FormCheckResult = { exercise: string; reps: number; goodReps: number
 export function FormCheck({ exercise, onClose, onResult }: { exercise: string | null; onClose: () => void; onResult: (r: FormCheckResult) => void }) {
   const [last, setLast] = useState<FormCheckResult | null>(null);
   const base = Platform.OS === 'web' ? window.location.origin : (getServerUrl() ?? '');
-  const url = exercise ? `${base.replace(/\/$/, '')}/form/index.html?ex=${encodeURIComponent(exercise)}` : '';
+  // The page matches Forkbell's look: the light/dark setting and the accent colour.
+  const url = exercise ? `${base.replace(/\/$/, '')}/form/index.html?ex=${encodeURIComponent(exercise)}&${lookParams()}` : '';
   const take = (data: unknown) => {
     const d = (typeof data === 'string' ? safeParse(data) : data) as FormCheckResult & { type?: string };
     if (d?.type !== 'forkbell-form') return;
@@ -96,3 +97,13 @@ const s = StyleSheet.create({
   link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   bar: { flexDirection: 'row', alignItems: 'center', gap: space(2), padding: space(4), borderTopWidth: 1, borderTopColor: color.line },
 });
+
+/** "theme=dark&accent=%235C9BFF": how Forkbell looks right now, for the camera page. */
+function lookParams() {
+  if (Platform.OS !== 'web') return `theme=${nativeScheme}&accent=${encodeURIComponent(color.accent)}`;
+  const root = document.documentElement;
+  const set = root.getAttribute('data-theme');
+  const dark = set ? set === 'dark' : window.matchMedia?.('(prefers-color-scheme: dark)').matches === true;
+  const accent = getComputedStyle(root).getPropertyValue('--fb-accent').trim();
+  return `theme=${dark ? 'dark' : 'light'}${/^#[0-9a-fA-F]{6}$/.test(accent) ? `&accent=${encodeURIComponent(accent)}` : ''}`;
+}

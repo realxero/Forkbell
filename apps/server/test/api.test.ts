@@ -144,6 +144,8 @@ test('the web page is never cached, so a new version shows on the next load', as
   if (!process.env.WEB_DIR) return;
   const r = await fetch('http://localhost:' + (process.env.TEST_PORT ?? 3999) + '/stretches');
   assert.equal(r.headers.get('cache-control'), 'no-cache');
+  const form = await fetch('http://localhost:' + (process.env.TEST_PORT ?? 3999) + '/form/index.html?ex=Squat&theme=dark');
+  assert.equal(form.headers.get('cache-control'), 'no-cache', 'nor is the Form check page');
 });
 
 test('streaks for Bell’s celebrations: a light route with start dates', async () => {

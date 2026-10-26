@@ -5,9 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
 <title>Form check · Forkbell</title>
+<script>
+  // Match Forkbell's own look: the app passes its light/dark setting and accent colour.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var t = q.get('theme');
+    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    var a = q.get('accent');
+    if (a && /^#[0-9a-fA-F]{6}$/.test(a)) document.documentElement.style.setProperty('--accent', a);
+  })();
+</script>
 <style>
   :root { --bg:#F4F5F2; --card:#fff; --ink:#1C252B; --soft:#5F6B73; --line:#DDE2E4; --accent:#2B6BD6; --good:#2E9E62; --bad:#D2423A; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0E1215; --card:#171C20; --ink:#E9EDEF; --soft:#9BA7AE; --line:#283036; --accent:#5C9BFF; --good:#4CC38A; --bad:#FF6B61; } }
+  /* Dark when the system is, unless Forkbell is set to light; always dark when it's set to dark. */
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0E1215; --card:#171C20; --ink:#E9EDEF; --soft:#9BA7AE; --line:#283036; --accent:#5C9BFF; --good:#4CC38A; --bad:#FF6B61; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg:#0E1215; --card:#171C20; --ink:#E9EDEF; --soft:#9BA7AE; --line:#283036; --accent:#5C9BFF; --good:#4CC38A; --bad:#FF6B61; color-scheme: dark; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body { margin:0; font: 16px/1.4 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); padding: env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom)); }

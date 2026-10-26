@@ -177,6 +177,11 @@ if (env.webDir) {
   };
   app.get('/', page);
   app.get('/index.html', page);
+  // The Form check page is checked with the server each time too, so changes to it show.
+  app.use('/form/*', async (c, next) => {
+    await next();
+    if (c.req.path.endsWith('.html') || c.req.path.endsWith('/form/')) c.header('cache-control', 'no-cache');
+  });
   app.use('*', serveStatic({ root }));
   // A missing file (an old page asking for an old build's script) is a plain 404,
   // not the page: a page where a script should be breaks with a confusing error.
