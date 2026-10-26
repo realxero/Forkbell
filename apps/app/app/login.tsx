@@ -11,7 +11,9 @@ import { color, space, type } from '../lib/theme';
 type Mode = 'signIn' | 'signUp';
 
 export default function Login() {
-  const { status, error, methods, loadMethods, signIn, signInWithPassword, signUp } = useAuth();
+  const { status, error, methods, loadMethods, signIn, signInWithPassword, signInWithCode, signUp } = useAuth();
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [signInCode, setSignInCode] = useState('');
   const isWeb = Platform.OS === 'web';
   const [server, setServer] = useState(getServerUrl() ?? '');
   // On the phone: has the address in the box been checked yet?
@@ -155,6 +157,41 @@ export default function Login() {
                     </Pressable>
                   )}
                 </View>
+              )}
+            </View>
+          )}
+
+          {checked && methods && (
+            <View style={{ gap: space(2), marginTop: space(4) }}>
+              {!codeOpen ? (
+                <Pressable onPress={() => setCodeOpen(true)} hitSlop={8} style={{ alignSelf: 'center' }} accessibilityRole="button">
+                  <Text style={s.link}>Signed in on another device? Use a code</Text>
+                </Pressable>
+              ) : (
+                <>
+                  <Text style={type.small}>On the device you’re signed in on: Settings → Sign-in and security → Sign in another device. Type the code it shows.</Text>
+                  <TextInput
+                    value={signInCode}
+                    onChangeText={setSignInCode}
+                    placeholder="ABCD-2345"
+                    placeholderTextColor={color.placeholder}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    autoComplete="one-time-code"
+                    textContentType="oneTimeCode"
+                    style={[s.input, { textAlign: 'center', letterSpacing: 2, fontSize: 22, fontWeight: '700' }]}
+                    accessibilityLabel="Code from your other device"
+                    onSubmitEditing={() => signInCode.trim() && run('code', () => signInWithCode(signInCode))}
+                  />
+                  <Pressable
+                    onPress={() => run('code', () => signInWithCode(signInCode))}
+                    disabled={!signInCode.trim() || !!busy}
+                    style={({ pressed }) => [s.button, (!signInCode.trim() || !!busy) && s.dim, pressed && s.pressed]}
+                    accessibilityRole="button"
+                  >
+                    <Text style={s.buttonText}>{busy === 'code' ? 'Signing in…' : 'Sign in with the code'}</Text>
+                  </Pressable>
+                </>
               )}
             </View>
           )}

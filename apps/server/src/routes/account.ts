@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm';
 import type { connect } from '@forkbell/db';
 import type { AccountSecurity } from '@forkbell/shared';
 import { z } from 'zod';
-import type { AppEnv } from '../auth.ts';
+import { newSignInCode, type AppEnv } from '../auth.ts';
 import { env } from '../env.ts';
 import { USERNAME, hashPassword, lockedFor, noteFailure, noteSuccess, passwordProblem, verifyPassword } from '../password.ts';
 
@@ -75,6 +75,9 @@ export function accountRoutes({ db, asUser }: ReturnType<typeof connect>) {
     if (!ok?.ok) return c.json({ error: 'Your account signs in with this password only, so it can’t be removed. Change it instead.' }, 400);
     return c.json({ ok: true });
   });
+
+  /** A one-time code to sign in another device (5 minutes, one use). */
+  r.post('/sign-in-code', (c) => c.json(newSignInCode(c.get('userId'))));
 
   r.post('/sessions/sign-out-others', async (c) => {
     const [ended] = await run<{ n: number }>(c, sql`select auth_end_other_sessions(${c.get('tokenHash')}) as n`);

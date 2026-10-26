@@ -333,6 +333,15 @@ Steps and pictures come from [Free Exercise DB](https://github.com/yuhonas/free-
 - **Another provider** (Authentik, Pocket ID, Keycloak, Google...): point the
   `OIDC_*` settings at it and set `OIDC_NAME` for the button.
 
+
+**Sign in another device with a code.** On a device that's signed in,
+Settings → Sign-in and security → *Sign in another device* shows a code like
+`K7QM-4XPA`. On the new phone or browser, tap *Signed in on another device?
+Use a code* on the sign-in screen and type it. Codes last 5 minutes, work
+once, and making a new one ends the last; ten wrong codes from one address
+wait 15 minutes. Handy for the iPhone app: no password or Authelia redirect
+to type on the phone. Codes live only in the server's memory, so restarting
+the server ends any that are waiting.
 ## Versions
 
 The version lives in the root `package.json`; change it everywhere with

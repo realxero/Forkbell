@@ -37,8 +37,31 @@ export const hashToken = (token: string) => createHmac('sha256', env.sessionSecr
 type Pending = { verifier: string; platform: 'web' | 'native'; returnTo: string; expires: number };
 const pending = new Map<string, Pending>();
 const handoff = new Map<string, { token: string; expires: number }>();
+
+/**
+ * Sign-in codes: a device that's signed in shows one ("Sign in another
+ * device"), and the new device types it. Eight letters and digits without
+ * look-alikes (about 40 bits), five minutes, one use, one per person at a
+ * time, kept only as a hash. Wrong guesses are limited per address.
+ */
+const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const CODE_MINUTES = 5;
+const linkCodes = new Map<string, { userId: string; expires: number }>();
+const codeMisses = new Map<string, { n: number; until: number }>();
+export function newSignInCode(userId: string) {
+  for (const [k, v] of linkCodes) if (v.userId === userId || v.expires < Date.now()) linkCodes.delete(k);
+  const bytes = randomBytes(8);
+  const code = Array.from(bytes, (b) => CODE_LETTERS[b % CODE_LETTERS.length]).join('');
+  const expires = Date.now() + CODE_MINUTES * 60_000;
+  linkCodes.set(hashToken(`code:${code}`), { userId, expires });
+  return { code: `${code.slice(0, 4)}-${code.slice(4)}`, expiresAt: new Date(expires).toISOString() };
+}
+const tidyCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/O/g, '0').replace(/I/g, '1');
+
 const sweep = () => {
   const now = Date.now();
+  for (const [k, v] of linkCodes) if (v.expires < now) linkCodes.delete(k);
+  for (const [k, v] of codeMisses) if (v.until < now) codeMisses.delete(k);
   for (const [k, v] of pending) if (v.expires < now) pending.delete(k);
   for (const [k, v] of handoff) if (v.expires < now) handoff.delete(k);
 };
@@ -65,7 +88,7 @@ export function describeDevice(userAgent: string | undefined, platform: 'web' | 
 }
 
 /** A new signed-in session; returns the token (only its hash is stored). */
-async function startSession(db: Database, userId: string, method: 'sso' | 'password', device: string) {
+async function startSession(db: Database, userId: string, method: 'sso' | 'password' | 'code', device: string) {
   const token = randomBytes(32).toString('base64url');
   const expires = new Date(Date.now() + env.sessionDays * 86_400_000);
   const hash = hashToken(token);
@@ -209,6 +232,25 @@ export function authRoutes(db: Database) {
       expires,
     });
     return c.redirect(env.appUrl);
+  });
+
+  /** Sign in with a code shown on a device that's already signed in. */
+  r.post('/code', async (c) => {
+    sweep();
+    const parsed = z.object({ code: z.string().max(40), platform: z.enum(['web', 'native']).default('web') }).safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: 'Type the code from your other device.' }, 400);
+    const ip = clientIp((n) => c.req.header(n));
+    const miss = codeMisses.get(ip);
+    if (miss && miss.n >= 10 && miss.until > Date.now()) return c.json({ error: 'Too many wrong codes. Try again in 15 minutes.' }, 429);
+    // Codes never use O or I, so someone typing those meant 0 and 1.
+    const key = hashToken(`code:${tidyCode(parsed.data.code)}`);
+    const hit = linkCodes.get(key);
+    if (!hit || hit.expires < Date.now()) {
+      codeMisses.set(ip, { n: (miss && miss.until > Date.now() ? miss.n : 0) + 1, until: Date.now() + 15 * 60_000 });
+      return c.json({ error: 'That code didn’t work. Codes last 5 minutes and work once; make a new one on your other device.' }, 401);
+    }
+    linkCodes.delete(key);
+    return finish(c, parsed.data.platform, await startSession(db, hit.userId, 'code', describeDevice(c.req.header('user-agent'), parsed.data.platform)));
   });
 
   r.post('/exchange', async (c) => {

@@ -125,6 +125,8 @@ export function SecuritySection() {
         <Text style={type.small}>Password sign-in is off on this server. Whoever runs it can turn it on with PASSWORD_LOGIN=on.</Text>
       )}
 
+      <SignInCode />
+
       <View style={s.card}>
         <Text style={type.label}>Where you’re signed in</Text>
         {sec.sessions.map((x, i) => (
@@ -135,7 +137,7 @@ export function SecuritySection() {
                 {x.current ? ' · this one' : ''}
               </Text>
               <Text style={type.small}>
-                {x.method === 'password' ? 'Password' : x.method === 'sso' ? (sec.sso ?? 'Single sign-on') : 'Signed in'} · since {when(x.createdAt)}
+                {x.method === 'password' ? 'Password' : x.method === 'sso' ? (sec.sso ?? 'Single sign-on') : x.method === 'code' ? 'Code from another device' : 'Signed in'} · since {when(x.createdAt)}
               </Text>
             </View>
             {!x.current && (
@@ -167,3 +169,47 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2) },
   rowLine: { borderTopWidth: 1, borderTopColor: color.line },
 });
+
+/**
+ * "Sign in another device": a code for the new phone or browser to type on
+ * its sign-in screen. Five minutes, one use; making a new one ends the last.
+ */
+function SignInCode() {
+  const [code, setCode] = useState<{ code: string; expiresAt: string } | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => {
+    if (!code) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [code]);
+  const left = code ? Math.max(0, Math.round((Date.parse(code.expiresAt) - now) / 1000)) : 0;
+  const make = async () => {
+    setProblem(null);
+    try {
+      setCode(await post<{ code: string; expiresAt: string }>('/api/me/security/sign-in-code', {}));
+      setNow(Date.now());
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : String(e));
+    }
+  };
+  return (
+    <View style={s.card}>
+      <Text style={type.label}>Sign in another device</Text>
+      <Text style={type.small}>No password to type on the new phone or browser: on its sign-in screen, tap “Signed in on another device? Use a code” and type the code shown here.</Text>
+      {code && left > 0 ? (
+        <>
+          <Text style={{ fontSize: 34, fontWeight: '800', letterSpacing: 4, textAlign: 'center', color: color.iron }} selectable accessibilityLabel={`Code ${code.code.split('').join(' ')}`}>
+            {code.code}
+          </Text>
+          <Text style={[type.small, { textAlign: 'center' }]}>Works once, for {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')} more. Only type it on a device you’re holding.</Text>
+        </>
+      ) : (
+        <Pressable onPress={() => void make()} style={({ pressed }) => [s.button, pressed && { opacity: 0.7 }]} accessibilityRole="button">
+          <Text style={s.buttonText}>{code ? 'That code ran out. Show a new one' : 'Show a code'}</Text>
+        </Pressable>
+      )}
+      {problem && <Text style={[type.small, { color: color.over }]}>{problem}</Text>}
+    </View>
+  );
+}

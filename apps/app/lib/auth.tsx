@@ -18,6 +18,8 @@ type Auth = {
   /** Single sign-on (Authelia). */
   signIn: (serverAddress?: string) => Promise<void>;
   signInWithPassword: (username: string, password: string) => Promise<void>;
+  /** with a code shown on a device that's already signed in */
+  signInWithCode: (code: string) => Promise<void>;
   signUp: (details: { username: string; password: string; name?: string; code?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -141,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (username: string, password: string) => passwordSession('/auth/password/login', { username, password }),
     [passwordSession],
   );
+  const signInWithCode = useCallback((code: string) => passwordSession('/auth/code', { code }), [passwordSession]);
   const signUp = useCallback(
     (d: { username: string; password: string; name?: string; code?: string }) => passwordSession('/auth/password/signup', d),
     [passwordSession],
@@ -154,7 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('signedOut');
   }, []);
 
-  return <AuthContext.Provider value={{ status, me, error, methods, loadMethods, signIn, signInWithPassword, signUp, signOut, refreshMe }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ status, me, error, methods, loadMethods, signIn, signInWithPassword, signInWithCode, signUp, signOut, refreshMe }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
