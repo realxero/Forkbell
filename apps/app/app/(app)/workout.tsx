@@ -26,6 +26,7 @@ import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
 import { WorkoutBell } from '../../components/WorkoutBell';
 import { WhenCard } from '../../components/WhenCard';
+import { ExerciseMenu } from '../../components/ExerciseMenu';
 import { SwipeRow } from '../../components/SwipeRow';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { put } from '../../lib/api';
@@ -523,6 +524,7 @@ export default function WorkoutScreen() {
               e={e}
               units={units}
               menuOpen={menu === i}
+              canMoveUp={i > 0}
               onMenu={() => setMenu(menu === i ? null : i)}
               onSet={(k, patch) => updateSet(i, k, patch)}
               onToggle={(k) => toggleDone(i, k)}
@@ -667,6 +669,7 @@ function ExerciseCard(props: {
   e: WorkoutExercise;
   units: Units;
   menuOpen: boolean;
+  canMoveUp: boolean;
   onMenu: () => void;
   onSet: (k: number, patch: Partial<SetEntry>) => void;
   onToggle: (k: number) => void;
@@ -726,26 +729,23 @@ function ExerciseCard(props: {
           <Text style={s.dots}>⋯</Text>
         </Pressable>
       </View>
-      {props.menuOpen && (
-        <View style={s.menu}>
-          {e.exercise.howTo && <Pressable onPress={props.onHowTo}><Text style={s.menuItem}>How to do it</Text></Pressable>}
-          <Pressable onPress={() => props.onRest(-15)}><Text style={s.menuItem}>Rest −15 s</Text></Pressable>
-          <Pressable onPress={() => props.onRest(15)}><Text style={s.menuItem}>Rest +15 s</Text></Pressable>
-          {props.canLinkNext && <Pressable onPress={props.onLinkNext}><Text style={s.menuItem}>Superset with the next exercise</Text></Pressable>}
-          {group && <Pressable onPress={props.onLeaveGroup}><Text style={s.menuItem}>Leave the {group.of > 2 ? 'circuit' : 'superset'}</Text></Pressable>}
-          {(kind === 'weight' || kind === 'bodyweight') && (
-            <Pressable onPress={props.onPerSide}><Text style={s.menuItem}>{props.perSide ? 'Count reps in total' : 'Count reps per side'}</Text></Pressable>
-          )}
-          <Pressable onPress={() => props.onMove(-1)}><Text style={s.menuItem}>Move up</Text></Pressable>
-          <Pressable onPress={() => props.onMove(1)}><Text style={s.menuItem}>Move down</Text></Pressable>
-          <Pressable onPress={props.onFormCheck}><Text style={s.menuItem}>Check my form (camera)</Text></Pressable>
-          <Pressable onPress={props.onSwap}><Text style={s.menuItem}>Swap for a similar exercise</Text></Pressable>
-          <Pressable onPress={() => props.onPain(!e.pain, e.pain ? null : e.painNote ?? null)}>
-            <Text style={[s.menuItem, { color: color.over }]}>{e.pain ? 'Clear pain flag' : 'Flag pain or discomfort'}</Text>
-          </Pressable>
-          <Pressable onPress={props.onRemove}><Text style={[s.menuItem, { color: color.over }]}>Remove</Text></Pressable>
-        </View>
-      )}
+      <ExerciseMenu
+        visible={props.menuOpen}
+        name={e.exercise.name}
+        restSeconds={e.restSeconds}
+        onClose={props.onMenu}
+        onRest={props.onRest}
+        howTo={e.exercise.howTo ? props.onHowTo : undefined}
+        formCheck={props.onFormCheck}
+        swap={props.onSwap}
+        linkNext={props.canLinkNext ? props.onLinkNext : undefined}
+        leaveGroup={group ? { label: `Leave the ${group.of > 2 ? 'circuit' : 'superset'}`, run: props.onLeaveGroup } : undefined}
+        perSide={kind === 'weight' || kind === 'bodyweight' ? { on: props.perSide, run: props.onPerSide } : undefined}
+        moveUp={props.canMoveUp ? () => props.onMove(-1) : undefined}
+        moveDown={props.canLinkNext ? () => props.onMove(1) : undefined}
+        pain={{ on: Boolean(e.pain), run: () => props.onPain(!e.pain, e.pain ? null : e.painNote ?? null) }}
+        remove={props.onRemove}
+      />
       {e.pain && (
         <View style={s.pain}>
           <Text style={[type.small, { color: color.over, fontWeight: '700' }]}>Pain flagged. Stop or go lighter; it’ll be shown next time.</Text>
@@ -967,8 +967,6 @@ const s = StyleSheet.create({
   groupTagText: { color: color.onAccent, fontSize: 12, fontWeight: '800' },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space(2), marginBottom: space(1) },
   dots: { fontSize: 24, color: color.ironSoft, paddingHorizontal: space(1), lineHeight: 26 },
-  menu: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4), rowGap: space(2), paddingVertical: space(2), borderTopWidth: 1, borderBottomWidth: 1, borderColor: color.line, marginBottom: space(1) },
-  menuItem: { color: color.protein, fontWeight: '600', fontSize: 15 },
   setHead: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: space(1) },
   th: { ...type.small, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: 3, borderRadius: 8 },
