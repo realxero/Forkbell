@@ -289,3 +289,13 @@ export const waterEntries = pgTable('water_entries', {
   ml: integer('ml').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
 });
+
+/** Progress photos. The image itself (bytea) is read and written with plain SQL, so lists stay light. */
+export const progressPhotos = pgTable('progress_photos', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  pose: text('pose').notNull(),
+  mime: text('mime').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+});

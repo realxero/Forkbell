@@ -151,6 +151,12 @@ try {
   await assert.rejects(as(bob, (tx) => tx`insert into water_entries (user_id, date, ml) values (${alice}, '2026-10-22', 250)`), "Bob can't log water for Alice");
   assert.equal((await as(bob, (tx) => tx`delete from water_entries returning id`)).length, 0, "or take hers back");
 
+  // Progress photos: only ever Alice's, with or without a share.
+  await as(alice, (tx) => tx`insert into progress_photos (date, pose, image, mime) values ('2026-10-22', 'front', ${Buffer.alloc(200, 1)}, 'image/jpeg')`);
+  assert.equal((await as(bob, (tx) => tx`select id from progress_photos`)).length, 0, "Bob can't see Alice's photos");
+  assert.equal((await as(bob, (tx) => tx`select id from progress_photos`, alice)).length, 0, 'not even viewing her profile');
+  await assert.rejects(as(bob, (tx) => tx`insert into progress_photos (user_id, date, pose, image, mime) values (${alice}, '2026-10-22', 'side', ${Buffer.alloc(200, 1)}, 'image/jpeg')`), "Bob can't add one for her");
+
   // Alice still sees her own data.
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 2, 'Alice sees her entries');
   assert.equal((await as(alice, (tx) => tx`select * from workout_sets`)).length, 1, 'Alice sees her sets');

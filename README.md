@@ -212,6 +212,19 @@ use kilograms), or *Other amount* and type anything like "20 oz", "1.5 L" or
 the card, in Settings → Goals and targets. It works offline like the diary, is
 included in Export, and people you share wellbeing with can see it.
 
+## Progress photos
+
+On the Progress tab: tap Front, Side or Back to take today's photo (the
+picture icon under each picks one from your library instead; on the web it's
+always the library). *First and latest* shows your first and newest photo of
+a pose side by side, each with your weight trend on that day, and the change
+in between. *See all* lists every day; tap a photo to see it big or delete it.
+
+They're stored in Postgres, so the nightly backup has them. Only you can see
+them: they're left out of family sharing whatever it allows (the database
+refuses it, not just the app), Bell never sees them, and Export lists them
+without the pictures. Adding one needs a connection to your server.
+
 ## Supersets, circuits, drop sets and plates
 
 - **Supersets and circuits.** An exercise's ⋯ menu has *Superset with the next exercise*. Do it again on the next one for a circuit of three or more. You go straight from one exercise to the next with no rest, then rest once after the last, for the longest rest time in the group. Moving an exercise out of the group, or *Leave the superset*, takes it out.

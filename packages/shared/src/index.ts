@@ -31,3 +31,4 @@ export * from './voices.ts';
 export * from './plates.ts';
 export * from './water.ts';
 export * from './supersets.ts';
+export * from './photos.ts';

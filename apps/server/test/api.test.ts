@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { caller, newUser, serverLog, startServer, stopServer } from './harness.ts';
+import { BASE, caller, newUser, serverLog, startServer, stopServer } from './harness.ts';
 
 const NOT_HERE = 'Your Forkbell server doesn’t have this yet. Update the server to the same version as the app.';
 const anon = caller(null);
@@ -233,4 +233,38 @@ test('workouts keep supersets and drop sets; drop sets never set records', async
   const csv = await u.call('GET', '/api/export/workouts.csv');
   assert.match(csv.text, /,drop_set\r\n/);
   assert.match(csv.text, /,yes\r\n/, 'the drop set is marked in the CSV');
+});
+
+test('progress photos: only yours, never anyone else’s, even family you share everything with', async () => {
+  const a = await newUser('Alice');
+  const b = await newUser('Bob');
+  // A tiny real JPEG-ish payload (the server only checks type and size).
+  const bytes = Buffer.alloc(2048, 7);
+  const image = `data:image/jpeg;base64,${bytes.toString('base64')}`;
+  const up = await a.call('POST', '/api/photos', { date: '2026-10-25', pose: 'front', image });
+  assert.equal(up.status, 201, up.text);
+  const id = up.body.photo.id;
+  assert.equal(up.body.photo.pose, 'front');
+  assert.equal((await a.call('POST', '/api/photos', { date: '2026-10-25', pose: 'top', image })).status, 400, 'front, side or back');
+  assert.equal((await a.call('POST', '/api/photos', { date: '2026-10-25', pose: 'side', image: 'data:image/gif;base64,AAAA' })).status, 400);
+  assert.equal((await a.call('GET', '/api/photos')).body.photos.length, 1);
+  const own = await fetch(`${BASE}/api/photos/${id}/image`, { headers: { authorization: `Bearer ${a.token}` } });
+  assert.equal(own.status, 200);
+  assert.equal(own.headers.get('content-type'), 'image/jpeg');
+  assert.ok(Buffer.from(await own.arrayBuffer()).equals(bytes), 'the same picture comes back');
+
+  // Alice shares everything with Bob.
+  const invite = await a.call('POST', '/api/shares/invites', { permissions: ['food_read', 'food_write', 'training_read', 'progress_read', 'wellbeing_read'] });
+  assert.equal(invite.status, 201, invite.text);
+  assert.equal((await b.call('POST', '/api/shares/accept', { code: invite.body.code })).status, 200);
+  const asBob = (p: string, method = 'GET') => fetch(`${BASE}${p}`, { method, headers: { authorization: `Bearer ${b.token}`, 'x-forkbell-profile': a.id } });
+  assert.equal((await asBob('/api/progress?today=2026-10-25')).status, 200, 'Bob can see her progress');
+  assert.deepEqual((await (await asBob('/api/photos')).json()).photos, [], 'but not her photos');
+  assert.equal((await asBob(`/api/photos/${id}/image`)).status, 404);
+  assert.equal((await asBob(`/api/photos/${id}`, 'DELETE')).status, 404);
+  assert.equal((await b.call('GET', `/api/photos/${id}/image`)).status, 404);
+  assert.equal((await a.call('GET', '/api/export')).body.data.progressPhotos.length, 1, 'listed in the export');
+  assert.ok(!(await a.call('GET', '/api/export')).text.includes(bytes.toString('base64').slice(0, 40)), 'the picture itself is left out of the export');
+  assert.equal((await a.call('DELETE', `/api/photos/${id}`)).status, 200);
+  assert.equal((await a.call('GET', '/api/photos')).body.photos.length, 0);
 });

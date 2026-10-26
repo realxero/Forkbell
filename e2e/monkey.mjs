@@ -26,7 +26,7 @@ if (!SECRET || !ADMIN) {
 const ROUTES = [
   '/', '/train', '/progress', '/bell', '/settings',
   '/add', '/add?meal=lunch&scan=1', '/weigh', '/weigh?meal=dinner', '/scan', '/stretches', '/stretches?kind=static&muscles=quads,hamstrings',
-  '/exercises', '/programs', '/plan', '/recipes', '/shopping', '/medications', '/preferences', '/sharing',
+  '/exercises', '/programs', '/plan', '/recipes', '/shopping', '/medications', '/preferences', '/sharing', '/photos',
   '/setting/goals', '/setting/appearance', '/setting/bell', '/setting/health', '/setting/phone', '/setting/data', '/setting/shortcuts', '/setting/nope',
   '/bell?ask=how%20much%20protein%20is%20left',
 ];

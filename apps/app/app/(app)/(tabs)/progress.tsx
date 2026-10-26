@@ -17,6 +17,7 @@ import { PatternsCard } from '../../../components/PatternsCard';
 import { FoodCheckInCard } from '../../../components/CheckInCards';
 import type { FoodCheckIn } from '@forkbell/shared';
 import { HealthCard } from '../../../components/HealthCard';
+import { ProgressPhotosCard } from '../../../components/ProgressPhotos';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
 
@@ -139,6 +140,9 @@ export default function ProgressScreen() {
                 <WeightChart points={shown} goalKg={p.goal.weightKg} show={(kg) => units.label(kg)} />
               </View>
             )}
+
+            {/* Progress photos: only ever yours, so not shown when viewing someone */}
+            {!viewing && <ProgressPhotosCard weighIns={p.weighIns} />}
 
             {/* Calories and macros, day by day */}
             {p.days && (
