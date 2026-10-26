@@ -56,3 +56,27 @@ test('base64 decodes to the same bytes', () => {
   const back = new Float32Array(base64ToBytes(Buffer.from(floats.buffer).toString('base64')).buffer);
   assert.deepEqual([...back].map((x) => Math.round(x * 100)), [40, 37, 150]);
 });
+
+// The same quarter turn the iPhone's LiDAR module (ForkbellDepthModule.swift)
+// does to go from the sensor's landscape to portrait. Rotating the depth map,
+// the boxes and the camera centre together must not change any volume.
+test('turning the scan upright, as the phone does, measures the same', () => {
+  const blocks = [{ x0: 8, y0: 10, x1: 24, y1: 26, cm: 2 }, { x0: 36, y0: 14, x1: 56, y1: 30, cm: 4 }];
+  for (const tilt of [0, 0.1, -0.15]) {
+  const s = scan(blocks, tilt);
+  const boxes = [box(6, 8, 26, 28), box(34, 12, 58, 32)];
+  const flat = plateVolumes(s, boxes);
+  // (x, y) moves to (H − 1 − y, x); width and height swap.
+  const depth = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) depth[x * H + (H - 1 - y)] = (s.depth as Float32Array)[y * W + x]!;
+  const upright: DepthScan = { width: H, height: W, depth, fx: s.fy, fy: s.fx, cx: H - 1 - s.cy, cy: s.cx };
+  // A box [l, t, r, b] in the landscape photo is [1 − b, l, 1 − t, r] in the upright one.
+  const turned = boxes.map(({ box: [l, t, r, b] }) => ({ box: [1 - b, l, 1 - t, r] as [number, number, number, number] }));
+  const up = plateVolumes(upright, turned);
+  assert.ok(flat.ok && up.ok);
+  for (let i = 0; i < 2; i++) {
+    const a = flat.volumes[i]!.ml, b = up.volumes[i]!.ml;
+    assert.ok(Math.abs(a - b) < Math.max(a, b) * 0.05, `tilt ${tilt}, food ${i}: ${a} vs ${b} ml`);
+  }
+  }
+});

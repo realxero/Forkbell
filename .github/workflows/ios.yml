@@ -31,7 +31,10 @@ jobs:
         working-directory: apps/app
         env:
           FORKBELL_BUILD_NUMBER: ${{ github.run_number }}
-        run: CI=1 npx expo prebuild --platform ios --clean
+        run: |
+          CI=1 npx expo prebuild --platform ios --clean
+          # The LiDAR camera is a local native module; fail loudly if it wasn't linked.
+          grep -q "ForkbellDepth" ios/Podfile.lock || { echo "modules/forkbell-depth was not linked into the iOS build"; exit 1; }
       - name: Build unsigned app
         working-directory: apps/app/ios
         run: |

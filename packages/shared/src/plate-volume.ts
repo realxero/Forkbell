@@ -105,7 +105,9 @@ export function plateVolumes(scan: DepthScan, foods: FoodBox[]): VolumeResult {
     if (!best || inliers > best.inliers) best = { n, d, inliers };
   }
   if (!best || best.inliers < background.length * 0.35) return { ok: false, error: 'Couldn’t find a flat table around the plate. Try again on a clear table, holding the phone straight above.' };
-  const { n, d } = best;
+  // Refine: a least-squares plane through all the table points the best guess agreed with,
+  // so the answer doesn't depend on which three random points happened to win.
+  const { n, d } = refinePlane(background.filter((p) => Math.abs(dot(best!.n, p) + best!.d) < PLANE_M), best);
   const heightOf = (p: V3) => dot(n, p) + d;
   // How far the phone is from straight above (the plane's tilt), in degrees.
   const tableTilt = Math.round((Math.acos(Math.min(1, Math.abs(n[2]))) * 180) / Math.PI);
@@ -180,4 +182,37 @@ export function base64ToBytes(b64: string): Uint8Array {
     if (o < out.length) out[o++] = n & 255;
   }
   return out;
+}
+
+/** Fit z = a·x + b·y + c through the points; falls back to the guess if that's degenerate. */
+function refinePlane(points: V3[], guess: { n: V3; d: number }): { n: V3; d: number } {
+  if (points.length < 10) return guess;
+  let sx = 0, sy = 0, sz = 0, sxx = 0, sxy = 0, syy = 0, sxz = 0, syz = 0;
+  for (const [x, y, z] of points) {
+    sx += x; sy += y; sz += z; sxx += x * x; sxy += x * y; syy += y * y; sxz += x * z; syz += y * z;
+  }
+  const k = points.length;
+  // Solve the 3×3 normal equations by Cramer's rule.
+  const m = [
+    [sxx, sxy, sx],
+    [sxy, syy, sy],
+    [sx, sy, k],
+  ];
+  const r = [sxz, syz, sz];
+  const det3 = (a: number[][]) =>
+    a[0]![0]! * (a[1]![1]! * a[2]![2]! - a[1]![2]! * a[2]![1]!) - a[0]![1]! * (a[1]![0]! * a[2]![2]! - a[1]![2]! * a[2]![0]!) + a[0]![2]! * (a[1]![0]! * a[2]![1]! - a[1]![1]! * a[2]![0]!);
+  const D = det3(m);
+  if (Math.abs(D) < 1e-12) return guess;
+  const col = (i: number) => m.map((row, j) => row.map((v, c) => (c === i ? r[j]! : v)));
+  const [a, b, c] = [det3(col(0)) / D, det3(col(1)) / D, det3(col(2)) / D];
+  // a·x + b·y − z + c = 0, facing the camera (positive at the origin).
+  let n: V3 = [a, b, -1];
+  const len = norm(n);
+  n = [n[0] / len, n[1] / len, n[2] / len];
+  let d = c / len;
+  if (d < 0) {
+    n = [-n[0], -n[1], -n[2]];
+    d = -d;
+  }
+  return { n, d };
 }

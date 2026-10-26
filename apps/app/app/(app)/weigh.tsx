@@ -16,7 +16,7 @@ import { confirm } from '../../lib/confirm';
 import { showToast } from '../../lib/toast';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { VoiceButton, voiceAvailable } from '../../components/VoiceButton';
-import { lidarSupported } from '../../modules/forkbell-depth';
+import { lidarStatus, lidarSupported } from '../../modules/forkbell-depth';
 import { color, radius, space, type } from '../../lib/theme';
 
 type Pick = Food | FoodCandidate;
@@ -95,6 +95,9 @@ export default function Weigh() {
               <Text style={[s.link, { flex: 1 }]}>Measure the plate with LiDAR instead</Text>
               <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
             </Pressable>
+          )}
+          {lidarStatus === 'not-in-build' && (
+            <Text style={type.small}>Measuring with LiDAR isn’t in this build of the app. Install a newer iPhone build to get it (iPhone Pro only).</Text>
           )}
 
           <View style={s.chips}>

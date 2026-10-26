@@ -2,8 +2,10 @@ node_modules/
 dist/
 .expo/
 web-build/
-ios/
-android/
+# The generated native projects (expo prebuild), not native code we write:
+# modules/*/ios holds the LiDAR camera and must stay in git.
+/apps/app/ios/
+/apps/app/android/
 .env
 *.log
 .DS_Store

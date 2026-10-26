@@ -30,6 +30,14 @@ export const lidarSupported = (() => {
   }
 })();
 
+/**
+ * Why the LiDAR option is or isn't there: 'ready'; 'no-lidar' (this iPhone has
+ * none); 'not-in-build' (an iPhone build made without the native module, which
+ * is worth saying, because it looks just like a phone with no LiDAR); 'other'.
+ */
+export const lidarStatus: 'ready' | 'no-lidar' | 'not-in-build' | 'other' =
+  Platform.OS !== 'ios' ? 'other' : !native ? 'not-in-build' : lidarSupported ? 'ready' : 'no-lidar';
+
 export type PlateCapture = DepthScan & { image: string; imageWidth: number; imageHeight: number };
 
 /** Open the LiDAR camera and take one measurement. Null if you cancelled. */
