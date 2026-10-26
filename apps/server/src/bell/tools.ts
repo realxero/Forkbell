@@ -146,8 +146,19 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
       const q = (a.name ?? '').toLowerCase();
       const hit = list.exercises.find((e) => e.name.toLowerCase() === q) ?? list.exercises.find((e) => e.name.toLowerCase().includes(q));
       if (!hit) return JSON.stringify({ error: `No exercise called "${a.name}".` });
-      const d = (await ctx.call(`/api/exercises/${hit.id}`)) as Record<string, unknown> & { sessions: unknown[] };
-      return JSON.stringify({ ...d, sessions: d.sessions.slice(0, 6), trend: undefined });
+      const d = (await ctx.call(`/api/exercises/${hit.id}`)) as Record<string, unknown> & {
+        sessions: unknown[];
+        variations?: { exercise: { name: string }; level: string; why: string }[];
+        progressIdeas?: { title: string; detail: string }[];
+      };
+      return JSON.stringify({
+        ...d,
+        sessions: d.sessions.slice(0, 6),
+        trend: undefined,
+        // Short, so they're cheap to include: names Bell can suggest, and ways to progress besides weight.
+        variations: d.variations?.map((v) => `${v.level}: ${v.exercise.name} (${v.why})`),
+        progressIdeas: d.progressIdeas?.map((i) => `${i.title}: ${i.detail}`),
+      });
     }
     case 'propose_food_entries': {
       const parsed = proposeArgsSchema.safeParse(args);

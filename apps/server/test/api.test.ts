@@ -154,3 +154,16 @@ test('streaks for Bell’s celebrations: a light route with start dates', async 
   assert.equal(r.body.foodSince, null);
   assert.equal(r.body.workoutWeeks, 0);
 });
+
+test('an exercise page lists variations and ways to progress besides weight', async () => {
+  const u = await newUser();
+  const list = await u.call('GET', '/api/exercises?q=bench press');
+  const bench = list.body.exercises.find((e: { name: string }) => e.name === 'Bench press');
+  assert.ok(bench, 'the built-in bench press');
+  const r = await u.call('GET', `/api/exercises/${bench.id}`);
+  assert.equal(r.status, 200);
+  const names = r.body.variations.map((v: { exercise: { name: string } }) => v.exercise.name);
+  assert.ok(names.includes('Incline bench press'), names.join(', '));
+  assert.ok(r.body.variations.every((v: { level: string }) => ['harder', 'angle', 'easier'].includes(v.level)));
+  assert.ok(r.body.progressIdeas.some((i: { key: string }) => i.key === 'slow'));
+});

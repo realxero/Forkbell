@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
 import { z } from 'zod';
-import { bellChatSchema, extractJson, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
+import { BIG_JUMP, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
 import { aiConfigFor } from '../bell/config.ts';
@@ -286,6 +286,18 @@ export function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string
   const set = (x: Workout['exercises'][number]['sets'][number]) =>
     `${x.warmup ? 'warm-up ' : ''}${x.seconds ? `${x.seconds} s` : `${show(x.weightKg)} × ${x.reps ?? '?'}`}${x.rpe ? ` @ RPE ${x.rpe}` : ''}`;
   const current = w.exercises.findIndex((e) => e.sets.some((x) => !x.done));
+  // When the smallest jump is a big share of the weight (5 lb on a 15 lb raise), say so.
+  const bigJump = (e: Workout['exercises'][number]) => {
+    if (e.exercise.kind !== 'weight') return '';
+    const working = [...e.sets.filter((x) => x.done && !x.warmup), ...e.previous.filter((x) => !x.warmup)].map((x) => x.weightKg ?? 0).filter((kg) => kg > 0);
+    if (!working.length) return '';
+    const kg = Math.max(...working);
+    const jump = incrementKg(e.exercise.increment, unit);
+    const share = jumpShare(kg, jump);
+    if (share <= BIG_JUMP) return '';
+    const ideas = progressIdeas(e.exercise).slice(0, 5).map((i) => i.title.toLowerCase()).join(', ');
+    return `  the next jump (+${show(jump)}) is ${Math.round(share * 100)}% more than ${show(kg)}: a big step. Progress another way first: ${ideas}`;
+  };
   const lines = w.exercises.map((e, i) => {
     const done = e.sets.filter((x) => x.done);
     const target = e.repMin ? ` (target ${e.targetSets ?? e.sets.length} sets of ${e.repMin}${e.repMax && e.repMax !== e.repMin ? `-${e.repMax}` : ''})` : '';
@@ -294,6 +306,7 @@ export function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string
       `  done: ${done.length ? done.map(set).join('; ') : 'nothing yet'}; ${e.sets.length - done.length} set(s) left`,
       e.previous.length ? `  last time: ${e.previous.map(set).join('; ')}` : '',
       e.pain ? `  they flagged pain here${e.painNote ? `: ${e.painNote}` : ''}` : '',
+      bigJump(e),
     ].filter(Boolean).join('\n');
   });
   const minutes = Math.round((Date.now() - Date.parse(w.startedAt)) / 60000);
@@ -305,6 +318,7 @@ ${lines.join('\n') || '(no exercises yet)'}
 In the workout:
 - Answer in one to three short sentences; they're resting with the phone in their hand. Lead with the number or the answer.
 - Next-set weight: base it on what they just did and the rep target. Hit the top of the range with reps to spare: add the smallest jump (${unit === 'lb' ? '5 lb for upper body, 10 lb for lower' : '2.5 kg for upper body, 5 kg for lower'}). Missed the bottom of the range or the last set was a grind: stay or drop about 10%. When unsure, stay.
+- When the next weight jump is too big (marked above), they've stalled (no progress over the last few sessions; check get_exercise), or they ask how to keep progressing: suggest one way to progress besides weight (more reps, an extra set, a slow 3-4 s lowering, a pause at the bottom, 1½ reps, shorter rest, one side at a time, longer holds for timed exercises) or a harder variation by name (get_exercise lists them). One idea at a time, said plainly.
 - Swaps: suggest a similar exercise for the same muscle with equipment they have, in plain names they can find in the library.
 - Rest: usually 2-3 min for heavy compound lifts, 60-90 s for small isolation work.
 - If they mention pain (not normal effort burn), tell them to stop that exercise, and suggest a pain-free alternative or calling it for today. Never push through pain.

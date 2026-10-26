@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type SetEntry } from '@forkbell/shared';
+import { VARIATION_LABEL, fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type ProgressIdea, type SetEntry, type Variation, type VariationLevel } from '@forkbell/shared';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { HowToCard, CuesCard } from '../../components/HowTo';
 import { cachedGet } from '../../lib/sync';
@@ -16,6 +16,9 @@ type Detail = {
   records: PersonalRecord[];
   sessions: { workoutId: string; date: string; name: string; sets: SetEntry[] }[];
   trend: { date: string; e1rmKg: number }[];
+  /** from servers before 0.12 these are missing */
+  variations?: Variation[];
+  progressIdeas?: ProgressIdea[];
 };
 
 const LABEL: Record<PersonalRecord['kind'], string> = {
@@ -114,6 +117,9 @@ export default function ExerciseDetail() {
 
             {d.exercise.kind === 'weight' && <StrengthGoal exercise={d.exercise} sessions={d.sessions} />}
 
+            {!!d.progressIdeas?.length && <ProgressIdeas ideas={d.progressIdeas} timed={d.exercise.kind === 'time'} />}
+            {!!d.variations?.length && <Variations list={d.variations} />}
+
             {d.sessions.length > 0 && <Text style={s.section}>Sessions</Text>}
             {d.sessions.map((sess) => (
               <Pressable key={sess.workoutId} onPress={() => router.push({ pathname: '/workout', params: { id: sess.workoutId } })} style={s.item}>
@@ -127,6 +133,58 @@ export default function ExerciseDetail() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+const LEVEL_TINT: Record<VariationLevel, string> = { harder: color.over, angle: color.accent, easier: color.fat };
+
+/** Ways to make it harder without more weight: for big jumps, stalls, or no heavier weight. */
+function ProgressIdeas({ ideas, timed }: { ideas: ProgressIdea[]; timed: boolean }) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? ideas : ideas.slice(0, 3);
+  return (
+    <View style={s.card}>
+      <Text style={[type.title, { fontSize: 18 }]}>{timed ? 'Ways to progress' : 'Ways to progress besides weight'}</Text>
+      <Text style={type.small}>{timed ? 'Make it harder a little at a time.' : 'For when the next weight jump is too big, you’ve stalled, or there’s nothing heavier.'}</Text>
+      {shown.map((i) => (
+        <View key={i.key} style={{ gap: 2 }}>
+          <Text style={[type.body, { fontWeight: '700' }]}>{i.title}</Text>
+          <Text style={type.small}>{i.detail}</Text>
+        </View>
+      ))}
+      {ideas.length > 3 && (
+        <Pressable onPress={() => setOpen(!open)} hitSlop={10} style={{ minHeight: 36, justifyContent: 'center' }}>
+          <Text style={s.link}>{open ? 'Show fewer' : `Show all ${ideas.length}`}</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+/** The same movement done another way. Tap one for its how-to. */
+function Variations({ list }: { list: Variation[] }) {
+  return (
+    <View style={s.card}>
+      <Text style={[type.title, { fontSize: 18 }]}>Variations</Text>
+      {list.map((v) => (
+        <Pressable
+          key={v.exercise.id}
+          onPress={() => router.push({ pathname: '/exercise', params: { id: v.exercise.id } })}
+          style={({ pressed }) => [s.variation, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel={`${v.exercise.name}, ${VARIATION_LABEL[v.level]}`}
+        >
+          <View style={[s.level, { borderColor: LEVEL_TINT[v.level] }]}>
+            <Text style={[s.levelText, { color: LEVEL_TINT[v.level] }]}>{VARIATION_LABEL[v.level]}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={type.body}>{v.exercise.name}</Text>
+            <Text style={type.small} numberOfLines={2}>{v.why.charAt(0).toUpperCase() + v.why.slice(1)}</Text>
+          </View>
+          <Text style={[s.link, { fontSize: 20 }]}>›</Text>
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
@@ -210,4 +268,7 @@ const s = StyleSheet.create({
   bar: { backgroundColor: color.protein, borderRadius: 3 },
   section: { ...type.small, fontWeight: '700', marginTop: space(2) },
   item: { backgroundColor: color.card, borderRadius: 10, padding: space(3), gap: 2 },
+  variation: { flexDirection: 'row', alignItems: 'center', gap: space(3), minHeight: 52, borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(2) },
+  level: { borderWidth: 1, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 2, minWidth: 108, alignItems: 'center' },
+  levelText: { fontSize: 12, fontWeight: '800' },
 });

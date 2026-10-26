@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, desc, eq, ilike, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { exercises, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
-import { estimatedOneRepMax, exerciseInputSchema, preferencesSchema, setVolumeKg, todayLocal, trainingTips, type PersonalRecord, type SetEntry } from '@forkbell/shared';
+import { estimatedOneRepMax, exerciseInputSchema, preferencesSchema, progressIdeas, setVolumeKg, todayLocal, trainingTips, variationsOf, type PersonalRecord, type SetEntry } from '@forkbell/shared';
 import { users } from '@forkbell/db';
 import type { AppEnv } from '../auth.ts';
 import { recentSessions, toExercise, toHowTo, toSet } from '../training.ts';
@@ -62,7 +62,12 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
       const [me] = await tx.select({ prefs: users.preferences }).from(users).limit(1);
       const prefs = preferencesSchema.parse(me?.prefs ?? {});
       const tips = trainingTips(recent.get(id) ?? [], todayLocal()).filter((t) => t.kind === 'pain' || (prefs.trainingTips && !prefs.training.hiddenTips.includes(id)));
-      return { ex, rows, tips };
+      // Everything you could pick, for variations of the same movement.
+      const library = await tx
+        .select({ ex: exercises, uses: usesSql })
+        .from(exercises)
+        .where(and(or(eq(exercises.ownerId, c.get('profileId')), isNull(exercises.ownerId)), eq(exercises.muscle, ex.muscle)));
+      return { ex, rows, tips, library };
     });
     if (!data) return c.json({ error: 'That exercise was not found.' }, 404);
     const exercise = toExercise(data.ex);
@@ -103,7 +108,8 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
       .map((s) => ({ date: s.date, e1rmKg: Math.max(0, ...s.sets.filter((x) => !x.warmup && x.weightKg && x.reps).map((x) => estimatedOneRepMax(x.weightKg!, x.reps!) ?? 0)) }))
       .filter((p) => p.e1rmKg > 0);
 
-    return c.json({ exercise, howTo: toHowTo(data.ex), records, sessions: sessions.slice(0, 30), trend, tips: data.tips });
+    const variations = variationsOf(exercise, data.library.map((r) => ({ ...toExercise(r.ex), uses: r.uses })));
+    return c.json({ exercise, howTo: toHowTo(data.ex), records, sessions: sessions.slice(0, 30), trend, tips: data.tips, variations, progressIdeas: progressIdeas(exercise) });
   });
 
   return r;
