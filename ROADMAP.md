@@ -33,6 +33,10 @@ and a better voice for Bell (the phone's best voice, or Kokoro on your server).
 0.13: water on Today, supersets and circuits, drop sets, a plate calculator
 for barbell lifts, and progress photos with a first-and-latest comparison.
 
+0.14: fasting, cardio, a spoken rest coach with heart-rate recovery, water in
+Apple Health, Bell knowing your water and fasting, and supersets saved in
+program days.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
