@@ -1,3 +1,4 @@
+import { WaterProposal } from './WaterProposal';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -18,7 +19,7 @@ import { color, radius, space, type } from '../lib/theme';
  * added right there. It keeps the conversation like the full chat does, so
  * Bell's questions can be answered with a tap.
  */
-type Turn = BellTurn & { proposals?: FoodProposal[]; added?: boolean; answered?: string; mood?: BellMood };
+type Turn = BellTurn & { water?: { ml: number; date: string }; proposals?: FoodProposal[]; added?: boolean; answered?: string; mood?: BellMood };
 /** After this long without a message, the next question starts a new conversation. */
 const FRESH_AFTER = 15 * 60_000;
 
@@ -69,7 +70,7 @@ export function QuickBell() {
         meal: mealForTime(),
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       });
-      setTurns([...next, { role: 'assistant', text: r.reply, question: r.question ?? null, proposals: r.proposals.length ? r.proposals : undefined, mood: bellMood({ userText: q, reply: r.reply, question: r.question }) }]);
+      setTurns([...next, { role: 'assistant', text: r.reply, question: r.question ?? null, proposals: r.proposals.length ? r.proposals : undefined, water: r.water ?? undefined, mood: bellMood({ userText: q, reply: r.reply, question: r.question }) }]);
       lastAt.current = Date.now();
       if (readAloud === 'always' || (readAloud !== 'never' && spoken)) void speak(r.question?.text ?? r.reply);
     } catch (e) {
@@ -151,6 +152,7 @@ export function QuickBell() {
                   <View key={i} style={{ gap: space(2) }}>
                     {!!t.text && <Text style={type.body}>{t.text}</Text>}
                     {t.question && <Question q={t.question} answered={t.answered} live={i === lastIndex && !busy} onAnswer={(a) => void ask(a, false, i)} />}
+                    {t.water && <WaterProposal ml={t.water.ml} date={t.water.date} onAdded={() => setExcited(true)} />}
                     {t.proposals && (
                       <Proposals items={t.proposals} added={Boolean(t.added)} onAdded={() => {
                         setTurns((l) => l.map((x, j) => (j === i ? { ...x, added: true } : x)));

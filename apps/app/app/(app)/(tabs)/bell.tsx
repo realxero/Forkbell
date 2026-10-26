@@ -1,3 +1,4 @@
+import { WaterProposal } from '../../../components/WaterProposal';
 import { speak } from '../../../lib/speak';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
@@ -22,6 +23,7 @@ type Message = {
   text: string;
   image?: string;
   proposals?: FoodProposal[];
+  water?: { ml: number; date: string };
   added?: boolean;
   question?: BellQuestion;
   /** the answer tapped, once there is one */
@@ -137,7 +139,7 @@ export default function Bell() {
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       });
       const mood = bellMood({ userText: body, reply: r.reply, question: r.question });
-      setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined, question: r.question ?? undefined, mood }]);
+      setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined, water: r.water ?? undefined, question: r.question ?? undefined, mood }]);
       // Read the answer aloud: always, or when you asked by voice (Settings → Bell).
       if (prefs.readAloud === 'always' || (prefs.readAloud !== 'never' && opts.spoken)) void speak(r.reply);
     } catch (e) {
@@ -240,6 +242,7 @@ export default function Bell() {
                   }}
                 />
               )}
+              {m.water && <WaterProposal ml={m.water.ml} date={m.water.date} onAdded={() => setExcited(true)} />}
               {m.question && <Question q={m.question} answered={m.answered} live={i === lastIndex && !busy} onAnswer={(a) => send(a, { answering: i })} />}
             </View>
             </View>

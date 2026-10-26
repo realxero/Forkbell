@@ -215,7 +215,7 @@ included in Export, and people you share wellbeing with can see it.
 On iPhone, each day's water also goes to Apple Health as one entry, so
 another glass or an Undo updates it there (Settings → Apple Health → Send
 water). Bell knows today's water and your goal, so "how am I doing today?"
-includes it; you log water on the card, not through Bell.
+includes it. Tell Bell "I drank a bottle of water" and it offers an Add button for 16.9 oz (500 ml); nothing is logged until you tap it, the same as food.
 
 ## Fasting
 

@@ -14,7 +14,14 @@ before(async () => {
     req.on('end', () => {
       const sent = JSON.parse(body || '{}') as { messages?: { role: string; content: unknown }[] };
       systems.push(String(sent.messages?.find((m) => m.role === 'system')?.content ?? ''));
-      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'Looking good!' } }] }));
+      const last = sent.messages?.at(-1);
+      const asked = String(sent.messages?.filter((m) => m.role === 'user').at(-1)?.content ?? '');
+      // "I drank a bottle of water": the model proposes it, then answers once the tool has run.
+      const message =
+        asked.includes('bottle of water') && last?.role !== 'tool'
+          ? { role: 'assistant', content: '', tool_calls: [{ id: 't1', type: 'function', function: { name: 'propose_water', arguments: JSON.stringify({ amount: asked.includes('two') ? '2 bottles' : '16.9 oz' }) } }] }
+          : { role: 'assistant', content: last?.role === 'tool' ? 'Nice, tap Add.' : 'Looking good!' };
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ choices: [{ message }] }));
     });
   });
   await new Promise<void>((r) => ai.listen(3882, r));
@@ -40,4 +47,16 @@ test('Bell sees today’s water, and a fast only when fasting is on', async () =
   await u.call('PUT', '/api/me/preferences', { ...me.preferences, fasting: { show: true, hours: 16 } });
   await ask();
   assert.match(systems.at(-1)!, /Fasting now: 3h 0\dm into a 16-hour fast/);
+});
+
+test('Bell proposes water; nothing is logged until the person taps Add', async () => {
+  const u = await newUser();
+  const today = '2026-10-25';
+  const r = await u.call('POST', '/api/bell/chat', { messages: [{ role: 'user', text: 'I drank a bottle of water' }], today, meal: 'lunch' });
+  assert.equal(r.status, 200, r.text);
+  assert.deepEqual(r.body.water, { ml: 500, date: today });
+  assert.equal(r.body.reply, 'Nice, tap Add.');
+  assert.equal((await u.call('GET', `/api/wellbeing/water/${today}`)).body.totalMl, 0, 'not logged by Bell');
+  const two = await u.call('POST', '/api/bell/chat', { messages: [{ role: 'user', text: 'I had two bottle of water' }], today, meal: 'lunch' });
+  assert.equal(two.body.water.ml, 1000, '"2 bottles" is 1 L');
 });

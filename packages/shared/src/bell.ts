@@ -51,6 +51,8 @@ export interface BellReply {
   proposals: FoodProposal[];
   /** set when Bell needs one detail before it can log something well */
   question?: BellQuestion | null;
+  /** water Bell suggests logging; the person taps Add, like food */
+  water?: { ml: number; date: string } | null;
 }
 
 /** What the model may send to ask_question. */

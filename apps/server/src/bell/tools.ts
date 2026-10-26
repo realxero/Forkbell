@@ -1,7 +1,8 @@
 // Bell's tools. Reads go through the same API routes the app uses (as the
 // signed-in person, so row-level security applies); Bell never writes. Food
-// it wants to log comes back as proposals the person reviews and confirms.
-import { askArgsSchema, checkFood, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences } from '@forkbell/shared';
+// it wants to log comes back as proposals the person reviews and confirms,
+// and so does water.
+import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences } from '@forkbell/shared';
 import type { ToolSpec } from './providers.ts';
 
 export type Internal = (path: string) => Promise<unknown>;
@@ -36,6 +37,12 @@ export const TOOLS: ToolSpec[] = [
     name: 'get_exercise',
     description: 'One exercise by name: personal records and recent sessions with weights and reps.',
     parameters: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] },
+  },
+  {
+    name: 'propose_water',
+    description:
+      'Suggest logging water the person says they drank ("a bottle of water", "16 oz", "two glasses"). They see an Add button; nothing is logged until they tap it. One call with the total. Plain water and sparkling water only; drinks with calories (coffee with milk, juice, soda) are food: use propose_food_entries.',
+    parameters: { type: 'object', properties: { amount: { type: 'string', description: 'The total, with a unit: "16.9 oz", "500 ml", "1 L", "2 cups". A bottle is 16.9 oz (500 ml) unless they say otherwise; a glass 8 oz (250 ml).' } }, required: ['amount'] },
   },
   {
     name: 'propose_food_entries',
@@ -110,11 +117,20 @@ export interface ToolContext {
   /** what the person said this turn, to check amounts against */
   userText: string;
   question: BellQuestion | null;
+  /** water proposed this turn */
+  water?: { ml: number; date: string } | null;
+  unit?: 'lb' | 'kg';
 }
 
 export async function runTool(name: string, args: unknown, ctx: ToolContext): Promise<string> {
   const a = (args ?? {}) as Record<string, string>;
   switch (name) {
+    case 'propose_water': {
+      const ml = parseWater(String(a.amount ?? ''), ctx.unit ?? 'lb');
+      if (!ml) return 'That amount could not be read. Give a number and a unit, like "16.9 oz" or "500 ml", up to 5 L.';
+      ctx.water = { ml: (ctx.water?.ml ?? 0) + ml <= 5000 ? (ctx.water?.ml ?? 0) + ml : ml, date: ctx.today };
+      return `Proposed ${ctx.water.ml} ml of water. The person taps Add to log it; tell them that in a few words, without repeating the number of ml unless asked.`;
+    }
     case 'get_day': {
       const day = (await ctx.call(`/api/diary/${encodeURIComponent(a.date ?? ctx.today)}`)) as DiaryDay;
       return JSON.stringify({

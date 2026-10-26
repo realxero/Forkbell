@@ -185,6 +185,8 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
       // The last few things they said, so an amount given before a question still counts.
       userText: messages.filter((m) => m.role === 'user').slice(-3).map((m) => m.text).join('\n'),
       question: null as BellQuestion | null,
+      water: null as { ml: number; date: string } | null,
+      unit: (me?.unit ?? 'lb') as 'lb' | 'kg',
     };
     let results: { call: ToolCall; output: string }[] | undefined;
     let text = '';
@@ -215,16 +217,18 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
       console.error('Bell:', e);
       return c.json({ error: e instanceof Error && e.message.startsWith('The AI service') ? e.message : 'Bell couldn’t reach the AI service. Check the server log.' }, 502);
     }
-    const { proposals, question } = ctx;
+    const { proposals, question, water } = ctx;
     // Bell always answers with something you can act on, never an empty bubble.
     const fallback = question
       ? ''
       : proposals.length
         ? 'Here’s what I’d log. Check the amounts and tap Add.'
+        : water
+          ? 'Tap Add to log the water.'
         : unfinished
           ? 'That took more steps than I’m allowed. Try asking about one thing at a time.'
           : 'I didn’t get an answer from the model. Try asking again, or rephrase it.';
-    const body: BellReply = { reply: unfinished && !proposals.length ? fallback : text || fallback, proposals, question };
+    const body: BellReply = { reply: unfinished && !proposals.length && !water ? fallback : text || fallback, proposals, question, water };
     return c.json(body);
   });
 
@@ -394,7 +398,7 @@ async function waterAndFastingFor(asUser: ReturnType<typeof connect>['asUser'], 
   const lines: string[] = [];
   if (prefs.water.show || ml > 0) {
     const goal = waterGoalMl(prefs.water.goalMl);
-    lines.push(`Water today: ${waterText(ml, unit)} of a ${waterText(goal, unit)} goal${ml >= goal ? ' (reached)' : `, ${waterText(goal - ml, unit)} to go`}. They log water on the Water card on Today (Bell can't log it).`);
+    lines.push(`Water today: ${waterText(ml, unit)} of a ${waterText(goal, unit)} goal${ml >= goal ? ' (reached)' : `, ${waterText(goal - ml, unit)} to go`}. When they say they drank water, use propose_water; they tap Add.`);
   }
   if (open) {
     const p = fastProgress({ startedAt: open.startedAt, endedAt: null, targetHours: open.targetHours });
