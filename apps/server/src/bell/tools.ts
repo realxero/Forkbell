@@ -1,3 +1,4 @@
+import { customAllowed } from './config.ts';
 // Bell's tools. Reads go through the same API routes the app uses (as the
 // signed-in person, so row-level security applies); Bell never writes. Food
 // it wants to log comes back as proposals the person reviews and confirms,
@@ -116,15 +117,25 @@ export const SEARCH_TOOL: ToolSpec = {
   parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
 };
 
-export const toolsFor = (prefs: Preferences) => [...TOOLS, ...(prefs.bell.askWhenUnsure ? [ASK_TOOL] : []), ...(env.searchUrl ? [SEARCH_TOOL] : [])];
+/**
+ * The SearXNG to search with: your own address from Settings → Bell, when this
+ * server allows custom addresses (AI_ALLOW_CUSTOM_URL=true, the same switch as
+ * for your own AI server), otherwise the server's SEARCH_URL, or none.
+ */
+export function searchUrlFor(prefs: Pick<Preferences, 'webSearchUrl'>): { url: string; source: 'yours' | 'server' } | null {
+  if (prefs.webSearchUrl && customAllowed()) return { url: prefs.webSearchUrl.replace(/\/$/, ''), source: 'yours' };
+  return env.searchUrl ? { url: env.searchUrl, source: 'server' } : null;
+}
+
+export const toolsFor = (prefs: Preferences) => [...TOOLS, ...(prefs.bell.askWhenUnsure ? [ASK_TOOL] : []), ...(searchUrlFor(prefs) ? [SEARCH_TOOL] : [])];
 
 /** Top results from SearXNG: title, link and snippet. Only the search words leave the server. */
-export async function searchWeb(query: string): Promise<string> {
-  if (!env.searchUrl) return 'Web search is not set up on this server.';
+export async function searchWeb(query: string, base: string | null = env.searchUrl || null): Promise<string> {
+  if (!base) return 'Web search is not set up.';
   const q = query.trim().slice(0, 200);
   if (!q) return 'Give some search words.';
   try {
-    const r = await fetch(`${env.searchUrl}/search?q=${encodeURIComponent(q)}&format=json&safesearch=1`, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/json' } });
+    const r = await fetch(`${base}/search?q=${encodeURIComponent(q)}&format=json&safesearch=1`, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/json' } });
     if (!r.ok) return `Search failed (${r.status}). If this keeps happening, SearXNG may need the JSON format turned on.`;
     const data = (await r.json()) as { results?: { title?: string; url?: string; content?: string }[] };
     const top = (data.results ?? []).slice(0, 6).map((x) => ({ title: (x.title ?? '').slice(0, 120), url: (x.url ?? '').slice(0, 200), snippet: (x.content ?? '').replace(/\s+/g, ' ').slice(0, 320) }));
@@ -162,7 +173,7 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
   const a = (args ?? {}) as Record<string, string>;
   switch (name) {
     case 'search_web':
-      return searchWeb(String(a.query ?? ''));
+      return searchWeb(String(a.query ?? ''), searchUrlFor(ctx.prefs)?.url ?? null);
     case 'propose_water': {
       const ml = parseWater(String(a.amount ?? ''), ctx.unit ?? 'lb');
       if (!ml) return 'That amount could not be read. Give a number and a unit, like "16.9 oz" or "500 ml", up to 5 L.';
@@ -350,11 +361,12 @@ ${opts.prefs.bell.askWhenUnsure
     ? `- If an unseen detail would change calories a lot (portion, oil, sauce, which size), ask ONE short question with ask_question instead of guessing. Log anything that is already clear in the same turn. If they answer "${JUST_ESTIMATE}", make a sensible assumption and say it in the note. Don't ask about small things (a splash of milk, a pinch of salt), and never ask twice about the same item.`
     : '- If an unseen detail would change calories a lot (oil, sauce, portion), make a sensible assumption, say it in the note, and invite a correction.'}
 - Give amount and unit the way they said it (1 serving, 11 fl oz, 2 slices, 4 oz) as well as grams; the app shows it that way.
+- For a restaurant, café or packaged item, it's one of them: amount 1, unit serving, serving_label like “1 burger” or “1 order”, and serving_g its typical weight, so it shows as 1 burger and the next is a tap.
 - grams is what they ate, never 100 just because foods are stored per 100 g. Use what they said, what the photo shows, their usual amount, or a typical portion.
 - Never say you'll do something ("let me adjust that", "I'll update it") unless you call the tool for it in this same reply. If you can't do it, say so plainly.
 - To fix something already logged (they give the real calories, amount or food): call get_day, then propose the corrected item with replaces_entry_id set to the old entry's id, in this reply. The card shows it replaces the old one, which is removed when they tap Add.
 - When they give a calorie count from a label, menu or the restaurant, set expected_kcal to it and estimate=false: their number wins over any database.
-${env.searchUrl ? "- For a restaurant, café or chain item, search_web for its published nutrition before estimating, and say where the numbers came from. If nothing exact turns up, estimate and say so." : "- You can't search the web here. For a restaurant or chain item, estimate and say it's an estimate; their posted numbers beat yours, so invite them to share them. (Whoever runs the server can turn on web search with SEARCH_URL.)"}
+${searchUrlFor(p) ? "- For a restaurant, café or chain item, search_web for its published nutrition before estimating, and say where the numbers came from. If nothing exact turns up, estimate and say so." : "- You can't search the web here. For a restaurant or chain item, estimate and say it's an estimate; their posted numbers beat yours, so invite them to share them. (Web search can be turned on in Settings → Bell.)"}
 - Keep replies short and plain. Use their units.
 
 Safety:

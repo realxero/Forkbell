@@ -174,3 +174,16 @@ test('a slow answer comes back as a ticket the app checks on, never as a timeout
   assert.equal(r.body.reply, 'Looking good!');
   assert.equal((await u.call('GET', `/api/bell/chat/${first.body.pending}`)).status, 404, 'collected once');
 });
+
+test('web search: the status says where it comes from; your own address needs the server to allow it', async () => {
+  const u = await newUser();
+  const s = (await u.call('GET', '/api/bell/status')).body.search;
+  assert.deepEqual(s, { on: true, source: 'server', server: true, yoursAllowed: false });
+  const tried = await u.call('POST', '/api/bell/search-test', {});
+  assert.equal(tried.status, 200, tried.text);
+  assert.equal(tried.body.ok, true, 'the server’s search works');
+  assert.equal((await u.call('POST', '/api/bell/search-test', { url: 'http://localhost:3882' })).status, 403, 'not allowed on this server');
+  const me = (await u.call('GET', '/api/me')).body;
+  assert.equal(me.preferences.webSearchUrl, null);
+  assert.equal((await u.call('PUT', '/api/me/preferences', { ...me.preferences, webSearchUrl: 'ftp://nope' })).status, 400);
+});

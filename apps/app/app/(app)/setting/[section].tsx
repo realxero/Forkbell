@@ -7,10 +7,12 @@ import { DataSection } from '../../../components/DataSection';
 import { ShortcutsSection } from '../../../components/ShortcutsSection';
 import { SecuritySection } from '../../../components/SecuritySection';
 import { BellVoice } from '../../../components/BellVoice';
+import { WebSearchSettings } from '../../../components/WebSearchSettings';
 
 const BellSection = () => (
   <>
     <AiSettings />
+    <WebSearchSettings />
     <BellVoice />
   </>
 );

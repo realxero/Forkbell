@@ -49,6 +49,14 @@ export const preferencesSchema = z.object({
   restFlash: z.boolean().default(true),
   /** the Patterns card on Progress */
   patterns: z.boolean().default(true),
+  /** your own SearXNG address for Bell's web search (used when the server allows custom addresses) */
+  webSearchUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .regex(/^https?:\/\/[^\s]+$/, 'Use an address starting with http:// or https://')
+    .nullable()
+    .default(null),
   /** the Water card on Today: shown or hidden, and the daily goal in ml */
   water: z
     .object({ show: z.boolean().default(true), goalMl: z.number().int().min(250).max(10000).default(2000) })

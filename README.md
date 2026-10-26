@@ -175,12 +175,18 @@ internet. If it's off, Bell falls back to the phone's voice.
 you don't end up with both. A calorie count you give is used exactly. Bell
 is told never to say it'll change something unless it does it in that reply.
 
-**Web search (optional).** Set `SEARCH_URL` to a SearXNG instance (with the
-JSON format turned on: `search: formats: [html, json]` in its
-`settings.yml`) and Bell searches for a restaurant or chain item's published
-nutrition before estimating, and says where the numbers came from. Only
-Bell's search words leave your server, to your SearXNG. A small one in the
-same Dockge stack:
+**Web search (optional).** Bell can search a SearXNG instance for a
+restaurant's or product's published nutrition before estimating, and says
+where the numbers came from. Only Bell's search words leave your server.
+SearXNG needs JSON answers on: `search: formats: [html, json]` in its
+`settings.yml`. Two ways to point Bell at it:
+
+- In the app: Settings → Bell → *Web search*, type the address as the
+  Forkbell server reaches it and tap *Try and save* (it only saves one that
+  works). This needs `AI_ALLOW_CUSTOM_URL=true` on the server, the same
+  switch as for your own AI server, since it lets people make the server
+  call an address of their choosing.
+- For everyone: `SEARCH_URL` in the stack. A small SearXNG in the same stack:
 
 ```yaml
   searxng:

@@ -6,9 +6,9 @@ import { z } from 'zod';
 import { BIG_JUMP, fastProgress, hoursText, waterGoalMl, waterText, supersetLetter, KOKORO_VOICES, TTS_VOICE, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
-import { aiConfigFor } from '../bell/config.ts';
+import { aiConfigFor, customAllowed } from '../bell/config.ts';
 import { env } from '../env.ts';
-import { runTool, systemPrompt, toolsFor, type ToolContext } from '../bell/tools.ts';
+import { runTool, searchUrlFor, searchWeb, systemPrompt, toolsFor, type ToolContext } from '../bell/tools.ts';
 
 const MAX_ROUNDS = 8;
 /**
@@ -139,9 +139,25 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
   r.get('/status', async (c) => {
     const cfg = await aiConfigFor(db, c.get('userId'));
     const tts = Boolean(env.tts.baseUrl);
-    if (!cfg) return c.json({ enabled: false, provider: null, model: null, source: null, tts });
-    if ('error' in cfg) return c.json({ enabled: false, provider: null, model: null, source: 'yours', error: cfg.error, tts });
-    return c.json({ enabled: true, provider: cfg.provider, model: cfg.model, source: cfg.source, tts });
+    const [me] = await asUser(c.get('userId'), (tx) => tx.select({ prefs: users.preferences }).from(users).where(eq(users.id, c.get('userId'))).limit(1));
+    const found = searchUrlFor(preferencesSchema.parse(me?.prefs ?? {}));
+    // Web search: where it comes from, and whether you may set your own address here.
+    const search = { on: Boolean(found), source: found?.source ?? null, server: Boolean(env.searchUrl), yoursAllowed: customAllowed() };
+    if (!cfg) return c.json({ enabled: false, provider: null, model: null, source: null, tts, search });
+    if ('error' in cfg) return c.json({ enabled: false, provider: null, model: null, source: 'yours', error: cfg.error, tts, search });
+    return c.json({ enabled: true, provider: cfg.provider, model: cfg.model, source: cfg.source, tts, search });
+  });
+
+  /** Try a SearXNG address (yours, when allowed, or the server's) with a sample search. */
+  r.post('/search-test', async (c) => {
+    const p = z.object({ url: z.string().trim().max(300).regex(/^https?:\/\/\S+$/).nullish() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!p.success) return c.json({ error: 'Use an address starting with http:// or https://' }, 400);
+    if (p.data.url && !customAllowed()) return c.json({ error: 'Your own addresses are turned off on this server (AI_ALLOW_CUSTOM_URL).' }, 403);
+    const base = p.data.url ? p.data.url.replace(/\/$/, '') : env.searchUrl || null;
+    if (!base) return c.json({ error: 'No search address to try.' }, 400);
+    const out = await searchWeb('banana calories', base);
+    if (out.startsWith('[')) return c.json({ ok: true, results: (JSON.parse(out) as unknown[]).length });
+    return c.json({ ok: false, error: out === 'No results.' ? 'It answered, but found nothing for a sample search.' : out });
   });
 
   /** The voices your speech server offers (Kokoro lists its own), and which one it uses by default. */
