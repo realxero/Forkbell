@@ -6,12 +6,20 @@ import { AiSettings, AppearanceSection, GoalsSection, HealthSection, PhoneSectio
 import { DataSection } from '../../../components/DataSection';
 import { ShortcutsSection } from '../../../components/ShortcutsSection';
 import { SecuritySection } from '../../../components/SecuritySection';
+import { BellVoice } from '../../../components/BellVoice';
+
+const BellSection = () => (
+  <>
+    <AiSettings />
+    <BellVoice />
+  </>
+);
 import { color, space, type } from '../../../lib/theme';
 
 const SECTIONS = {
   goals: { title: 'Goals and targets', body: GoalsSection },
   appearance: { title: 'Units and appearance', body: AppearanceSection },
-  bell: { title: 'Bell (AI)', body: AiSettings },
+  bell: { title: 'Bell (AI)', body: BellSection },
   health: { title: 'Apple Health and Health Connect', body: HealthSection },
   phone: { title: 'This phone', body: PhoneSection },
   data: { title: 'Export and backup', body: DataSection },

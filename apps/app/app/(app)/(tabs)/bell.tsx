@@ -139,7 +139,7 @@ export default function Bell() {
       const mood = bellMood({ userText: body, reply: r.reply, question: r.question });
       setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined, question: r.question ?? undefined, mood }]);
       // Read the answer aloud: always, or when you asked by voice (Settings → Bell).
-      if (prefs.readAloud === 'always' || (prefs.readAloud !== 'never' && opts.spoken)) speak(r.reply);
+      if (prefs.readAloud === 'always' || (prefs.readAloud !== 'never' && opts.spoken)) void speak(r.reply);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 0 ? 'Bell needs a connection.' : e instanceof Error ? e.message : String(e));
     } finally {

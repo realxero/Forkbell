@@ -27,3 +27,4 @@ export * from './weigh.ts';
 export * from './plate-volume.ts';
 export * from './version.ts';
 export * from './variations.ts';
+export * from './voices.ts';

@@ -2,10 +2,11 @@ import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
 import { z } from 'zod';
-import { BIG_JUMP, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
+import { BIG_JUMP, KOKORO_VOICES, TTS_VOICE, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
 import { aiConfigFor } from '../bell/config.ts';
+import { env } from '../env.ts';
 import { runTool, systemPrompt, toolsFor, type ToolContext } from '../bell/tools.ts';
 
 const MAX_ROUNDS = 8;
@@ -18,6 +19,17 @@ function allowed(userId: string) {
   recent.set(userId, [...list, now]);
   return true;
 }
+
+// Bell's voice from your speech server: generous, but not unlimited (each one is GPU time).
+const spoken = new Map<string, number[]>();
+function mayspeak(userId: string) {
+  const now = Date.now();
+  const list = (spoken.get(userId) ?? []).filter((t) => now - t < 10 * 60 * 1000);
+  if (list.length >= 150) return false;
+  spoken.set(userId, [...list, now]);
+  return true;
+}
+const ttsHeaders = () => ({ 'content-type': 'application/json', ...(env.tts.apiKey ? { authorization: `Bearer ${env.tts.apiKey}` } : {}) });
 
 const labelSchema = z.object({ image: z.string().max(4_000_000).regex(/^data:image\/(jpeg|png|webp|gif);base64,/, 'Send a JPEG, PNG, WebP or GIF photo.') });
 
@@ -85,9 +97,51 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
 
   r.get('/status', async (c) => {
     const cfg = await aiConfigFor(db, c.get('userId'));
-    if (!cfg) return c.json({ enabled: false, provider: null, model: null, source: null });
-    if ('error' in cfg) return c.json({ enabled: false, provider: null, model: null, source: 'yours', error: cfg.error });
-    return c.json({ enabled: true, provider: cfg.provider, model: cfg.model, source: cfg.source });
+    const tts = Boolean(env.tts.baseUrl);
+    if (!cfg) return c.json({ enabled: false, provider: null, model: null, source: null, tts });
+    if ('error' in cfg) return c.json({ enabled: false, provider: null, model: null, source: 'yours', error: cfg.error, tts });
+    return c.json({ enabled: true, provider: cfg.provider, model: cfg.model, source: cfg.source, tts });
+  });
+
+  /** The voices your speech server offers (Kokoro lists its own), and which one it uses by default. */
+  r.get('/voices', async (c) => {
+    if (!env.tts.baseUrl) return c.json({ server: false, voices: [], default: null });
+    let voices: string[] = [];
+    try {
+      const res = await fetch(`${env.tts.baseUrl}/audio/voices`, { headers: ttsHeaders(), signal: AbortSignal.timeout(5000) });
+      const data = (await res.json()) as { voices?: unknown };
+      if (res.ok && Array.isArray(data.voices)) voices = data.voices.filter((v): v is string => typeof v === 'string' && TTS_VOICE.test(v)).slice(0, 200);
+    } catch {
+      return c.json({ server: true, reachable: false, voices: KOKORO_VOICES, default: env.tts.voice });
+    }
+    return c.json({ server: true, reachable: true, voices: voices.length ? voices : KOKORO_VOICES, default: env.tts.voice });
+  });
+
+  /**
+   * Bell's words as speech from your speech server, as MP3. A GET, so the
+   * app's audio player can stream it straight from this address.
+   */
+  r.get('/speak', async (c) => {
+    if (!env.tts.baseUrl) return c.json({ error: 'No speech server is set up (TTS_BASE_URL).' }, 404);
+    const text = (c.req.query('text') ?? '').trim().slice(0, 1500);
+    const voice = c.req.query('voice') || env.tts.voice;
+    const speed = Math.min(1.5, Math.max(0.6, Number(c.req.query('speed') ?? 1) || 1));
+    if (!text) return c.json({ error: 'Nothing to say.' }, 400);
+    if (!TTS_VOICE.test(voice)) return c.json({ error: 'Unknown voice.' }, 400);
+    if (!mayspeak(c.get('userId'))) return c.json({ error: 'That’s a lot of speaking in a short time. Try again in a few minutes.' }, 429);
+    let res: Response;
+    try {
+      res = await fetch(`${env.tts.baseUrl}/audio/speech`, {
+        method: 'POST',
+        headers: ttsHeaders(),
+        body: JSON.stringify({ model: env.tts.model, input: text, voice, response_format: 'mp3', speed }),
+        signal: AbortSignal.timeout(30_000),
+      });
+    } catch {
+      return c.json({ error: 'The speech server didn’t answer. Is it running?' }, 502);
+    }
+    if (!res.ok || !res.body) return c.json({ error: `The speech server answered ${res.status}.` }, 502);
+    return new Response(res.body, { headers: { 'content-type': res.headers.get('content-type') ?? 'audio/mpeg', 'cache-control': 'private, max-age=3600' } });
   });
 
   r.post('/chat', async (c) => {

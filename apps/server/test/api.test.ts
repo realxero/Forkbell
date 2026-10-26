@@ -167,3 +167,12 @@ test('an exercise page lists variations and ways to progress besides weight', as
   assert.ok(r.body.variations.every((v: { level: string }) => ['harder', 'angle', 'easier'].includes(v.level)));
   assert.ok(r.body.progressIdeas.some((i: { key: string }) => i.key === 'slow'));
 });
+
+test('without a speech server, Bell says so and the app uses the phone’s voice', async () => {
+  const u = await newUser();
+  assert.equal((await u.call('GET', '/api/bell/status')).body.tts, false);
+  assert.equal((await u.call('GET', '/api/bell/voices')).body.server, false);
+  const r = await u.call('GET', '/api/bell/speak?text=hello');
+  assert.equal(r.status, 404);
+  assert.match(r.type, /json/);
+});

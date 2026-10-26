@@ -48,6 +48,17 @@ export const env = {
     /** for OpenAI-compatible servers (Ollama, LM Studio, OpenRouter...) or a proxy */
     baseUrl: (process.env.AI_BASE_URL || '').replace(/\/$/, ''),
   },
+  /**
+   * A natural voice for Bell from an OpenAI-compatible speech server, such as
+   * Kokoro-FastAPI on your network (http://192.168.1.20:8880/v1). Off when empty;
+   * the app then uses the phone's own voices.
+   */
+  tts: {
+    baseUrl: (process.env.TTS_BASE_URL || '').replace(/\/$/, ''),
+    apiKey: process.env.TTS_API_KEY || '',
+    model: process.env.TTS_MODEL || 'kokoro',
+    voice: process.env.TTS_VOICE || 'af_heart',
+  },
   webDir: process.env.WEB_DIR ?? null,
   secureCookies: publicUrl.startsWith('https://'),
 };

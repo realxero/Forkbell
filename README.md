@@ -150,6 +150,21 @@ stays off.
 - **Fix a wrong barcode entry from the label.** After scanning, *Numbers look wrong?* opens the food form; photograph the label and Bell reads what's printed (it isn't allowed to estimate). Forkbell converts per-serving, kJ and salt figures to per 100 g itself, fills the form for you to check, and your corrected copy is what scans from then on.
 - `apps/server/scripts/mock-ai.mjs` is a stand-in model for testing without a key (it also asks a question, tries a 100 g default, and answers label photos).
 
+### Bell's voice
+
+Bell reads answers aloud with the best voice the phone or browser has, and
+skips the robotic ones. On iPhone, download a Premium voice (Settings →
+Accessibility → Spoken Content → Voices → English, e.g. Ava, Zoe, Evan or
+Nathan) and Bell uses it by itself. Settings → Bell → Bell's voice lists the
+voices with a play button.
+
+For the most natural voice, run [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI)
+on a computer on your network (its GPU image needs the NVIDIA Container
+Toolkit; the CPU image works too, just slower) and set
+`TTS_BASE_URL=http://<that computer>:8880/v1`. The phone streams the audio
+through your Forkbell server, so the speech server never needs to be on the
+internet. If it's off, Bell falls back to the phone's voice.
+
 ## Offline
 
 The web app keeps its own files with a service worker, and each device keeps a

@@ -71,7 +71,7 @@ export function QuickBell() {
       });
       setTurns([...next, { role: 'assistant', text: r.reply, question: r.question ?? null, proposals: r.proposals.length ? r.proposals : undefined, mood: bellMood({ userText: q, reply: r.reply, question: r.question }) }]);
       lastAt.current = Date.now();
-      if (readAloud === 'always' || (readAloud !== 'never' && spoken)) speak(r.question?.text ?? r.reply);
+      if (readAloud === 'always' || (readAloud !== 'never' && spoken)) void speak(r.question?.text ?? r.reply);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 0 ? 'Bell needs a connection.' : e instanceof Error ? e.message : String(e));
     } finally {

@@ -56,7 +56,7 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
       });
       const answer = r.question?.text ?? r.reply;
       setMessages((m) => [...m, { role: 'assistant', text: answer, mood: bellMood({ userText: q, reply: r.reply, question: r.question }) }]);
-      if (readAloud === 'always' || (readAloud !== 'never' && spoken)) speak(answer);
+      if (readAloud === 'always' || (readAloud !== 'never' && spoken)) void speak(answer);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 0 ? 'Bell needs a connection.' : e instanceof Error ? e.message : String(e));
     } finally {
