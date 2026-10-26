@@ -3,13 +3,17 @@
 //   out: each day's calories and macros, and finished workouts
 import { addDays, todayLocal, type WorkoutSummary } from '@forkbell/shared';
 import { api } from './api';
-import { healthAvailable, healthName, healthSource, readHealth, readWeights, requestHealthAccess, writeNutrition, writeWorkout } from './health';
+import { healthAvailable, healthName, healthSource, readHealth, readWeights, requestHealthAccess, writeNutrition, writeWater, writeWorkout } from './health';
 import { readCache, writeCache } from './sync';
 
 export interface HealthSettings {
   connected: boolean;
   readActivity: boolean;
   writeNutrition: boolean;
+  /** each day's water (iPhone only) */
+  writeWater?: boolean;
+  /** days whose water was sent, so a day taken back to nothing is set to 0 there too */
+  waterSent?: string[];
   writeWorkouts: boolean;
   lastSync: string | null;
   /** workouts finished after this were not sent yet */
@@ -40,7 +44,7 @@ export async function connectHealth(): Promise<string | null> {
   const ok = await requestHealthAccess();
   if (!ok) return `${healthName} didn’t give access. You can allow it in its settings.`;
   // Don't send years of old workouts on the first connect; start from now.
-  setHealthSettings({ connected: true, permVersion: 2, workoutsSentUntil: getHealthSettings().workoutsSentUntil ?? new Date().toISOString() });
+  setHealthSettings({ connected: true, permVersion: 3, workoutsSentUntil: getHealthSettings().workoutsSentUntil ?? new Date().toISOString() });
   return syncHealth(true);
 }
 
@@ -54,10 +58,10 @@ export function syncHealth(force = false): Promise<string | null> {
     if (!force && s.lastSync && Date.now() - Date.parse(s.lastSync) < 15 * 60 * 1000) return null;
     const today = todayLocal();
     try {
-      // Version 2 reads more types (sleep, heart, distance...): ask for them once.
-      if ((s.permVersion ?? 1) < 2) {
+      // Version 2 reads more types (sleep, heart, distance...); version 3 writes water. Ask once for what's new.
+      if ((s.permVersion ?? 1) < 3) {
         await requestHealthAccess();
-        setHealthSettings({ permVersion: 2 });
+        setHealthSettings({ permVersion: 3 });
       }
       if (s.readActivity && !s.weightHistoryImported) {
         // Once: your weigh-in history (two years), so the trend and chart start with it
@@ -76,6 +80,16 @@ export function syncHealth(force = false): Promise<string | null> {
           `/api/diary/totals?from=${addDays(today, -6)}&to=${today}`,
         );
         await writeNutrition(days.map((d) => ({ date: d.date, ...d.totals })));
+      }
+      if (s.writeWater !== false && healthSource === 'apple_health') {
+        // Days with water are sent; a day sent before and now taken back to nothing is sent as 0.
+        // Days never sent stay untouched (sending 0 there would look like you drank nothing).
+        const from = addDays(today, -6);
+        const { days } = await api<{ days: { date: string; ml: number }[] }>(`/api/wellbeing/water?from=${from}&to=${today}`);
+        const had = new Set(days.map((d) => d.date));
+        const emptied = (s.waterSent ?? []).filter((d) => d >= from && !had.has(d)).map((date) => ({ date, ml: 0 }));
+        await writeWater([...days.filter((d) => d.ml > 0), ...emptied]);
+        setHealthSettings({ waterSent: days.filter((d) => d.ml > 0).map((d) => d.date) });
       }
       if (s.writeWorkouts) {
         const { workouts } = await api<{ workouts: WorkoutSummary[] }>('/api/workouts?limit=30');

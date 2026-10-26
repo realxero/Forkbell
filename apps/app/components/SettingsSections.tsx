@@ -369,11 +369,11 @@ export function HealthSection() {
       </View>
     );
   }
-  const toggle = (key: 'readActivity' | 'writeNutrition' | 'writeWorkouts', label: string) => (
+  const toggle = (key: 'readActivity' | 'writeNutrition' | 'writeWorkouts' | 'writeWater', label: string) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space(3) }}>
       <Text style={[type.body, { flex: 1 }]}>{label}</Text>
       <Switch
-        value={h[key]}
+        value={h[key] !== false}
         onValueChange={(v) => {
           setHealthSettings({ [key]: v });
           setH(getHealthSettings());
@@ -406,6 +406,7 @@ export function HealthSection() {
           {toggle('readActivity', 'Bring in steps, activity and weight')}
           {toggle('writeNutrition', `Send daily calories and macros to ${healthName}`)}
           {toggle('writeWorkouts', `Send workouts to ${healthName}`)}
+          {Platform.OS === 'ios' && toggle('writeWater', `Send water to ${healthName}`)}
           <Text style={type.small}>
             {h.lastSync ? `Last synced ${new Date(h.lastSync).toLocaleString()}.` : 'Not synced yet.'} Syncs when you open the app.
             {h.weightHistoryImported && h.weightHistoryCount ? ` Brought in ${h.weightHistoryCount} past weigh-ins.` : ''}

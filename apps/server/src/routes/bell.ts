@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
-import { users, type connect } from '@forkbell/db';
+import { and, eq, isNull, sql } from 'drizzle-orm';
+import { fasts, users, waterEntries, type connect } from '@forkbell/db';
 import { z } from 'zod';
-import { BIG_JUMP, supersetLetter, KOKORO_VOICES, TTS_VOICE, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
+import { BIG_JUMP, fastProgress, hoursText, waterGoalMl, waterText, supersetLetter, KOKORO_VOICES, TTS_VOICE, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
 import { aiConfigFor } from '../bell/config.ts';
@@ -166,6 +166,7 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
     }));
     const prefs = preferencesSchema.parse(me?.prefs ?? {});
     let system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null, prefs });
+    system += await waterAndFastingFor(asUser, userId, today, me?.unit ?? 'lb', prefs).catch(() => '');
     // Asked from inside a workout: the session as it stands, so "next set?" needs no lookup.
     if (workoutId) {
       const w = await internal(`/api/workouts/${workoutId}`, userId).then((r) => (r as { workout: Workout }).workout, () => null);
@@ -377,4 +378,27 @@ In the workout:
 - Rest: usually 2-3 min for heavy compound lifts, 60-90 s for small isolation work.
 - If they mention pain (not normal effort burn), tell them to stop that exercise, and suggest a pain-free alternative or calling it for today. Never push through pain.
 - Use get_exercise for their records and older history when it helps.`;
+}
+
+/**
+ * Today's water against the goal, and a fast that's going, for Bell's
+ * instructions, so "how am I doing today?" includes them. Only what the
+ * person turned on (or actually logged).
+ */
+async function waterAndFastingFor(asUser: ReturnType<typeof connect>['asUser'], userId: string, today: string, unit: 'lb' | 'kg', prefs: ReturnType<typeof preferencesSchema.parse>) {
+  const { ml, open } = await asUser(userId, async (tx) => {
+    const [w] = await tx.select({ ml: sql<number>`coalesce(sum(${waterEntries.ml}), 0)::int` }).from(waterEntries).where(eq(waterEntries.date, today));
+    const [f] = prefs.fasting.show ? await tx.select().from(fasts).where(and(isNull(fasts.endedAt), eq(fasts.userId, userId))).limit(1) : [];
+    return { ml: w?.ml ?? 0, open: f ?? null };
+  });
+  const lines: string[] = [];
+  if (prefs.water.show || ml > 0) {
+    const goal = waterGoalMl(prefs.water.goalMl);
+    lines.push(`Water today: ${waterText(ml, unit)} of a ${waterText(goal, unit)} goal${ml >= goal ? ' (reached)' : `, ${waterText(goal - ml, unit)} to go`}. They log water on the Water card on Today (Bell can't log it).`);
+  }
+  if (open) {
+    const p = fastProgress({ startedAt: open.startedAt, endedAt: null, targetHours: open.targetHours });
+    lines.push(`Fasting now: ${hoursText(p.hours)} into a ${open.targetHours}-hour fast${p.done ? ' (goal reached)' : ''}. If they log food, don't lecture; they end the fast on Today. Never push them to fast longer.`);
+  }
+  return lines.length ? `\n\n${lines.join('\n')}` : '';
 }

@@ -199,3 +199,6 @@ export async function latestHeartRate(): Promise<{ bpm: number; at: number } | n
 export async function latestRestingHeartRate(): Promise<number | null> {
   return null;
 }
+
+/** Water to Apple Health: iPhone only, for now. */
+export async function writeWater(_days: { date: string; ml: number }[]): Promise<void> {}

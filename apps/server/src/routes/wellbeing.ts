@@ -104,6 +104,21 @@ export function wellbeingRoutes({ asUser }: ReturnType<typeof connect>) {
   });
 
   // Water ---------------------------------------------------------------------
+  /** Daily totals for a range (?from=&to=, up to 62 days), for sending to Apple Health. */
+  r.get('/water', async (c) => {
+    const from = dateSchema.safeParse(c.req.query('from'));
+    const to = dateSchema.safeParse(c.req.query('to'));
+    if (!from.success || !to.success || from.data > to.data || addDays(from.data, 62) < to.data) return c.json({ error: 'Use from and to dates like 2026-10-22, up to 62 days apart.' }, 400);
+    const rows = await asUser(c.get('profileId'), (tx) =>
+      tx
+        .select({ date: waterEntries.date, ml: sql<number>`sum(${waterEntries.ml})::int` })
+        .from(waterEntries)
+        .where(and(gte(waterEntries.date, from.data), sql`${waterEntries.date} <= ${to.data}::date`))
+        .groupBy(waterEntries.date)
+        .orderBy(asc(waterEntries.date)),
+    );
+    return c.json({ days: rows });
+  });
   // The day is in the path (not a query), so the app keeps one copy per day for offline use.
   r.get('/water/:date', async (c) => {
     const d = dateSchema.safeParse(c.req.param('date'));

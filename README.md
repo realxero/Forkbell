@@ -212,6 +212,11 @@ use kilograms), or *Other amount* and type anything like "20 oz", "1.5 L" or
 the card, in Settings → Goals and targets. It works offline like the diary, is
 included in Export, and people you share wellbeing with can see it.
 
+On iPhone, each day's water also goes to Apple Health as one entry, so
+another glass or an Undo updates it there (Settings → Apple Health → Send
+water). Bell knows today's water and your goal, so "how am I doing today?"
+includes it; you log water on the card, not through Bell.
+
 ## Fasting
 
 Off until you turn it on in Settings → Goals and targets. Then Today has a

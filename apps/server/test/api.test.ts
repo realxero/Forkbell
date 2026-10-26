@@ -313,3 +313,15 @@ test('cardio: built in, logged as time and distance, longest time is the record'
   const made = await u.call('POST', '/api/exercises', { name: 'Battle ropes', muscle: 'full body', equipment: 'cardio', kind: 'cardio', restSeconds: 0 });
   assert.ok(made.status < 300, made.text);
 });
+
+test('water: daily totals for a range, for Apple Health', async () => {
+  const u = await newUser();
+  await u.call('POST', '/api/wellbeing/water', { date: '2026-10-20', ml: 500 });
+  await u.call('POST', '/api/wellbeing/water', { date: '2026-10-20', ml: 250 });
+  await u.call('POST', '/api/wellbeing/water', { date: '2026-10-22', ml: 1000 });
+  await u.call('POST', '/api/wellbeing/water', { date: '2026-10-30', ml: 1000 });
+  const r = await u.call('GET', '/api/wellbeing/water?from=2026-10-19&to=2026-10-25');
+  assert.equal(r.status, 200, r.text);
+  assert.deepEqual(r.body.days, [{ date: '2026-10-20', ml: 750 }, { date: '2026-10-22', ml: 1000 }]);
+  assert.equal((await u.call('GET', '/api/wellbeing/water?from=2026-01-01&to=2026-10-25')).status, 400, 'not a whole year at once');
+});

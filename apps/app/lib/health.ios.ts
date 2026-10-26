@@ -51,6 +51,7 @@ export async function requestHealthAccess() {
       'HKQuantityTypeIdentifierDietaryProtein',
       'HKQuantityTypeIdentifierDietaryCarbohydrates',
       'HKQuantityTypeIdentifierDietaryFatTotal',
+      'HKQuantityTypeIdentifierDietaryWater',
       'HKWorkoutTypeIdentifier',
     ],
   });
@@ -184,5 +185,21 @@ export async function latestRestingHeartRate(): Promise<number | null> {
     return s ? s.quantity : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Each day's water as one sample, so changing the day (Undo, another glass)
+ * replaces it in Apple Health instead of adding a second one.
+ */
+export async function writeWater(days: { date: string; ml: number }[]) {
+  for (const d of days) {
+    const start = startOf(d.date);
+    const end = new Date(Math.min(startOf(addDays(d.date, 1)).getTime() - 1000, Date.now()));
+    if (end <= start || !(d.ml >= 0)) continue;
+    await saveQuantitySample('HKQuantityTypeIdentifierDietaryWater', 'mL', d.ml, start, end, {
+      HKMetadataKeySyncIdentifier: `forkbell:${d.date}:water`,
+      HKMetadataKeySyncVersion: Date.now(),
+    }).catch(() => {});
   }
 }
