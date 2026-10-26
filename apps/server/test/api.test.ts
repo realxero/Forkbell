@@ -176,3 +176,29 @@ test('without a speech server, Bell says so and the app uses the phone’s voice
   assert.equal(r.status, 404);
   assert.match(r.type, /json/);
 });
+
+test('water: add (once, even if sent twice), total by day, undo, and nobody else sees it', async () => {
+  const a = await newUser('Alice');
+  const b = await newUser('Bob');
+  const id = '6f1c2a4e-1b2c-4d3e-8f90-0123456789ab';
+  assert.equal((await a.call('POST', '/api/wellbeing/water', { id, date: '2026-10-25', ml: 500 })).status, 201);
+  assert.equal((await a.call('POST', '/api/wellbeing/water', { id, date: '2026-10-25', ml: 500 })).status, 201, 'a resend is fine');
+  assert.equal((await a.call('POST', '/api/wellbeing/water', { date: '2026-10-25', ml: 237 })).status, 201);
+  assert.equal((await a.call('POST', '/api/wellbeing/water', { date: '2026-10-24', ml: 1000 })).status, 201);
+  assert.equal((await a.call('POST', '/api/wellbeing/water', { date: '2026-10-25', ml: 0 })).status, 400);
+  assert.equal((await a.call('POST', '/api/wellbeing/water', { date: '2026-10-25', ml: 9000 })).status, 400);
+  const day = (await a.call('GET', '/api/wellbeing/water/2026-10-25')).body;
+  assert.equal(day.totalMl, 737, 'the resend was counted once, other days are apart');
+  assert.deepEqual(day.entries.map((e: { ml: number }) => e.ml), [500, 237], 'in the order they were logged');
+  assert.equal((await b.call('GET', '/api/wellbeing/water/2026-10-25')).body.totalMl, 0, "Bob can't see Alice's water");
+  assert.equal((await b.call('DELETE', `/api/wellbeing/water/${id}`)).status, 404, "or take it back");
+  assert.equal((await a.call('DELETE', `/api/wellbeing/water/${day.entries[1].id}`)).status, 200);
+  assert.equal((await a.call('GET', '/api/wellbeing/water/2026-10-25')).body.totalMl, 500);
+  const exported = (await a.call('GET', '/api/export')).body.data.waterEntries;
+  assert.equal(exported.length, 2, 'water is in the export');
+  assert.equal((await b.call('GET', '/api/export')).body.data.waterEntries.length, 0);
+  const me = (await a.call('GET', '/api/me')).body;
+  assert.deepEqual(me.preferences.water, { show: true, goalMl: 2000 }, 'the goal starts at 2 L, card shown');
+  assert.equal((await a.call('PUT', '/api/me/preferences', { ...me.preferences, water: { show: false, goalMl: 3000 } })).status, 200);
+  assert.deepEqual((await a.call('GET', '/api/me')).body.preferences.water, { show: false, goalMl: 3000 });
+});

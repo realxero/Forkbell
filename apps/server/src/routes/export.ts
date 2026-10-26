@@ -29,6 +29,7 @@ const TABLES = {
   savedMealItems: t.savedMealItems,
   recipes: t.recipes,
   recipeItems: t.recipeItems,
+  waterEntries: t.waterEntries,
 } as const;
 
 /** One CSV cell: quoted when it needs to be. */

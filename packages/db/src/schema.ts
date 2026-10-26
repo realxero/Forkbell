@@ -276,3 +276,12 @@ export const shortcutKeys = pgTable('shortcut_keys', {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
   lastUsedAt: timestamp('last_used_at', { withTimezone: true, mode: 'string' }),
 });
+
+/** Water: one row per glass or bottle. */
+export const waterEntries = pgTable('water_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  ml: integer('ml').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+});

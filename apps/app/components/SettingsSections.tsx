@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { presetGoals, todayLocal } from '@forkbell/shared';
+import { DEFAULT_WATER_GOAL_ML, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
 import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent } from '../lib/theme';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -62,6 +62,7 @@ export function GoalsSection() {
       </Pressable>
       {status && <Text style={type.body}>{status}</Text>}
       <WeekdayGoals />
+      <WaterGoal />
     </View>
   );
 }
@@ -443,3 +444,47 @@ const s = StyleSheet.create({
   ctaText: { color: color.onAccent, fontSize: 17, fontWeight: '800' },
   account: { marginTop: space(8), paddingTop: space(4), borderTopWidth: 1, borderTopColor: color.line, gap: space(3) },
 });
+
+/** Settings → Goals: the daily water goal, and whether the Water card shows on Today. */
+function WaterGoal() {
+  const { me, refreshMe } = useAuth();
+  const unit = me?.weightUnit ?? 'lb';
+  const water = me?.preferences.water ?? { show: true, goalMl: DEFAULT_WATER_GOAL_ML };
+  const [text, setText] = useState(waterText(water.goalMl, unit));
+  const [status, setStatus] = useState<string | null>(null);
+  const save = async (next: { show: boolean; goalMl: number }) => {
+    if (!me) return;
+    try {
+      await put('/api/me/preferences', { ...me.preferences, water: next });
+      await refreshMe();
+      setStatus(next.show ? `Water goal: ${waterText(next.goalMl, unit)} a day.` : 'The Water card is hidden. Your water history is kept.');
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const saveGoal = () => {
+    const ml = parseWaterGoal(text, unit);
+    if (!ml) return setStatus(`Type a daily amount like ${unit === 'lb' ? '“68 oz” or “2.5 L”' : '“2.5 L” or “2500 ml”'}.`);
+    setText(waterText(ml, unit));
+    void save({ ...water, goalMl: ml });
+  };
+  return (
+    <View style={{ gap: space(2), marginTop: space(4) }}>
+      <Text style={type.label}>Water</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
+        <Text style={[type.body, { flex: 1 }]}>Show the Water card on Today</Text>
+        <Switch value={water.show} onValueChange={(show) => void save({ ...water, show })} accessibilityLabel="Show the Water card on Today" />
+      </View>
+      {water.show && (
+        <>
+          <Text style={type.small}>Daily goal (2 L, about 68 oz, to start). Type it in oz, ml or L.</Text>
+          <View style={{ flexDirection: 'row', gap: space(2) }}>
+            <TextInput value={text} onChangeText={setText} onSubmitEditing={saveGoal} placeholder={unit === 'lb' ? '68 oz' : '2 L'} style={[s.input, { flex: 1 }]} accessibilityLabel="Daily water goal" />
+            <Pressable onPress={saveGoal} style={[s.button, { paddingHorizontal: space(5) }]}><Text style={s.buttonText}>Save</Text></Pressable>
+          </View>
+        </>
+      )}
+      {status && <Text style={type.small}>{status}</Text>}
+    </View>
+  );
+}

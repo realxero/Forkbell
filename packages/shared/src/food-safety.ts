@@ -43,6 +43,10 @@ export const preferencesSchema = z.object({
   trainingTips: z.boolean().default(true),
   /** the Patterns card on Progress */
   patterns: z.boolean().default(true),
+  /** the Water card on Today: shown or hidden, and the daily goal in ml */
+  water: z
+    .object({ show: z.boolean().default(true), goalMl: z.number().int().min(250).max(10000).default(2000) })
+    .default({ show: true, goalMl: 2000 }),
   /** finished (or skipped) the first-launch setup */
   onboarded: z.boolean().default(false),
   /** for starting targets: an estimate of your burn until your own numbers take over */

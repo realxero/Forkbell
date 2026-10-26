@@ -145,6 +145,12 @@ try {
   assert.equal((await as(bob, (tx) => tx`select * from saved_meal_items`)).length, 0, "or their items");
   await assert.rejects(as(bob, (tx) => tx`insert into saved_meal_items (meal_id, user_id, food_id, grams) values (${am!.id}, ${bob}, ${aliceFood}, 5)`), "Bob can't add to Alice's meal");
 
+  // Water: Alice's own; Bob can neither see it nor add to it.
+  await as(alice, (tx) => tx`insert into water_entries (date, ml) values ('2026-10-22', 500)`);
+  assert.equal((await as(bob, (tx) => tx`select * from water_entries`)).length, 0, "Bob can't see Alice's water");
+  await assert.rejects(as(bob, (tx) => tx`insert into water_entries (user_id, date, ml) values (${alice}, '2026-10-22', 250)`), "Bob can't log water for Alice");
+  assert.equal((await as(bob, (tx) => tx`delete from water_entries returning id`)).length, 0, "or take hers back");
+
   // Alice still sees her own data.
   assert.equal((await as(alice, (tx) => tx`select * from diary_entries`)).length, 2, 'Alice sees her entries');
   assert.equal((await as(alice, (tx) => tx`select * from workout_sets`)).length, 1, 'Alice sees her sets');

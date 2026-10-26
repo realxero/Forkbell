@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, desc, eq, gte } from 'drizzle-orm';
-import { checkIns, medicationLogs, medications, type connect } from '@forkbell/db';
-import { addDays, dateSchema, todayLocal } from '@forkbell/shared';
+import { checkIns, medicationLogs, medications, waterEntries, type connect } from '@forkbell/db';
+import { addDays, dateSchema, MAX_WATER_ML, todayLocal, waterTotal, type WaterDay } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -101,6 +101,34 @@ export function wellbeingRoutes({ asUser }: ReturnType<typeof connect>) {
           .onConflictDoUpdate({ target: [medicationLogs.medicationId, medicationLogs.date, medicationLogs.slot], set: { status } });
     });
     return c.json({ ok: true });
+  });
+
+  // Water ---------------------------------------------------------------------
+  // The day is in the path (not a query), so the app keeps one copy per day for offline use.
+  r.get('/water/:date', async (c) => {
+    const d = dateSchema.safeParse(c.req.param('date'));
+    if (!d.success) return c.json({ error: 'Use a date like 2026-10-25.' }, 400);
+    const entries = await asUser(c.get('profileId'), (tx) =>
+      tx.select({ id: waterEntries.id, ml: waterEntries.ml, at: waterEntries.createdAt }).from(waterEntries).where(eq(waterEntries.date, d.data)).orderBy(asc(waterEntries.createdAt), asc(waterEntries.id)),
+    );
+    return c.json({ date: d.data, entries, totalMl: waterTotal(entries) } satisfies WaterDay);
+  });
+  r.post('/water', async (c) => {
+    const p = z
+      .object({ id: z.string().uuid().optional(), date: dateSchema, ml: z.number().int().min(1, 'Add at least 1 ml.').max(MAX_WATER_ML, 'That’s more than one drink; add it in parts.') })
+      .safeParse(await c.req.json().catch(() => null));
+    if (!p.success) return c.json({ error: p.error.issues[0]?.message ?? 'Send a date and an amount in ml.' }, 400);
+    const { id, date, ml } = p.data;
+    // Sent twice (an answer lost on a bad connection): the second does nothing.
+    const [row] = await asUser(c.get('userId'), (tx) =>
+      tx.insert(waterEntries).values({ ...(id ? { id } : {}), date, ml } as typeof waterEntries.$inferInsert).onConflictDoNothing({ target: waterEntries.id }).returning({ id: waterEntries.id }),
+    );
+    return c.json({ id: row?.id ?? id }, 201);
+  });
+  r.delete('/water/:id', async (c) => {
+    if (!z.string().uuid().safeParse(c.req.param('id')).success) return c.json({ error: 'Not found.' }, 404);
+    const gone = await asUser(c.get('userId'), (tx) => tx.delete(waterEntries).where(eq(waterEntries.id, c.req.param('id'))).returning({ id: waterEntries.id }));
+    return gone.length ? c.json({ ok: true }) : c.json({ error: 'Not found.' }, 404);
   });
 
   return r;

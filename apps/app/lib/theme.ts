@@ -31,6 +31,8 @@ const light = {
   dangerBg: '#FDECEA',
   restFill: '#2F4350',
   track: '#E6E9EA',
+  water: '#1E88C8',
+  waterBg: '#E4F2FB',
 } as const;
 
 const dark: Record<keyof typeof light, string> = {
@@ -54,6 +56,8 @@ const dark: Record<keyof typeof light, string> = {
   dangerBg: '#3A1A18',
   restFill: '#33505F',
   track: '#262D32',
+  water: '#4FB3F0',
+  waterBg: '#122A3A',
 };
 
 export type ColorName = keyof typeof light;

@@ -17,6 +17,8 @@ import {
   type Workout,
   type WorkoutSummary,
   type SavedMeal,
+  type WaterDay,
+  waterTotal,
 } from '@forkbell/shared';
 import { cachedGet, cachedPaths, newId, readCache, send, updateCache, writeCache } from './sync';
 import { haptic } from './haptics';
@@ -283,4 +285,32 @@ export async function changeEntryNutrition(entry: DiaryEntry, totals: { kcal: nu
   const food = await createFood({ name: entry.food.name, brand: entry.food.brand, source: 'custom', per100, servingGrams: entry.food.servingGrams, barcode: null } as Parameters<typeof createFood>[0]);
   updateCache<DiaryDay>(`/api/diary/${entry.date}`, (day) => day && withEntries(day, day.entries.map((e) => (e.id === entry.id ? { ...e, food } : e))));
   return send('PATCH', `/api/diary/${entry.id}`, { foodId: food.id }, { label: `Correct ${entry.food.name}`, coalesceKey: `entry-food:${entry.id}` });
+}
+
+// Water ---------------------------------------------------------------------
+
+const waterPath = (date: string) => `/api/wellbeing/water/${date}`;
+const waterDay = (date: string): WaterDay => readCache<WaterDay>(waterPath(date)) ?? { date, entries: [], totalMl: 0 };
+
+/** Log a drink. Shows straight away; sent now, or when back online. Returns the new total. */
+export async function addWater(date: string, ml: number) {
+  const id = newId();
+  updateCache<WaterDay>(waterPath(date), (d) => {
+    const entries = [...(d ?? waterDay(date)).entries, { id, ml, at: new Date().toISOString() }];
+    return { date, entries, totalMl: waterTotal(entries) };
+  });
+  await send('POST', '/api/wellbeing/water', { id, date, ml }, { label: 'Log water' });
+  return waterDay(date).totalMl;
+}
+
+/** Take back the last drink of the day. */
+export async function undoWater(date: string) {
+  const last = waterDay(date).entries.at(-1);
+  if (!last) return null;
+  updateCache<WaterDay>(waterPath(date), (d) => {
+    const entries = (d ?? waterDay(date)).entries.filter((e) => e.id !== last.id);
+    return { date, entries, totalMl: waterTotal(entries) };
+  });
+  await send('DELETE', `/api/wellbeing/water/${last.id}`, undefined, { label: 'Undo water' });
+  return last;
 }
