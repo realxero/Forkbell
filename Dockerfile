@@ -1,5 +1,10 @@
 # One image: the API server plus the exported web app, served from the same origin.
-FROM node:22-bookworm-slim AS build
+# Node 24 LTS (supported until April 2028). Build with --pull so Docker fetches the
+# newest Node 24 instead of reusing an old copy; the check below stops a build on a
+# Node with a known security hole (CVE-2026-111497, fixed in 24.22.1).
+FROM node:24-bookworm-slim AS build
+COPY scripts/check-node.mjs /tmp/check-node.mjs
+RUN node /tmp/check-node.mjs
 WORKDIR /src
 RUN corepack enable
 COPY . .
@@ -18,7 +23,9 @@ RUN cd apps/app && CI=1 npx expo export --platform web --output-dir /out/web
 # Same for the exported web app (public/form keeps its host permissions): the runtime user must be able to read every folder.
 RUN chmod -R a+rX /out/web
 
-FROM node:22-bookworm-slim
+FROM node:24-bookworm-slim
+COPY scripts/check-node.mjs /tmp/check-node.mjs
+RUN node /tmp/check-node.mjs
 WORKDIR /app
 ENV NODE_ENV=production WEB_DIR=/app/web MIGRATIONS_DIR=/app/migrations PORT=3000
 COPY docker/runtime-package.json package.json

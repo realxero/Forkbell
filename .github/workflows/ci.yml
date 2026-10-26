@@ -18,7 +18,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - name: Node version has no known security holes
+        run: node scripts/check-node.mjs
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test

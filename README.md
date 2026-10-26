@@ -64,12 +64,15 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
    empty and Forkbell uses usernames and passwords, and the first person to
    open it creates the first account.)
 2. `cp .env.example .env` and fill in the top sections.
-3. `docker compose up -d --build`
+3. `docker compose build --pull && docker compose up -d`
 4. Point your reverse proxy at port 3000 and open `PUBLIC_URL`.
 
 Back up `./data/postgres` (or use `pg_dump`).
 
-Updating: pull, rebuild the image, and redeploy. The `migrate` container
+Updating: pull, rebuild the image with `--pull` (so Docker fetches the newest
+Node 24 with its security fixes, instead of reusing the copy it has), and
+redeploy. A build on a Node with a known security hole stops with a message
+saying so. The `migrate` container
 upgrades the database and refreshes the built-in foods and exercises before
 the server starts.
 
@@ -200,7 +203,7 @@ when it syncs.
 
 ## Development
 
-Needs Node 22+ and pnpm (`corepack enable`).
+Needs Node 24 (24.22.1 or newer; `.nvmrc` says which) and pnpm (`corepack enable`).
 
 ```sh
 pnpm install
