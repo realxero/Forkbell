@@ -1,33 +1,40 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
-import { mealForTime, todayLocal, type BellReply } from '@forkbell/shared';
+import { bellHistory, mealForTime, todayLocal, type BellReply, type BellTurn, type FoodProposal } from '@forkbell/shared';
 import { api, ApiError, post } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { speak, stopSpeaking } from '../lib/speak';
 import { VoiceButton, voiceAvailable } from './VoiceButton';
 import { BellAvatar } from './BellAvatar';
-import { Proposals } from '../app/(app)/(tabs)/bell';
+import { Proposals, Question } from '../app/(app)/(tabs)/bell';
 import { color, radius, space, type } from '../lib/theme';
 
 /**
  * Ask Bell from anywhere: a floating button above the tabs. Hold it and talk,
  * let go, and the answer appears (and is read out if you like). Tap it to
  * talk hands-free, or type in the sheet. Food Bell suggests is reviewed and
- * added right there.
+ * added right there. It keeps the conversation like the full chat does, so
+ * Bell's questions can be answered with a tap.
  */
+type Turn = BellTurn & { proposals?: FoodProposal[]; added?: boolean; answered?: string };
+/** After this long without a message, the next question starts a new conversation. */
+const FRESH_AFTER = 15 * 60_000;
+
 export function QuickBell() {
   const { me } = useAuth();
   const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
   const [hearing, setHearing] = useState<string | null>(null);
   const [text, setText] = useState('');
-  const [asked, setAsked] = useState<string | null>(null);
-  const [reply, setReply] = useState<BellReply | null>(null);
+  // The whole conversation, like the full chat: Bell needs it to understand an
+  // answer to its own question ("Oat milk", "16 oz").
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const lastAt = useRef(0);
+  const scroll = useRef<ScrollViewInstance>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [added, setAdded] = useState(false);
   const voice = voiceAvailable();
   const readAloud = me?.preferences.bell?.readAloud ?? 'voice';
 
@@ -39,24 +46,31 @@ export function QuickBell() {
   useEffect(() => {
     if (!open) stopSpeaking();
   }, [open]);
+  useEffect(() => {
+    setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
+  }, [turns, busy]);
 
-  const ask = async (question: string, spoken: boolean) => {
+  const ask = async (question: string, spoken: boolean, answering?: number) => {
     const q = question.trim();
-    if (!q) return;
+    if (!q || busy) return;
     setOpen(true);
-    setAsked(q);
-    setReply(null);
-    setAdded(false);
     setError(null);
+    // A new question long after the last one starts over; answering Bell never does.
+    const fresh = answering === undefined && Date.now() - lastAt.current > FRESH_AFTER;
+    const base = fresh ? [] : answering !== undefined ? turns.map((t, j) => (j === answering ? { ...t, answered: q } : t)) : turns;
+    const next: Turn[] = [...base, { role: 'user', text: q }];
+    setTurns(next);
+    lastAt.current = Date.now();
     setBusy(true);
     try {
       const r = await post<BellReply>('/api/bell/chat', {
-        messages: [{ role: 'user', text: q }],
+        messages: bellHistory(next),
         today: todayLocal(),
         meal: mealForTime(),
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       });
-      setReply(r);
+      setTurns([...next, { role: 'assistant', text: r.reply, question: r.question ?? null, proposals: r.proposals.length ? r.proposals : undefined }]);
+      lastAt.current = Date.now();
       if (readAloud === 'always' || (readAloud !== 'never' && spoken)) speak(r.question?.text ?? r.reply);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 0 ? 'Bell needs a connection.' : e instanceof Error ? e.message : String(e));
@@ -64,6 +78,13 @@ export function QuickBell() {
       setBusy(false);
     }
   };
+  const startOver = () => {
+    stopSpeaking();
+    setTurns([]);
+    setError(null);
+    lastAt.current = 0;
+  };
+  const lastIndex = turns.length - 1;
 
   if (!enabled) return null;
   return (
@@ -106,23 +127,32 @@ export function QuickBell() {
               </View>
               <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
             </View>
-            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
+            <ScrollView ref={scroll} style={{ maxHeight: 420 }} contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
               {hearing !== null && (
                 <View style={s.listening}>
                   <Ionicons name="mic" size={18} color={color.over} />
                   <Text style={[type.body, { flex: 1 }]}>{hearing || 'Listening… let go when you’re done'}</Text>
                 </View>
               )}
-              {asked && hearing === null && <Text style={[type.body, { fontWeight: '700' }]}>“{asked}”</Text>}
-              {busy && <ActivityIndicator color={color.accent} />}
-              {reply && (
-                <>
-                  <Text style={type.body}>{reply.question?.text ?? reply.reply}</Text>
-                  {reply.proposals.length > 0 && <Proposals items={reply.proposals} added={added} onAdded={() => setAdded(true)} />}
-                </>
+              {turns.map((t, i) =>
+                t.role === 'user' ? (
+                  // An answer tapped on Bell's question shows on its button, not again here.
+                  turns[i - 1]?.answered === t.text ? null : (
+                    <Text key={i} style={[type.body, { fontWeight: '700' }]}>“{t.text}”</Text>
+                  )
+                ) : (
+                  <View key={i} style={{ gap: space(2) }}>
+                    {!!t.text && <Text style={type.body}>{t.text}</Text>}
+                    {t.question && <Question q={t.question} answered={t.answered} live={i === lastIndex && !busy} onAnswer={(a) => void ask(a, false, i)} />}
+                    {t.proposals && (
+                      <Proposals items={t.proposals} added={Boolean(t.added)} onAdded={() => setTurns((l) => l.map((x, j) => (j === i ? { ...x, added: true } : x)))} />
+                    )}
+                  </View>
+                ),
               )}
+              {busy && <ActivityIndicator color={color.accent} />}
               {error && <Text style={{ color: color.over }}>{error}</Text>}
-              {!asked && hearing === null && !error && (
+              {!turns.length && hearing === null && !error && (
                 <Text style={type.small}>{voice ? 'Hold the button and talk, or type below.' : 'Type a question, or what you ate.'} For example: “How much protein do I have left?” or “I had two eggs and toast”.</Text>
               )}
             </ScrollView>
@@ -132,7 +162,14 @@ export function QuickBell() {
                 <Ionicons name="arrow-up" size={20} color={color.onAccent} />
               </Pressable>
             </View>
-            <Pressable onPress={() => { setOpen(false); router.push('/bell'); }}><Text style={s.link}>Open the full chat ›</Text></Pressable>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              {turns.length > 0 ? (
+                <Pressable onPress={startOver} hitSlop={8}><Text style={s.link}>New question</Text></Pressable>
+              ) : (
+                <View />
+              )}
+              <Pressable onPress={() => { setOpen(false); router.push('/bell'); }} hitSlop={8}><Text style={s.link}>Open the full chat ›</Text></Pressable>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>

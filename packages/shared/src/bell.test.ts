@@ -72,3 +72,26 @@ test('old saved preferences get the Bell defaults', () => {
   const p = preferencesSchema.parse({ allergies: ['milk'] });
   assert.deepEqual(p.bell, { askWhenUnsure: true, voiceSends: true, readAloud: 'voice', style: 'buddy' });
 });
+
+test('an answer to Bell’s question is sent with the conversation it answers', async () => {
+  const { bellHistory, bellChatSchema } = await import('./index.ts');
+  const sent = bellHistory([
+    { role: 'user', text: 'log a 16 oz latte' },
+    { role: 'assistant', text: '', question: { text: 'What milk was in it?', choices: ['Whole milk', 'Oat milk'] } },
+    { role: 'user', text: 'Oat milk' },
+  ]);
+  assert.equal(sent.length, 3);
+  assert.equal(sent[0]!.text, 'log a 16 oz latte');
+  assert.equal(sent[1]!.text, 'What milk was in it?');
+  assert.equal(sent.at(-1)!.text, 'Oat milk');
+  assert.equal(bellChatSchema.safeParse({ messages: sent, today: '2026-10-25', meal: 'breakfast' }).success, true);
+});
+
+test('only the last 20 turns go, and placeholder photos stay behind', async () => {
+  const { bellHistory } = await import('./index.ts');
+  const turns = Array.from({ length: 30 }, (_, i) => ({ role: (i % 2 ? 'assistant' : 'user') as 'user' | 'assistant', text: `t${i}`, image: i === 29 ? 'photo' : undefined }));
+  const sent = bellHistory(turns);
+  assert.equal(sent.length, 20);
+  assert.equal(sent[0]!.text, 't10');
+  assert.equal('image' in sent.at(-1)!, false);
+});

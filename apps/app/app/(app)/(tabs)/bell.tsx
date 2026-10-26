@@ -4,7 +4,7 @@ import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
+import { bellHistory, forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
 import { api, ApiError, post } from '../../../lib/api';
 import { addEntry } from '../../../lib/actions';
 import { useAuth } from '../../../lib/auth';
@@ -32,12 +32,6 @@ type Message = {
 const KEY = 'device:bell-chat';
 const SUGGESTIONS = ['What have I eaten today?', 'How much protein do I have left?', 'Log 2 eggs and toast for breakfast', 'How is my bench press going?'];
 
-/** What the model sees for each turn; a question Bell asked is part of what it said. */
-const forModel = (m: Message) => ({
-  role: m.role,
-  text: [m.text, m.question?.text].filter(Boolean).join('\n'),
-  ...(m.image?.startsWith('data:') ? { image: m.image } : {}),
-});
 
 export default function Bell() {
   const { me } = useAuth();
@@ -128,7 +122,7 @@ export default function Bell() {
     setNotice(null);
     try {
       const r = await post<BellReply>('/api/bell/chat', {
-        messages: next.slice(-20).map(forModel),
+        messages: bellHistory(next),
         today: todayLocal(),
         meal: mealForTime(),
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
@@ -330,7 +324,7 @@ export default function Bell() {
 }
 
 /** A question from Bell, answered with one tap. "Just estimate it" is always there. */
-function Question({ q, answered, live, onAnswer }: { q: BellQuestion; answered?: string; live: boolean; onAnswer: (a: string) => void }) {
+export function Question({ q, answered, live, onAnswer }: { q: BellQuestion; answered?: string; live: boolean; onAnswer: (a: string) => void }) {
   const choices = q.choices.some((c) => c.toLowerCase() === JUST_ESTIMATE.toLowerCase()) ? q.choices : [...q.choices, JUST_ESTIMATE];
   return (
     <View style={{ gap: space(2) }}>

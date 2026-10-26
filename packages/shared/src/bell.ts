@@ -198,3 +198,25 @@ export function imageLinkIn(text: string): string | null {
   const m = /https?:\/\/[^\s<>"']+?\.(?:jpe?g|png|webp|gif)(?:\?[^\s<>"']*)?(?=$|[\s)>\]"'])/i.exec(text);
   return m ? m[0] : null;
 }
+
+/** One turn of a conversation with Bell, as the app keeps it. */
+export interface BellTurn {
+  role: 'user' | 'assistant';
+  text: string;
+  image?: string;
+  question?: BellQuestion | null;
+}
+
+/**
+ * What gets sent to Bell: the conversation so far (the last 20 turns), with
+ * any question Bell asked folded into what it said. Without the history, a
+ * tapped answer like "Oat milk" arrives on its own and Bell takes it for a
+ * brand-new food.
+ */
+export function bellHistory(turns: BellTurn[]) {
+  return turns.slice(-20).map((m) => ({
+    role: m.role,
+    text: [m.text, m.question?.text].filter(Boolean).join('\n'),
+    ...(m.image?.startsWith('data:') ? { image: m.image } : {}),
+  }));
+}
