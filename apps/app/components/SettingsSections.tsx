@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DEFAULT_WATER_GOAL_ML, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
+import { DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
 import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent } from '../lib/theme';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -63,6 +63,7 @@ export function GoalsSection() {
       {status && <Text style={type.body}>{status}</Text>}
       <WeekdayGoals />
       <WaterGoal />
+      <FastingSetting />
     </View>
   );
 }
@@ -485,6 +486,35 @@ function WaterGoal() {
         </>
       )}
       {status && <Text style={type.small}>{status}</Text>}
+    </View>
+  );
+}
+
+/** Settings → Goals: the fasting timer on Today (off until turned on) and the goal it starts with. */
+function FastingSetting() {
+  const { me, refreshMe } = useAuth();
+  const fasting = me?.preferences.fasting ?? { show: false, hours: 16 };
+  const save = async (next: { show: boolean; hours: number }) => {
+    if (!me) return;
+    await put('/api/me/preferences', { ...me.preferences, fasting: next }).catch(() => {});
+    await refreshMe();
+  };
+  return (
+    <View style={{ gap: space(2), marginTop: space(4) }}>
+      <Text style={type.label}>Fasting</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
+        <Text style={[type.body, { flex: 1 }]}>Show the fasting timer on Today</Text>
+        <Switch value={fasting.show} onValueChange={(show) => void save({ ...fasting, show })} accessibilityLabel="Show the fasting timer on Today" />
+      </View>
+      {fasting.show && (
+        <>
+          <Text style={type.small}>Usual goal</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+            {FAST_PRESETS.map((h) => <Chip key={h} label={`${h} hours`} on={fasting.hours === h} onPress={() => void save({ ...fasting, hours: h })} />)}
+          </View>
+        </>
+      )}
+      <Text style={type.small}>Optional. If you’re pregnant, diabetic, on medication, or fasting has ever made eating feel hard, check with your doctor first.</Text>
     </View>
   );
 }

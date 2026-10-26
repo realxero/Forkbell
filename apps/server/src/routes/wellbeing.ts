@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { and, asc, desc, eq, gte } from 'drizzle-orm';
-import { checkIns, medicationLogs, medications, waterEntries, type connect } from '@forkbell/db';
-import { addDays, dateSchema, MAX_WATER_ML, todayLocal, waterTotal, type WaterDay } from '@forkbell/shared';
+import { and, asc, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import { checkIns, fasts, medicationLogs, medications, waterEntries, type connect } from '@forkbell/db';
+import { addDays, dateSchema, fastStreak, MAX_WATER_ML, type Fast, type Fasts, todayLocal, waterTotal, type WaterDay } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -128,6 +128,54 @@ export function wellbeingRoutes({ asUser }: ReturnType<typeof connect>) {
   r.delete('/water/:id', async (c) => {
     if (!z.string().uuid().safeParse(c.req.param('id')).success) return c.json({ error: 'Not found.' }, 404);
     const gone = await asUser(c.get('userId'), (tx) => tx.delete(waterEntries).where(eq(waterEntries.id, c.req.param('id'))).returning({ id: waterEntries.id }));
+    return gone.length ? c.json({ ok: true }) : c.json({ error: 'Not found.' }, 404);
+  });
+
+  // Fasting --------------------------------------------------------------------
+  // ?today=YYYY-MM-DD&tz=<the phone's getTimezoneOffset()> so the streak counts the phone's days.
+  r.get('/fasts', async (c) => {
+    const d = dateSchema.safeParse(c.req.query('today'));
+    const today = d.success ? d.data : todayLocal();
+    const tz = Number(c.req.query('tz'));
+    const rows = await asUser(c.get('profileId'), (tx) => tx.select().from(fasts).orderBy(desc(fasts.startedAt)).limit(90));
+    const list: Fast[] = rows.map((f) => ({ id: f.id, startedAt: f.startedAt, endedAt: f.endedAt, targetHours: f.targetHours }));
+    return c.json({ open: list.find((f) => !f.endedAt) ?? null, recent: list.filter((f) => f.endedAt).slice(0, 10), streak: fastStreak(list, today, Number.isFinite(tz) ? tz : undefined) } satisfies Fasts);
+  });
+  r.post('/fasts', async (c) => {
+    const p = z
+      .object({ id: z.string().uuid().optional(), startedAt: z.string().datetime({ offset: true }).optional(), targetHours: z.number().min(1).max(72) })
+      .safeParse(await c.req.json().catch(() => null));
+    if (!p.success) return c.json({ error: 'Send how many hours to fast for (1 to 72).' }, 400);
+    const startedAt = p.data.startedAt ?? new Date().toISOString();
+    if (Date.parse(startedAt) > Date.now() + 5 * 60_000) return c.json({ error: 'A fast can’t start in the future.' }, 400);
+    const result = await asUser(c.get('userId'), async (tx) => {
+      if (p.data.id) {
+        const [prior] = await tx.select({ id: fasts.id }).from(fasts).where(eq(fasts.id, p.data.id)).limit(1);
+        if (prior) return { id: prior.id }; // sent before, on a bad connection
+      }
+      const [open] = await tx.select({ id: fasts.id }).from(fasts).where(isNull(fasts.endedAt)).limit(1);
+      if (open) return { conflict: open.id };
+      const [row] = await tx.insert(fasts).values({ ...(p.data.id ? { id: p.data.id } : {}), startedAt, targetHours: p.data.targetHours } as typeof fasts.$inferInsert).returning({ id: fasts.id });
+      return { id: row!.id };
+    });
+    if ('conflict' in result) return c.json({ error: 'A fast is already going. End it first.', id: result.conflict }, 409);
+    return c.json(result, 201);
+  });
+  r.post('/fasts/:id/end', async (c) => {
+    if (!z.string().uuid().safeParse(c.req.param('id')).success) return c.json({ error: 'Not found.' }, 404);
+    const p = z.object({ endedAt: z.string().datetime({ offset: true }).optional() }).safeParse(await c.req.json().catch(() => ({})));
+    const endedAt = (p.success && p.data.endedAt) || new Date().toISOString();
+    const done = await asUser(c.get('userId'), (tx) =>
+      tx.update(fasts).set({ endedAt }).where(and(eq(fasts.id, c.req.param('id')), isNull(fasts.endedAt), sql`started_at < ${endedAt}::timestamptz`)).returning({ id: fasts.id }),
+    );
+    // Already ended (sent twice) is fine too.
+    if (done.length) return c.json({ ok: true });
+    const [had] = await asUser(c.get('userId'), (tx) => tx.select({ endedAt: fasts.endedAt }).from(fasts).where(eq(fasts.id, c.req.param('id'))).limit(1));
+    return had?.endedAt ? c.json({ ok: true }) : c.json({ error: 'That fast isn’t going, or the end is before the start.' }, 404);
+  });
+  r.delete('/fasts/:id', async (c) => {
+    if (!z.string().uuid().safeParse(c.req.param('id')).success) return c.json({ error: 'Not found.' }, 404);
+    const gone = await asUser(c.get('userId'), (tx) => tx.delete(fasts).where(eq(fasts.id, c.req.param('id'))).returning({ id: fasts.id }));
     return gone.length ? c.json({ ok: true }) : c.json({ error: 'Not found.' }, 404);
   });
 

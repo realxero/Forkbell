@@ -188,3 +188,25 @@ export async function cancelRestAlert() {
   if (!remindersSupported) return;
   await Notifications.cancelScheduledNotificationAsync(REST_ID).catch(() => {});
 }
+
+// Not under PREFIX: refreshReminders() clears those, and this one must survive it.
+const FAST_ID = 'fast-goal';
+/** A buzz when a fast reaches its goal, even with Forkbell closed. Nothing for a fast that's over. */
+export async function scheduleFastAlert(f: { startedAt: string; endedAt: string | null; targetHours: number } | null) {
+  if (!remindersSupported) return;
+  await Notifications.cancelScheduledNotificationAsync(FAST_ID).catch(() => {});
+  if (!f || f.endedAt) return;
+  const seconds = Math.round((Date.parse(f.startedAt) + f.targetHours * 3_600_000 - Date.now()) / 1000);
+  if (seconds < 5) return;
+  const perm = await Notifications.getPermissionsAsync().catch(() => null);
+  if (!perm?.granted) {
+    if (!perm?.canAskAgain || readCache<boolean>('device:fast-asked')) return;
+    writeCache('device:fast-asked', true);
+    if (!(await Notifications.requestPermissionsAsync()).granted) return;
+  }
+  await Notifications.scheduleNotificationAsync({
+    identifier: FAST_ID,
+    content: { title: `${f.targetHours} hours: fast complete`, body: 'End it in Forkbell whenever you’re ready to eat.', sound: 'default', data: { kind: 'fast', url: '/' } },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds },
+  }).catch(() => {});
+}

@@ -268,3 +268,28 @@ test('progress photos: only yours, never anyone else’s, even family you share 
   assert.equal((await a.call('DELETE', `/api/photos/${id}`)).status, 200);
   assert.equal((await a.call('GET', '/api/photos')).body.photos.length, 0);
 });
+
+test('fasting: one at a time, sent twice counts once, ends after it starts, counts toward a streak', async () => {
+  const a = await newUser('Alice');
+  const b = await newUser('Bob');
+  const id = crypto.randomUUID();
+  const start = new Date(Date.now() - 17 * 3_600_000).toISOString();
+  assert.equal((await a.call('POST', '/api/wellbeing/fasts', { id, startedAt: start, targetHours: 16 })).status, 201);
+  assert.equal((await a.call('POST', '/api/wellbeing/fasts', { id, startedAt: start, targetHours: 16 })).status, 201, 'a resend is fine');
+  assert.equal((await a.call('POST', '/api/wellbeing/fasts', { targetHours: 16 })).status, 409, 'one at a time');
+  assert.equal((await a.call('POST', '/api/wellbeing/fasts', { targetHours: 16, startedAt: new Date(Date.now() + 3_600_000).toISOString() })).status, 400, 'not in the future');
+  const open = (await a.call('GET', '/api/wellbeing/fasts')).body;
+  assert.equal(open.open.id, id);
+  assert.equal((await b.call('GET', '/api/wellbeing/fasts')).body.open, null, "Bob can't see Alice's fast");
+  assert.equal((await b.call('POST', `/api/wellbeing/fasts/${id}/end`, {})).status, 404, 'or end it');
+  assert.equal((await a.call('POST', `/api/wellbeing/fasts/${id}/end`, { endedAt: new Date(Date.parse(start) - 60_000).toISOString() })).status, 404, 'an end before the start');
+  assert.equal((await a.call('POST', `/api/wellbeing/fasts/${id}/end`, {})).status, 200);
+  assert.equal((await a.call('POST', `/api/wellbeing/fasts/${id}/end`, {})).status, 200, 'ending twice is fine');
+  const after = (await a.call('GET', `/api/wellbeing/fasts?today=${new Date().toISOString().slice(0, 10)}&tz=0`)).body;
+  assert.equal(after.open, null);
+  assert.equal(after.recent.length, 1);
+  assert.equal(after.streak, 1, '17 hours of a 16-hour goal counts');
+  assert.equal((await a.call('GET', '/api/export')).body.data.fasts.length, 1, 'fasts are in the export');
+  const me = (await a.call('GET', '/api/me')).body;
+  assert.deepEqual(me.preferences.fasting, { show: false, hours: 16 }, 'off until you turn it on');
+});

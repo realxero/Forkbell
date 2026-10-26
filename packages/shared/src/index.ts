@@ -32,3 +32,4 @@ export * from './plates.ts';
 export * from './water.ts';
 export * from './supersets.ts';
 export * from './photos.ts';
+export * from './fasting.ts';

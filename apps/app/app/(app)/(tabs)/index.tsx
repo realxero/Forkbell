@@ -21,6 +21,7 @@ import { Logo } from '../../../components/Logo';
 import { MealQuickActions } from '../../../components/MealQuickActions';
 import { StreakCheer } from '../../../components/StreakCheer';
 import { WaterCard } from '../../../components/WaterCard';
+import { FastingCard } from '../../../components/FastingCard';
 
 const MEAL_ICONS: Record<Meal, ComponentProps<typeof Ionicons>['name']> = { breakfast: 'sunny-outline', lunch: 'partly-sunny-outline', dinner: 'moon-outline', snacks: 'cafe-outline' };
 
@@ -226,6 +227,7 @@ export default function Diary() {
             })}
 
             {date <= todayLocal() && <WaterCard date={date} readOnly={Boolean(viewing)} />}
+            {date === todayLocal() && <FastingCard readOnly={Boolean(viewing)} />}
 
             {day.entries.length > 0 && date <= todayLocal() && (
               <FinishDay

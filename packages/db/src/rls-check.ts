@@ -151,6 +151,11 @@ try {
   await assert.rejects(as(bob, (tx) => tx`insert into water_entries (user_id, date, ml) values (${alice}, '2026-10-22', 250)`), "Bob can't log water for Alice");
   assert.equal((await as(bob, (tx) => tx`delete from water_entries returning id`)).length, 0, "or take hers back");
 
+  // Fasts: Alice's own.
+  await as(alice, (tx) => tx`insert into fasts (started_at, target_hours) values (now() - interval '2 hours', 16)`);
+  assert.equal((await as(bob, (tx) => tx`select * from fasts`)).length, 0, "Bob can't see Alice's fast");
+  assert.equal((await as(bob, (tx) => tx`update fasts set ended_at = now() returning id`)).length, 0, 'or end it');
+
   // Progress photos: only ever Alice's, with or without a share.
   await as(alice, (tx) => tx`insert into progress_photos (date, pose, image, mime) values ('2026-10-22', 'front', ${Buffer.alloc(200, 1)}, 'image/jpeg')`);
   assert.equal((await as(bob, (tx) => tx`select id from progress_photos`)).length, 0, "Bob can't see Alice's photos");

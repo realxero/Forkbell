@@ -212,6 +212,15 @@ use kilograms), or *Other amount* and type anything like "20 oz", "1.5 L" or
 the card, in Settings → Goals and targets. It works offline like the diary, is
 included in Export, and people you share wellbeing with can see it.
 
+## Fasting
+
+Off until you turn it on in Settings → Goals and targets. Then Today has a
+fasting timer: pick a goal (12 to 24 hours), say when you last ate (just now,
+or up to 4 hours ago), and it counts up with a bar toward the goal. The phone
+notifies you when the goal is reached; *End fast* (or *End early*) stops it.
+Fasts that reach their goal build a streak. It works offline, is in Export,
+and people you share wellbeing with can see it.
+
 ## Progress photos
 
 On the Progress tab: tap Front, Side or Back to take today's photo (the

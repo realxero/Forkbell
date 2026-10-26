@@ -47,6 +47,10 @@ export const preferencesSchema = z.object({
   water: z
     .object({ show: z.boolean().default(true), goalMl: z.number().int().min(250).max(10000).default(2000) })
     .default({ show: true, goalMl: 2000 }),
+  /** the fasting timer on Today: off until you turn it on, and the goal it starts with */
+  fasting: z
+    .object({ show: z.boolean().default(false), hours: z.number().int().min(10).max(72).default(16) })
+    .default({ show: false, hours: 16 }),
   /** finished (or skipped) the first-launch setup */
   onboarded: z.boolean().default(false),
   /** for starting targets: an estimate of your burn until your own numbers take over */

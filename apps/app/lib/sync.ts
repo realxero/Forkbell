@@ -223,6 +223,7 @@ export async function warmCache(today: string) {
     '/api/workouts',
     `/api/progress?today=${today}`,
     `/api/wellbeing/water/${today}`,
+    '/api/wellbeing/fasts',
   ];
   for (const p of paths) await cachedGet(p).catch(() => {});
 }

@@ -299,3 +299,12 @@ export const progressPhotos = pgTable('progress_photos', {
   mime: text('mime').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
 });
+
+/** Fasts: a start, a goal in hours, and an end once it's over. */
+export const fasts = pgTable('fasts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true, mode: 'string' }).notNull(),
+  endedAt: timestamp('ended_at', { withTimezone: true, mode: 'string' }),
+  targetHours: num('target_hours').notNull(),
+});

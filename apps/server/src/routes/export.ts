@@ -30,6 +30,7 @@ const TABLES = {
   recipes: t.recipes,
   recipeItems: t.recipeItems,
   waterEntries: t.waterEntries,
+  fasts: t.fasts,
   // the list of photos (date and pose); the pictures themselves are in the nightly backup
   progressPhotos: t.progressPhotos,
 } as const;

@@ -19,6 +19,11 @@ import {
   type SavedMeal,
   type WaterDay,
   waterTotal,
+  type Fast,
+  type Fasts,
+  fastProgress,
+  fastStreak,
+  todayLocal,
 } from '@forkbell/shared';
 import { cachedGet, cachedPaths, newId, readCache, send, updateCache, writeCache } from './sync';
 import { haptic } from './haptics';
@@ -313,4 +318,37 @@ export async function undoWater(date: string) {
   });
   await send('DELETE', `/api/wellbeing/water/${last.id}`, undefined, { label: 'Undo water' });
   return last;
+}
+
+// Fasting -------------------------------------------------------------------
+
+const FASTS = '/api/wellbeing/fasts';
+const fastsNow = (): Fasts => readCache<Fasts>(FASTS) ?? { open: null, recent: [], streak: 0 };
+
+/** Start a fast now, or from when you last ate. Shows straight away; sent now or when back online. */
+export async function startFast(targetHours: number, startedAt = new Date().toISOString()) {
+  const fast: Fast = { id: newId(), startedAt, endedAt: null, targetHours };
+  updateCache<Fasts>(FASTS, (f) => ({ ...(f ?? fastsNow()), open: fast }));
+  await send('POST', FASTS, { id: fast.id, startedAt, targetHours }, { label: 'Start fast' });
+  return fast;
+}
+
+/** End the fast that's going. */
+export async function endFast(fast: Fast) {
+  const endedAt = new Date().toISOString();
+  const ended = { ...fast, endedAt };
+  updateCache<Fasts>(FASTS, (f) => {
+    const cur = f ?? fastsNow();
+    // Reached its goal today: the streak goes up now, not on the next refresh.
+    const streak = fastProgress(ended).done ? fastStreak([ended, ...cur.recent], todayLocal()) : cur.streak;
+    return { open: null, recent: [ended, ...cur.recent].slice(0, 10), streak: Math.max(cur.streak, streak) };
+  });
+  await send('POST', `${FASTS}/${fast.id}/end`, { endedAt }, { label: 'End fast' });
+  return ended;
+}
+
+/** Take a fast out completely, as if it never started. */
+export async function removeFast(fast: Fast) {
+  updateCache<Fasts>(FASTS, (f) => ({ ...(f ?? fastsNow()), open: null }));
+  await send('DELETE', `${FASTS}/${fast.id}`, undefined, { label: 'Remove fast' });
 }
