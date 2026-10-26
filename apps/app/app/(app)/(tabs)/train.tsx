@@ -10,6 +10,8 @@ import { formatDuration, useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { YourWeek } from '../../../components/YourWeek';
 import { BodyMap } from '../../../components/BodyMap';
+import { PlateCalculator } from '../../../components/PlateCalculator';
+import { useAuth } from '../../../lib/auth';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
 import { color, space, type } from '../../../lib/theme';
 
@@ -76,6 +78,8 @@ export default function Train() {
 
   const next = program?.routines.find((r) => r.id === (pick ?? program.nextRoutineId)) ?? null;
 
+  const [plates, setPlates] = useState(false);
+  const { me: meForPlates } = useAuth();
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <ScrollView
@@ -85,6 +89,9 @@ export default function Train() {
         <View style={s.head}>
           <Text style={[type.hero, { fontSize: 34 }]}>Train</Text>
           <View style={{ flexDirection: 'row', gap: space(4) }}>
+            <Pressable onPress={() => setPlates(true)} hitSlop={10} accessibilityLabel="Plate calculator">
+              <Text style={s.link}>Plates</Text>
+            </Pressable>
             <Pressable onPress={() => router.push('/stretches')} hitSlop={10}>
               <Text style={s.link}>Stretches</Text>
             </Pressable>
@@ -173,6 +180,7 @@ export default function Train() {
         ))}
         {history && history.length === 0 && !open && <Text style={type.small}>Finished workouts show up here.</Text>}
       </ScrollView>
+      <PlateCalculator visible={plates} weightKg={null} exercise={null} unit={meForPlates?.weightUnit ?? 'lb'} onClose={() => setPlates(false)} />
     </SafeAreaView>
   );
 }

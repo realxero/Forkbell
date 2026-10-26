@@ -28,3 +28,4 @@ export * from './plate-volume.ts';
 export * from './version.ts';
 export * from './variations.ts';
 export * from './voices.ts';
+export * from './plates.ts';

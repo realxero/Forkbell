@@ -11,6 +11,7 @@ import { color, space, type } from '../lib/theme';
 import { Chip } from './AmountPicker';
 import { AiSettings } from './AiSettings';
 import { Platform, Switch } from 'react-native';
+import { playSound, setSoundsOn, soundsOn, unlockAudio } from '../lib/sounds';
 import { hapticsOn, hapticsSupported, setHapticsOn } from '../lib/haptics';
 import { downloadAllPictures, onPictureProgress, pictureCacheSupported, pictureDownloadRunning, pictureStats, removeSavedPictures } from '../lib/picture-cache';
 import { reminderSettings, remindersSupported, setReminderSettings, type ReminderSettings } from '../lib/reminders';
@@ -172,6 +173,20 @@ function SavedPictures() {
 }
 
 /** A light tap for ticked sets, logged food, rest over and celebrations. */
+/** Chimes when rest is over and when a workout is done. */
+function SoundSwitch() {
+  const [on, setOn] = useState(soundsOn());
+  return (
+    <View style={s.switchRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={type.body}>Sounds</Text>
+        <Text style={type.small}>A chime when rest is over and when you finish a workout. Plays over your music without pausing it{Platform.OS === 'ios' ? ' and follows the silent switch' : ''}.</Text>
+      </View>
+      <Switch value={on} onValueChange={(v) => { setOn(v); setSoundsOn(v); if (v) { unlockAudio(); playSound('rest'); } }} accessibilityLabel="Sounds" />
+    </View>
+  );
+}
+
 function HapticsSwitch() {
   const [on, setOn] = useState(hapticsOn);
   return (
@@ -241,6 +256,7 @@ function Appearance() {
         ))}
       </View>
       {hapticsSupported && <HapticsSwitch />}
+      <SoundSwitch />
       {Platform.OS !== 'web' && (
         <Text style={type.small}>{nativeThemeSupported ? 'Forkbell refreshes for a second to change colours. Nothing is lost.' : 'On this phone Forkbell follows the system’s light and dark setting.'}</Text>
       )}

@@ -13,6 +13,10 @@ import { ExercisePicker } from '../../components/ExercisePicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SwapSheet } from '../../components/SwapSheet';
 import { showToast } from '../../lib/toast';
+import { playSound, unlockAudio } from '../../lib/sounds';
+import { PlateCalculator, defaultBarId } from '../../components/PlateCalculator';
+import { FinishScreen } from '../../components/FinishScreen';
+import { BARS, DEFAULT_PLATES, fromKg, toKg, warmupSets } from '@forkbell/shared';
 import { FormCheck } from '../../components/FormCheck';
 import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
@@ -54,6 +58,8 @@ export default function WorkoutScreen() {
   const [howToFor, setHowToFor] = useState<Exercise | null>(null);
   /** which exercise card is being filmed for a form check */
   const [formFor, setFormFor] = useState<number | null>(null);
+  /** the exercise card the plate calculator is open for */
+  const [platesFor, setPlatesFor] = useState<number | null>(null);
   const training = useTrainingSetup();
   const [menu, setMenu] = useState<number | null>(null);
   const [restEnd, setRestEnd] = useState<number | null>(null);
@@ -88,6 +94,7 @@ export default function WorkoutScreen() {
     if (restEnd && restLeft === 0) {
       if (hapticsOn()) haptic.alert();
       else Vibration.vibrate(500);
+      playSound('rest');
       const t = setTimeout(() => setRestEnd(null), 4000);
       return () => clearTimeout(t);
     }
@@ -152,6 +159,7 @@ export default function WorkoutScreen() {
     const ph = placeholderFor(e, k);
     const patch: Partial<SetEntry> = { done: true };
     haptic.tap();
+    unlockAudio(); // browsers only allow sound after a tap
     if (e.exercise.kind === 'time') {
       const secs = s.seconds ?? ph.seconds;
       if (!secs) return setHint('Enter the time first.');
@@ -218,6 +226,30 @@ export default function WorkoutScreen() {
       return { ...w, exercises: list };
     });
 
+  /** The weight of the next working set: what's typed in, else last time's top set. */
+  const nextWorkingWeight = (e: WorkoutExercise) =>
+    e.sets.find((x) => !x.done && !x.warmup && x.weightKg)?.weightKg ??
+    e.sets.find((x) => !x.warmup && x.weightKg)?.weightKg ??
+    [...e.previous].filter((x) => !x.warmup && x.weightKg).sort((a, b) => (b.weightKg ?? 0) - (a.weightKg ?? 0))[0]?.weightKg ??
+    null;
+
+  /** Ramp-up sets before the working weight, loadable with your plates and the bar you use. */
+  const addWarmups = (i: number) => {
+    const e = w!.exercises[i]!;
+    const kg = nextWorkingWeight(e);
+    if (!kg) return setHint('Enter your working weight first, then tap Warm-up sets.');
+    const unit = units.unit;
+    const bar = [...BARS, ...training.setup.bars].find((b) => b.id === (training.setup.barFor[e.exercise.id] || defaultBarId(e.exercise, unit))) ?? BARS.find((b) => b.id === `olympic-${unit}`)!;
+    const sets = warmupSets(fromKg(kg, unit), bar, training.setup.plates[unit] ?? DEFAULT_PLATES[unit]);
+    if (!sets.length) return setHint('That weight is light enough to start straight away.');
+    updateExercise(i, (x) => ({
+      ...x,
+      // Replace any warm-ups already there, keep the working sets.
+      sets: [...sets.map((ws) => ({ weightKg: toKg(ws.weight, unit), reps: ws.reps, seconds: null, rpe: null, warmup: true, done: false })), ...x.sets.filter((st) => !st.warmup)],
+    }));
+    haptic.tap();
+  };
+
   const finish = async () => {
     const left = w!.exercises.flatMap((e) => e.sets).filter((s) => !s.done).length;
     if (left && !(await confirm('Finish workout?', `${left} unticked ${left === 1 ? 'set' : 'sets'} will be left out.`, 'Finish'))) return;
@@ -227,6 +259,8 @@ export default function WorkoutScreen() {
       const r = await finishWorkout(latest.current ?? w!);
       if (r.discarded) return router.back();
       setRestEnd(null);
+      haptic.success();
+      playSound('done');
       setSummary(r.summary!);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -244,7 +278,7 @@ export default function WorkoutScreen() {
     router.back();
   };
 
-  if (summary && w) return <SummaryView w={w} summary={summary} />;
+  if (summary && w) return <FinishScreen w={latest.current ?? w} summary={summary} />;
   if (!w)
     return (
       <SafeAreaView style={s.screen}>
@@ -310,6 +344,8 @@ export default function WorkoutScreen() {
               onToggle={(k) => toggleDone(i, k)}
               onAddSet={() => updateExercise(i, (x) => ({ ...x, sets: [...x.sets, { ...(x.sets.at(-1) ?? blankSet()), done: false, warmup: false }] }))}
               onRemoveSet={() => updateExercise(i, (x) => ({ ...x, sets: x.sets.slice(0, -1) }))}
+              onPlates={() => setPlatesFor(i)}
+              onWarmupSets={() => addWarmups(i)}
               onRest={(by) => updateExercise(i, (x) => ({ ...x, restSeconds: Math.min(900, Math.max(0, x.restSeconds + by)) }))}
               onMove={(by) => {
                 setMenu(null);
@@ -364,6 +400,21 @@ export default function WorkoutScreen() {
         {!w.finishedAt && <WorkoutBell workoutId={w.id} beforeAsk={flush} lifted={restLeft !== null} />}
       </KeyboardAvoidingView>
       <HowToSheet exercise={howToFor} onClose={() => setHowToFor(null)} />
+      <PlateCalculator
+        visible={platesFor !== null}
+        unit={units.unit}
+        exercise={platesFor !== null ? (w.exercises[platesFor]?.exercise ?? null) : null}
+        weightKg={platesFor !== null && w.exercises[platesFor] ? nextWorkingWeight(w.exercises[platesFor]!) : null}
+        onClose={() => setPlatesFor(null)}
+        onUse={(kg) => {
+          const i = platesFor;
+          if (i === null) return;
+          updateExercise(i, (x) => {
+            const k = x.sets.findIndex((st) => !st.done && !st.warmup);
+            return k < 0 ? x : { ...x, sets: x.sets.map((st, j) => (j === k ? { ...st, weightKg: kg } : st)) };
+          });
+        }}
+      />
       <FormCheck
         exercise={formFor !== null ? (w.exercises[formFor]?.exercise.name ?? null) : null}
         onClose={() => setFormFor(null)}
@@ -418,6 +469,8 @@ function ExerciseCard(props: {
   onToggle: (k: number) => void;
   onAddSet: () => void;
   onRemoveSet: () => void;
+  onPlates: () => void;
+  onWarmupSets: () => void;
   onRest: (by: number) => void;
   onMove: (by: number) => void;
   onRemove: () => void;
@@ -573,8 +626,14 @@ function ExerciseCard(props: {
 
       <View style={s.cardFoot}>
         <Pressable onPress={props.onAddSet} hitSlop={6}><Text style={s.addText}>+ Add set</Text></Pressable>
+        {e.exercise.kind === 'weight' && (
+          <>
+            <Pressable onPress={props.onWarmupSets} hitSlop={6} accessibilityLabel={`Add warm-up sets for ${e.exercise.name}`}><Text style={s.addText}>Warm-up sets</Text></Pressable>
+            <Pressable onPress={props.onPlates} hitSlop={6} accessibilityLabel={`Plate calculator for ${e.exercise.name}`}><Text style={s.addText}>Plates</Text></Pressable>
+          </>
+        )}
         {e.sets.length > 0 && (
-          <Pressable onPress={props.onRemoveSet} hitSlop={6}><Text style={[s.addText, { color: color.ironSoft }]}>− Remove set</Text></Pressable>
+          <Pressable onPress={props.onRemoveSet} hitSlop={6}><Text style={[s.addText, { color: color.ironSoft }]}>− Remove</Text></Pressable>
         )}
       </View>
     </View>
@@ -596,77 +655,10 @@ function PainNote({ value, onSave }: { value: string; onSave: (note: string) => 
   );
 }
 
-const RECORD_NAMES: Record<PersonalRecord['kind'], string> = {
-  weight: 'Heaviest weight',
-  e1rm: 'Best estimated 1-rep max',
-  reps: 'Most reps',
-  volume: 'Best set (weight × reps)',
-  time: 'Longest time',
-};
-
-function SummaryView({ w, summary }: { w: Workout; summary: Summary }) {
-  const units = useUnit();
-  const recordValue = (r: PersonalRecord) =>
-    r.kind === 'reps'
-      ? `${r.value} reps`
-      : r.kind === 'time'
-        ? `${r.value} s`
-        : r.kind === 'volume'
-          ? `${units.show(r.weightKg)} × ${r.reps}`
-          : r.kind === 'e1rm'
-            ? `about ${units.roundLabel(r.value)} (${units.show(r.weightKg)} × ${r.reps})`
-            : units.label(r.value);
-  return (
-    <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={[s.content, { gap: space(4) }]}>
-        <Text style={[type.hero, { fontSize: 34 }]}>Nice work.</Text>
-        <Text style={type.body}>{w.name} is saved.</Text>
-        <View style={s.stats}>
-          <Stat label="Time" value={formatDuration(summary.durationSeconds)} />
-          <Stat label="Sets" value={String(summary.sets)} />
-          <Stat label="Volume" value={units.label(summary.volumeKg) || '0'} />
-        </View>
-        {volumeComparison(summary.volumeKg) && <Text style={type.body}>{volumeComparison(summary.volumeKg)}</Text>}
-        {summary.records.length > 0 ? (
-          <View style={s.card}>
-            <Text style={type.title}>New personal records</Text>
-            {summary.records.map((r, i) => (
-              <View key={i} style={{ paddingVertical: space(2), borderTopWidth: i ? 1 : 0, borderTopColor: color.line }}>
-                <Text style={[type.body, { fontWeight: '700' }]}>{r.exerciseName}</Text>
-                <Text style={type.small}>
-                  {RECORD_NAMES[r.kind]}: {recordValue(r)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : summary.offline ? (
-          <Text style={type.small}>Saved on this device. Records are checked once it syncs.</Text>
-        ) : (
-          <Text style={type.small}>No new records this time. Showing up is how they happen.</Text>
-        )}
-        <Pressable onPress={() => router.replace({ pathname: '/stretches', params: { kind: 'static', muscles: trained(w).join(','), start: '1' } })} style={s.coolDown}>
-          <Ionicons name="body-outline" size={20} color={color.accent} />
-          <Text style={[s.link, { flex: 1 }]}>Cool down: stretch {trained(w).slice(0, 3).join(', ') || 'what you trained'}</Text>
-        </Pressable>
-        <Pressable onPress={() => router.back()} style={s.button}>
-          <Text style={s.buttonText}>Done</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
 
 /** The muscles a workout works, main ones first. */
 const trained = (w: Workout) => [...new Set(w.exercises.map((e) => e.exercise.muscle))].filter((m) => m !== 'full body').slice(0, 5);
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flex: 1, gap: space(1) }}>
-      <Text style={[type.title, type.number]}>{value}</Text>
-      <Text style={type.small}>{label}</Text>
-    </View>
-  );
-}
 
 const s = StyleSheet.create({
   warmup: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start', backgroundColor: color.card, borderRadius: 14, padding: space(4) },
