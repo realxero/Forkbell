@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ALLERGENS, BODY_AREAS, DIETS, EQUIPMENT_KINDS, checkFood, defaultPreferences, preferencesSchema, type Preferences } from '@forkbell/shared';
 import { put } from '../../lib/api';
@@ -11,8 +11,14 @@ import { color, space, type } from '../../lib/theme';
 const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** Food preferences and suggestion settings. */
+/**
+ * Food preferences and suggestions, or (with ?section=training) the training
+ * setup: equipment, areas to go easy on, tips and the rest coach. One screen,
+ * two pages, so each Settings row opens only what it says.
+ */
 export default function PreferencesScreen() {
+  const { section } = useLocalSearchParams<{ section?: string }>();
+  const training = section === 'training';
   const { me, refreshMe } = useAuth();
   // Parsing fills in settings added since this copy was saved (e.g. offline).
   const [p, setP] = useState<Preferences>(me ? preferencesSchema.parse(me.preferences) : defaultPreferences());
@@ -53,10 +59,12 @@ export default function PreferencesScreen() {
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.head}>
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>Cancel</Text></Pressable>
-          <Text style={type.title}>Food and suggestions</Text>
+          <Text style={type.title}>{training ? 'Training setup' : 'Food and suggestions'}</Text>
           <Pressable onPress={save} hitSlop={12}><Text style={s.link}>Save</Text></Pressable>
         </View>
         {status && <Text style={s.error}>{status}</Text>}
+        {!training && (
+          <>
 
         <Text style={s.section}>Allergies</Text>
         <View style={s.chips}>{ALLERGENS.map((a) => <Chip key={a} label={cap(a)} on={p.allergies.includes(a)} onPress={() => toggleAllergy(a)} />)}</View>
@@ -134,7 +142,10 @@ export default function PreferencesScreen() {
         {sw('Patterns card on Progress', p.patterns, (v) => setP({ ...p, patterns: v }))}
         <Text style={s.note}>Off: what you said goes into the message box so you can fix it first.</Text>
 
-        <Text style={s.section}>Training</Text>
+          </>
+        )}
+        {training && (
+          <>
         {sw('Safety tips on exercises', p.trainingTips, (v) => setP({ ...p, trainingTips: v }))}
         <Text style={s.note}>Lighter-day, check-up and stalled-lift tips, and big-jump heads-ups. Pain you flag always shows next time.</Text>
 
@@ -167,6 +178,8 @@ export default function PreferencesScreen() {
         <Text style={s.label}>Never suggest these exercises</Text>
         <TextInput value={neverLifts} onChangeText={setNeverLifts} placeholder="e.g. upright row, good morning" placeholderTextColor={color.placeholder} style={s.input} />
         <Text style={s.note}>You can still log them; they just won’t be offered as swaps.</Text>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

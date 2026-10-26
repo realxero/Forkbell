@@ -50,7 +50,7 @@ export function ExercisePicker({
   const [full, setFull] = useState(false);
   const [limit, setLimit] = useState(120);
   const { me } = useAuth();
-  // Equipment filter: any, what you have (Settings → Food preferences → Training), or one kind.
+  // Equipment filter: any, what you have (Settings → Training setup), or one kind.
   const owned = me?.preferences.training?.equipment ?? [];
   const [gear, setGear] = useState<string | null>(owned.length ? 'mine' : null);
   const [identify, setIdentify] = useState(false);

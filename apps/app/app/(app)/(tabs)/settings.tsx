@@ -36,7 +36,7 @@ export default function Settings() {
       rows: [
         { icon: 'flag-outline', tint: '#2E9E62', title: 'Goals and targets', detail: goals, href: '/setting/goals' },
         { icon: 'restaurant-outline', tint: '#E8590C', title: 'Food preferences and suggestions', detail: 'Allergies, diet, suggestions, patterns', href: '/preferences' },
-        { icon: 'barbell-outline', tint: '#1C252B', title: 'Training setup', detail: me?.preferences.training?.equipment?.length ? `Equipment: ${me.preferences.training.equipment.join(', ')}` : 'Equipment you have (full gym), areas to protect', href: '/preferences' },
+        { icon: 'barbell-outline', tint: '#1C252B', title: 'Training setup', detail: me?.preferences.training?.equipment?.length ? `Equipment: ${me.preferences.training.equipment.join(', ')}` : 'Equipment you have (full gym), areas to protect', href: { pathname: '/preferences', params: { section: 'training' } } },
         { icon: 'color-palette-outline', tint: '#6A4BD1', title: 'Units and appearance', detail: `${me?.weightUnit === 'kg' ? 'Kilograms' : 'Pounds'} · theme · accent colour`, href: '/setting/appearance' },
         { icon: 'lock-closed-outline', tint: '#3A4750', title: 'Sign-in and security', detail: 'Password, where you’re signed in', href: '/setting/security' },
       ],

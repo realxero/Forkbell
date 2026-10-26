@@ -259,8 +259,7 @@ the exercise's record, and the workouts CSV has a distance column.
 
 ## Rest coach
 
-Off until you pick it in Settings → Food preferences and suggestions →
-Training. *Timings* speaks in Bell's voice during rests: "Ten seconds", then
+Off until you pick it in Settings → Training setup. *Timings* speaks in Bell's voice during rests: "Ten seconds", then
 "Rest's up. Next: bench press, set 3, 185 pounds for 8." *Timings and
 encouragement* adds a few words after a set that beats last time.
 
@@ -275,7 +274,7 @@ usually just keeps time.
 
 ## Training suggestions
 
-Rules, not AI, so they're instant and work offline. Set them up in Settings, Food and suggestions, under Training: the equipment you have, areas to go easy on (shoulders, elbows, wrists, lower back, knees), and exercises never to suggest.
+Rules, not AI, so they're instant and work offline. Set them up in Settings → Training setup: the equipment you have, areas to go easy on (shoulders, elbows, wrists, lower back, knees), and exercises never to suggest.
 
 - **Swaps.** An exercise's menu, or *See swaps* under a tip, lists exercises for the same muscle, best first, each with why it fits ("easier on your shoulders", "you've done it before"). *Pick any exercise* is always there.
 - **Stalled lifts.** When three sessions over two weeks do no better than the ones before, a tip suggests a different rep range or a swap.
