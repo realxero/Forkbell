@@ -10,6 +10,7 @@ import { photoSource, usePhotos } from '../lib/photos';
 import { useUnit } from '../lib/units';
 import { confirm } from '../lib/confirm';
 import { Chip } from './AmountPicker';
+import { PhotoSlider } from './PhotoSlider';
 import { color, radius, space, type } from '../lib/theme';
 
 export const niceDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
@@ -20,6 +21,7 @@ export function ProgressPhotosCard({ weighIns }: { weighIns: TrendPoint[] }) {
   const { photos, error, busy, add, remove } = usePhotos();
   const [pose, setPose] = useState<Pose>('front');
   const [open, setOpen] = useState<ProgressPhoto | null>(null);
+  const [slider, setSlider] = useState(false);
   const today = todayLocal();
   const { first, latest } = firstAndLatest(photos ?? [], pose);
   const trend = (d: string) => trendOnDate(weighIns, d);
@@ -82,7 +84,15 @@ export function ProgressPhotosCard({ weighIns }: { weighIns: TrendPoint[] }) {
               <View style={s.chips}>
                 {POSES.map((p) => <Chip key={p} label={POSE_NAMES[p]} on={pose === p} onPress={() => setPose(p)} />)}
               </View>
-              {!first ? (
+              {first && latest && (
+                <View style={s.chips}>
+                  <Chip label="Side by side" on={!slider} onPress={() => setSlider(false)} />
+                  <Chip label="Slider" on={slider} onPress={() => setSlider(true)} />
+                </View>
+              )}
+              {first && latest && slider ? (
+                <PhotoSlider before={photoSource(first.id)} after={photoSource(latest.id)} beforeLabel={niceDate(first.date)} afterLabel={niceDate(latest.date)} />
+              ) : !first ? (
                 <Text style={type.small}>No {POSE_NAMES[pose].toLowerCase()} photos yet.</Text>
               ) : (
                 <View style={s.row}>

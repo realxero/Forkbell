@@ -232,7 +232,7 @@ On the Progress tab: tap Front, Side or Back to take today's photo (the
 picture icon under each picks one from your library instead; on the web it's
 always the library). *First and latest* shows your first and newest photo of
 a pose side by side, each with your weight trend on that day, and the change
-in between. *See all* lists every day; tap a photo to see it big or delete it.
+in between. *Slider* puts them in one frame instead: drag across to wipe from the first to the latest. *See all* lists every day; tap a photo to see it big or delete it.
 
 They're stored in Postgres, so the nightly backup has them. Only you can see
 them: they're left out of family sharing whatever it allows (the database
