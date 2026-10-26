@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { mealForTime, todayLocal, type BellReply } from '@forkbell/shared';
+import { bellMood, mealForTime, todayLocal, type BellMood, type BellReply } from '@forkbell/shared';
 import { api, ApiError, post } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { speak, stopSpeaking } from '../lib/speak';
@@ -14,7 +14,7 @@ import { color, radius, space, type } from '../lib/theme';
 
 const QUICK = ['What weight for my next set?', 'How long should I rest?', 'This machine’s taken. What can I do instead?', 'Am I on track to beat last time?'];
 
-type Msg = { role: 'user' | 'assistant'; text: string };
+type Msg = { role: 'user' | 'assistant'; text: string; mood?: BellMood };
 
 /** The floating Bell button for the workout screen, and its sheet. Hidden when Bell has no AI key. */
 export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: string; beforeAsk: () => Promise<void>; lifted: boolean }) {
@@ -48,14 +48,14 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
     try {
       await beforeAsk().catch(() => {}); // the sets you just ticked, saved first so Bell sees them
       const r = await post<BellReply>('/api/bell/chat', {
-        messages: next.slice(-12),
+        messages: next.slice(-12).map(({ role, text }) => ({ role, text })),
         today: todayLocal(),
         meal: mealForTime(),
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
         workoutId,
       });
       const answer = r.question?.text ?? r.reply;
-      setMessages((m) => [...m, { role: 'assistant', text: answer }]);
+      setMessages((m) => [...m, { role: 'assistant', text: answer, mood: bellMood({ userText: q, reply: r.reply, question: r.question }) }]);
       if (readAloud === 'always' || (readAloud !== 'never' && spoken)) speak(answer);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 0 ? 'Bell needs a connection.' : e instanceof Error ? e.message : String(e));
@@ -87,7 +87,7 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
         <Pressable style={s.backdrop} onPress={() => !busy && setOpen(false)}>
           <Pressable style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
-              <BellAvatar size={30} mood={busy ? 'thinking' : 'happy'} />
+              <BellAvatar size={30} mood={busy ? 'thinking' : hearing !== null ? 'listening' : (messages.at(-1)?.mood ?? 'happy')} alive={open} />
               <Text style={[type.title, { flex: 1 }]}>Bell · this workout</Text>
               <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
             </View>

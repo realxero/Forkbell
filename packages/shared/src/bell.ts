@@ -220,3 +220,16 @@ export function bellHistory(turns: BellTurn[]) {
     ...(m.image?.startsWith('data:') ? { image: m.image } : {}),
   }));
 }
+
+export type BellMood = 'happy' | 'thinking' | 'listening' | 'curious' | 'excited' | 'proud' | 'concerned';
+
+const PAIN = /\b(pain(ful)?|hurts?|hurting|injur(y|ed|ies)|tweak(ed)?|strain(ed)?|sprain(ed)?|aches?|aching|sharp|pinch(ed|ing)?|pulled (a|my) )/i;
+const PROUD = /(personal (best|record)|\bnew (pr|record|best|high)\b|\bPRs?\b|goal (hit|reached|met|done)|\b(hit|reached|met|smashed|crushed) (your|the)( \w+){0,2} (goal|target)|\bstreak\b|\bmilestone\b|\bnew best\b)/i;
+
+/** How Bell looks after a reply: worried about pain, curious when asking, proud of records and goals. */
+export function bellMood(opts: { userText?: string; reply?: string; question?: BellQuestion | null }): BellMood {
+  if (opts.userText && PAIN.test(opts.userText)) return 'concerned';
+  if (opts.question) return 'curious';
+  if (opts.reply && PROUD.test(opts.reply)) return 'proud';
+  return 'happy';
+}

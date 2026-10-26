@@ -4,7 +4,7 @@ import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { bellHistory, forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
+import { bellHistory, bellMood, forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellMood, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
 import { api, ApiError, post } from '../../../lib/api';
 import { addEntry } from '../../../lib/actions';
 import { useAuth } from '../../../lib/auth';
@@ -28,6 +28,8 @@ type Message = {
   answered?: string;
   /** said out loud rather than typed */
   spoken?: boolean;
+  /** Bell's face for this reply */
+  mood?: BellMood;
 };
 const KEY = 'device:bell-chat';
 const SUGGESTIONS = ['What have I eaten today?', 'How much protein do I have left?', 'Log 2 eggs and toast for breakfast', 'How is my bench press going?'];
@@ -50,6 +52,13 @@ export default function Bell() {
   const [canTalk] = useState(voiceAvailable);
   const scroll = useRef<ScrollViewInstance>(null);
   const triedLink = useRef<string | null>(null);
+  // A few seconds of excitement when you add the food Bell found.
+  const [excited, setExcited] = useState(false);
+  useEffect(() => {
+    if (!excited) return;
+    const t = setTimeout(() => setExcited(false), 4000);
+    return () => clearTimeout(t);
+  }, [excited]);
 
   // Checked each time you open the tab, so a key added in Settings takes effect straight away.
   useFocusEffect(
@@ -127,7 +136,8 @@ export default function Bell() {
         meal: mealForTime(),
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       });
-      setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined, question: r.question ?? undefined }]);
+      const mood = bellMood({ userText: body, reply: r.reply, question: r.question });
+      setMessages([...next, { role: 'assistant', text: r.reply, proposals: r.proposals.length ? r.proposals : undefined, question: r.question ?? undefined, mood }]);
       // Read the answer aloud: always, or when you asked by voice (Settings → Bell).
       if (prefs.readAloud === 'always' || (prefs.readAloud !== 'never' && opts.spoken)) speak(r.reply);
     } catch (e) {
@@ -171,6 +181,8 @@ export default function Bell() {
   }
 
   const lastIndex = messages.length - 1;
+  const lastMood = [...messages].reverse().find((m) => m.role === 'assistant')?.mood ?? 'happy';
+  const headMood: BellMood = busy ? 'thinking' : hearing ? 'listening' : excited ? 'excited' : lastMood;
   const empty = !text.trim() && !image;
 
   return (
@@ -178,7 +190,7 @@ export default function Bell() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={80}>
         <View style={s.head}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
-            <BellAvatar size={36} mood={busy ? 'thinking' : 'happy'} />
+            <BellAvatar size={36} mood={headMood} alive />
             <Text style={[type.hero, { fontSize: 34 }]}>Bell</Text>
           </View>
           {messages.length > 0 && (
@@ -191,7 +203,7 @@ export default function Bell() {
           {messages.length === 0 && (
             <View style={{ gap: space(2) }}>
               <View style={s.hello}>
-                <BellAvatar size={56} />
+                <BellAvatar size={56} alive />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={[type.body, { fontWeight: '800' }]}>Hey{me?.name ? ` ${me.name.split(' ')[0]}` : ''}! I’m Bell, your gym buddy.</Text>
                   <Text style={type.small}>
@@ -208,7 +220,7 @@ export default function Bell() {
           )}
           {messages.map((m, i) => (
             <View key={i} style={m.role === 'user' ? undefined : s.theirRow}>
-            {m.role !== 'user' && <BellAvatar size={28} />}
+            {m.role !== 'user' && <BellAvatar size={28} mood={i === lastIndex && excited ? 'excited' : (m.mood ?? 'happy')} alive={i === lastIndex} />}
             <View style={[s.bubble, m.role === 'user' ? s.mine : s.theirs]}>
               {m.image?.startsWith('data:') && <Image source={{ uri: m.image }} style={s.photo} accessibilityLabel="Your photo" />}
               {m.image === 'photo' && <Text style={[type.small, m.role === 'user' && { color: color.chalk }]}>[photo]</Text>}
@@ -222,7 +234,10 @@ export default function Bell() {
                 <Proposals
                   items={m.proposals}
                   added={Boolean(m.added)}
-                  onAdded={() => setMessages((list) => list.map((x, j) => (j === i ? { ...x, added: true } : x)))}
+                  onAdded={() => {
+                    setMessages((list) => list.map((x, j) => (j === i ? { ...x, added: true } : x)));
+                    setExcited(true);
+                  }}
                 />
               )}
               {m.question && <Question q={m.question} answered={m.answered} live={i === lastIndex && !busy} onAnswer={(a) => send(a, { answering: i })} />}
@@ -231,7 +246,7 @@ export default function Bell() {
           ))}
           {busy && (
             <View style={s.theirRow}>
-              <BellAvatar size={28} mood="thinking" />
+              <BellAvatar size={28} mood="thinking" alive />
               <View style={[s.bubble, s.theirs, { flexDirection: 'row', gap: space(2), alignItems: 'center' }]}>
                 <ActivityIndicator color={color.iron} />
                 <Text style={type.small}>Bell is thinking…</Text>

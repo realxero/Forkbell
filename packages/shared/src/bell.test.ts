@@ -95,3 +95,14 @@ test('only the last 20 turns go, and placeholder photos stay behind', async () =
   assert.equal(sent[0]!.text, 't10');
   assert.equal('image' in sent.at(-1)!, false);
 });
+
+test('Bell’s mood follows the conversation', async () => {
+  const { bellMood } = await import('./index.ts');
+  assert.equal(bellMood({ userText: 'my shoulder hurts when I press', reply: 'Let’s go lighter.' }), 'concerned');
+  assert.equal(bellMood({ userText: 'I tweaked my back', reply: 'New PR though!' }), 'concerned', 'pain comes first');
+  assert.equal(bellMood({ userText: 'log a latte', question: { text: 'What milk?', choices: ['Oat', 'Whole'] } }), 'curious');
+  assert.equal(bellMood({ reply: 'That’s a new personal record on bench!' }), 'proud');
+  assert.equal(bellMood({ reply: 'You hit your protein goal today.' }), 'proud');
+  assert.equal(bellMood({ reply: 'You have 40 g of protein left.' }), 'happy');
+  assert.equal(bellMood({ userText: 'what should I eat after training?' }), 'happy');
+});

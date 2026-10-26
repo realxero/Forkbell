@@ -19,6 +19,7 @@ import { showToast } from '../../../lib/toast';
 import { FoodIcon } from '../../../components/FoodIcon';
 import { Logo } from '../../../components/Logo';
 import { MealQuickActions } from '../../../components/MealQuickActions';
+import { StreakCheer } from '../../../components/StreakCheer';
 
 const MEAL_ICONS: Record<Meal, ComponentProps<typeof Ionicons>['name']> = { breakfast: 'sunny-outline', lunch: 'partly-sunny-outline', dinner: 'moon-outline', snacks: 'cafe-outline' };
 
@@ -128,6 +129,7 @@ export default function Diary() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
         {error && <Text style={s.error}>{error}</Text>}
+        <StreakCheer enabled={!viewing && date === todayLocal()} tick={(day?.totals.kcal ?? 0) > 0 ? 1 : 0} />
         {notice && <Text style={type.small}>{notice}</Text>}
         {!day && !error && <ActivityIndicator color={color.iron} style={{ marginTop: space(10) }} />}
 

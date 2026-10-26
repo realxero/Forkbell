@@ -101,3 +101,32 @@ test('recipes: numbers per 100 g of the finished dish', () => {
   const cooked = recipePer100([{ food: rice, grams: 200 }, { food: beans, grams: 300 }], 1110);
   assert.equal(cooked.per100.kcal, 100);
 });
+
+test('streak milestones are cheered once per streak', async () => {
+  const { computeStreaks, streakCheer, addDays } = await import('./index.ts');
+  const today = '2026-10-25';
+  const days = (n: number, end = today) => Array.from({ length: n }, (_, i) => addDays(end, -i));
+  const s7 = computeStreaks(days(7), [], 3, today);
+  assert.equal(s7.foodSince, addDays(today, -6));
+  const cheer = streakCheer(s7, []);
+  assert.equal(cheer?.count, 7);
+  assert.equal(cheer?.kind, 'food');
+  // Shown already: nothing more until 14.
+  assert.equal(streakCheer(s7, [cheer!.key]), null);
+  assert.equal(streakCheer(computeStreaks(days(2), [], 3, today), []), null);
+  // Tomorrow, still 7-ish: the same streak, the same key.
+  const s8 = computeStreaks(days(8, addDays(today, 1)), [], 3, addDays(today, 1));
+  assert.equal(streakCheer(s8, [cheer!.key]), null);
+  // A new streak after a break can earn 3 again.
+  const fresh = computeStreaks(days(3, addDays(today, 10)), [], 3, addDays(today, 10));
+  assert.equal(streakCheer(fresh, [cheer!.key])?.count, 3);
+});
+
+test('training streaks cheer at 2, 4 and 8 weeks', async () => {
+  const { computeStreaks, streakCheer, addDays } = await import('./index.ts');
+  const today = '2026-10-25'; // a Sunday
+  const workouts = Array.from({ length: 4 }, (_, w) => [0, 2, 4].map((d) => addDays('2026-10-19', d - w * 7))).flat();
+  const s = computeStreaks([], workouts, 3, today);
+  assert.equal(s.workoutWeeks, 4);
+  assert.equal(streakCheer(s, [])?.title, '4 weeks of training in a row!');
+});

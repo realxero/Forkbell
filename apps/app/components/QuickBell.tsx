@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
-import { bellHistory, mealForTime, todayLocal, type BellReply, type BellTurn, type FoodProposal } from '@forkbell/shared';
+import { bellHistory, bellMood, mealForTime, todayLocal, type BellMood, type BellReply, type BellTurn, type FoodProposal } from '@forkbell/shared';
 import { api, ApiError, post } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { speak, stopSpeaking } from '../lib/speak';
@@ -18,7 +18,7 @@ import { color, radius, space, type } from '../lib/theme';
  * added right there. It keeps the conversation like the full chat does, so
  * Bell's questions can be answered with a tap.
  */
-type Turn = BellTurn & { proposals?: FoodProposal[]; added?: boolean; answered?: string };
+type Turn = BellTurn & { proposals?: FoodProposal[]; added?: boolean; answered?: string; mood?: BellMood };
 /** After this long without a message, the next question starts a new conversation. */
 const FRESH_AFTER = 15 * 60_000;
 
@@ -69,7 +69,7 @@ export function QuickBell() {
         meal: mealForTime(),
         localTime: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       });
-      setTurns([...next, { role: 'assistant', text: r.reply, question: r.question ?? null, proposals: r.proposals.length ? r.proposals : undefined }]);
+      setTurns([...next, { role: 'assistant', text: r.reply, question: r.question ?? null, proposals: r.proposals.length ? r.proposals : undefined, mood: bellMood({ userText: q, reply: r.reply, question: r.question }) }]);
       lastAt.current = Date.now();
       if (readAloud === 'always' || (readAloud !== 'never' && spoken)) speak(r.question?.text ?? r.reply);
     } catch (e) {
@@ -85,6 +85,13 @@ export function QuickBell() {
     lastAt.current = 0;
   };
   const lastIndex = turns.length - 1;
+  const [excited, setExcited] = useState(false);
+  useEffect(() => {
+    if (!excited) return;
+    const t = setTimeout(() => setExcited(false), 4000);
+    return () => clearTimeout(t);
+  }, [excited]);
+  const mood: BellMood = busy ? 'thinking' : hearing !== null ? 'listening' : excited ? 'excited' : (turns.at(-1)?.mood ?? 'happy');
 
   if (!enabled) return null;
   return (
@@ -122,7 +129,7 @@ export function QuickBell() {
           <Pressable style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
-                <BellAvatar size={30} mood={busy ? 'thinking' : hearing !== null ? 'listening' : 'happy'} />
+                <BellAvatar size={30} mood={mood} alive={open} />
                 <Text style={type.title}>Ask Bell</Text>
               </View>
               <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
@@ -145,7 +152,10 @@ export function QuickBell() {
                     {!!t.text && <Text style={type.body}>{t.text}</Text>}
                     {t.question && <Question q={t.question} answered={t.answered} live={i === lastIndex && !busy} onAnswer={(a) => void ask(a, false, i)} />}
                     {t.proposals && (
-                      <Proposals items={t.proposals} added={Boolean(t.added)} onAdded={() => setTurns((l) => l.map((x, j) => (j === i ? { ...x, added: true } : x)))} />
+                      <Proposals items={t.proposals} added={Boolean(t.added)} onAdded={() => {
+                        setTurns((l) => l.map((x, j) => (j === i ? { ...x, added: true } : x)));
+                        setExcited(true);
+                      }} />
                     )}
                   </View>
                 ),

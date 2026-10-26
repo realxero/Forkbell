@@ -192,6 +192,9 @@ export interface Streaks {
   workoutWeeks: number;
   bestWorkoutWeeks: number;
   workoutsThisWeek: number;
+  /** the first day of the current logging streak, and the Monday of the first week of the workout streak */
+  foodSince?: string | null;
+  workoutSince?: string | null;
 }
 
 /** Monday of the week a date falls in. */
@@ -204,7 +207,11 @@ export function weekStart(date: string): string {
 export function computeStreaks(loggedDates: string[], workoutDates: string[], weeklyGoal: number, today: string): Streaks {
   const logged = new Set(loggedDates);
   let foodDays = 0;
-  for (let d = logged.has(today) ? today : addDays(today, -1); logged.has(d); d = addDays(d, -1)) foodDays++;
+  let foodSince: string | null = null;
+  for (let d = logged.has(today) ? today : addDays(today, -1); logged.has(d); d = addDays(d, -1)) {
+    foodDays++;
+    foodSince = d;
+  }
   let bestFoodDays = 0;
   for (const d of [...logged].sort()) {
     if (logged.has(addDays(d, -1))) continue;
@@ -218,8 +225,12 @@ export function computeStreaks(loggedDates: string[], workoutDates: string[], we
   const thisWeek = weekStart(today);
   const met = (w: string) => (perWeek.get(w) ?? 0) >= weeklyGoal;
   let workoutWeeks = 0;
+  let workoutSince: string | null = met(thisWeek) ? thisWeek : null;
   // The current week never breaks a streak; it only adds once the goal is met.
-  for (let w = addDays(thisWeek, -7); met(w); w = addDays(w, -7)) workoutWeeks++;
+  for (let w = addDays(thisWeek, -7); met(w); w = addDays(w, -7)) {
+    workoutWeeks++;
+    workoutSince = w;
+  }
   if (met(thisWeek)) workoutWeeks++;
   let bestWorkoutWeeks = 0;
   for (const w of [...perWeek.keys()].sort()) {
@@ -228,7 +239,47 @@ export function computeStreaks(loggedDates: string[], workoutDates: string[], we
     for (let x = w; met(x); x = addDays(x, 7)) n++;
     bestWorkoutWeeks = Math.max(bestWorkoutWeeks, n);
   }
-  return { foodDays, bestFoodDays: Math.max(bestFoodDays, foodDays), workoutWeeks, bestWorkoutWeeks: Math.max(bestWorkoutWeeks, workoutWeeks), workoutsThisWeek: perWeek.get(thisWeek) ?? 0 };
+  return {
+    foodDays,
+    bestFoodDays: Math.max(bestFoodDays, foodDays),
+    workoutWeeks,
+    bestWorkoutWeeks: Math.max(bestWorkoutWeeks, workoutWeeks),
+    workoutsThisWeek: perWeek.get(thisWeek) ?? 0,
+    foodSince,
+    workoutSince,
+  };
+}
+
+/** Logging streaks (days) and training streaks (weeks) that Bell celebrates on Today. */
+export const STREAK_CHEERS = { food: [3, 7, 14, 21, 30], workout: [2, 4, 8] } as const;
+
+export interface StreakCheer {
+  kind: 'food' | 'workout';
+  count: number;
+  /** remember this so the same milestone of the same streak never shows twice */
+  key: string;
+  title: string;
+  detail: string;
+}
+
+/**
+ * The milestone to celebrate now, if any: the biggest one reached that hasn't
+ * been shown for this streak. A broken and restarted streak can earn them
+ * again. `seen` is the keys already shown.
+ */
+export function streakCheer(st: Streaks, seen: string[]): StreakCheer | null {
+  const pick = (kind: 'food' | 'workout', count: number, since: string | null | undefined): StreakCheer | null => {
+    if (!since) return null;
+    const hit = [...STREAK_CHEERS[kind]].reverse().find((n) => count >= n);
+    if (!hit) return null;
+    const key = `${kind}:${since}:${hit}`;
+    if (seen.includes(key)) return null;
+    return kind === 'food'
+      ? { kind, count: hit, key, title: `${hit} days of logging in a row!`, detail: hit >= 30 ? 'A whole month. That’s a habit now.' : hit >= 14 ? 'You’re really building something here.' : 'Keep it going, I’m counting with you.' }
+      : { kind, count: hit, key, title: `${hit} weeks of training in a row!`, detail: hit >= 8 ? 'Two months of showing up. Seriously impressive.' : 'Every week you hit your workouts. Nice.' };
+  };
+  // A training streak is rarer, so it goes first if both land on the same day.
+  return pick('workout', st.workoutWeeks, st.workoutSince) ?? pick('food', st.foodDays, st.foodSince);
 }
 
 export interface Milestone {

@@ -145,3 +145,12 @@ test('the web page is never cached, so a new version shows on the next load', as
   const r = await fetch('http://localhost:' + (process.env.TEST_PORT ?? 3999) + '/stretches');
   assert.equal(r.headers.get('cache-control'), 'no-cache');
 });
+
+test('streaks for Bell’s celebrations: a light route with start dates', async () => {
+  const u = await newUser();
+  const r = await u.call('GET', '/api/progress/streaks?today=2026-10-25');
+  assert.equal(r.status, 200);
+  assert.equal(r.body.foodDays, 0);
+  assert.equal(r.body.foodSince, null);
+  assert.equal(r.body.workoutWeeks, 0);
+});

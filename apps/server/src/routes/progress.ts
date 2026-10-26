@@ -197,6 +197,23 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     return c.json({ patterns, insights, daysLooked: dayRows.length });
   });
 
+  /** Just the streaks, for Bell's celebrations on Today (much lighter than the whole Progress screen). */
+  r.get('/streaks', async (c) => {
+    const t = dateSchema.safeParse(c.req.query('today'));
+    const today = t.success ? t.data : todayLocal();
+    const userId = c.get('profileId');
+    const { logged, done, goal } = await asUser(userId, async (tx) => {
+      const [me] = await tx.select({ goal: users.weeklyWorkoutGoal }).from(users).where(eq(users.id, userId)).limit(1);
+      const logged = (await tx.execute<{ date: string }>(sql`
+        select d.date::text as date from diary_entries d join foods f on f.id = d.food_id
+        where d.date >= ${addDays(today, -400)}::date and d.date <= ${today}::date
+        group by d.date having sum(d.grams / 100 * f.kcal) > 0`)) as unknown as { date: string }[];
+      const done = await tx.select({ date: workouts.date }).from(workouts).where(and(isNotNull(workouts.finishedAt), sql`${workouts.date} >= ${addDays(today, -400)}::date`));
+      return { logged, done, goal: me?.goal ?? 3 };
+    });
+    return c.json(computeStreaks(logged.map((r) => r.date), done.map((w) => w.date), goal, today));
+  });
+
   /** This month next to last month: logging, calories, protein, weight and workouts. */
   r.get('/recap', async (c) => {
     const t = dateSchema.safeParse(c.req.query('today'));
