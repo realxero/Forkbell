@@ -55,6 +55,10 @@ amount and can be renamed; new foods follow the label (per serving); goal
 bars on amounts; Days logged as a month; Quick add fixed; Bell answers
 before Cloudflare gives up, and clearer errors when something else answers.
 
+0.19: Bell answers by checking back instead of one long wait (no more "needs
+a connection" on slow answers), × 2 / × 3 and "make this one serving" for
+amounts, and vitamins and minerals.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
