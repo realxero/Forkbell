@@ -1,3 +1,4 @@
+import { askBell } from '../../../lib/bell-ask';
 import { WaterProposal } from '../../../components/WaterProposal';
 import { speak } from '../../../lib/speak';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -132,7 +133,7 @@ export default function Bell() {
     setError(null);
     setNotice(null);
     try {
-      const r = await post<BellReply>('/api/bell/chat', {
+      const r = await askBell({
         messages: bellHistory(next),
         today: todayLocal(),
         meal: mealForTime(),

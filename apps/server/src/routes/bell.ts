@@ -1,4 +1,5 @@
-import { Hono } from 'hono';
+import { randomUUID } from 'node:crypto';
+import { Hono, type Context } from 'hono';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { fasts, users, waterEntries, type connect } from '@forkbell/db';
 import { z } from 'zod';
@@ -11,14 +12,21 @@ import { runTool, systemPrompt, toolsFor, type ToolContext } from '../bell/tools
 
 const MAX_ROUNDS = 8;
 /**
- * Bell answers within this, whatever the model is doing. Cloudflare gives up on
- * a request after 100 seconds and the app then sees Cloudflare's error page
- * instead of Bell, so stop well before and answer with what there is.
+ * Bell answers within this, whatever the model is doing, with what there is
+ * by then. The app waits for it (see startJob), so it can be generous for a
+ * slow local model.
  */
-const ANSWER_WITHIN_MS = Number(process.env.BELL_ANSWER_WITHIN_MS) || 75_000;
+const ANSWER_WITHIN_MS = Number(process.env.BELL_ANSWER_WITHIN_MS) || 240_000;
 class OutOfTime extends Error {}
-const within = <T>(work: Promise<T>, deadline: number) =>
-  Promise.race([work, new Promise<never>((_, reject) => setTimeout(() => reject(new OutOfTime()), Math.max(0, deadline - Date.now())))]);
+/** The work, or OutOfTime at the deadline. The timer goes when the work finishes; work that ends after the deadline is ignored. */
+function within<T>(work: Promise<T>, deadline: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  work.catch(() => {}); // handled below, or no longer wanted
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new OutOfTime()), Math.max(0, deadline - Date.now()));
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
 // A simple guard against runaway costs: 40 messages per person per 10 minutes.
 const recent = new Map<string, number[]>();
 function allowed(userId: string) {
@@ -100,6 +108,29 @@ Rules:
 - name and brand only if you can read them on the pack; otherwise null.
 - If the photo isn't a nutrition label, or you can't read the numbers clearly, set readable to false and say why in note.`;
 
+/** Bell answers being worked out: ticket → answer, kept 10 minutes. */
+const jobs = new Map<string, { userId: string; at: number; done: { code: number; body: unknown } | null }>();
+const JOB_WAIT_MS = Number(process.env.BELL_WAIT_MS) || 20_000;
+
+function startJob(c: Context<AppEnv>, userId: string, work: Promise<{ code: number; body: unknown }>) {
+  for (const [k, j] of jobs) if (Date.now() - j.at > 10 * 60_000) jobs.delete(k);
+  const id = randomUUID();
+  const job = { userId, at: Date.now(), done: null as { code: number; body: unknown } | null };
+  jobs.set(id, job);
+  const finished = work.then(
+    (r) => (job.done = r),
+    (e) => {
+      console.error('Bell:', e);
+      job.done = { code: 500, body: { error: 'Bell ran into a problem. Check the server log.' } };
+    },
+  );
+  return Promise.race([finished.then(() => true), new Promise<boolean>((r) => setTimeout(() => r(false), JOB_WAIT_MS))]).then((ready) => {
+    if (!ready) return c.json({ pending: id }, 202);
+    jobs.delete(id);
+    return c.json(job.done!.body as object, job.done!.code as 200);
+  });
+}
+
 export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: string, userId: string) => Promise<unknown>) {
   const { asUser } = db;
   const r = new Hono<AppEnv>();
@@ -153,6 +184,15 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
     return new Response(res.body, { headers: { 'content-type': res.headers.get('content-type') ?? 'audio/mpeg', 'cache-control': 'private, max-age=3600' } });
   });
 
+  /** Is that answer ready? 202 while Bell is still working on it. */
+  r.get('/chat/:id', (c) => {
+    const job = jobs.get(c.req.param('id'));
+    if (!job || job.userId !== c.get('profileId')) return c.json({ error: 'That answer has expired. Ask again.' }, 404);
+    if (!job.done) return c.json({ pending: c.req.param('id') }, 202);
+    jobs.delete(c.req.param('id'));
+    return c.json(job.done.body as object, job.done.code as 200);
+  });
+
   r.post('/chat', async (c) => {
     const ai = await aiConfigFor(db, c.get('userId'));
     if (!ai) return c.json({ error: 'Bell needs an AI key. Add yours in Settings → Bell.' }, 503);
@@ -163,91 +203,98 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the message.' }, 400);
     const { messages, today, meal, localTime, workoutId } = parsed.data;
 
-    const [me] = await asUser(userId, (tx) => tx.select({ name: users.name, unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1));
-    // Only the newest photo goes to the model; older ones are just mentioned.
-    const window = messages.slice(-20);
-    const lastImage = window.map((m) => Boolean(m.image)).lastIndexOf(true);
-    const turns = window.map((m, i) => ({
-      role: m.role,
-      // Models reject empty turns; an assistant turn can be empty when it only asked a question.
-      text: m.image && i !== lastImage ? `${m.text} [photo]` : m.text || (m.role === 'assistant' ? '(asked a question)' : ''),
-      image: i === lastImage ? m.image : undefined,
-    }));
-    const prefs = preferencesSchema.parse(me?.prefs ?? {});
-    let system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null, prefs });
-    system += await waterAndFastingFor(asUser, userId, today, me?.unit ?? 'lb', prefs).catch(() => '');
-    // Asked from inside a workout: the session as it stands, so "next set?" needs no lookup.
-    if (workoutId) {
-      const w = await internal(`/api/workouts/${workoutId}`, userId).then((r) => (r as { workout: Workout }).workout, () => null);
-      if (w) system += workoutContext(w, me?.unit ?? 'lb', localTime);
-    }
-    const cfg = { apiKey: ai.apiKey, model: ai.model, baseUrl: ai.baseUrl };
-    const tools = toolsFor(prefs);
-    const model = ai.format === 'anthropic' ? anthropic(cfg, system, turns, tools) : openai(cfg, system, turns, tools);
+    // The answer is worked out in the background. If it's ready within 20 seconds it comes
+    // straight back; otherwise the app gets a ticket and asks again every couple of seconds,
+    // so a slow AI service (a local model, a busy provider) never runs into the iPhone's
+    // 60-second limit on a request or Cloudflare's 100 seconds.
+    const work = (async (): Promise<{ code: 200 | 400 | 404 | 429 | 500 | 502 | 503; body: unknown }> => {
+      const [me] = await asUser(userId, (tx) => tx.select({ name: users.name, unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1));
+      // Only the newest photo goes to the model; older ones are just mentioned.
+      const window = messages.slice(-20);
+      const lastImage = window.map((m) => Boolean(m.image)).lastIndexOf(true);
+      const turns = window.map((m, i) => ({
+        role: m.role,
+        // Models reject empty turns; an assistant turn can be empty when it only asked a question.
+        text: m.image && i !== lastImage ? `${m.text} [photo]` : m.text || (m.role === 'assistant' ? '(asked a question)' : ''),
+        image: i === lastImage ? m.image : undefined,
+      }));
+      const prefs = preferencesSchema.parse(me?.prefs ?? {});
+      let system = systemPrompt({ today, localTime, unit: me?.unit ?? 'lb', name: me?.name ?? null, prefs });
+      system += await waterAndFastingFor(asUser, userId, today, me?.unit ?? 'lb', prefs).catch(() => '');
+      // Asked from inside a workout: the session as it stands, so "next set?" needs no lookup.
+      if (workoutId) {
+        const w = await internal(`/api/workouts/${workoutId}`, userId).then((r) => (r as { workout: Workout }).workout, () => null);
+        if (w) system += workoutContext(w, me?.unit ?? 'lb', localTime);
+      }
+      const cfg = { apiKey: ai.apiKey, model: ai.model, baseUrl: ai.baseUrl };
+      const tools = toolsFor(prefs);
+      const model = ai.format === 'anthropic' ? anthropic(cfg, system, turns, tools) : openai(cfg, system, turns, tools);
 
-    const ctx: ToolContext = {
-      call: (path: string) => internal(path, userId),
-      today,
-      meal,
-      proposals: [] as FoodProposal[],
-      prefs,
-      // The last few things they said, so an amount given before a question still counts.
-      userText: messages.filter((m) => m.role === 'user').slice(-3).map((m) => m.text).join('\n'),
-      question: null as BellQuestion | null,
-      water: null as { ml: number; date: string } | null,
-      unit: (me?.unit ?? 'lb') as 'lb' | 'kg',
-    };
-    let results: { call: ToolCall; output: string }[] | undefined;
-    let text = '';
-    let unfinished = false;
-    let outOfTime = false;
-    const deadline = Date.now() + ANSWER_WITHIN_MS;
-    try {
-      for (let round = 0; round < MAX_ROUNDS; round++) {
-        const step = await within(model.step(results), deadline);
-        text = step.text || text;
-        unfinished = step.calls.length > 0;
-        if (!step.calls.length) break;
-        results = [];
-        for (const tc of step.calls) {
-          let output: string;
-          try {
-            output = await within(runTool(tc.name, tc.args, ctx), deadline);
-          } catch (e) {
-            output = `Tool failed: ${e instanceof Error ? e.message : String(e)}`;
+      const ctx: ToolContext = {
+        call: (path: string) => internal(path, userId),
+        today,
+        meal,
+        proposals: [] as FoodProposal[],
+        prefs,
+        // The last few things they said, so an amount given before a question still counts.
+        userText: messages.filter((m) => m.role === 'user').slice(-3).map((m) => m.text).join('\n'),
+        question: null as BellQuestion | null,
+        water: null as { ml: number; date: string } | null,
+        unit: (me?.unit ?? 'lb') as 'lb' | 'kg',
+      };
+      let results: { call: ToolCall; output: string }[] | undefined;
+      let text = '';
+      let unfinished = false;
+      let outOfTime = false;
+      const deadline = Date.now() + ANSWER_WITHIN_MS;
+      try {
+        for (let round = 0; round < MAX_ROUNDS; round++) {
+          const step = await within(model.step(results), deadline);
+          text = step.text || text;
+          unfinished = step.calls.length > 0;
+          if (!step.calls.length) break;
+          results = [];
+          for (const tc of step.calls) {
+            let output: string;
+            try {
+              output = await within(runTool(tc.name, tc.args, ctx), deadline);
+            } catch (e) {
+              output = `Tool failed: ${e instanceof Error ? e.message : String(e)}`;
+            }
+            results.push({ call: tc, output });
           }
-          results.push({ call: tc, output });
+          // A question means waiting for the person; another model call would only guess.
+          if (ctx.question) {
+            unfinished = false;
+            break;
+          }
         }
-        // A question means waiting for the person; another model call would only guess.
-        if (ctx.question) {
-          unfinished = false;
-          break;
+      } catch (e) {
+        if (e instanceof OutOfTime) {
+          outOfTime = true;
+          console.error(`Bell: no answer within ${ANSWER_WITHIN_MS / 1000} s; answering with what there is`);
+        } else {
+        console.error('Bell:', e);
+        return { code: 502 as const, body: { error: e instanceof Error && e.message.startsWith('The AI service') ? e.message : 'Bell couldn’t reach the AI service. Check the server log.' } };
         }
       }
-    } catch (e) {
-      if (e instanceof OutOfTime) {
-        outOfTime = true;
-        console.error(`Bell: no answer within ${ANSWER_WITHIN_MS / 1000} s; answering with what there is`);
-      } else {
-      console.error('Bell:', e);
-      return c.json({ error: e instanceof Error && e.message.startsWith('The AI service') ? e.message : 'Bell couldn’t reach the AI service. Check the server log.' }, 502);
-      }
-    }
-    const { proposals, question, water } = ctx;
-    // Bell always answers with something you can act on, never an empty bubble.
-    const fallback = question
-      ? ''
-      : proposals.length
-        ? 'Here’s what I’d log. Check the amounts and tap Add.'
-        : water
-          ? 'Tap Add to log the water.'
-        : outOfTime
-          ? 'The AI service is slow right now and I ran out of time. Try again in a moment, or ask about one thing at a time.'
-          : unfinished
-          ? 'That took more steps than I’m allowed. Try asking about one thing at a time.'
-          : 'I didn’t get an answer from the model. Try asking again, or rephrase it.';
-    const body: BellReply = { reply: (unfinished || outOfTime) && !proposals.length && !water ? fallback : text || fallback, proposals, question, water };
-    return c.json(body);
+      const { proposals, question, water } = ctx;
+      // Bell always answers with something you can act on, never an empty bubble.
+      const fallback = question
+        ? ''
+        : proposals.length
+          ? 'Here’s what I’d log. Check the amounts and tap Add.'
+          : water
+            ? 'Tap Add to log the water.'
+          : outOfTime
+            ? 'The AI service is slow right now and I ran out of time. Try again in a moment, or ask about one thing at a time.'
+            : unfinished
+            ? 'That took more steps than I’m allowed. Try asking about one thing at a time.'
+            : 'I didn’t get an answer from the model. Try asking again, or rephrase it.';
+      const body: BellReply = { reply: (unfinished || outOfTime) && !proposals.length && !water ? fallback : text || fallback, proposals, question, water };
+      return { code: 200 as const, body };
+    })();
+    return startJob(c, userId, work);
   });
 
   /** Read a nutrition label photo. Nothing is saved: the app shows the numbers to check first. */

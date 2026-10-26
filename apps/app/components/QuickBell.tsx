@@ -1,3 +1,4 @@
+import { askBell } from '../lib/bell-ask';
 import { WaterProposal } from './WaterProposal';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
@@ -64,7 +65,7 @@ export function QuickBell() {
     lastAt.current = Date.now();
     setBusy(true);
     try {
-      const r = await post<BellReply>('/api/bell/chat', {
+      const r = await askBell({
         messages: bellHistory(next),
         today: todayLocal(),
         meal: mealForTime(),

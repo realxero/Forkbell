@@ -46,6 +46,12 @@ if (env.appUrl !== env.publicUrl) {
   app.use('/auth/*', cors({ origin: env.appUrl, credentials: true }));
 }
 
+// A promise that fails with no one listening would stop the whole server (Node's
+// default). Log it instead, so one broken request can't take Forkbell down.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection (the server keeps running):', reason);
+});
+
 app.get('/healthz', (c) => c.json({ ok: true, version: BUILD.version, commit: BUILD.commit, build: BUILD.buildNumber, builtAt: BUILD.builtAt }));
 app.route('/auth', authRoutes(database.db));
 

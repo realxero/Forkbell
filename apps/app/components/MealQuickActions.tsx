@@ -1,3 +1,4 @@
+import { askBell } from '../lib/bell-ask';
 import { useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -122,7 +123,7 @@ function PhotoLog({ date, meal, onClose, onAdded }: { date: string; meal: Meal; 
     try {
       const status = await api<{ enabled: boolean; error?: string }>('/api/bell/status');
       if (!status.enabled) throw new Error(status.error ?? 'Photo logging uses Bell. Add an AI key in Settings → Bell first.');
-      const r = await post<BellReply>('/api/bell/chat', {
+      const r = await askBell({
         messages: [{ role: 'user', text: `Log this photo for ${MEAL_NAMES[meal].toLowerCase()}${note.trim() ? `: ${note.trim()}` : ''}. Estimate each food and its amount.`, image }],
         today: date,
         meal,

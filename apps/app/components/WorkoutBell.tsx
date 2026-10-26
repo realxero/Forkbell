@@ -1,6 +1,7 @@
 // Ask Bell from inside a workout. Bell sees the session as it stands (what
 // you've done, what's left, last time), so "what weight next?" just works.
 // Short answers, quick questions to tap, and hold the mic to talk.
+import { askBell } from '../lib/bell-ask';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -47,7 +48,7 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
     setBusy(true);
     try {
       await beforeAsk().catch(() => {}); // the sets you just ticked, saved first so Bell sees them
-      const r = await post<BellReply>('/api/bell/chat', {
+      const r = await askBell({
         messages: next.slice(-12).map(({ role, text }) => ({ role, text })),
         today: todayLocal(),
         meal: mealForTime(),
