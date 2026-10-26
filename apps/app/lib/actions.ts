@@ -28,7 +28,7 @@ import {
   toIso,
 } from '@forkbell/shared';
 import { cachedGet, cachedPaths, newId, readCache, send, updateCache, writeCache } from './sync';
-import { post } from './api';
+import { patch, post } from './api';
 import { haptic } from './haptics';
 
 const emptyDay = (date: string): DiaryDay => {
@@ -378,4 +378,14 @@ export async function logPastWorkout(o: { date: string; startedAt: string; finis
   const r = await post<{ workout: Workout }>('/api/workouts', { id: newId(), ...o });
   writeCache(`/api/workouts/${r.workout.id}`, { workout: r.workout });
   return r.workout;
+}
+
+/** One serving of one of your foods ("1 bar" = 48 g). Needs a connection; built-in foods can't be changed. */
+export async function setFoodServing(foodId: string, servingGrams: number, servingLabel: string | null) {
+  const { food } = await patch<{ food: Food }>(`/api/foods/${foodId}/serving`, { servingGrams, servingLabel });
+  // Every copy on this phone gets the serving: recent foods, your library, logged days.
+  updateCache<RecentFoods>('/api/foods/recent', (r) => r && { ...r, recent: r.recent.map((x) => (x.food.id === foodId ? { ...x, food } : x)), frequent: r.frequent.map((x) => (x.food.id === foodId ? { ...x, food } : x)) });
+  updateCache<{ foods: Food[] }>('/api/foods/library', (lib) => lib && { foods: lib.foods.map((f) => (f.id === foodId ? food : f)) });
+  for (const path of cachedPaths('/api/diary/')) updateCache<DiaryDay>(path, (day) => day && (day.entries ? { ...day, entries: day.entries.map((e) => (e.food.id === foodId ? { ...e, food } : e)) } : day));
+  return food;
 }

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { MEALS, amountFromGrams, amountText, forAmount, parseQuantity, unitFor, unitsFor, type DiaryDay, type Food, type FoodCandidate, type Meal } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { readCache } from '../lib/sync';
+import { setFoodServing } from '../lib/actions';
 import { color, space, type } from '../lib/theme';
 
 export const MEAL_NAMES: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
@@ -30,9 +31,14 @@ type Props = {
  * word for one (bar, slice), oz, g, and for drinks fl oz, cups and ml. Used
  * for adding a food and for editing an entry.
  */
-export function AmountPicker({ food, initialGrams, initialAmount, initialMeal, lastGrams, date, submitLabel, onSubmit, error, children }: Props) {
+export function AmountPicker({ food: given, initialGrams, initialAmount, initialMeal, lastGrams, date, submitLabel, onSubmit, error, children }: Props) {
   const { me } = useAuth();
   const prefer = me?.weightUnit ?? 'lb';
+  // A serving added here ("1 bar" = this amount) applies straight away.
+  const [serving, setServing] = useState<{ servingGrams: number; servingLabel: string | null } | null>(null);
+  const food = useMemo(() => (serving ? { ...given, ...serving } : given), [given, serving]);
+  const [naming, setNaming] = useState<string | null>(null);
+  const [servingError, setServingError] = useState<string | null>(null);
   const units = useMemo(() => unitsFor(food, prefer), [food, prefer]);
   // Start with what was said before, else last time's amount, else one serving, else 100 g in your unit.
   const start = useMemo(() => {
@@ -109,7 +115,49 @@ export function AmountPicker({ food, initialGrams, initialAmount, initialMeal, l
           />
         )}
       </View>
+      {!unit.count && valid && (
+        // Several at once without the maths: 2 × 1.7 oz.
+        <View style={s.chips}>
+          {[0.5, 2, 3, 4].map((x) => (
+            <Chip key={x} label={`× ${x === 0.5 ? '½' : x}`} on={false} onPress={() => setQty(String(Math.round(q! * x * 100) / 100))} />
+          ))}
+        </View>
+      )}
       {valid && unit.key !== 'g' && <Text style={type.small}>= {Math.round(g)} g</Text>}
+      {!food.servingGrams && 'id' in food && food.source !== 'builtin' && valid && (
+        <View style={{ gap: space(1), marginTop: space(1) }}>
+          {naming === null ? (
+            <Pressable onPress={() => setNaming('')} hitSlop={6}>
+              <Text style={s.link}>Make {amountText(q!, unit)} one serving (like 1 bar), to log “2 bars” next time</Text>
+            </Pressable>
+          ) : (
+            <View style={s.row}>
+              <Text style={type.body}>1</Text>
+              <TextInput value={naming} onChangeText={setNaming} placeholder="bar, cookie, scoop…" placeholderTextColor={color.placeholder} autoFocus style={[s.input, { flex: 1 }]} accessibilityLabel="What one serving is called" />
+              <Pressable
+                onPress={async () => {
+                  setServingError(null);
+                  const label = naming.trim() ? `1 ${naming.trim().toLowerCase()}` : null;
+                  try {
+                    await setFoodServing(String(food.id), g, label);
+                    setServing({ servingGrams: g, servingLabel: label });
+                    setUnitKey('serving');
+                    setQty('1');
+                    setNaming(null);
+                  } catch (e) {
+                    setServingError(e instanceof Error ? e.message : String(e));
+                  }
+                }}
+                style={s.smallButton}
+                accessibilityRole="button"
+              >
+                <Text style={s.smallButtonText}>Save</Text>
+              </Pressable>
+            </View>
+          )}
+          {servingError && <Text style={s.error}>{servingError}</Text>}
+        </View>
+      )}
       {!valid && qty.trim() !== '' && <Text style={s.error}>Type an amount like 1, 1.5 or 1/2.</Text>}
 
       <View style={s.nutrition}>
@@ -177,6 +225,9 @@ const s = StyleSheet.create({
   chip: { borderWidth: 1, borderColor: color.line, borderRadius: 20, paddingHorizontal: space(3), paddingVertical: space(2), backgroundColor: color.card },
   chipOn: { backgroundColor: color.iron, borderColor: color.iron },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
+  link: { color: color.accent, fontWeight: '700' },
+  smallButton: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3) },
+  smallButtonText: { color: color.chalk, fontWeight: '700' },
   qty: { width: 110, fontSize: 22, fontWeight: '700', textAlign: 'center' },
   unitRow: { gap: space(2), paddingVertical: space(1) },
   nutrition: { flexDirection: 'row', gap: space(3), backgroundColor: color.card, borderRadius: 12, padding: space(4), marginVertical: space(2) },

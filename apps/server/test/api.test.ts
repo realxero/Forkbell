@@ -62,7 +62,7 @@ test('every API path the app calls exists on the server', async () => {
   const missing: string[] = [];
   for (const p of paths) {
     let exists = false;
-    for (const method of ['GET', 'POST', 'PUT', 'DELETE']) {
+    for (const method of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) {
       const r = await u.call(method, p, method === 'GET' || method === 'DELETE' ? undefined : {});
       assert.ok(r.status < 500 || [502, 503].includes(r.status), explain(`${method} ${p} crashed with ${r.status}: ${r.text.slice(0, 200)}`));
       if (!(r.status === 404 && r.body?.error === NOT_HERE)) {
@@ -445,4 +445,16 @@ test('recent foods remember how last time was said', async () => {
   await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'snacks', grams: 24, foodId: food.id, amount: 1, unit: 'serving' });
   const recent = (await u.call('GET', '/api/foods/recent?today=2026-10-25')).body.recent[0];
   assert.deepEqual([recent.lastGrams, recent.lastAmount, recent.lastUnit], [24, 1, 'serving']);
+});
+
+test('make an amount one serving of your own food; built-in foods stay as they are', async () => {
+  const u = await newUser();
+  const mine = (await u.call('POST', '/api/foods', { name: 'Snack Bar', brand: null, source: 'custom', per100: { kcal: 418, protein: 4, carbs: 75, fat: 12 }, servingGrams: null, barcode: null })).body.food;
+  const r = await u.call('PATCH', `/api/foods/${mine.id}/serving`, { servingGrams: 48, servingLabel: '1 bar' });
+  assert.equal(r.status, 200, r.text);
+  assert.deepEqual([r.body.food.servingGrams, r.body.food.servingLabel], [48, '1 bar']);
+  const builtin = (await u.call('GET', '/api/foods/library')).body.foods.find((f: { source: string }) => f.source === 'builtin');
+  if (builtin) assert.equal((await u.call('PATCH', `/api/foods/${builtin.id}/serving`, { servingGrams: 10 })).status, 404);
+  const other = await newUser();
+  assert.equal((await other.call('PATCH', `/api/foods/${mine.id}/serving`, { servingGrams: 1 })).status, 404, "not someone else's food");
 });

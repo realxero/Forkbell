@@ -245,6 +245,10 @@ Adding a food of your own follows the label: the serving size as printed
 your label shows. A label photo is read the same way, so a granola bar's
 label shows 100 kcal per bar, not 417 per 100 g.
 
+Several at once: in oz, g, cups and the like, ×½, ×2, ×3 and ×4 multiply what
+you typed. For one of your own foods with no serving yet, *Make 1.7 oz one
+serving* names it (1 bar, 1 cookie, 1 scoop), so next time it's "2 bars".
+
 Any entry can be renamed (Edit → *Name in your diary*); only that entry
 changes, not the food.
 

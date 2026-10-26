@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { router } from 'expo-router';
-import { addDays, betterOptions, defaultPreferences, forAmount, mealForTime, todayLocal, type BetterOption, type DiaryEntry, type Meal, entryName } from '@forkbell/shared';
+import { addDays, betterOptions, defaultPreferences, forAmount, mealForTime, todayLocal, type BetterOption, type DiaryEntry, type Meal, entryName, entryAmountText } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { addEntry, deleteEntry, foodLibrary } from '../lib/actions';
 import { showToast } from '../lib/toast';
@@ -93,7 +93,7 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
               <FoodIcon name={entry.food.name} brand={entry.food.brand} size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={[type.body, { fontWeight: '700' }]} numberOfLines={1}>{entryName(entry)}</Text>
-                <Text style={type.small}>{entry.grams} g · {n.kcal} kcal · {MEAL_NAMES[entry.meal]}, {dayName(entry.date)}</Text>
+                <Text style={type.small}>{entryAmountText(entry, me?.weightUnit ?? 'lb')} · {n.kcal} kcal · {MEAL_NAMES[entry.meal]}, {dayName(entry.date)}</Text>
               </View>
             </View>
             {better ? (

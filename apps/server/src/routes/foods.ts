@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { and, desc, eq, gte, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { diaryEntries, foods, type connect } from '@forkbell/db';
 import { addDays, barcodeVariants, chooseBarcodeMatch, crossCheck, rankResults, dateSchema, foodInputSchema, todayLocal, type FoodCandidate, type RecentFood, type RecentFoods } from '@forkbell/shared';
@@ -132,6 +133,18 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
       if (err instanceof BadFood) return c.json({ error: err.message }, 400);
       throw err;
     }
+  });
+
+  // One serving of one of your foods ("1 bar" = 48 g), so it can be logged as 2 bars.
+  r.patch('/:id/serving', async (c) => {
+    const p = z.object({ servingGrams: z.number().positive().max(5000), servingLabel: z.string().trim().min(1).max(100).nullish() }).safeParse(await c.req.json().catch(() => null));
+    if (!p.success) return c.json({ error: 'Send the grams in one serving.' }, 400);
+    if (!z.string().uuid().safeParse(c.req.param('id')).success) return c.json({ error: 'That food was not found.' }, 404);
+    const [row] = await asUser(c.get('profileId'), (tx) =>
+      tx.update(foods).set({ servingGrams: p.data.servingGrams, servingLabel: p.data.servingLabel ?? null }).where(eq(foods.id, c.req.param('id'))).returning(),
+    );
+    // Built-in foods aren't yours to change: row-level security finds nothing to update.
+    return row ? c.json({ food: toFood(row) }) : c.json({ error: 'Only foods you added can be changed. This one is built in.' }, 404);
   });
 
   return r;
