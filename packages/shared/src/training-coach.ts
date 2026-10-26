@@ -26,6 +26,8 @@ export const trainingSetupSchema = z
     /** strength goals: exercise id to an estimated one-rep max, in kg */
     goals: z.record(z.string().uuid(), z.number().positive().max(1000)).default({}),
     /** the weekdays you train, 0 = Sunday */
+    /** exercises whose reps are counted per side (lunges, single-arm rows) */
+    perSide: z.array(z.string().uuid()).max(500).default([]),
     trainingDays: z.array(z.number().int().min(0).max(6)).max(7).default([]),
     /** plate sizes your gym has, per unit; missing means a typical set */
     plates: z.object({ lb: z.array(z.number().positive().max(100)).max(12).optional(), kg: z.array(z.number().positive().max(50)).max(12).optional() }).default({}),
@@ -37,7 +39,7 @@ export const trainingSetupSchema = z
     /** the bar last used for each exercise (exercise id to bar id) */
     barFor: z.record(z.string(), z.string().max(40)).default({}),
   })
-  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, trainingDays: [], plates: {}, bars: [], barFor: {} });
+  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {} });
 export type TrainingSetup = z.infer<typeof trainingSetupSchema>;
 
 // Name fragments for movements that put real load on each area.

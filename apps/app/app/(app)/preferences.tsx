@@ -149,6 +149,10 @@ export default function PreferencesScreen() {
         {sw('Safety tips on exercises', p.trainingTips, (v) => setP({ ...p, trainingTips: v }))}
         <Text style={s.note}>Lighter-day, check-up and stalled-lift tips, and big-jump heads-ups. Pain you flag always shows next time.</Text>
 
+        {sw('Keep the screen on during a workout', p.keepAwake, (v) => setP({ ...p, keepAwake: v }))}
+        {sw('Flash the screen when a rest is up', p.restFlash, (v) => setP({ ...p, restFlash: v }))}
+        <Text style={s.note}>The flash is for gyms too loud to hear the alert. In a workout, swipe a set left to delete it or right to copy it, and an exercise’s ⋯ menu can count its reps per side.</Text>
+
         <Text style={s.label}>Rest coach (spoken, in Bell’s voice)</Text>
         <View style={s.chips}>
           <Chip label="Off" on={p.workoutVoice === 'off'} onPress={() => setP({ ...p, workoutVoice: 'off' })} />

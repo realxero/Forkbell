@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { afterSet, bigJump, recoveredAt, restAdvice, restCue, setFeedback, cardioKcal, distanceText, durationText, fromDistanceUnit, paceText, parseDuration, toDistanceUnit, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
@@ -26,6 +26,9 @@ import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
 import { WorkoutBell } from '../../components/WorkoutBell';
 import { WhenCard } from '../../components/WhenCard';
+import { SwipeRow } from '../../components/SwipeRow';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { put } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { speak } from '../../lib/speak';
 import { latestHeartRate, latestRestingHeartRate } from '../../lib/health';
@@ -69,7 +72,7 @@ const blankSet = (): SetEntry => ({ weightKg: null, reps: null, seconds: null, r
 export default function WorkoutScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const units = useUnit();
-  const { me } = useAuth();
+  const { me, refreshMe } = useAuth();
   const voice = me?.preferences.workoutVoice ?? 'off';
   /** the rest coach: what's been said this rest, and the rest's plan */
   const told = useRef(new Set<string>());
@@ -120,11 +123,19 @@ export default function WorkoutScreen() {
     return () => clearInterval(t);
   }, []);
   const restLeft = restEnd ? Math.max(0, Math.ceil((restEnd - now) / 1000)) : null;
+  // Rest over: a flash across the screen too (Settings → Training setup), for a gym too loud to hear it.
+  const flash = useRef(new Animated.Value(0)).current;
+  const flashOn = me?.preferences.restFlash !== false;
   useEffect(() => {
     if (restEnd && restLeft === 0) {
       if (hapticsOn()) haptic.alert();
       else Vibration.vibrate(500);
       playSound('rest');
+      if (flashOn) {
+        flash.setValue(0);
+        const pulse = [Animated.timing(flash, { toValue: 1, duration: 220, useNativeDriver: true }), Animated.timing(flash, { toValue: 0, duration: 380, useNativeDriver: true })];
+        Animated.sequence([...pulse, Animated.timing(flash, { toValue: 1, duration: 220, useNativeDriver: true }), Animated.timing(flash, { toValue: 0, duration: 380, useNativeDriver: true })]).start();
+      }
       const t = setTimeout(() => setRestEnd(null), 4000);
       return () => clearTimeout(t);
     }
@@ -157,6 +168,29 @@ export default function WorkoutScreen() {
     };
   }, [hrOn, restEnd !== null]); // eslint-disable-line react-hooks/exhaustive-deps
   const hrFresh = hr && now - hr.at <= 60_000 ? hr : null;
+
+  // The screen stays on while a workout is going (Settings → Training setup), so the timer is always there.
+  const awake = Boolean(w && !w.finishedAt) && me?.preferences.keepAwake !== false;
+  useEffect(() => {
+    if (!awake) return;
+    activateKeepAwakeAsync('workout').catch(() => {});
+    return () => {
+      try {
+        deactivateKeepAwake('workout');
+      } catch {}
+    };
+  }, [awake]);
+
+  /** Reps per side for an exercise (lunges, single-arm rows): just how they're shown and said. */
+  const perSide = new Set(me?.preferences.training.perSide ?? []);
+  const togglePerSide = async (exerciseId: string) => {
+    if (!me) return;
+    setMenu(null);
+    const list = me.preferences.training.perSide ?? [];
+    const next = list.includes(exerciseId) ? list.filter((x) => x !== exerciseId) : [...list, exerciseId];
+    await put('/api/me/preferences', { ...me.preferences, training: { ...me.preferences.training, perSide: next } }).catch(() => {});
+    await refreshMe();
+  };
 
   // The rest coach: timing cues, and a nudge from your heart rate when it's fresh.
   useEffect(() => {
@@ -478,6 +512,10 @@ export default function WorkoutScreen() {
               onToggle={(k) => toggleDone(i, k)}
               onAddSet={() => updateExercise(i, (x) => ({ ...x, sets: [...x.sets, { ...(x.sets.at(-1) ?? blankSet()), done: false, warmup: false }] }))}
               onRemoveSet={() => updateExercise(i, (x) => ({ ...x, sets: x.sets.slice(0, -1) }))}
+              onDeleteSet={(k) => updateExercise(i, (x) => ({ ...x, sets: x.sets.filter((_, j) => j !== k) }))}
+              onCopySet={(k) => updateExercise(i, (x) => ({ ...x, sets: [...x.sets.slice(0, k + 1), { ...x.sets[k]!, done: false }, ...x.sets.slice(k + 1)] }))}
+              perSide={perSide.has(e.exercise.id)}
+              onPerSide={() => void togglePerSide(e.exercise.id)}
               onPlates={() => setPlatesFor(i)}
               onWarmupSets={() => addWarmups(i)}
               onRest={(by) => updateExercise(i, (x) => ({ ...x, restSeconds: Math.min(900, Math.max(0, x.restSeconds + by)) }))}
@@ -545,6 +583,7 @@ export default function WorkoutScreen() {
             )}
           </View>
         )}
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color.fat, opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] }) }]} />
         {!w.finishedAt && <WorkoutBell workoutId={w.id} beforeAsk={flush} lifted={restLeft !== null} />}
       </KeyboardAvoidingView>
       <HowToSheet exercise={howToFor} onClose={() => setHowToFor(null)} />
@@ -617,6 +656,10 @@ function ExerciseCard(props: {
   onToggle: (k: number) => void;
   onAddSet: () => void;
   onRemoveSet: () => void;
+  onDeleteSet: (k: number) => void;
+  onCopySet: (k: number) => void;
+  perSide: boolean;
+  onPerSide: () => void;
   onPlates: () => void;
   onWarmupSets: () => void;
   onRest: (by: number) => void;
@@ -674,6 +717,9 @@ function ExerciseCard(props: {
           <Pressable onPress={() => props.onRest(15)}><Text style={s.menuItem}>Rest +15 s</Text></Pressable>
           {props.canLinkNext && <Pressable onPress={props.onLinkNext}><Text style={s.menuItem}>Superset with the next exercise</Text></Pressable>}
           {group && <Pressable onPress={props.onLeaveGroup}><Text style={s.menuItem}>Leave the {group.of > 2 ? 'circuit' : 'superset'}</Text></Pressable>}
+          {(kind === 'weight' || kind === 'bodyweight') && (
+            <Pressable onPress={props.onPerSide}><Text style={s.menuItem}>{props.perSide ? 'Count reps in total' : 'Count reps per side'}</Text></Pressable>
+          )}
           <Pressable onPress={() => props.onMove(-1)}><Text style={s.menuItem}>Move up</Text></Pressable>
           <Pressable onPress={() => props.onMove(1)}><Text style={s.menuItem}>Move down</Text></Pressable>
           <Pressable onPress={props.onFormCheck}><Text style={s.menuItem}>Check my form (camera)</Text></Pressable>
@@ -721,7 +767,7 @@ function ExerciseCard(props: {
         ) : (
           <>
             <Text style={[s.colNum, s.th]}>{kind === 'bodyweight' ? `+${units.unit}` : units.unit}</Text>
-            <Text style={[s.colNum, s.th]}>Reps</Text>
+            <Text style={[s.colNum, s.th]}>{props.perSide ? 'Reps/side' : 'Reps'}</Text>
             <Text style={[s.colRpe, s.th]}>RPE</Text>
           </>
         )}
@@ -745,73 +791,79 @@ function ExerciseCard(props: {
         const then = nextSetKind(set, k === 0);
         const thenWhat = then.warmup ? 'a warm-up' : then.drop ? 'a drop set' : 'a working set';
         return (
-          <View key={k} style={[s.setRow, set.done && s.setDone]}>
-            <Pressable style={s.colSet} onPress={() => { haptic.tap(); props.onSet(k, then); }} accessibilityLabel={`${what}. Tap to make it ${thenWhat}`}>
-              <Text style={[s.setNo, set.warmup && { color: color.carbs }, set.drop && { color: color.over }]}>{label}</Text>
-            </Pressable>
-            <Text style={[s.colPrev, type.small, type.number]} numberOfLines={1}>{prevText}</Text>
-            {kind === 'cardio' ? (
-              <>
+          <SwipeRow
+            key={k}
+            left={{ label: 'Copy', icon: 'copy-outline', tint: color.accent, run: () => props.onCopySet(k) }}
+            right={{ label: 'Delete', icon: 'trash-outline', tint: color.over, run: () => props.onDeleteSet(k) }}
+          >
+            <View style={[s.setRow, set.done && s.setDone]}>
+              <Pressable style={s.colSet} onPress={() => { haptic.tap(); props.onSet(k, then); }} accessibilityLabel={`${what}. Tap to make it ${thenWhat}`}>
+                <Text style={[s.setNo, set.warmup && { color: color.carbs }, set.drop && { color: color.over }]}>{label}</Text>
+              </Pressable>
+              <Text style={[s.colPrev, type.small, type.number]} numberOfLines={1}>{prevText}</Text>
+              {kind === 'cardio' ? (
+                <>
+                  <NumberField
+                    label={`Bout ${k + 1} minutes`}
+                    value={set.seconds === null ? '' : durationText(set.seconds)}
+                    placeholder={ph.seconds ? durationText(ph.seconds) : 'min'}
+                    onCommit={(t) => props.onSet(k, { seconds: parseDuration(t) })}
+                    style={[s.cell, s.colNum]}
+                  />
+                  <NumberField
+                    label={`Bout ${k + 1} distance in ${units.unit === 'lb' ? 'miles' : 'kilometres'}`}
+                    value={set.distanceM == null ? '' : String(Math.round(toDistanceUnit(set.distanceM, units.unit) * 100) / 100)}
+                    placeholder={ph.distanceM ? String(Math.round(toDistanceUnit(ph.distanceM, units.unit) * 100) / 100) : '–'}
+                    onCommit={(t) => {
+                      const v = Number(t.replace(',', '.'));
+                      props.onSet(k, { distanceM: t.trim() && v > 0 ? Math.round(fromDistanceUnit(v, units.unit)) : null });
+                    }}
+                    style={[s.cell, s.colNum]}
+                  />
+                </>
+              ) : kind === 'time' ? (
                 <NumberField
-                  label={`Bout ${k + 1} minutes`}
-                  value={set.seconds === null ? '' : durationText(set.seconds)}
-                  placeholder={ph.seconds ? durationText(ph.seconds) : 'min'}
-                  onCommit={(t) => props.onSet(k, { seconds: parseDuration(t) })}
-                  style={[s.cell, s.colNum]}
-                />
-                <NumberField
-                  label={`Bout ${k + 1} distance in ${units.unit === 'lb' ? 'miles' : 'kilometres'}`}
-                  value={set.distanceM == null ? '' : String(Math.round(toDistanceUnit(set.distanceM, units.unit) * 100) / 100)}
-                  placeholder={ph.distanceM ? String(Math.round(toDistanceUnit(ph.distanceM, units.unit) * 100) / 100) : '–'}
-                  onCommit={(t) => {
-                    const v = Number(t.replace(',', '.'));
-                    props.onSet(k, { distanceM: t.trim() && v > 0 ? Math.round(fromDistanceUnit(v, units.unit)) : null });
-                  }}
-                  style={[s.cell, s.colNum]}
-                />
-              </>
-            ) : kind === 'time' ? (
-              <NumberField
-                label={`Set ${k + 1} seconds`}
-                value={set.seconds === null ? '' : String(set.seconds)}
-                placeholder={ph.seconds ? String(ph.seconds) : '0'}
-                decimal={false}
-                onCommit={(t) => props.onSet(k, { seconds: t.trim() ? Math.min(86400, Math.max(0, Math.round(Number(t)) || 0)) : null })}
-                style={[s.cell, s.colWide]}
-              />
-            ) : (
-              <>
-                <NumberField
-                  label={`Set ${k + 1} weight in ${units.unit}`}
-                  value={units.show(set.weightKg)}
-                  placeholder={ph.weightKg ? units.show(ph.weightKg) : kind === 'bodyweight' ? '0' : ''}
-                  onCommit={(t) => props.onSet(k, { weightKg: units.read(t) })}
-                  style={[s.cell, s.colNum]}
-                />
-                <NumberField
-                  label={`Set ${k + 1} reps`}
-                  value={set.reps === null ? '' : String(set.reps)}
-                  placeholder={ph.reps ? String(ph.reps) : ''}
+                  label={`Set ${k + 1} seconds`}
+                  value={set.seconds === null ? '' : String(set.seconds)}
+                  placeholder={ph.seconds ? String(ph.seconds) : '0'}
                   decimal={false}
-                  onCommit={(t) => props.onSet(k, { reps: t.trim() ? Math.min(1000, Math.max(0, Math.round(Number(t)) || 0)) : null })}
-                  style={[s.cell, s.colNum]}
+                  onCommit={(t) => props.onSet(k, { seconds: t.trim() ? Math.min(86400, Math.max(0, Math.round(Number(t)) || 0)) : null })}
+                  style={[s.cell, s.colWide]}
                 />
-                <NumberField
-                  label={`Set ${k + 1} RPE`}
-                  value={set.rpe === null ? '' : String(set.rpe)}
-                  placeholder="–"
-                  onCommit={(t) => {
-                    const v = Number(t.replace(',', '.'));
-                    props.onSet(k, { rpe: t.trim() && v >= 1 && v <= 10 ? Math.round(v * 2) / 2 : null });
-                  }}
-                  style={[s.cell, s.colRpe]}
-                />
-              </>
-            )}
-            <Pressable onPress={() => props.onToggle(k)} style={[s.colDone, s.check, set.done && s.checkOn]} accessibilityRole="checkbox" accessibilityState={{ checked: set.done }} accessibilityLabel={`Set ${k + 1} done`}>
-              <Text style={[s.checkText, set.done && { color: color.card }]}>✓</Text>
-            </Pressable>
-          </View>
+              ) : (
+                <>
+                  <NumberField
+                    label={`Set ${k + 1} weight in ${units.unit}`}
+                    value={units.show(set.weightKg)}
+                    placeholder={ph.weightKg ? units.show(ph.weightKg) : kind === 'bodyweight' ? '0' : ''}
+                    onCommit={(t) => props.onSet(k, { weightKg: units.read(t) })}
+                    style={[s.cell, s.colNum]}
+                  />
+                  <NumberField
+                    label={`Set ${k + 1} reps`}
+                    value={set.reps === null ? '' : String(set.reps)}
+                    placeholder={ph.reps ? String(ph.reps) : ''}
+                    decimal={false}
+                    onCommit={(t) => props.onSet(k, { reps: t.trim() ? Math.min(1000, Math.max(0, Math.round(Number(t)) || 0)) : null })}
+                    style={[s.cell, s.colNum]}
+                  />
+                  <NumberField
+                    label={`Set ${k + 1} RPE`}
+                    value={set.rpe === null ? '' : String(set.rpe)}
+                    placeholder="–"
+                    onCommit={(t) => {
+                      const v = Number(t.replace(',', '.'));
+                      props.onSet(k, { rpe: t.trim() && v >= 1 && v <= 10 ? Math.round(v * 2) / 2 : null });
+                    }}
+                    style={[s.cell, s.colRpe]}
+                  />
+                </>
+              )}
+              <Pressable onPress={() => props.onToggle(k)} style={[s.colDone, s.check, set.done && s.checkOn]} accessibilityRole="checkbox" accessibilityState={{ checked: set.done }} accessibilityLabel={`Set ${k + 1} done`}>
+                <Text style={[s.checkText, set.done && { color: color.card }]}>✓</Text>
+              </Pressable>
+            </View>
+          </SwipeRow>
         );
       })}
       {(() => {

@@ -43,6 +43,10 @@ export const preferencesSchema = z.object({
   trainingTips: z.boolean().default(true),
   /** the rest coach's voice in workouts: off, timings only, or timings plus a few words after good sets */
   workoutVoice: z.enum(['off', 'cues', 'coach']).default('off'),
+  /** keep the screen on during a workout */
+  keepAwake: z.boolean().default(true),
+  /** flash the screen when a rest is up (for loud gyms) */
+  restFlash: z.boolean().default(true),
   /** the Patterns card on Progress */
   patterns: z.boolean().default(true),
   /** the Water card on Today: shown or hidden, and the daily goal in ml */
