@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
-import { addDays, sumEntries, todayLocal, type DiaryEntry, type Meal } from '@forkbell/shared';
+import { addDays, sumEntries, todayLocal, type DiaryEntry, type Meal, entryName } from '@forkbell/shared';
 import { addEntry, deleteEntry, saveMeal } from '../lib/actions';
 import { showToast } from '../lib/toast';
 import { CalendarSheet } from './Calendar';
@@ -104,7 +104,7 @@ export function SelectionBar({ entries, onDone, onChanged }: { entries: DiaryEnt
         <Pressable style={s.backdrop} onPress={() => setNaming(false)}>
           <Pressable style={s.sheet} onPress={() => {}}>
             <Text style={type.title}>Save as a meal</Text>
-            <Text style={type.small}>{entries.map((e) => e.food.name).join(', ')}</Text>
+            <Text style={type.small}>{entries.map((e) => entryName(e)).join(', ')}</Text>
             <TextInput value={name} onChangeText={setName} placeholder="Name, e.g. My usual breakfast" style={s.input} autoFocus maxLength={80} />
             {error && <Text style={{ color: color.over }}>{error}</Text>}
             <Pressable disabled={!name.trim()} onPress={save} style={[s.primary, !name.trim() && { opacity: 0.4 }]}><Text style={s.primaryText}>Save meal</Text></Pressable>

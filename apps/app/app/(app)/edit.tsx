@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { DiaryEntry } from '@forkbell/shared';
 import { api, ApiError } from '../../lib/api';
 import { changeEntryNutrition, findCachedEntry, updateEntry } from '../../lib/actions';
-import { forAmount } from '@forkbell/shared';
+import { forAmount, entryName } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { removeWithUndo } from '../../components/EntryMenu';
 import { AmountPicker } from '../../components/AmountPicker';
@@ -13,8 +13,13 @@ import { color, space, type } from '../../lib/theme';
 
 /** Change an entry's amount or meal, or remove it. */
 export default function EditEntry() {
+  const [name, setName] = useState('');
   const { id } = useLocalSearchParams<{ id: string }>();
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
+  // The name box starts with what the entry is called now.
+  useEffect(() => {
+    if (entry) setName(entryName(entry));
+  }, [entry?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,19 +54,27 @@ export default function EditEntry() {
           <AmountPicker
             food={entry.food}
             initialGrams={entry.grams}
+            initialAmount={entry.amount && entry.unit ? { amount: entry.amount, unit: entry.unit } : null}
             initialMeal={entry.meal}
+            date={entry.date}
             submitLabel={() => 'Save'}
             error={error}
-            onSubmit={async (grams, meal) => {
+            onSubmit={async (grams, meal, said) => {
               setError(null);
               try {
-                await updateEntry(entry, { grams, meal });
+                const renamed = name.trim() === entryName(entry) ? {} : { name: name.trim() === entry.food.name ? '' : name.trim() };
+                await updateEntry(entry, { grams, meal, amount: said.amount, unit: said.unit, ...renamed });
                 router.back();
               } catch (e) {
                 setError(e instanceof Error ? e.message : String(e));
               }
             }}
           >
+            <View style={{ gap: space(1), marginTop: space(4) }}>
+              <Text style={type.small}>Name in your diary</Text>
+              <TextInput value={name} onChangeText={setName} placeholder={entry.food.name} placeholderTextColor={color.placeholder} style={s.nameInput} accessibilityLabel="Name in your diary" returnKeyType="done" />
+              <Text style={type.small}>Changes just this entry; {entry.food.name} keeps its name everywhere else. Saved with Save above.</Text>
+            </View>
             <FixNumbers entry={entry} onDone={() => router.back()} />
             <Pressable onPress={remove} style={s.remove} accessibilityLabel={`Remove ${entry.food.name}`}>
               <Text style={s.removeText}>Remove from diary</Text>
@@ -136,6 +149,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
   link: { color: color.protein, fontWeight: '700', fontSize: 16 },
   error: { ...type.body, color: color.over },
+  nameInput: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3), color: color.iron },
   remove: { alignSelf: 'center', padding: space(3), marginTop: space(2) },
   removeText: { color: color.over, fontWeight: '700', fontSize: 16 },
 });

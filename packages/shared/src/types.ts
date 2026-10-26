@@ -56,7 +56,15 @@ export interface DiaryEntry {
   meal: Meal;
   grams: number;
   food: Food;
+  /** how the amount was said ("1" "serving", "4" "oz"); grams is what the numbers use */
+  amount?: number | null;
+  unit?: string | null;
+  /** this entry's own name, shown instead of the food's */
+  name?: string | null;
 }
+
+/** What to call an entry: its own name, or its food's. */
+export const entryName = (e: Pick<DiaryEntry, 'name' | 'food'>) => e.name?.trim() || e.food.name;
 
 export interface Totals {
   kcal: number;

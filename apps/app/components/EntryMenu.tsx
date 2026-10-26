@@ -3,7 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { router } from 'expo-router';
-import { addDays, betterOptions, defaultPreferences, forAmount, mealForTime, todayLocal, type BetterOption, type DiaryEntry, type Meal } from '@forkbell/shared';
+import { addDays, betterOptions, defaultPreferences, forAmount, mealForTime, todayLocal, type BetterOption, type DiaryEntry, type Meal, entryName } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { addEntry, deleteEntry, foodLibrary } from '../lib/actions';
 import { showToast } from '../lib/toast';
@@ -25,7 +25,7 @@ const dayName = (date: string) => {
 export async function removeWithUndo(e: DiaryEntry, after?: () => void) {
   await deleteEntry(e);
   after?.();
-  showToast(`Removed ${e.food.name}`, {
+  showToast(`Removed ${entryName(e)}`, {
     action: {
       label: 'Undo',
       run: async () => {
@@ -71,7 +71,7 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
   const copyTo = async (date: string, m: Meal) => {
     await addEntry({ date, meal: m, grams: entry.grams, food: entry.food });
     onChanged();
-    showToast(`Copied ${entry.food.name} to ${MEAL_NAMES[m].toLowerCase()}, ${dayName(date)}`);
+    showToast(`Copied ${entryName(entry)} to ${MEAL_NAMES[m].toLowerCase()}, ${dayName(date)}`);
     setPicking(false);
     setTarget(null);
     onClose();
@@ -92,7 +92,7 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
             <View style={s.head}>
               <FoodIcon name={entry.food.name} brand={entry.food.brand} size={40} />
               <View style={{ flex: 1 }}>
-                <Text style={[type.body, { fontWeight: '700' }]} numberOfLines={1}>{entry.food.name}</Text>
+                <Text style={[type.body, { fontWeight: '700' }]} numberOfLines={1}>{entryName(entry)}</Text>
                 <Text style={type.small}>{entry.grams} g · {n.kcal} kcal · {MEAL_NAMES[entry.meal]}, {dayName(entry.date)}</Text>
               </View>
             </View>
@@ -148,7 +148,7 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
       <CalendarSheet
         visible={picking}
         selected={target ?? entry.date}
-        title={`Copy ${entry.food.name}`}
+        title={`Copy ${entryName(entry)}`}
         onPick={setTarget}
         onClose={() => setPicking(false)}
         footer={

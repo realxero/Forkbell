@@ -413,3 +413,28 @@ test('times come back as ISO 8601, which phones can read', async () => {
   assert.equal(fast.status, 201);
   assert.match((await u.call('GET', '/api/wellbeing/fasts')).body.open.startedAt, /T.*[+-]\d{2}:\d{2}$/);
 });
+
+test('entries remember how the amount was said, and can have their own name', async () => {
+  const u = await newUser();
+  const food = (await u.call('POST', '/api/foods', { name: 'Chewy Granola Bar', brand: 'Kirkland', source: 'custom', per100: { kcal: 417, protein: 4, carbs: 70, fat: 13 }, servingGrams: 24, servingLabel: '1 bar', barcode: null })).body.food;
+  assert.equal(food.servingLabel, '1 bar');
+  const r = await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'snacks', grams: 48, foodId: food.id, amount: 2, unit: 'serving' });
+  assert.equal(r.status, 201, r.text);
+  const id = r.body.entry.id;
+  let e = (await u.call('GET', '/api/diary/2026-10-25')).body.entries[0];
+  assert.deepEqual([e.amount, e.unit, e.name], [2, 'serving', null]);
+  assert.equal((await u.call('PATCH', `/api/diary/${id}`, { name: 'Costco granola bars' })).status, 200);
+  e = (await u.call('GET', '/api/diary/2026-10-25')).body.entries[0];
+  assert.equal(e.name, 'Costco granola bars', 'renamed just this entry');
+  assert.equal(e.food.name, 'Chewy Granola Bar', 'the food keeps its name');
+  // New grams without new wording drops the old wording, so it can't say "2 bars" for 30 g.
+  await u.call('PATCH', `/api/diary/${id}`, { grams: 30 });
+  e = (await u.call('GET', '/api/diary/2026-10-25')).body.entries[0];
+  assert.deepEqual([e.grams, e.amount, e.unit], [30, null, null]);
+  await u.call('PATCH', `/api/diary/${id}`, { grams: 24, amount: 1, unit: 'serving', name: '' });
+  e = (await u.call('GET', '/api/diary/2026-10-25')).body.entries[0];
+  assert.deepEqual([e.grams, e.amount, e.unit, e.name], [24, 1, 'serving', null], 'an empty name goes back to the food’s');
+  await u.call('POST', '/api/diary/copy', { from: '2026-10-25', to: '2026-10-26' });
+  const copy = (await u.call('GET', '/api/diary/2026-10-26')).body.entries[0];
+  assert.deepEqual([copy.amount, copy.unit], [1, 'serving'], 'copies keep the wording');
+});

@@ -50,6 +50,11 @@ export const diaryEntries = pgTable('diary_entries', {
   meal: text('meal', { enum: ['breakfast', 'lunch', 'dinner', 'snacks'] }).notNull(),
   foodId: uuid('food_id').notNull(),
   grams: num('grams').notNull(),
+  /** how the amount was said: 1 (amount) bar (unit); grams stays the truth */
+  amount: num('amount'),
+  unit: text('unit'),
+  /** this entry's own name, instead of the food's */
+  name: text('name'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

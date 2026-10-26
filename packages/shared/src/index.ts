@@ -36,3 +36,4 @@ export * from './fasting.ts';
 export * from './cardio.ts';
 export * from './rest-coach.ts';
 export * from './workout-import.ts';
+export * from './amounts.ts';

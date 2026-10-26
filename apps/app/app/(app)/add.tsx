@@ -66,9 +66,9 @@ export default function AddFood() {
     };
   }, [q]);
 
-  const log = async (food: Pick, grams: number, toMeal: Meal) => {
+  const log = async (food: Pick, grams: number, toMeal: Meal, said?: { amount: number; unit: string }) => {
     setError(null);
-    await addEntry({ date, meal: toMeal, grams, food });
+    await addEntry({ date, meal: toMeal, grams, food, ...(said ?? {}) });
   };
 
   /** One tap: log a recent food with last time's amount and stay here to add more. */
@@ -117,11 +117,12 @@ export default function AddFood() {
             food={view.food}
             initialMeal={meal}
             lastGrams={view.lastGrams ?? lastGramsFor(view.food)}
+            date={date}
             submitLabel={(m) => `Add to ${MEAL_NAMES[m]}`}
             error={error}
-            onSubmit={async (g, m) => {
+            onSubmit={async (g, m, said) => {
               try {
-                await log(view.food, g, m);
+                await log(view.food, g, m, said);
                 router.back();
               } catch (e) {
                 setError(message(e));
@@ -344,7 +345,9 @@ function Scanner({ onCode, onCancel, error }: { onCode: (code: string) => Promis
 }
 
 function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, onCreated, onCancel }: { initialName: string; initialBrand?: string; barcode?: string; note?: string; canReadLabels: boolean; onCreated: (f: Food) => void; onCancel: () => void }) {
-  const [form, setForm] = useState({ name: initialName.trim(), brand: initialBrand ?? '', kcal: '', protein: '', carbs: '', fat: '', serving: '', barcode: barcode ?? '' });
+  const [form, setForm] = useState({ name: initialName.trim(), brand: initialBrand ?? '', kcal: '', protein: '', carbs: '', fat: '', serving: '', servingLabel: '', barcode: barcode ?? '' });
+  /** Numbers as the label prints them: per serving (US labels) or per 100 g. */
+  const [basis, setBasis] = useState<'serving' | '100g'>('serving');
   /** fiber, sugar and sodium from a label photo; there are no boxes for them, so they ride along */
   const [extra, setExtra] = useState<Partial<Record<'fiber' | 'sugar' | 'sodium', number | null>>>({});
   const [read, setRead] = useState<{ busy: boolean; basis?: LabelFood['basis']; note?: string | null } | null>(null);
@@ -354,11 +357,16 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
   const [scanning, setScanning] = useState(false);
   const [scanProblem, setScanProblem] = useState<string | null>(null);
   const num = (v: string) => Number(v.replace(',', '.') || 0);
-  const per100 = { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat), ...extra };
+  const servingG = num(form.serving);
+  // Stored per 100 g underneath, whichever way the label prints them.
+  const k = basis === 'serving' ? (servingG > 0 ? 100 / servingG : NaN) : 1;
+  const r1 = (v: number) => Math.round(v * 10) / 10;
+  const per100 = { kcal: r1(num(form.kcal) * k), protein: r1(num(form.protein) * k), carbs: r1(num(form.carbs) * k), fat: r1(num(form.fat) * k), ...extra };
   const problem = form.kcal ? per100Problems(per100)[0] : null;
   const code = form.barcode.replace(/\D/g, '');
   const codeProblem = code && (code.length < 6 || code.length > 14) ? 'A barcode is 6 to 14 digits.' : null;
-  const blocked = !form.name.trim() || !form.kcal || Boolean(problem) || Boolean(codeProblem) || Boolean(read?.busy);
+  const servingProblem = basis === 'serving' && form.kcal && !(servingG > 0) ? 'Add the serving size in grams (it’s on the label next to the serving, e.g. “1 bar (24 g)”).' : null;
+  const blocked = !form.name.trim() || !form.kcal || Boolean(problem && !servingProblem) || Boolean(servingProblem) || Boolean(codeProblem) || Boolean(read?.busy);
 
   /** Photograph the label; Bell reads it and fills the boxes for you to check. Nothing is saved yet. */
   const readLabel = async () => {
@@ -370,15 +378,20 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
     try {
       const { food } = await post<{ food: LabelFood }>('/api/bell/label', { image: photo.image });
       const str = (n: number | null | undefined) => (n == null ? '' : String(n));
+      // Show the numbers the way the label prints them: per serving when there's a serving size.
+      const per = food.servingGrams ? food.servingGrams / 100 : 1;
+      const at = (v: number | null | undefined, kcal = false) => (v == null ? '' : str(kcal ? Math.round(v * per) : Math.round(v * per * 10) / 10));
+      setBasis(food.servingGrams ? 'serving' : '100g');
       setForm((f) => ({
         ...f,
         name: f.name || food.name || '',
         brand: f.brand || food.brand || '',
-        kcal: str(food.per100.kcal),
-        protein: str(food.per100.protein),
-        carbs: str(food.per100.carbs),
-        fat: str(food.per100.fat),
+        kcal: at(food.per100.kcal, true),
+        protein: at(food.per100.protein),
+        carbs: at(food.per100.carbs),
+        fat: at(food.per100.fat),
         serving: food.servingGrams ? str(food.servingGrams) : f.serving,
+        servingLabel: food.servingLabel || f.servingLabel,
       }));
       setExtra({ fiber: food.per100.fiber ?? null, sugar: food.per100.sugar ?? null, sodium: food.per100.sodium ?? null });
       setRead({ busy: false, basis: food.basis, note: food.note });
@@ -396,7 +409,8 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
         brand: form.brand || null,
         source: 'custom',
         per100,
-        servingGrams: form.serving ? num(form.serving) : null,
+        servingGrams: servingG > 0 ? servingG : null,
+        servingLabel: form.servingLabel.trim() || null,
         barcode: code || null,
       });
       onCreated(food);
@@ -423,18 +437,24 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
       )}
       {read?.basis && (
         <Text style={[type.small, s.readNote]}>
-          {read.basis === 'per serving, converted'
-            ? `Read from the per-serving column and converted to per 100 g using the ${form.serving} g serving.`
-            : 'Read from the per-100 g column.'}{' '}
+          {basis === 'serving' ? `Read per serving (${form.serving} g), as the label prints it.` : 'Read from the per-100 g column.'}{' '}
           Check each number against the label before saving.{read.note ? ` ${read.note}` : ''}
         </Text>
       )}
       {field('name', 'Name', 'default')}
       {field('brand', 'Brand (optional)', 'default')}
-      <Text style={[type.small, { marginTop: space(2) }]}>Per 100 g, from the label’s per-100 g column</Text>
+      <Text style={[type.label, { marginTop: space(2) }]}>Serving size</Text>
+      <View style={s.searchRow}>{field('servingLabel', 'As on the label, e.g. 1 bar', 'default')}{field('serving', 'Grams in one serving')}</View>
+      <Text style={[type.label, { marginTop: space(2) }]}>Nutrition</Text>
+      <View style={[s.searchRow, { alignItems: 'center' }]}>
+        <Text style={type.small}>The label’s numbers are</Text>
+        <Chip label="Per serving" on={basis === 'serving'} onPress={() => setBasis('serving')} />
+        <Chip label="Per 100 g" on={basis === '100g'} onPress={() => setBasis('100g')} />
+      </View>
       <View style={s.searchRow}>{field('kcal', 'Calories')}{field('protein', 'Protein g')}</View>
       <View style={s.searchRow}>{field('carbs', 'Carbs g')}{field('fat', 'Fat g')}</View>
-      {field('serving', 'One serving in grams (optional)')}
+      {servingProblem && <Text style={s.error}>{servingProblem}</Text>}
+      {basis === 'serving' && servingG > 0 && form.kcal ? <Text style={type.small}>That’s {Math.round(per100.kcal)} kcal per 100 g.</Text> : null}
       <View style={{ gap: space(1) }}>
         <Text style={type.small}>Barcode (optional, so it scans next time)</Text>
         <View style={s.searchRow}>

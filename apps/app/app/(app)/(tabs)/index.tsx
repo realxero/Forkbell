@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MEALS, addDays, checkFood, forAmount, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal } from '@forkbell/shared';
+import { MEALS, addDays, checkFood, forAmount, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, entryAmountText, entryName } from '@forkbell/shared';
 import { SuggestionsCard } from '../../../components/SuggestionsCard';
 import { useAuth } from '../../../lib/auth';
 import { useViewing } from '../../../lib/profile';
@@ -53,6 +53,11 @@ export default function Diary() {
   const { me } = useAuth();
   const viewing = useViewing();
   const [date, setDate] = useState(todayLocal());
+  // Opened on a particular day (a day in Progress → Days logged).
+  const opened = useLocalSearchParams<{ date?: string }>().date;
+  useEffect(() => {
+    if (opened && /^\d{4}-\d{2}-\d{2}$/.test(opened)) setDate(opened);
+  }, [opened]);
   const [day, setDay] = useState<DiaryDay | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -206,9 +211,9 @@ export default function Diary() {
                           <FoodIcon name={e.food.name} brand={e.food.brand} size={38} />
                         )}
                         <View style={{ flex: 1 }}>
-                          <Text style={type.body} numberOfLines={1}>{e.food.name}</Text>
+                          <Text style={type.body} numberOfLines={1}>{entryName(e)}</Text>
                           <Text style={type.small} numberOfLines={1}>
-                            {e.food.brand ? `${e.food.brand} · ` : ''}{e.grams} g · {n.protein} g protein
+                            {e.food.brand ? `${e.food.brand} · ` : ''}{entryAmountText(e, me?.weightUnit ?? 'lb')} · {n.protein} g protein
                           </Text>
                           {(() => {
                             // Name-based allergy and diet flags, so a mistake is easy to spot.

@@ -39,6 +39,10 @@ export const addEntrySchema = z
     foodId: z.string().uuid().optional(),
     /** An outside search hit: saved to your foods first, then logged. */
     food: foodInputSchema.optional(),
+    /** how the amount was said: 1 serving, 4 oz (grams is still the amount that counts) */
+    amount: z.number().positive().max(100000).nullish(),
+    unit: z.string().trim().min(1).max(64).nullish(),
+    name: z.string().trim().min(1).max(120).nullish(),
   })
   .refine((v) => Boolean(v.foodId) !== Boolean(v.food), 'Send either foodId or food');
 
@@ -57,8 +61,12 @@ export const updateEntrySchema = z
     meal: z.enum(MEALS).optional(),
     /** point the entry at another food, e.g. an edited copy with corrected numbers */
     foodId: z.string().uuid().optional(),
+    amount: z.number().positive().max(100000).nullish(),
+    unit: z.string().trim().min(1).max(64).nullish(),
+    /** rename just this entry; null goes back to the food's name */
+    name: z.string().trim().max(120).nullish(),
   })
-  .refine((v) => v.grams !== undefined || v.meal !== undefined || v.foodId !== undefined, 'Nothing to change.');
+  .refine((v) => Object.values(v).some((x) => x !== undefined), 'Nothing to change.');
 
 const itemSchema = z.object({ foodId: z.string().uuid(), grams: z.number().positive().max(10000) });
 

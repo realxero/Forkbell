@@ -45,7 +45,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
       tx.select({ entry: diaryEntries, food: foods }).from(diaryEntries).innerJoin(foods, eq(foods.id, diaryEntries.foodId)).where(eq(diaryEntries.id, id)).limit(1),
     );
     if (!row) return c.json({ error: 'That entry was not found.' }, 404);
-    const entry: DiaryEntry = { id: row.entry.id, date: row.entry.date, meal: row.entry.meal, grams: row.entry.grams, food: toFood(row.food) };
+    const entry: DiaryEntry = toEntry(row.entry, row.food);
     return c.json({ entry });
   });
 
@@ -58,8 +58,8 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
     // Row-level security limits the source rows to yours; user_id defaults to you.
     const copied = await asUser(c.get('profileId'), (tx) =>
       tx.execute(sql`
-        insert into diary_entries (date, meal, food_id, grams)
-        select ${to}::date, coalesce(${toMeal ?? null}::text, meal), food_id, grams
+        insert into diary_entries (date, meal, food_id, grams, amount, unit, name)
+        select ${to}::date, coalesce(${toMeal ?? null}::text, meal), food_id, grams, amount, unit, name
         from diary_entries
         where date = ${from}::date and (${meal ?? null}::text is null or meal = ${meal ?? null}::text)
         order by created_at
@@ -115,13 +115,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         .orderBy(asc(diaryEntries.createdAt));
       const [me] = await tx.select().from(users).where(eq(users.id, c.get('profileId'))).limit(1);
       const [finished] = await tx.select({ date: dayStatus.date }).from(dayStatus).where(eq(dayStatus.date, date.data)).limit(1);
-      const entries: DiaryEntry[] = rows.map(({ entry, food }) => ({
-        id: entry.id,
-        date: entry.date,
-        meal: entry.meal,
-        grams: entry.grams,
-        food: toFood(food),
-      }));
+      const entries: DiaryEntry[] = rows.map(({ entry, food }) => toEntry(entry, food));
       return {
         date: date.data,
         entries,
@@ -143,7 +137,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         if (input.id) {
           // Sent before (the answer was lost on a bad connection): return what's there.
           const [prior] = await tx.select({ entry: diaryEntries, food: foods }).from(diaryEntries).innerJoin(foods, eq(foods.id, diaryEntries.foodId)).where(eq(diaryEntries.id, input.id)).limit(1);
-          if (prior) return { id: prior.entry.id, date: prior.entry.date, meal: prior.entry.meal, grams: prior.entry.grams, food: toFood(prior.food) } satisfies DiaryEntry;
+          if (prior) return toEntry(prior.entry, prior.food);
         }
         let foodId = input.foodId;
         if (input.food) foodId = (await saveFood(tx, userId, input.food)).id;
@@ -151,9 +145,9 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         if (!food) return null; // not yours and not built in: RLS hides it
         const [row] = await tx
           .insert(diaryEntries)
-          .values({ ...(input.id ? { id: input.id } : {}), userId, date: input.date, meal: input.meal, grams: input.grams, foodId: food.id })
+          .values({ ...(input.id ? { id: input.id } : {}), userId, date: input.date, meal: input.meal, grams: input.grams, foodId: food.id, amount: input.amount ?? null, unit: input.unit ?? null, name: input.name ?? null })
           .returning();
-        return { id: row!.id, date: row!.date, meal: row!.meal, grams: row!.grams, food: toFood(food) } satisfies DiaryEntry;
+        return toEntry(row!, food);
       });
       if (!entry) return c.json({ error: 'That food was not found.' }, 404);
       return c.json({ entry }, 201);
@@ -171,7 +165,9 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         const [f] = await tx.select({ id: foods.id }).from(foods).where(eq(foods.id, parsed.data.foodId)).limit(1);
         if (!f) return []; // not theirs and not built in
       }
-      return tx.update(diaryEntries).set(parsed.data).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('profileId')))).returning({ id: diaryEntries.id });
+      // A new amount in grams without a new "how it was said" drops the old wording.
+      const change = { ...parsed.data, ...(parsed.data.grams !== undefined && parsed.data.amount === undefined ? { amount: null, unit: null } : {}), ...(parsed.data.name === '' ? { name: null } : {}) };
+      return tx.update(diaryEntries).set(change).where(and(eq(diaryEntries.id, c.req.param('id')), eq(diaryEntries.userId, c.get('profileId')))).returning({ id: diaryEntries.id });
     });
     return updated.length ? c.json({ ok: true }) : c.json({ error: 'That entry was not found.' }, 404);
   });
@@ -184,4 +180,9 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
   });
 
   return r;
+}
+
+/** A diary row and its food, as the app sees it. */
+function toEntry(entry: typeof diaryEntries.$inferSelect, food: Parameters<typeof toFood>[0]): DiaryEntry {
+  return { id: entry.id, date: entry.date, meal: entry.meal, grams: entry.grams, food: toFood(food), amount: entry.amount ?? null, unit: entry.unit ?? null, name: entry.name ?? null };
 }

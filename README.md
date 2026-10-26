@@ -229,6 +229,25 @@ Checks: `pnpm typecheck`, `pnpm test`, and `pnpm --filter @forkbell/db rls-check
 - **A better burn estimate.** Once you have ten finished days in the last four weeks, the daily-burn estimate uses only finished days, so a half-logged day can't make it look like you burn less than you do.
 - **Smart reminders (phone only).** In Settings, *Reminders on this phone*. Forkbell learns when you usually log each meal and only nudges about meals you log most days, about an hour after your usual time, and only if that meal is still empty. An evening nudge to finish the day comes around when you usually do. They're local notifications scheduled on the phone, replanned whenever the app opens or you log something, so nothing goes through a push service. If you log on the web instead, the phone hears about it next time Forkbell opens there.
 
+## Amounts: servings, oz, cups
+
+Foods keep their numbers per 100 g underneath, but you never have to think
+in grams. When you log a food, pick how much in the unit that fits: the
+label's serving or its word for one (*1 bar*, *1 slice*), oz or g, and for
+drinks, soups and sauces fl oz, cups, ml, tbsp and tsp (½, 1, 1½ and 2 are a
+tap away). Switching units keeps the same amount of food. The entry
+remembers how you said it ("2 bars (48 g)"), and editing it opens in the
+same unit. The bars under the numbers show how much of the day's goal that
+amount is.
+
+Adding a food of your own follows the label: the serving size as printed
+("1 bar", 24 g) and the numbers per serving, or per 100 g if that's what
+your label shows. A label photo is read the same way, so a granola bar's
+label shows 100 kcal per bar, not 417 per 100 g.
+
+Any entry can be renamed (Edit → *Name in your diary*); only that entry
+changes, not the food.
+
 ## Water
 
 A Water card on Today. Tap +8, +16.9 or +24 oz (+250, +500 or +750 ml if you

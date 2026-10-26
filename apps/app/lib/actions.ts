@@ -45,12 +45,13 @@ const withEntries = (day: DiaryDay, entries: DiaryEntry[]): DiaryDay => ({ ...da
 // Food ----------------------------------------------------------------------
 
 /** Log a food. Works offline; a database search hit is saved to your foods by the server when it arrives. */
-export async function addEntry(input: { date: string; meal: Meal; grams: number; food: Food | FoodCandidate }) {
+/** amount and unit: how it was said (1 serving, 4 oz); grams is what the numbers use. */
+export async function addEntry(input: { date: string; meal: Meal; grams: number; food: Food | FoodCandidate; amount?: number | null; unit?: string | null; name?: string | null }) {
   const id = newId();
   const food: Food = 'id' in input.food ? input.food : { ...input.food, id: `pending-${id}` };
   updateCache<DiaryDay>(`/api/diary/${input.date}`, (day) => {
     const d = day ?? emptyDay(input.date);
-    return withEntries(d, [...d.entries, { id, date: input.date, meal: input.meal, grams: input.grams, food }]);
+    return withEntries(d, [...d.entries, { id, date: input.date, meal: input.meal, grams: input.grams, food, amount: input.amount ?? null, unit: input.unit ?? null, name: input.name ?? null }]);
   });
   if ('id' in input.food) {
     updateCache<RecentFoods>('/api/foods/recent', (r) => {
@@ -59,7 +60,8 @@ export async function addEntry(input: { date: string; meal: Meal; grams: number;
       return { ...r, recent: [entry, ...r.recent.filter((x) => x.food.id !== food.id)].slice(0, 15) };
     });
   }
-  const body = 'id' in input.food ? { id, date: input.date, meal: input.meal, grams: input.grams, foodId: input.food.id } : { id, date: input.date, meal: input.meal, grams: input.grams, food: input.food };
+  const said = { ...(input.amount && input.unit ? { amount: input.amount, unit: input.unit } : {}), ...(input.name ? { name: input.name } : {}) };
+  const body = 'id' in input.food ? { id, date: input.date, meal: input.meal, grams: input.grams, foodId: input.food.id, ...said } : { id, date: input.date, meal: input.meal, grams: input.grams, food: input.food, ...said };
   const r = await send<{ entry: DiaryEntry }>('POST', '/api/diary', body, { label: `Log ${food.name}` });
   if (!r.queued && r.data?.entry) {
     // Swap in the server's copy (a saved database food now has its real id).
@@ -74,9 +76,10 @@ export async function addEntry(input: { date: string; meal: Meal; grams: number;
 /** A meal just got logged (or removed): replan this phone's reminders. */
 const nudgeReminders = () => void import('./reminders').then((m) => m.refreshReminders()).catch(() => {});
 
-export async function updateEntry(entry: DiaryEntry, patch: { grams: number; meal: Meal }) {
-  updateCache<DiaryDay>(`/api/diary/${entry.date}`, (day) => day && withEntries(day, day.entries.map((e) => (e.id === entry.id ? { ...e, ...patch } : e))));
-  return send('PATCH', `/api/diary/${entry.id}`, patch, { label: `Change ${entry.food.name}`, coalesceKey: `entry:${entry.id}` });
+export async function updateEntry(entry: DiaryEntry, patch: { grams?: number; meal?: Meal; amount?: number | null; unit?: string | null; name?: string | null }) {
+  const shown = { ...patch, ...(patch.name === '' ? { name: null } : {}) };
+  updateCache<DiaryDay>(`/api/diary/${entry.date}`, (day) => day && withEntries(day, day.entries.map((e) => (e.id === entry.id ? { ...e, ...shown } : e))));
+  return send('PATCH', `/api/diary/${entry.id}`, patch, { label: `Change ${entry.name || entry.food.name}`, coalesceKey: `entry:${entry.id}` });
 }
 
 export async function deleteEntry(entry: DiaryEntry) {
@@ -131,11 +134,11 @@ export async function findByBarcodeOffline(code: string): Promise<Food | null> {
 }
 
 /** Create your own food; offline it gets its id on the device and is sent later. */
-export async function createFood(input: Omit<FoodCandidate, 'barcode' | 'portions' | 'sourceId' | 'servingLabel'> & { barcode: string | null }): Promise<Food> {
+export async function createFood(input: Omit<FoodCandidate, 'barcode' | 'portions' | 'sourceId' | 'servingLabel'> & { barcode: string | null; servingLabel?: string | null }): Promise<Food> {
   const id = newId();
   const body = { ...input, id };
   const r = await send<{ food: Food }>('POST', '/api/foods', body, { label: `Create ${input.name}` });
-  const food: Food = !r.queued && r.data?.food ? r.data.food : { ...input, id, sourceId: null, servingLabel: null, portions: [] };
+  const food: Food = !r.queued && r.data?.food ? r.data.food : { ...input, id, sourceId: null, servingLabel: input.servingLabel ?? null, portions: [] };
   updateCache<{ foods: Food[] }>('/api/foods/library', (lib) => lib && { foods: [food, ...lib.foods] });
   return food;
 }
