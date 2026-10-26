@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { VARIATION_LABEL, fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type ProgressIdea, type SetEntry, type Variation, type VariationLevel } from '@forkbell/shared';
+import { VARIATION_LABEL, distanceText, durationText, fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type ProgressIdea, type SetEntry, type Variation, type VariationLevel } from '@forkbell/shared';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { HowToCard, CuesCard } from '../../components/HowTo';
 import { cachedGet } from '../../lib/sync';
@@ -48,14 +48,14 @@ export default function ExerciseDetail() {
     r.kind === 'reps'
       ? `${r.value}`
       : r.kind === 'time'
-        ? `${r.value} s`
+        ? d?.exercise.kind === 'cardio' ? `${durationText(r.value)} min` : `${r.value} s`
         : r.kind === 'volume'
           ? `${units.show(r.weightKg)} × ${r.reps}`
           : r.kind === 'e1rm'
             ? units.roundLabel(r.value)
             : units.label(r.value);
   const setText = (x: SetEntry) =>
-    d?.exercise.kind === 'time' ? `${x.seconds ?? 0} s` : `${x.weightKg ? `${units.show(x.weightKg)}×` : ''}${x.reps ?? 0}${x.warmup ? ' (w)' : x.drop ? ' (d)' : ''}`;
+    d?.exercise.kind === 'cardio' ? `${durationText(x.seconds ?? 0)} min${x.distanceM ? ` · ${distanceText(x.distanceM, units.unit)}` : ''}` : d?.exercise.kind === 'time' ? `${x.seconds ?? 0} s` : `${x.weightKg ? `${units.show(x.weightKg)}×` : ''}${x.reps ?? 0}${x.warmup ? ' (w)' : x.drop ? ' (d)' : ''}`;
   const top = d?.trend.length ? Math.max(...d.trend.map((t) => t.e1rmKg)) : 0;
   const bottom = d?.trend.length ? Math.min(...d.trend.map((t) => t.e1rmKg)) * 0.9 : 0;
 

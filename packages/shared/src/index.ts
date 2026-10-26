@@ -33,3 +33,4 @@ export * from './water.ts';
 export * from './supersets.ts';
 export * from './photos.ts';
 export * from './fasting.ts';
+export * from './cardio.ts';

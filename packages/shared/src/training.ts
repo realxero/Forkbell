@@ -3,7 +3,7 @@ import { dateSchema } from './schemas.ts';
 
 export const MUSCLES = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'core', 'full body'] as const;
 export type Muscle = (typeof MUSCLES)[number];
-export type ExerciseKind = 'weight' | 'bodyweight' | 'time';
+export type ExerciseKind = 'weight' | 'bodyweight' | 'time' | 'cardio';
 export type WeightUnit = 'lb' | 'kg';
 
 export interface Exercise {
@@ -53,6 +53,8 @@ export interface SetEntry {
   done: boolean;
   /** a drop set: straight after the set before it, lighter, with no rest (never also a warm-up) */
   drop?: boolean;
+  /** cardio: metres covered (the time is `seconds`) */
+  distanceM?: number | null;
 }
 
 export interface WorkoutExercise {
@@ -183,7 +185,7 @@ export interface NextTarget {
  */
 export function nextTarget(last: SetEntry[], repMin: number, repMax: number, stepKg: number, kind: ExerciseKind): NextTarget | null {
   const sets = working(last);
-  if (!sets.length) return null;
+  if (!sets.length || kind === 'cardio') return null;
   if (kind === 'time') {
     const best = Math.max(...sets.map((s) => s.seconds ?? 0));
     return { weightKg: null, reps: 0, note: best ? `Last time ${best} s. Try to match or beat it.` : 'Log your time.' };
@@ -301,6 +303,7 @@ const setSchema = z.object({
   warmup: z.boolean(),
   done: z.boolean(),
   drop: z.boolean().optional(),
+  distanceM: z.number().min(0).max(1_000_000).nullish(),
 });
 
 export const saveWorkoutSchema = z.object({
@@ -339,7 +342,7 @@ export const exerciseInputSchema = z.object({
   name: z.string().trim().min(1).max(120),
   muscle: z.enum(MUSCLES),
   equipment: z.string().trim().min(1).max(40),
-  kind: z.enum(['weight', 'bodyweight', 'time']),
+  kind: z.enum(['weight', 'bodyweight', 'time', 'cardio']),
   increment: z.enum(['small', 'large']).default('small'),
   restSeconds: z.number().int().min(0).max(900).default(120),
 });

@@ -338,7 +338,7 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
 export function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string): string {
   const show = (kg: number | null) => (kg === null ? 'bodyweight' : `${Math.round((unit === 'lb' ? kg * 2.20462 : kg) * 2) / 2} ${unit}`);
   const set = (x: Workout['exercises'][number]['sets'][number]) =>
-    `${x.warmup ? 'warm-up ' : x.drop ? 'drop set ' : ''}${x.seconds ? `${x.seconds} s` : `${show(x.weightKg)} × ${x.reps ?? '?'}`}${x.rpe ? ` @ RPE ${x.rpe}` : ''}`;
+    `${x.warmup ? 'warm-up ' : x.drop ? 'drop set ' : ''}${x.seconds ? `${x.seconds} s${x.distanceM ? ` over ${Math.round(x.distanceM)} m` : ''}` : `${show(x.weightKg)} × ${x.reps ?? '?'}`}${x.rpe ? ` @ RPE ${x.rpe}` : ''}`;
   const current = w.exercises.findIndex((e) => e.sets.some((x) => !x.done));
   // When the smallest jump is a big share of the weight (5 lb on a 15 lb raise), say so.
   const bigJump = (e: Workout['exercises'][number]) => {

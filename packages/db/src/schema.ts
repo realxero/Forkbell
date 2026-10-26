@@ -68,7 +68,7 @@ export const exercises = pgTable('exercises', {
   name: text('name').notNull(),
   muscle: text('muscle').notNull(),
   equipment: text('equipment').notNull(),
-  kind: text('kind', { enum: ['weight', 'bodyweight', 'time'] }).notNull(),
+  kind: text('kind', { enum: ['weight', 'bodyweight', 'time', 'cardio'] }).notNull(),
   increment: text('increment', { enum: ['small', 'large'] }).notNull(),
   restSeconds: integer('rest_seconds').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -150,6 +150,8 @@ export const workoutSets = pgTable('workout_sets', {
   done: boolean('done').notNull(),
   /** straight after the set before it, lighter, no rest */
   drop: boolean('drop_set').notNull().default(false),
+  /** cardio: metres covered */
+  distanceM: num('distance_m'),
 });
 
 export const weighIns = pgTable('weigh_ins', {

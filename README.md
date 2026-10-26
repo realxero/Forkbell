@@ -234,6 +234,18 @@ them: they're left out of family sharing whatever it allows (the database
 refuses it, not just the app), Bell never sees them, and Export lists them
 without the pictures. Adding one needs a connection to your server.
 
+## Cardio
+
+Twelve built-in cardio exercises (Run, Treadmill, Walk, Hike, Bike ride,
+Stationary bike, Rowing machine, Elliptical, Stair climber, Swim, Jump rope,
+HIIT), and *Cardio* as a kind when you make your own. Add one to any workout
+and log each bout as minutes ("30", or "32:15") and a distance in miles or
+km. The card shows the total time, distance, pace and a rough calorie
+estimate from your weight trend (a watch's number is better when you have
+one; it isn't added to your daily burn, which already comes from your
+logging and weight trend). No rest timer between bouts. The longest time is
+the exercise's record, and the workouts CSV has a distance column.
+
 ## Supersets, circuits, drop sets and plates
 
 - **Supersets and circuits.** An exercise's ⋯ menu has *Superset with the next exercise*. Do it again on the next one for a circuit of three or more. You go straight from one exercise to the next with no rest, then rest once after the last, for the longest rest time in the group. Moving an exercise out of the group, or *Leave the superset*, takes it out.

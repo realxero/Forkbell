@@ -12,7 +12,7 @@ export interface BuiltinExercise {
   name: string;
   muscle: Muscle;
   equipment: string;
-  kind: 'weight' | 'bodyweight' | 'time';
+  kind: 'weight' | 'bodyweight' | 'time' | 'cardio';
   increment: 'small' | 'large';
   restSeconds: number;
 }
@@ -86,6 +86,19 @@ const rows: Row[] = [
 
   // Core and full body
   ['plank', 'Plank', 'core', 'bodyweight', 'time', 'small', 60],
+  // Cardio: logged as a time and a distance; no rest timer.
+  ['cardio-run', 'Run', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-treadmill', 'Treadmill', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-walk', 'Walk', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-hike', 'Hike', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-bike', 'Bike ride', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-stationary-bike', 'Stationary bike', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-row', 'Rowing machine', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-elliptical', 'Elliptical', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-stairs', 'Stair climber', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-swim', 'Swim', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-jump-rope', 'Jump rope', 'full body', 'cardio', 'cardio', 'small', 0],
+  ['cardio-hiit', 'HIIT', 'full body', 'cardio', 'cardio', 'small', 0],
   ['side-plank', 'Side plank', 'core', 'bodyweight', 'time', 'small', 60],
   ['hanging-leg-raise', 'Hanging leg raise', 'core', 'bodyweight', 'bodyweight', 'small', I],
   ['cable-crunch', 'Cable crunch', 'core', 'cable', 'weight', 'small', I],

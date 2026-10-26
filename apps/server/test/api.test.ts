@@ -231,8 +231,8 @@ test('workouts keep supersets and drop sets; drop sets never set records', async
   const e1rm = records.find((r) => r.kind === 'e1rm');
   assert.equal(e1rm?.weightKg, 100, 'the drop set (90 × 12) is not the best estimated max');
   const csv = await u.call('GET', '/api/export/workouts.csv');
-  assert.match(csv.text, /,drop_set\r\n/);
-  assert.match(csv.text, /,yes\r\n/, 'the drop set is marked in the CSV');
+  assert.match(csv.text, /,drop_set,/);
+  assert.match(csv.text, /,yes,\r\n/, 'the drop set is marked in the CSV');
 });
 
 test('progress photos: only yours, never anyone else’s, even family you share everything with', async () => {
@@ -292,4 +292,24 @@ test('fasting: one at a time, sent twice counts once, ends after it starts, coun
   assert.equal((await a.call('GET', '/api/export')).body.data.fasts.length, 1, 'fasts are in the export');
   const me = (await a.call('GET', '/api/me')).body;
   assert.deepEqual(me.preferences.fasting, { show: false, hours: 16 }, 'off until you turn it on');
+});
+
+test('cardio: built in, logged as time and distance, longest time is the record', async () => {
+  const u = await newUser();
+  const list = (await u.call('GET', '/api/exercises')).body.exercises as { id: string; name: string; kind: string }[];
+  const run = list.find((x) => x.kind === 'cardio' && x.name === 'Run');
+  assert.ok(run, 'Run is a built-in cardio exercise');
+  assert.ok(list.filter((x) => x.kind === 'cardio').length >= 12);
+  const id = (await u.call('POST', '/api/workouts', { date: '2026-10-25' })).body.workout.id;
+  const bout = (seconds: number, distanceM: number | null) => ({ weightKg: null, reps: null, seconds, rpe: null, warmup: false, done: true, distanceM });
+  const saved = await u.call('PUT', `/api/workouts/${id}`, { name: 'Run', date: '2026-10-25', notes: null, exercises: [{ exerciseId: run!.id, restSeconds: 0, targetSets: null, repMin: null, repMax: null, sets: [bout(1800, 5000), bout(600, null)] }] });
+  assert.equal(saved.status, 200, saved.text);
+  const w = (await u.call('GET', `/api/workouts/${id}`)).body.workout;
+  assert.deepEqual(w.exercises[0].sets.map((x: { seconds: number; distanceM: number | null }) => [x.seconds, x.distanceM]), [[1800, 5000], [600, null]]);
+  assert.ok((await u.call('POST', `/api/workouts/${id}/finish`, {})).status < 300);
+  const records = (await u.call('GET', `/api/exercises/${run!.id}`)).body.records as { kind: string; value: number }[];
+  assert.deepEqual(records.map((r) => [r.kind, r.value]), [['time', 1800]]);
+  assert.match((await u.call('GET', '/api/export/workouts.csv')).text, /,5\r\n/, 'distance in km in the CSV');
+  const made = await u.call('POST', '/api/exercises', { name: 'Battle ropes', muscle: 'full body', equipment: 'cardio', kind: 'cardio', restSeconds: 0 });
+  assert.ok(made.status < 300, made.text);
 });

@@ -17,8 +17,9 @@ const KINDS: { kind: ExerciseKind; label: string }[] = [
   { kind: 'weight', label: 'Weight × reps' },
   { kind: 'bodyweight', label: 'Bodyweight reps' },
   { kind: 'time', label: 'Time' },
+  { kind: 'cardio', label: 'Cardio (time and distance)' },
 ];
-const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'kettlebell', 'bodyweight', 'band', 'other'];
+const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'kettlebell', 'bodyweight', 'band', 'cardio', 'other'];
 
 /** Full-screen list to pick an exercise, with search, muscle filter and "create your own". */
 export function ExercisePicker({
@@ -54,7 +55,7 @@ export function ExercisePicker({
   const [gear, setGear] = useState<string | null>(owned.length ? 'mine' : null);
   const [identify, setIdentify] = useState(false);
   const gearOk = (e: Listed) =>
-    !gear || (gear === 'mine' ? e.equipment === 'bodyweight' || e.equipment === 'other' || owned.includes(e.equipment as never) : e.equipment === gear);
+    !gear || (gear === 'mine' ? e.equipment === 'bodyweight' || e.equipment === 'cardio' || e.equipment === 'other' || owned.includes(e.equipment as never) : e.equipment === gear);
 
   // The whole library is small, so it's loaded once (and kept for offline) and searched here.
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { afterSet, bigJump, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { afterSet, bigJump, cardioKcal, distanceText, durationText, fromDistanceUnit, paceText, parseDuration, toDistanceUnit, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet } from '../../lib/sync';
@@ -37,6 +37,7 @@ function placeholderFor(e: WorkoutExercise, k: number) {
     weightKg: prev?.weightKg ?? above?.weightKg ?? null,
     reps: prev?.reps ?? above?.reps ?? e.repMin ?? null,
     seconds: prev?.seconds ?? above?.seconds ?? null,
+    distanceM: prev?.distanceM ?? above?.distanceM ?? null,
   };
 }
 
@@ -160,10 +161,11 @@ export default function WorkoutScreen() {
     const patch: Partial<SetEntry> = { done: true };
     haptic.tap();
     unlockAudio(); // browsers only allow sound after a tap
-    if (e.exercise.kind === 'time') {
+    if (e.exercise.kind === 'time' || e.exercise.kind === 'cardio') {
       const secs = s.seconds ?? ph.seconds;
-      if (!secs) return setHint('Enter the time first.');
+      if (!secs) return setHint(e.exercise.kind === 'cardio' ? 'Enter the minutes first.' : 'Enter the time first.');
       patch.seconds = secs;
+      if (e.exercise.kind === 'cardio' && s.distanceM == null && ph.distanceM) patch.distanceM = ph.distanceM;
     } else {
       const reps = s.reps ?? ph.reps;
       if (!reps) return setHint('Enter the reps first.');
@@ -542,8 +544,8 @@ function ExerciseCard(props: {
         <Pressable style={{ flex: 1 }} onPress={() => router.push({ pathname: '/exercise', params: { id: e.exercise.id } })}>
           <Text style={[type.title, { fontSize: 18 }]}>{e.exercise.name}</Text>
           <Text style={type.small}>
-            {e.targetSets && target && kind !== 'time' ? `${e.targetSets} × ${target} reps · ` : ''}
-            rest {formatDuration(e.restSeconds)}
+            {e.targetSets && target && kind !== 'time' && kind !== 'cardio' ? `${e.targetSets} × ${target} reps · ` : ''}
+            {kind === 'cardio' ? 'time and distance' : `rest ${formatDuration(e.restSeconds)}`}
           </Text>
         </Pressable>
         {e.exercise.howTo && (
@@ -601,6 +603,11 @@ function ExerciseCard(props: {
         <Text style={[s.colPrev, s.th]}>Last time</Text>
         {kind === 'time' ? (
           <Text style={[s.colWide, s.th]}>Seconds</Text>
+        ) : kind === 'cardio' ? (
+          <>
+            <Text style={[s.colNum, s.th]}>Minutes</Text>
+            <Text style={[s.colNum, s.th]}>{units.unit === 'lb' ? 'Miles' : 'Km'}</Text>
+          </>
         ) : (
           <>
             <Text style={[s.colNum, s.th]}>{kind === 'bodyweight' ? `+${units.unit}` : units.unit}</Text>
@@ -618,6 +625,8 @@ function ExerciseCard(props: {
           ? '—'
           : kind === 'time'
             ? `${prev.seconds ?? 0} s`
+            : kind === 'cardio'
+              ? `${durationText(prev.seconds ?? 0)} min${prev.distanceM ? ` · ${distanceText(prev.distanceM, units.unit)}` : ''}`
             : `${prev.weightKg ? `${units.show(prev.weightKg)} × ` : ''}${prev.reps ?? 0}`;
         // Working sets are numbered; warm-ups show W and drop sets D.
         const n = e.sets.slice(0, k + 1).filter((x) => !x.warmup && !x.drop).length;
@@ -631,7 +640,27 @@ function ExerciseCard(props: {
               <Text style={[s.setNo, set.warmup && { color: color.carbs }, set.drop && { color: color.over }]}>{label}</Text>
             </Pressable>
             <Text style={[s.colPrev, type.small, type.number]} numberOfLines={1}>{prevText}</Text>
-            {kind === 'time' ? (
+            {kind === 'cardio' ? (
+              <>
+                <NumberField
+                  label={`Bout ${k + 1} minutes`}
+                  value={set.seconds === null ? '' : durationText(set.seconds)}
+                  placeholder={ph.seconds ? durationText(ph.seconds) : 'min'}
+                  onCommit={(t) => props.onSet(k, { seconds: parseDuration(t) })}
+                  style={[s.cell, s.colNum]}
+                />
+                <NumberField
+                  label={`Bout ${k + 1} distance in ${units.unit === 'lb' ? 'miles' : 'kilometres'}`}
+                  value={set.distanceM == null ? '' : String(Math.round(toDistanceUnit(set.distanceM, units.unit) * 100) / 100)}
+                  placeholder={ph.distanceM ? String(Math.round(toDistanceUnit(ph.distanceM, units.unit) * 100) / 100) : '–'}
+                  onCommit={(t) => {
+                    const v = Number(t.replace(',', '.'));
+                    props.onSet(k, { distanceM: t.trim() && v > 0 ? Math.round(fromDistanceUnit(v, units.unit)) : null });
+                  }}
+                  style={[s.cell, s.colNum]}
+                />
+              </>
+            ) : kind === 'time' ? (
               <NumberField
                 label={`Set ${k + 1} seconds`}
                 value={set.seconds === null ? '' : String(set.seconds)}
@@ -682,8 +711,9 @@ function ExerciseCard(props: {
         return msg ? <Text style={s.tip}>💡 {msg}</Text> : null;
       })()}
 
+      {kind === 'cardio' && <CardioSummary e={e} unit={units.unit} />}
       <View style={s.cardFoot}>
-        <Pressable onPress={props.onAddSet} hitSlop={6}><Text style={s.addText}>+ Add set</Text></Pressable>
+        <Pressable onPress={props.onAddSet} hitSlop={6}><Text style={s.addText}>{kind === 'cardio' ? '+ Add a bout' : '+ Add set'}</Text></Pressable>
         {e.exercise.kind === 'weight' && (
           <Pressable onPress={props.onWarmupSets} hitSlop={6} accessibilityLabel={`Add warm-up sets for ${e.exercise.name}`}><Text style={s.addText}>Warm-up sets</Text></Pressable>
         )}
@@ -695,6 +725,25 @@ function ExerciseCard(props: {
         )}
       </View>
     </View>
+  );
+}
+
+/** Time, distance, pace and a rough calorie estimate for a cardio card. */
+function CardioSummary({ e, unit }: { e: WorkoutExercise; unit: 'lb' | 'kg' }) {
+  const [weightKg, setWeightKg] = useState<number | null>(null);
+  useEffect(() => {
+    cachedGet<{ weighIns: { trendKg: number }[] }>(`/api/progress?today=${new Date().toISOString().slice(0, 10)}`).then((p) => setWeightKg(p.weighIns.at(-1)?.trendKg ?? null), () => {});
+  }, []);
+  const done = e.sets.filter((x) => x.done && x.seconds);
+  if (!done.length) return null;
+  const seconds = done.reduce((n, x) => n + (x.seconds ?? 0), 0);
+  const metres = done.reduce((n, x) => n + (x.distanceM ?? 0), 0);
+  const pace = paceText(seconds, metres || null, unit);
+  const kcal = cardioKcal(e.exercise.name, seconds, weightKg, metres || null);
+  return (
+    <Text style={[type.small, { marginTop: space(1) }]}>
+      {durationText(seconds)} min{metres ? ` · ${distanceText(metres, unit)}` : ''}{pace ? ` · ${pace}` : ''} · about {kcal} kcal{weightKg ? '' : ' (log your weight for a better estimate)'}
+    </Text>
   );
 }
 

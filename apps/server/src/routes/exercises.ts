@@ -92,7 +92,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
         }
       if (best) records.push(best);
     };
-    if (exercise.kind === 'time') consider('time', (s) => s.seconds);
+    if (exercise.kind === 'time' || exercise.kind === 'cardio') consider('time', (s) => s.seconds);
     else if (exercise.kind === 'bodyweight') {
       consider('reps', (s) => (s.weightKg ? null : s.reps));
       consider('weight', (s) => s.weightKg);

@@ -37,7 +37,7 @@ export function toHowTo(r: ExerciseRow): ExerciseHowTo | null {
   };
 }
 
-export const toSet = (r: Pick<SetRow, 'weightKg' | 'reps' | 'seconds' | 'rpe' | 'warmup' | 'done'> & Partial<Pick<SetRow, 'drop'>>): SetEntry => ({
+export const toSet = (r: Pick<SetRow, 'weightKg' | 'reps' | 'seconds' | 'rpe' | 'warmup' | 'done'> & Partial<Pick<SetRow, 'drop' | 'distanceM'>>): SetEntry => ({
   weightKg: r.weightKg,
   reps: r.reps,
   seconds: r.seconds,
@@ -45,6 +45,7 @@ export const toSet = (r: Pick<SetRow, 'weightKg' | 'reps' | 'seconds' | 'rpe' | 
   warmup: r.warmup,
   done: r.done,
   drop: r.drop ?? false,
+  distanceM: r.distanceM ?? null,
 });
 
 /** Sets grouped by workout_exercise id, in order. */
@@ -175,7 +176,7 @@ export async function saveWorkout(tx: Tx, id: string, input: SaveWorkoutInput) {
       .values({ workoutId: id, exerciseId: e.exerciseId, position, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, pain: e.pain ?? false, painNote: e.painNote ?? null, superset: groups[position] ?? null } as typeof workoutExercises.$inferInsert)
       .returning({ id: workoutExercises.id });
     if (e.sets.length) {
-      await tx.insert(workoutSets).values(e.sets.map((s, i) => ({ workoutExerciseId: we!.id, position: i, ...s, drop: Boolean(s.drop) && !s.warmup }) as typeof workoutSets.$inferInsert));
+      await tx.insert(workoutSets).values(e.sets.map((s, i) => ({ workoutExerciseId: we!.id, position: i, ...s, drop: Boolean(s.drop) && !s.warmup, distanceM: s.distanceM ?? null }) as typeof workoutSets.$inferInsert));
     }
   }
   return true;

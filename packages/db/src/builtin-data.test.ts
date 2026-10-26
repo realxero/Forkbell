@@ -39,9 +39,9 @@ test('every starter program only uses built-in exercises', () => {
       }
 });
 
-test('every built-in exercise has steps and pictures', async () => {
+test('every built-in exercise has steps and pictures (cardio needs none)', async () => {
   const { exerciseLibrary } = await import('./exercise-library.ts');
-  for (const e of builtinExercises) {
+  for (const e of builtinExercises.filter((x) => x.kind !== 'cardio')) {
     const h = exerciseLibrary.core[e.key];
     assert.ok(h, `${e.key} has a how-to`);
     assert.ok(h.steps.length >= 1 && h.images >= 1, `${e.key} has steps and a picture`);
