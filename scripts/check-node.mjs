@@ -15,8 +15,13 @@ if (!need) {
 }
 if (older(need)) {
   console.error(`Node ${process.versions.node} has a known security hole; ${need} or newer fixes it.`);
-  console.error('Docker reused an old copy of the Node image. Build again with --pull:');
-  console.error('  sudo docker build --pull -t forkbell:latest .');
+  if (process.env.GITHUB_ACTIONS)
+    console.error('GitHub Actions used the Node already on its runner: setup-node needs check-latest: true to fetch the newest one.');
+  else {
+    console.error('An old copy of Node was used. In a Docker build, build again with --pull:');
+    console.error('  sudo docker build --pull -t forkbell:latest .');
+    console.error('Anywhere else, update Node (the version in .nvmrc).');
+  }
   process.exit(1);
 }
 console.log(`Node ${process.versions.node}: OK`);
