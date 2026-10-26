@@ -72,6 +72,8 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
           uses: sql<number>`count(*)::int`,
           lastGrams: sql<string>`(array_agg(${diaryEntries.grams} order by ${diaryEntries.createdAt} desc))[1]`,
           lastMeal: sql<RecentFood['lastMeal']>`(array_agg(${diaryEntries.meal} order by ${diaryEntries.createdAt} desc))[1]`,
+          lastAmount: sql<string | null>`(array_agg(${diaryEntries.amount} order by ${diaryEntries.createdAt} desc))[1]`,
+          lastUnit: sql<string | null>`(array_agg(${diaryEntries.unit} order by ${diaryEntries.createdAt} desc))[1]`,
         })
         .from(diaryEntries)
         .innerJoin(foods, eq(foods.id, diaryEntries.foodId))
@@ -81,6 +83,8 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
     const all: (RecentFood & { lastUsed: string })[] = rows.map((r) => ({
       food: toFood(r.food),
       lastGrams: Number(r.lastGrams),
+      lastAmount: r.lastAmount == null ? null : Number(r.lastAmount),
+      lastUnit: r.lastUnit ?? null,
       lastMeal: r.lastMeal,
       uses: r.uses,
       lastUsed: r.lastUsed,

@@ -248,6 +248,12 @@ label shows 100 kcal per bar, not 417 per 100 g.
 Any entry can be renamed (Edit → *Name in your diary*); only that entry
 changes, not the food.
 
+Bell works the same way: "an 11 fl oz Premier shake" comes back as *11 fl oz*
+on its card (the grams are worked out from that, not guessed), with the same
+unit buttons to change it, and is saved that way. Recent and most-logged
+foods, meal shortcuts and plans show amounts in these units too, and a quick
+re-log uses last time's wording.
+
 ## Water
 
 A Water card on Today. Tap +8, +16.9 or +24 oz (+250, +500 or +750 ml if you

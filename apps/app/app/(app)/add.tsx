@@ -1,8 +1,9 @@
+import { useAuth } from '../../lib/auth';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { dataKind, forAmount, KIND_INFO, mealForTime, type NutritionCheck, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods } from '@forkbell/shared';
+import { dataKind, forAmount, KIND_INFO, mealForTime, type NutritionCheck, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods, entryAmountText } from '@forkbell/shared';
 import { api, ApiError, post } from '../../lib/api';
 import { pickImage } from '../../lib/images';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -20,6 +21,7 @@ type BarcodeResult = { food?: Food; candidate?: FoodCandidate; check?: Nutrition
 type Screen = { kind: 'search' } | { kind: 'scan' } | { kind: 'amount'; food: Pick; lastGrams?: number; check?: NutritionCheck | null } | { kind: 'create'; barcode?: string; note?: string; prefill?: { name: string; brand: string | null } };
 
 export default function AddFood() {
+  const { me } = useAuth();
   const params = useLocalSearchParams<{ meal?: Meal; date?: string; scan?: string }>();
   const meal = params.meal ?? mealForTime();
   const date = params.date ?? todayLocal();
@@ -74,8 +76,9 @@ export default function AddFood() {
   /** One tap: log a recent food with last time's amount and stay here to add more. */
   const quickAdd = async (r: RecentFood) => {
     try {
-      await log(r.food, r.lastGrams, meal);
-      setAdded((a) => [...a, `${r.food.name}, ${r.lastGrams} g`]);
+      const said = r.lastAmount && r.lastUnit ? { amount: r.lastAmount, unit: r.lastUnit } : undefined;
+      await log(r.food, r.lastGrams, meal, said);
+      setAdded((a) => [...a, `${r.food.name}, ${entryAmountText({ grams: r.lastGrams, amount: r.lastAmount, unit: r.lastUnit, food: r.food }, me?.weightUnit ?? 'lb')}`]);
     } catch (e) {
       setError(message(e));
     }
@@ -239,6 +242,7 @@ function RecentList({
   onPick: (r: RecentFood) => void;
   onQuickAdd: (r: RecentFood) => void;
 }) {
+  const { me } = useAuth();
   if (!data) return <ActivityIndicator color={color.iron} style={{ marginTop: space(4) }} />;
   if (!data.recent.length) return <Text style={[type.small, { marginTop: space(2) }]}>Foods you log show up here, so the next time takes one tap.</Text>;
   const list = data[tab];
@@ -255,7 +259,7 @@ function RecentList({
           <View style={{ flex: 1 }}>
             <Text style={type.body} numberOfLines={1}>{r.food.name}</Text>
             <Text style={type.small} numberOfLines={1}>
-              {r.lastGrams} g · {forAmount(r.food.per100, r.lastGrams).kcal} kcal{r.food.brand ? ` · ${r.food.brand}` : ''}
+              {entryAmountText({ grams: r.lastGrams, amount: r.lastAmount, unit: r.lastUnit, food: r.food }, me?.weightUnit ?? 'lb')} · {forAmount(r.food.per100, r.lastGrams).kcal} kcal{r.food.brand ? ` · ${r.food.brand}` : ''}
             </Text>
           </View>
           <Pressable onPress={() => onQuickAdd(r)} hitSlop={8} style={s.plus} accessibilityLabel={`Add ${r.lastGrams} grams of ${r.food.name}`}>

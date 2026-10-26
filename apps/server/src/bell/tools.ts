@@ -2,7 +2,7 @@
 // signed-in person, so row-level security applies); Bell never writes. Food
 // it wants to log comes back as proposals the person reviews and confirms,
 // and so does water.
-import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences } from '@forkbell/shared';
+import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences, unitsFor } from '@forkbell/shared';
 import { env } from '../env.ts';
 import type { ToolSpec } from './providers.ts';
 
@@ -72,6 +72,13 @@ export const TOOLS: ToolSpec[] = [
               note: { type: 'string', description: 'short note shown on the card, e.g. "assumed one medium bowl"' },
               expected_kcal: { type: 'number', description: 'calories for this amount when a label, photo or the person stated them ("150 per bottle"); the item is refused if the numbers are more than 20% off' },
               amount_confirmed: { type: 'boolean', description: 'only when exactly 100 g really is what they had (they said so, it is their usual amount, or one serving is 100 g)' },
+              amount: { type: 'number', description: 'how much, in their unit: 1 for "a shake", 11 for "11 fl oz", 2 for "2 slices"' },
+              unit: {
+                type: 'string',
+                description: 'the unit of amount: serving (or the label word for one, e.g. bar, slice), g, oz, lb, ml, floz, cup, tbsp, tsp. With amount and unit, grams is worked out for you; still give your best grams.',
+              },
+              serving_g: { type: 'number', description: 'grams in one serving, when you know it (label, package, typical size)' },
+              serving_label: { type: 'string', description: 'one serving as printed or said, e.g. "1 bar", "11 fl oz"' },
               replaces_entry_id: {
                 type: 'string',
                 description: 'to correct something already logged (wrong calories, amount or food): the entry id from get_day. The card says it replaces that entry, and the old one is removed when they tap Add. Never propose a correction without it, or they get two.',
@@ -214,6 +221,18 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
       const problems: string[] = [];
       for (const item of parsed.data.items) {
         const food = item.food_id ? lib.foods.find((f) => f.id === item.food_id) ?? null : null;
+        // "11 fl oz" or "2 slices": work out the grams from the unit, so the numbers can't drift.
+        let said: { amount: number; unit: string } | null = null;
+        const servingG = food?.servingGrams ?? item.serving_g ?? null;
+        if (item.amount && item.unit) {
+          const forUnits = { name: food?.name ?? item.name, servingGrams: servingG, servingLabel: food?.servingLabel ?? item.serving_label ?? null, portions: food?.portions ?? [] };
+          const want = item.unit.toLowerCase().replace(/\s+/g, '').replace(/s$/, '');
+          const u = unitsFor(forUnits, ctx.unit ?? 'lb').find((x) => x.key === want || x.label.replace(/\s+/g, '') === want || x.key === `p:${item.unit}` || (want === 'serving' && x.key === 'serving'));
+          if (u) {
+            said = { amount: item.amount, unit: u.key };
+            item.grams = Math.round(item.amount * u.grams * 10) / 10;
+          }
+        }
         // 100 g is the per-100 basis, rarely what someone ate. Don't let it slip through.
         if (!item.amount_confirmed && looksLikeDefaultAmount(item.grams, ctx.userText)) {
           const typical = food?.servingGrams ? ` One serving of this food is ${food.servingGrams} g.` : '';
@@ -271,6 +290,10 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
           date: item.date ?? ctx.today,
           food,
           per100,
+          amount: said?.amount ?? null,
+          unit: said?.unit ?? null,
+          servingGrams: food ? null : (item.serving_g ?? null),
+          servingLabel: food ? null : (item.serving_label ?? null),
           estimate: food ? false : item.estimate !== false,
           note: item.note ?? null,
           warnings: checkFood(`${food?.name ?? item.name} ${food?.brand ?? item.brand ?? ''}`, ctx.prefs).reasons.filter((r) => !r.startsWith('you dislike') && !r.includes('never-suggest')),
@@ -326,6 +349,7 @@ How to help:
 ${opts.prefs.bell.askWhenUnsure
     ? `- If an unseen detail would change calories a lot (portion, oil, sauce, which size), ask ONE short question with ask_question instead of guessing. Log anything that is already clear in the same turn. If they answer "${JUST_ESTIMATE}", make a sensible assumption and say it in the note. Don't ask about small things (a splash of milk, a pinch of salt), and never ask twice about the same item.`
     : '- If an unseen detail would change calories a lot (oil, sauce, portion), make a sensible assumption, say it in the note, and invite a correction.'}
+- Give amount and unit the way they said it (1 serving, 11 fl oz, 2 slices, 4 oz) as well as grams; the app shows it that way.
 - grams is what they ate, never 100 just because foods are stored per 100 g. Use what they said, what the photo shows, their usual amount, or a typical portion.
 - Never say you'll do something ("let me adjust that", "I'll update it") unless you call the tool for it in this same reply. If you can't do it, say so plainly.
 - To fix something already logged (they give the real calories, amount or food): call get_day, then propose the corrected item with replaces_entry_id set to the old entry's id, in this reply. The card shows it replaces the old one, which is removed when they tap Add.

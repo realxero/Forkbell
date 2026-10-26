@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MEALS, addDays, nextDays, planDays, todayLocal, type DayPlan, type DiaryDay, type Food, type RecentFood } from '@forkbell/shared';
+import { MEALS, addDays, nextDays, planDays, todayLocal, type DayPlan, type DiaryDay, type Food, type RecentFood, entryAmountText } from '@forkbell/shared';
 import { useAuth } from '../../lib/auth';
 import { addEntry, foodLibrary } from '../../lib/actions';
 import { cachedGet } from '../../lib/sync';
@@ -104,7 +104,7 @@ export default function Plan() {
                       >
                         <FoodIcon name={it.food.name} brand={it.food.brand} size={30} />
                         <Text style={[type.body, { flex: 1 }]} numberOfLines={1}>{it.food.name}</Text>
-                        <Text style={[type.small, type.number]}>{it.grams} g · {Math.round((it.food.per100.kcal * it.grams) / 100)} kcal</Text>
+                        <Text style={[type.small, type.number]}>{entryAmountText({ grams: it.grams, food: it.food })} · {Math.round((it.food.per100.kcal * it.grams) / 100)} kcal</Text>
                       </Pressable>
                     );
                   })}

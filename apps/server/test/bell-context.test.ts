@@ -120,3 +120,22 @@ test('Bell answers in time even when the AI service is slow', async () => {
   assert.match(r.body.reply, /ran out of time/);
   assert.ok(Date.now() - started < 10_000, 'within the limit (3 s in this test; 75 s for real)');
 });
+
+test('Bell gives amounts in their unit: 11 fl oz works out its own grams', async () => {
+  const u = await newUser();
+  script = (sent) => {
+    if (sent.messages?.at(-1)?.role === 'tool') return { role: 'assistant', content: 'Tap Add.' };
+    return {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: 'p1', type: 'function', function: { name: 'propose_food_entries', arguments: JSON.stringify({ items: [{ name: 'Vanilla protein shake', brand: 'Premier Protein', grams: 300, amount: 11, unit: 'fl oz', serving_g: 325, serving_label: '11 fl oz', per100: { kcal: 49, protein: 9.2, carbs: 1.2, fat: 0.9 }, estimate: false }] }) } }],
+    };
+  };
+  const r = await u.call('POST', '/api/bell/chat', { messages: [{ role: 'user', text: 'Log an 11 fl oz Premier protein shake' }], today: '2026-10-25', meal: 'breakfast' });
+  script = null;
+  assert.equal(r.status, 200, r.text);
+  const p = r.body.proposals[0];
+  assert.deepEqual([p.amount, p.unit], [11, 'floz']);
+  assert.ok(Math.abs(p.grams - 325.3) < 1, `grams from 11 fl oz, not Bell's 300: ${p.grams}`);
+  assert.deepEqual([p.servingGrams, p.servingLabel], [325, '11 fl oz']);
+});

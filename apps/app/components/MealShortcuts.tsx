@@ -1,8 +1,9 @@
+import { useAuth } from '../lib/auth';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { addDays, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type SavedMeal, entryName } from '@forkbell/shared';
+import { addDays, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type SavedMeal, entryName, entryAmountText } from '@forkbell/shared';
 import { deleteSavedMeal, logItems } from '../lib/actions';
 import { cachedGet } from '../lib/sync';
 import { confirm } from '../lib/confirm';
@@ -23,6 +24,7 @@ const dayName = (date: string) => {
  * earlier days (step back with ‹ ›). One tap logs the whole thing.
  */
 export function MealShortcuts({ date, meal, onLogged }: { date: string; meal: Meal; onLogged: (text: string) => void }) {
+  const { me } = useAuth();
   const [saved, setSaved] = useState<SavedMeal[]>([]);
   const [back, setBack] = useState(1); // days before `date` to look from
   const [prev, setPrev] = useState<{ date: string; entries: DiaryEntry[] } | null | undefined>(undefined);
@@ -93,7 +95,7 @@ export function MealShortcuts({ date, meal, onLogged }: { date: string; meal: Me
                 <View key={e.id} style={s.row}>
                   <FoodIcon name={e.food.name} brand={e.food.brand} size={28} />
                   <Text style={[type.body, { flex: 1 }]} numberOfLines={1}>{entryName(e)}</Text>
-                  <Text style={[type.small, type.number]}>{e.grams} g</Text>
+                  <Text style={[type.small, type.number]}>{entryAmountText(e, me?.weightUnit ?? 'lb')}</Text>
                 </View>
               ))}
               <Pressable disabled={busy} onPress={() => logAll(prev.entries, `${MEAL_NAMES[meal]} from ${dayName(prev.date).toLowerCase()}`)} style={[s.button, busy && { opacity: 0.5 }]}>

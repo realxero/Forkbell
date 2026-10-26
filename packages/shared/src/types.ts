@@ -108,6 +108,9 @@ export interface Me {
 export interface RecentFood {
   food: Food;
   lastGrams: number;
+  /** how last time's amount was said, when it was ("1" "serving") */
+  lastAmount?: number | null;
+  lastUnit?: string | null;
   lastMeal: Meal;
   uses: number;
 }

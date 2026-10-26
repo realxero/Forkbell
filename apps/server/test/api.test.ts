@@ -438,3 +438,11 @@ test('entries remember how the amount was said, and can have their own name', as
   const copy = (await u.call('GET', '/api/diary/2026-10-26')).body.entries[0];
   assert.deepEqual([copy.amount, copy.unit], [1, 'serving'], 'copies keep the wording');
 });
+
+test('recent foods remember how last time was said', async () => {
+  const u = await newUser();
+  const food = (await u.call('POST', '/api/foods', { name: 'Granola bar', brand: null, source: 'custom', per100: { kcal: 417, protein: 4, carbs: 70, fat: 13 }, servingGrams: 24, servingLabel: '1 bar', barcode: null })).body.food;
+  await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'snacks', grams: 24, foodId: food.id, amount: 1, unit: 'serving' });
+  const recent = (await u.call('GET', '/api/foods/recent?today=2026-10-25')).body.recent[0];
+  assert.deepEqual([recent.lastGrams, recent.lastAmount, recent.lastUnit], [24, 1, 'serving']);
+});

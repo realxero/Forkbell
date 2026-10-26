@@ -20,6 +20,12 @@ export interface FoodProposal {
   warnings: string[];
   /** a diary entry this corrects: it's removed when the person taps Add */
   replaces?: { id: string; name: string; kcal: number } | null;
+  /** how the amount was said ("1" "serving", "11" "floz"); grams is what the numbers use */
+  amount?: number | null;
+  unit?: string | null;
+  /** one serving of Bell's own estimate, so the card can offer "1 shake" */
+  servingGrams?: number | null;
+  servingLabel?: string | null;
 }
 
 export const bellChatSchema = z.object({
@@ -84,6 +90,12 @@ export const proposeArgsSchema = z.object({
         name: z.string().trim().min(1).max(200),
         brand: z.string().trim().max(200).nullish(),
         grams: z.number().positive().max(5000),
+        /** how they said it: 1 serving, 11 fl oz, 2 slices; grams is then worked out from it */
+        amount: z.number().positive().max(1000).optional(),
+        unit: z.string().trim().min(1).max(40).optional(),
+        /** one serving, for an estimate or a label (e.g. "1 shake", 325 g) */
+        serving_g: z.number().positive().max(5000).optional(),
+        serving_label: z.string().trim().max(60).optional(),
         meal: z.enum(MEALS).optional(),
         date: dateSchema.optional(),
         food_id: z.string().uuid().optional(),

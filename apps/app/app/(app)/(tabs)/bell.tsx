@@ -5,7 +5,7 @@ import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { bellHistory, bellMood, forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellMood, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
+import { bellHistory, bellMood, forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellMood, type BellQuestion, type BellReply, type FoodProposal, type Meal, amountFromGrams, parseQuantity, unitFor, unitsFor } from '@forkbell/shared';
 import { api, ApiError, post } from '../../../lib/api';
 import { addEntry, removeEntryById } from '../../../lib/actions';
 import { useAuth } from '../../../lib/auth';
@@ -384,7 +384,10 @@ export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; ad
           date: p.date,
           meal: p.meal,
           grams: p.grams,
-          food: p.food ?? { name: p.name, brand: p.brand, source: 'custom', sourceId: null, per100: p.per100!, servingGrams: null, servingLabel: null, barcode: null, portions: [] },
+          amount: p.amount ?? null,
+          unit: p.unit ?? null,
+          // Bell's estimate keeps its serving, so next time "1 shake" is a tap.
+          food: p.food ?? { name: p.name, brand: p.brand, source: 'custom', sourceId: null, per100: p.per100!, servingGrams: p.servingGrams ?? null, servingLabel: p.servingLabel ?? null, barcode: null, portions: [] },
         });
         // A correction: the entry it replaces goes once the new one is in.
         if (p.replaces) await removeEntryById(p.replaces.id, p.date);
@@ -434,16 +437,7 @@ export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; ad
             </View>
             {!added && p.keep && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2), flexWrap: 'wrap', marginLeft: 36 }}>
-                <NumberField
-                  label={`${p.name} grams`}
-                  value={String(p.grams)}
-                  onCommit={(t) => {
-                    const g = Number(t.replace(',', '.'));
-                    if (g > 0 && g <= 5000) setList((l) => l.map((x, j) => (j === i ? { ...x, grams: g } : x)));
-                  }}
-                  style={s.grams}
-                />
-                <Text style={type.small}>g</Text>
+                <ProposalAmount p={p} onChange={(patch) => setList((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))} />
                 {(['breakfast', 'lunch', 'dinner', 'snacks'] as Meal[]).map((m) => (
                   <Chip key={m} label={MEAL_NAMES[m]} on={p.meal === m} onPress={() => setList((l) => l.map((x, j) => (j === i ? { ...x, meal: m } : x)))} />
                 ))}
@@ -503,3 +497,48 @@ const s = StyleSheet.create({
   send: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
   sendText: { color: color.chalk, fontWeight: '700', fontSize: 15 },
 });
+
+/**
+ * How much, on one of Bell's cards: a number in the unit Bell (or you) used,
+ * and the units that fit the food, the same as logging it yourself.
+ */
+function ProposalAmount({ p, onChange }: { p: FoodProposal; onChange: (patch: Pick<FoodProposal, 'grams' | 'amount' | 'unit'>) => void }) {
+  const { me } = useAuth();
+  const prefer = me?.weightUnit ?? 'lb';
+  const food = p.food ?? { name: p.name, servingGrams: p.servingGrams ?? null, servingLabel: p.servingLabel ?? null, portions: [] };
+  const units = unitsFor(food, prefer);
+  const said = p.amount && p.unit ? { quantity: p.amount, unit: unitFor(food, p.unit, prefer) } : amountFromGrams(food, p.grams, prefer);
+  const set = (quantity: number, key: string) => {
+    const u = units.find((x) => x.key === key) ?? said.unit;
+    const grams = Math.round(quantity * u.grams * 10) / 10;
+    if (grams > 0 && grams <= 5000) onChange({ grams, amount: quantity, unit: u.key });
+  };
+  return (
+    <>
+      <NumberField
+        label={`${p.name}, how many ${said.unit.label}`}
+        value={String(Math.round(said.quantity * 100) / 100)}
+        onCommit={(t) => {
+          const q = parseQuantity(t);
+          if (q) set(q, said.unit.key);
+        }}
+        style={s.grams}
+      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space(1) }} style={{ flexGrow: 0, maxWidth: '100%' }}>
+        {units.slice(0, 6).map((u) => (
+          <Chip
+            key={u.key}
+            label={u.label}
+            on={u.key === said.unit.key}
+            onPress={() => {
+              // The same amount of food in the new unit.
+              const q = p.grams / u.grams;
+              set(u.key === 'g' || u.key === 'ml' ? Math.round(q) : Math.round(q * 100) / 100, u.key);
+            }}
+          />
+        ))}
+      </ScrollView>
+      {said.unit.key !== 'g' && <Text style={type.small}>{Math.round(p.grams)} g</Text>}
+    </>
+  );
+}
