@@ -10,6 +10,15 @@ import { env } from '../env.ts';
 import { runTool, systemPrompt, toolsFor, type ToolContext } from '../bell/tools.ts';
 
 const MAX_ROUNDS = 8;
+/**
+ * Bell answers within this, whatever the model is doing. Cloudflare gives up on
+ * a request after 100 seconds and the app then sees Cloudflare's error page
+ * instead of Bell, so stop well before and answer with what there is.
+ */
+const ANSWER_WITHIN_MS = Number(process.env.BELL_ANSWER_WITHIN_MS) || 75_000;
+class OutOfTime extends Error {}
+const within = <T>(work: Promise<T>, deadline: number) =>
+  Promise.race([work, new Promise<never>((_, reject) => setTimeout(() => reject(new OutOfTime()), Math.max(0, deadline - Date.now())))]);
 // A simple guard against runaway costs: 40 messages per person per 10 minutes.
 const recent = new Map<string, number[]>();
 function allowed(userId: string) {
@@ -191,9 +200,11 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
     let results: { call: ToolCall; output: string }[] | undefined;
     let text = '';
     let unfinished = false;
+    let outOfTime = false;
+    const deadline = Date.now() + ANSWER_WITHIN_MS;
     try {
       for (let round = 0; round < MAX_ROUNDS; round++) {
-        const step = await model.step(results);
+        const step = await within(model.step(results), deadline);
         text = step.text || text;
         unfinished = step.calls.length > 0;
         if (!step.calls.length) break;
@@ -201,7 +212,7 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
         for (const tc of step.calls) {
           let output: string;
           try {
-            output = await runTool(tc.name, tc.args, ctx);
+            output = await within(runTool(tc.name, tc.args, ctx), deadline);
           } catch (e) {
             output = `Tool failed: ${e instanceof Error ? e.message : String(e)}`;
           }
@@ -214,8 +225,13 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
         }
       }
     } catch (e) {
+      if (e instanceof OutOfTime) {
+        outOfTime = true;
+        console.error(`Bell: no answer within ${ANSWER_WITHIN_MS / 1000} s; answering with what there is`);
+      } else {
       console.error('Bell:', e);
       return c.json({ error: e instanceof Error && e.message.startsWith('The AI service') ? e.message : 'Bell couldn’t reach the AI service. Check the server log.' }, 502);
+      }
     }
     const { proposals, question, water } = ctx;
     // Bell always answers with something you can act on, never an empty bubble.
@@ -225,10 +241,12 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
         ? 'Here’s what I’d log. Check the amounts and tap Add.'
         : water
           ? 'Tap Add to log the water.'
-        : unfinished
+        : outOfTime
+          ? 'The AI service is slow right now and I ran out of time. Try again in a moment, or ask about one thing at a time.'
+          : unfinished
           ? 'That took more steps than I’m allowed. Try asking about one thing at a time.'
           : 'I didn’t get an answer from the model. Try asking again, or rephrase it.';
-    const body: BellReply = { reply: unfinished && !proposals.length && !water ? fallback : text || fallback, proposals, question, water };
+    const body: BellReply = { reply: (unfinished || outOfTime) && !proposals.length && !water ? fallback : text || fallback, proposals, question, water };
     return c.json(body);
   });
 

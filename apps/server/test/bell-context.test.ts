@@ -8,6 +8,7 @@ let ai: Server;
 const systems: string[] = [];
 const searches: string[] = [];
 const toolNames: string[][] = [];
+let hang = false;
 let script: ((sent: { messages?: { role: string; content: unknown }[] }) => unknown) | null = null;
 
 before(async () => {
@@ -23,6 +24,7 @@ before(async () => {
       const sent = JSON.parse(body || '{}') as { messages?: { role: string; content: unknown }[]; tools?: { function?: { name: string } }[] };
       toolNames.push((sent.tools ?? []).map((t) => t.function?.name ?? ''));
       systems.push(String(sent.messages?.find((m) => m.role === 'system')?.content ?? ''));
+      if (hang) return; // the AI service never answers
       if (script) {
         const m = script(sent);
         if (m) {
@@ -41,7 +43,7 @@ before(async () => {
     });
   });
   await new Promise<void>((r) => ai.listen(3882, r));
-  await startServer({ AI_PROVIDER: 'openai', AI_BASE_URL: 'http://localhost:3882/v1', AI_MODEL: 'test-model', AI_API_KEY: 'x', SEARCH_URL: 'http://localhost:3882' });
+  await startServer({ AI_PROVIDER: 'openai', AI_BASE_URL: 'http://localhost:3882/v1', AI_MODEL: 'test-model', AI_API_KEY: 'x', SEARCH_URL: 'http://localhost:3882', BELL_ANSWER_WITHIN_MS: '3000' });
 });
 after(async () => {
   await stopServer();
@@ -106,4 +108,15 @@ test('Bell can search the web when SEARCH_URL is set, and a correction replaces 
   assert.equal(Math.round((p.per100.kcal * p.grams) / 100), 470, 'the stated 470, not 469');
   assert.deepEqual(p.replaces, { id: entryId, name: 'Croissant grilled cheese', kcal: 560 });
   assert.match(systems.at(-1)!, /Never say you'll do something/);
+});
+
+test('Bell answers in time even when the AI service is slow', async () => {
+  const u = await newUser();
+  hang = true;
+  const started = Date.now();
+  const r = await u.call('POST', '/api/bell/chat', { messages: [{ role: 'user', text: 'hello' }], today: '2026-10-25', meal: 'lunch' });
+  hang = false;
+  assert.equal(r.status, 200, r.text);
+  assert.match(r.body.reply, /ran out of time/);
+  assert.ok(Date.now() - started < 10_000, 'within the limit (3 s in this test; 75 s for real)');
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
@@ -69,28 +69,32 @@ function QuickAdd({ visible, date, meal, onClose, onAdded }: { visible: boolean;
       setError(e instanceof Error ? e.message : String(e));
     }
   };
-  const field = (k: keyof typeof v, label: string, flex = 1) => (
-    <View style={{ flex, gap: 2 }}>
+  // Only fields side by side share a row's width (flex); stacked ones keep their own
+  // height, so the keyboard can't squash them flat.
+  const field = (k: keyof typeof v, label: string, inRow = false) => (
+    <View style={[{ gap: 4 }, inRow && { flex: 1 }]}>
       <Text style={type.small}>{label}</Text>
       <TextInput value={v[k]} onChangeText={(x) => setV({ ...v, [k]: x })} keyboardType={k === 'name' ? 'default' : 'decimal-pad'} style={s.input} accessibilityLabel={label} autoFocus={k === 'kcal'} />
     </View>
   );
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <Pressable style={s.backdrop} onPress={onClose}>
         <Pressable style={s.sheet} onPress={() => {}}>
           <Text style={type.title}>Quick add to {MEAL_NAMES[meal]}</Text>
           {field('kcal', 'Calories')}
           <View style={{ flexDirection: 'row', gap: space(2) }}>
-            {field('protein', 'Protein g')}
-            {field('carbs', 'Carbs g')}
-            {field('fat', 'Fat g')}
+            {field('protein', 'Protein g', true)}
+            {field('carbs', 'Carbs g', true)}
+            {field('fat', 'Fat g', true)}
           </View>
           {field('name', 'Name (optional)')}
           {error && <Text style={{ color: color.over }}>{error}</Text>}
           <Pressable onPress={save} style={s.primary}><Text style={s.primaryText}>Add</Text></Pressable>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

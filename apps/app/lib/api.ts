@@ -68,13 +68,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   // Forkbell always answers in JSON. A web page here means something in front of the
   // server answered instead, most often a login page from the reverse proxy.
   if (!(res.headers.get('content-type') ?? '').includes('application/json')) {
-    const page = res.redirected || (res.headers.get('content-type') ?? '').includes('text/html');
-    throw new ApiError(
-      page
-        ? `${serverUrl} answered with a web page instead of Forkbell. If your reverse proxy puts a login (such as Authelia forward-auth) in front of Forkbell, turn it off for Forkbell: the app signs in with Authelia by itself.`
-        : `${serverUrl} answered ${res.status} without Forkbell data. Check the server address.`,
-      res.ok ? 418 : res.status,
-    );
+    throw new ApiError(await notForkbell(serverUrl, res), res.ok ? 418 : res.status);
   }
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new ApiError(data.error ?? `The server answered ${res.status}.`, res.status);
@@ -84,3 +78,22 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const post = <T>(path: string, body: unknown) => api<T>(path, { method: 'POST', body: JSON.stringify(body) });
 export const put = <T>(path: string, body: unknown) => api<T>(path, { method: 'PUT', body: JSON.stringify(body) });
 export const del = <T>(path: string) => api<T>(path, { method: 'DELETE' });
+
+/**
+ * Something other than Forkbell answered. Say what, from the status and the
+ * page: a timeout or a server that's down (Cloudflare 52x, Traefik 502/504)
+ * reads very differently from a login page in front of the app.
+ */
+async function notForkbell(serverUrl: string, res: Response): Promise<string> {
+  const text = await res.text().catch(() => '');
+  const title = /<title[^>]*>([^<]{1,120})<\/title>/i.exec(text)?.[1]?.trim() ?? '';
+  const cloudflare = /cloudflare/i.test(text) || res.headers.get('server') === 'cloudflare';
+  const what = `${res.status}${title ? `, “${title}”` : ''}`;
+  if (res.status === 524 || res.status === 504 || res.status === 522)
+    return `Forkbell’s server took too long to answer (${what}). Bell may still be thinking through a long question; try again, and if it keeps happening, check the server log.`;
+  if (res.status === 502 || res.status === 503 || res.status === 520 || res.status === 521 || res.status === 523)
+    return `Forkbell’s server isn’t answering right now (${what}). It may be restarting, or the container stopped: check it in Dockge and its log.`;
+  if (res.redirected || /authelia|sign in|log in|login/i.test(title + text.slice(0, 4000)))
+    return `${serverUrl} answered with a login page instead of Forkbell (${what}). If your reverse proxy puts a login (such as Authelia forward-auth) in front of Forkbell, turn it off for Forkbell: the app signs in by itself.`;
+  return `${serverUrl} answered with a web page instead of Forkbell (${what}${cloudflare ? ', from Cloudflare' : ''}). Check that the server is running and the address is right.`;
+}
