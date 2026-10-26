@@ -50,6 +50,11 @@ corrections that replace the old entry, optional web search for Bell, the
 muscle map opening exercises, scanning a barcode for a new food, Close on
 the form check, and a tidier exercise options sheet.
 
+0.18: amounts in servings, oz, cups and ml; entries remember how you said the
+amount and can be renamed; new foods follow the label (per serving); goal
+bars on amounts; Days logged as a month; Quick add fixed; Bell answers
+before Cloudflare gives up, and clearer errors when something else answers.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
