@@ -1,6 +1,6 @@
 import { createElement, useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getServerUrl } from '../lib/api';
 import { color, space, type } from '../lib/theme';
@@ -36,6 +36,8 @@ export function FormCheck({ exercise, onClose, onResult }: { exercise: string | 
   if (!exercise) return null;
   return (
     <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      {/* A modal is its own screen: it needs its own safe-area measurements, or the top sits under the clock. */}
+      <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: color.chalk }} edges={['top', 'bottom']}>
         <View style={s.head}>
           <Text style={type.title}>Form check</Text>
@@ -57,6 +59,7 @@ export function FormCheck({ exercise, onClose, onResult }: { exercise: string | 
           </View>
         )}
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }

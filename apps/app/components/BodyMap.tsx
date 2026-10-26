@@ -2,12 +2,11 @@ import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { muscleStatuses, todayLocal, trainNext, type Exercise, type MapMuscle, type MuscleStat, type MuscleState, type MuscleStatus } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
 import { BODY_PATHS, type BodyView } from '../lib/body-paths';
 import { useAuth } from '../lib/auth';
-import { HowToSheet } from './HowTo';
 import { Thumb } from './ExercisePicker';
 import { color, radius, space, type } from '../lib/theme';
 
@@ -91,7 +90,6 @@ export function BodyMap() {
   const [stats, setStats] = useState<MuscleStatus[] | null>(null);
   const [picked, setPicked] = useState<MapMuscle | null>(null);
   const [exercises, setExercises] = useState<(Exercise & { uses: number })[]>([]);
-  const [howTo, setHowTo] = useState<Exercise | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -151,7 +149,18 @@ export function BodyMap() {
                 <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={{ gap: space(2) }}>
                   {forMuscle.length === 0 && <Text style={type.small}>Nothing with the equipment you have. Change it in Settings → Training setup.</Text>}
                   {forMuscle.map((e) => (
-                    <Pressable key={e.id} onPress={() => setHowTo(e)} style={({ pressed }) => [s.exRow, pressed && { opacity: 0.6 }]} accessibilityHint="Opens how to do it">
+                    <Pressable
+                      key={e.id}
+                      onPress={() => {
+                        // iPhones can't show one sheet over another, so close this one and open the
+                        // exercise's own page: how to do it, your records and variations.
+                        setPicked(null);
+                        router.push({ pathname: '/exercise', params: { id: e.id } });
+                      }}
+                      style={({ pressed }) => [s.exRow, pressed && { opacity: 0.6 }]}
+                      accessibilityRole="button"
+                      accessibilityHint="Opens the exercise: how to do it, your records and variations"
+                    >
                       <Thumb e={e} size={44} />
                       <View style={{ flex: 1 }}>
                         <Text style={type.body}>{e.name}</Text>
@@ -166,7 +175,6 @@ export function BodyMap() {
           </Pressable>
         </Pressable>
       </Modal>
-      <HowToSheet exercise={howTo} onClose={() => setHowTo(null)} />
     </View>
   );
 }

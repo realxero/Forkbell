@@ -350,6 +350,9 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
   const [read, setRead] = useState<{ busy: boolean; basis?: LabelFood['basis']; note?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (v: string) => setForm({ ...form, [k]: v });
+  /** scanning the barcode with the camera, instead of typing it */
+  const [scanning, setScanning] = useState(false);
+  const [scanProblem, setScanProblem] = useState<string | null>(null);
   const num = (v: string) => Number(v.replace(',', '.') || 0);
   const per100 = { kcal: num(form.kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat), ...extra };
   const problem = form.kcal ? per100Problems(per100)[0] : null;
@@ -432,7 +435,28 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
       <View style={s.searchRow}>{field('kcal', 'Calories')}{field('protein', 'Protein g')}</View>
       <View style={s.searchRow}>{field('carbs', 'Carbs g')}{field('fat', 'Fat g')}</View>
       {field('serving', 'One serving in grams (optional)')}
-      {field('barcode', 'Barcode (optional, so it scans next time)', 'number-pad')}
+      <View style={{ gap: space(1) }}>
+        <Text style={type.small}>Barcode (optional, so it scans next time)</Text>
+        <View style={s.searchRow}>
+          <TextInput value={form.barcode} onChangeText={set('barcode')} keyboardType="number-pad" style={[s.input, { flex: 1 }]} accessibilityLabel="Barcode" placeholder="Scan it or type the number" placeholderTextColor={color.placeholder} />
+          <Pressable onPress={() => { setScanProblem(null); setScanning((v) => !v); }} style={s.scanButton} accessibilityRole="button" accessibilityLabel={scanning ? 'Stop scanning' : 'Scan the barcode with the camera'}>
+            <Text style={s.scanText}>{scanning ? 'Cancel' : 'Scan'}</Text>
+          </Pressable>
+        </View>
+        {scanning && (
+          <>
+            <BarcodeCamera
+              onCode={(code) => {
+                setForm((f) => ({ ...f, barcode: code }));
+                setScanning(false);
+              }}
+              onError={setScanProblem}
+            />
+            <Text style={[type.small, { textAlign: 'center' }]}>Hold the barcode inside the box.</Text>
+          </>
+        )}
+        {scanProblem && <Text style={s.error}>{scanProblem}</Text>}
+      </View>
       {(problem || codeProblem || error) && <Text style={s.error}>{error ?? problem ?? codeProblem}</Text>}
       <Pressable disabled={blocked} onPress={save} style={[s.button, blocked && { opacity: 0.4 }]}>
         <Text style={s.buttonText}>Save food</Text>

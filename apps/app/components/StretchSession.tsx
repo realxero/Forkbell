@@ -3,6 +3,7 @@
 // with a buzz to switch. Pause any time; Back and Next skip around.
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { picturePaths, stretchDose, stretchSeconds, type Stretch } from '@forkbell/shared';
 import { HowToFrames } from './HowTo';
@@ -75,7 +76,9 @@ export function StretchSession({ items, title, onClose }: { items: Stretch[] | n
   const total = items?.reduce((n, s) => n + stretchSeconds(s), 0) ?? 0;
   return (
     <Modal visible={Boolean(items?.length)} animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen">
-      <View style={s.screen}>
+      {/* A modal is its own screen: it needs its own safe-area measurements, or the top sits under the clock. */}
+      <SafeAreaProvider>
+      <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
         <View style={s.head}>
           <Text style={[type.title, { flex: 1 }]} numberOfLines={1}>{title}</Text>
           <Pressable onPress={onClose} hitSlop={12} style={s.close} accessibilityLabel="Close">
@@ -120,7 +123,8 @@ export function StretchSession({ items, title, onClose }: { items: Stretch[] | n
             <Text style={[type.small, { fontSize: 11 }]}>Steps and pictures: Free Exercise DB (public domain)</Text>
           </ScrollView>
         ) : null}
-      </View>
+      </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
