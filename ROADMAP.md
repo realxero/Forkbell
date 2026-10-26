@@ -42,6 +42,9 @@ workout's day and times, the screen staying on, a rest flash, swipe to
 delete or copy a set, reps per side, a before/after photo slider, and
 signing in another device with a one-time code.
 
+0.16: Bell can log water (you tap Add), and importing workouts from Strong,
+Hevy or FitNotes.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
