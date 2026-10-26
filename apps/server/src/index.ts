@@ -27,6 +27,7 @@ import { stretchRoutes } from './routes/stretches.ts';
 import { exportRoutes } from './routes/export.ts';
 import { shortcutRoutes } from './routes/shortcuts.ts';
 import { photoRoutes } from './routes/photos.ts';
+import { importRoutes } from './routes/import.ts';
 import { accountRoutes } from './routes/account.ts';
 import { BUILD } from '@forkbell/shared';
 
@@ -105,6 +106,8 @@ api.route('/stretches', stretchRoutes());
 api.route('/export', exportRoutes(database));
 // Progress photos: always yours only (not in SHAREABLE, and the database checks too).
 api.route('/photos', photoRoutes(database));
+// Importing workouts from Strong, Hevy or FitNotes (your own account only).
+api.route('/import', importRoutes(database));
 
 // Bell reads data through the same routes as the app, as the signed-in person.
 // This copy of the API is never served; only Bell's tools call it, in-process.

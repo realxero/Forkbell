@@ -266,6 +266,27 @@ the exercise's record, and the workouts CSV has a distance column.
 
 The first two can be turned off in Settings → Training setup.
 
+## Importing workouts from Strong, Hevy or FitNotes
+
+Settings → Export, import and backup → *Import workouts*. In the other app,
+export your workouts as a CSV file (it's in that app's settings, usually
+under Export), save it to Files, and pick it. Forkbell works out which app
+made it from its columns, then shows a preview: how many workouts and sets,
+the dates, which exercise names match ones Forkbell has (including the
+built-in library, so "Bench Press (Barbell)" finds the barbell bench press),
+and which will be added as your own. Nothing is saved until you tap Import.
+
+- Warm-up and drop sets, RPE, supersets (Hevy), cardio time and distance,
+  and notes come across.
+- Hevy and FitNotes say whether weights are in pounds or kilograms; Strong
+  doesn't, so pick the unit Strong was set to.
+- FitNotes has no times, so its workouts are put at noon for an hour.
+- Workouts already in Forkbell (same start time) are skipped, so importing
+  the same file again adds nothing. Up to 5,000 workouts at a time.
+
+If a file from one of these apps doesn't come through right, the columns may
+have changed: open an issue with the first few lines of the file.
+
 ## Past workouts
 
 *+ Log a past workout* at the bottom of Train is for one you did without

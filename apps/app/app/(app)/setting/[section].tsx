@@ -22,7 +22,7 @@ const SECTIONS = {
   bell: { title: 'Bell (AI)', body: BellSection },
   health: { title: 'Apple Health and Health Connect', body: HealthSection },
   phone: { title: 'This phone', body: PhoneSection },
-  data: { title: 'Export and backup', body: DataSection },
+  data: { title: 'Export, import and backup', body: DataSection },
   shortcuts: { title: 'Siri and Shortcuts', body: ShortcutsSection },
   security: { title: 'Sign-in and security', body: SecuritySection },
 } as const;

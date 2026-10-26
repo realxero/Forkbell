@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { File, Paths } from 'expo-file-system';
 import { authHeaders, getServerUrl } from '../lib/api';
 import { color, radius, space, type } from '../lib/theme';
+import { ImportWorkouts } from './ImportWorkouts';
 
 const EXPORTS = [
   { path: '/api/export', name: 'forkbell', ext: 'json', title: 'Everything (JSON)', detail: 'Every food, diary entry, workout, set, weigh-in, check-in and medication. For keeping, or moving to another app.' },
@@ -71,6 +72,7 @@ export function DataSection() {
         </Pressable>
       ))}
       {note && <Text style={{ color: color.over }}>{note}</Text>}
+      <ImportWorkouts />
       <Text style={[type.small, { marginTop: space(4) }]}>Backups</Text>
       <Text style={type.body}>
         Your server can back up the whole database every night by itself: add the backup service from Forkbell’s docker-compose.yml to your stack. It keeps two weeks of copies next to your other Forkbell data. docs/BACKUP.md in the repo has the steps, and how to restore one.

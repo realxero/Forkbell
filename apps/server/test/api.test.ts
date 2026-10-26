@@ -368,3 +368,37 @@ test('a past workout: logged finished, beside one going, and its day and times c
   await u.call('PUT', `/api/workouts/${going.id}`, { name: 'Workout', date: '2026-10-25', notes: null, finishedAt: '2026-10-20T00:00:00.000Z', exercises: [] });
   assert.equal((await u.call('GET', `/api/workouts/${going.id}`)).body.workout.finishedAt, null);
 });
+
+test('importing workouts from another app: preview, then once only, matching names', async () => {
+  const u = await newUser();
+  const set = (weightKg: number | null, reps: number | null, extra: Record<string, unknown> = {}) => ({ weightKg, reps, seconds: null, distanceM: null, rpe: null, warmup: false, drop: false, ...extra });
+  const workouts = [
+    {
+      date: '2026-03-15', startedAt: '2026-03-16T01:02:00.000Z', finishedAt: '2026-03-16T02:07:00.000Z', name: 'Push Day', notes: null,
+      exercises: [
+        { name: 'Bench Press (Barbell)', category: null, superset: null, sets: [set(40, 10, { warmup: true }), set(84, 8), set(60, 12, { drop: true })] },
+        { name: 'Zercher Carry Thing', category: null, superset: null, sets: [set(50, 5)] },
+      ],
+    },
+    { date: '2026-03-17', startedAt: '2026-03-17T14:00:00.000Z', finishedAt: '2026-03-17T14:30:00.000Z', name: 'Run', notes: null, exercises: [{ name: 'Morning Jog', category: 'Cardio', superset: null, sets: [set(null, null, { seconds: 1800, distanceM: 5000 })] }] },
+  ];
+  const preview = await u.call('POST', '/api/import/workouts', { format: 'strong', workouts, dryRun: true });
+  assert.equal(preview.status, 200, preview.text);
+  assert.equal(preview.body.workouts, 2);
+  assert.equal(preview.body.sets, 5);
+  assert.ok(preview.body.matched.some((m: { from: string }) => m.from === 'Bench Press (Barbell)'), JSON.stringify(preview.body.matched));
+  assert.deepEqual(preview.body.added.sort(), ['Morning Jog', 'Zercher Carry Thing']);
+  assert.equal((await u.call('GET', '/api/workouts?limit=10')).body.workouts.length, 0, 'a preview saves nothing');
+  const done = await u.call('POST', '/api/import/workouts', { format: 'strong', workouts, dryRun: false });
+  assert.equal(done.status, 200, done.text);
+  const list = (await u.call('GET', '/api/workouts?limit=10')).body.workouts as { id: string; name: string; finishedAt: string | null }[];
+  assert.deepEqual(list.map((w) => w.name).sort(), ['Push Day', 'Run']);
+  assert.ok(list.every((w) => w.finishedAt), 'imported finished');
+  const push = (await u.call('GET', `/api/workouts/${list.find((w) => w.name === 'Push Day')!.id}`)).body.workout;
+  assert.deepEqual(push.exercises[0].sets.map((s: { warmup: boolean; drop: boolean; done: boolean }) => [s.warmup, s.drop, s.done]), [[true, false, true], [false, false, true], [false, true, true]]);
+  const mine = (await u.call('GET', '/api/exercises')).body.exercises as { name: string; kind: string }[];
+  assert.equal(mine.find((e) => e.name === 'Morning Jog')?.kind, 'cardio', 'a new exercise gets its kind from its sets');
+  const again = await u.call('POST', '/api/import/workouts', { format: 'strong', workouts, dryRun: false });
+  assert.equal(again.body.workouts, 0);
+  assert.equal(again.body.skipped, 2, 'the same file twice adds nothing');
+});

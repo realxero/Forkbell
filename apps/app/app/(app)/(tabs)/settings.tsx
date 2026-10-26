@@ -52,7 +52,7 @@ export default function Settings() {
     },
     {
       title: 'Your data',
-      rows: [{ icon: 'download-outline', tint: '#5B6B73', title: 'Export and backup', detail: 'Everything as JSON, diary and workouts as CSV', href: '/setting/data' }],
+      rows: [{ icon: 'download-outline', tint: '#5B6B73', title: 'Export, import and backup', detail: 'Export everything; import workouts from Strong, Hevy or FitNotes', href: '/setting/data' }],
     },
     ...(remindersSupported || pictureCacheSupported
       ? [{ title: 'This phone', rows: [{ icon: 'notifications-outline' as IconName, tint: '#D99A00', title: 'Reminders and offline pictures', detail: 'Notifications, saved exercise pictures', href: '/setting/phone' as Href }] }]
