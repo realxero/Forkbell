@@ -45,6 +45,11 @@ signing in another device with a one-time code.
 0.16: Bell can log water (you tap Add), and importing workouts from Strong,
 Hevy or FitNotes.
 
+0.17: fixes for the workout clock (NaN:NaN) and the web wake lock, Bell
+corrections that replace the old entry, optional web search for Bell, the
+muscle map opening exercises, scanning a barcode for a new food, Close on
+the form check, and a tidier exercise options sheet.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
