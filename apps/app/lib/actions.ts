@@ -159,6 +159,7 @@ export async function startWorkout(date: string, routineId?: string): Promise<Wo
         repMax: x.repMax,
         sets: Array.from({ length: x.sets }, () => ({ weightKg: null, reps: null, seconds: null, rpe: null, warmup: false, done: false })),
         previous: [],
+        superset: x.superset ?? null,
       })),
     };
     await saveWorkout(workout);

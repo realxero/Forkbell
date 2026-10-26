@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterSet, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets } from './supersets.ts';
+import { afterSet, leaveSuperset, linkWithNext, nextSetKind, splitAfter, supersetLetter, supersetRun, tidySupersets } from './supersets.ts';
 
 const set = (done = false, extra: { warmup?: boolean; drop?: boolean } = {}) => ({ weightKg: 50, reps: 8, seconds: null, rpe: null, warmup: false, done, ...extra });
 const ex = (rest: number, sets: ReturnType<typeof set>[], superset: number | null = null) => ({ restSeconds: rest, sets, superset });
@@ -49,4 +49,10 @@ test('tapping the set number cycles working, W, D', () => {
   assert.deepEqual(nextSetKind({ warmup: true }, false), { warmup: false, drop: true });
   assert.deepEqual(nextSetKind({ warmup: false, drop: true }, false), { warmup: false, drop: false });
   assert.deepEqual(nextSetKind({ warmup: true }, true), { warmup: false, drop: false }, 'the first set has nothing to drop from');
+});
+
+test('splitting a superset between two exercises', () => {
+  assert.deepEqual(splitAfter([1, 1, 1, 1], 1), [1, 1, 2, 2], 'a circuit of four splits into two supersets');
+  assert.deepEqual(splitAfter([1, 1, 1], 0), [null, 1, 1], 'one on its own is no superset');
+  assert.deepEqual(splitAfter([1, 1, null], 1), [1, 1, null], 'nothing to split');
 });

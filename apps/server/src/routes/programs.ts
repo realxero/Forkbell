@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, desc, eq, inArray, max, ne } from 'drizzle-orm';
 import { exercises, programs, routineExercises, routines, type connect, type Tx } from '@forkbell/db';
-import { STARTER_PROGRAMS, saveRoutineSchema, type Program } from '@forkbell/shared';
+import { STARTER_PROGRAMS, saveRoutineSchema, tidySupersets, type Program } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 import { isMissingExercise, loadRoutines, nextRoutineId } from '../training.ts';
@@ -115,8 +115,9 @@ export function routineRoutes({ asUser }: ReturnType<typeof connect>) {
         const updated = await tx.update(routines).set({ name: parsed.data.name }).where(eq(routines.id, id)).returning({ id: routines.id });
         if (!updated.length) return false;
         await tx.delete(routineExercises).where(eq(routineExercises.routineId, id));
+        const groups = tidySupersets(parsed.data.exercises.map((e) => e.superset ?? null));
         if (parsed.data.exercises.length)
-          await tx.insert(routineExercises).values(parsed.data.exercises.map((e, position) => ({ routineId: id, position, ...e }) as typeof routineExercises.$inferInsert));
+          await tx.insert(routineExercises).values(parsed.data.exercises.map((e, position) => ({ routineId: id, position, ...e, superset: groups[position] ?? null }) as typeof routineExercises.$inferInsert));
         return true;
       });
       return ok ? c.json({ ok: true }) : c.json({ error: 'That day was not found.' }, 404);

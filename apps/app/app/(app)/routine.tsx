@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Program, RoutineExercise } from '@forkbell/shared';
+import { linkWithNext, splitAfter, supersetLetter, supersetRun, tidySupersets, type Program, type RoutineExercise } from '@forkbell/shared';
 import { cachedGet } from '../../lib/sync';
 import { api, del } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
@@ -32,14 +32,22 @@ export default function RoutineEditor() {
   }, [id, programId]);
 
   const change = (i: number, patch: Partial<RoutineExercise>) => setItems((list) => list!.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  /** Superset numbers after a link, a split, a move or a removal: neighbours only, renumbered. */
+  const regroup = (list: RoutineExercise[], groups?: (number | null)[]) => {
+    const g = groups ?? tidySupersets(list.map((x) => x.superset ?? null));
+    return list.map((x, j) => ({ ...x, superset: g[j] ?? null }));
+  };
   const move = (i: number, by: number) =>
     setItems((list) => {
       const l = [...list!];
       const j = i + by;
       if (j < 0 || j >= l.length) return l;
       [l[i], l[j]] = [l[j]!, l[i]!];
-      return l;
+      return regroup(l);
     });
+  const groupsOf = (list: RoutineExercise[]) => list.map((x) => x.superset ?? null);
+  const link = (i: number) => setItems((l) => regroup(l!, linkWithNext(groupsOf(l!), i)));
+  const split = (i: number) => setItems((l) => regroup(l!, splitAfter(groupsOf(l!), i)));
 
   const save = async () => {
     setSaving(true);
@@ -49,7 +57,7 @@ export default function RoutineEditor() {
         method: 'PUT',
         body: JSON.stringify({
           name,
-          exercises: items!.map((x) => ({ exerciseId: x.exercise.id, sets: x.sets, repMin: x.repMin, repMax: Math.max(x.repMin, x.repMax), restSeconds: x.restSeconds })),
+          exercises: items!.map((x) => ({ exerciseId: x.exercise.id, sets: x.sets, repMin: x.repMin, repMax: Math.max(x.repMin, x.repMax), restSeconds: x.restSeconds, superset: x.superset ?? null })),
         }),
       });
       router.back();
@@ -83,24 +91,44 @@ export default function RoutineEditor() {
           <>
             <TextInput value={name} onChangeText={setName} style={[s.input, type.title]} accessibilityLabel="Day name" />
             {items.length === 0 && <Text style={type.body}>No exercises yet.</Text>}
-            {items.map((x, i) => (
-              <View key={`${x.exercise.id}-${i}`} style={s.card}>
+            {items.map((x, i) => {
+              const run = supersetRun(groupsOf(items), i);
+              const inGroup = run.length > 1;
+              const joinedToNext = inGroup && run.includes(i + 1);
+              return (
+              <View key={`${x.exercise.id}-${i}`} style={{ gap: space(2) }}>
+              <View style={[s.card, inGroup && s.grouped]}>
+                {inGroup && (
+                  <Text style={s.groupTag}>
+                    {run.length > 2 ? 'Circuit' : 'Superset'} {supersetLetter(x.superset ?? 1)} · {run.indexOf(i) + 1} of {run.length}
+                  </Text>
+                )}
                 <View style={s.row}>
                   <Text style={[type.body, { fontWeight: '700', flex: 1 }]}>{x.exercise.name}</Text>
                   <Pressable onPress={() => move(i, -1)} hitSlop={6}><Text style={s.icon}>↑</Text></Pressable>
                   <Pressable onPress={() => move(i, 1)} hitSlop={6}><Text style={s.icon}>↓</Text></Pressable>
-                  <Pressable onPress={() => setItems((l) => l!.filter((_, j) => j !== i))} hitSlop={6}><Text style={[s.icon, { color: color.over }]}>✕</Text></Pressable>
+                  <Pressable onPress={() => setItems((l) => regroup(l!.filter((_, j) => j !== i)))} hitSlop={6}><Text style={[s.icon, { color: color.over }]}>✕</Text></Pressable>
                 </View>
                 <Stepper label="Sets" value={x.sets} min={1} max={20} onChange={(v) => change(i, { sets: v })} />
-                {x.exercise.kind !== 'time' && (
+                {x.exercise.kind !== 'time' && x.exercise.kind !== 'cardio' && (
                   <>
                     <Stepper label="Reps from" value={x.repMin} min={1} max={100} onChange={(v) => change(i, { repMin: v, repMax: Math.max(v, x.repMax) })} />
                     <Stepper label="Reps to" value={x.repMax} min={x.repMin} max={100} onChange={(v) => change(i, { repMax: v })} />
                   </>
                 )}
-                <Stepper label="Rest" value={x.restSeconds} min={0} max={900} step={15} format={formatDuration} onChange={(v) => change(i, { restSeconds: v })} />
+                <Stepper label={joinedToNext ? 'Rest (after the round)' : 'Rest'} value={x.restSeconds} min={0} max={900} step={15} format={formatDuration} onChange={(v) => change(i, { restSeconds: v })} />
               </View>
-            ))}
+              {i < items.length - 1 && (
+                <Pressable onPress={() => (joinedToNext ? split(i) : link(i))} style={s.linkRow} accessibilityRole="button">
+                  <Text style={[s.small, joinedToNext && { color: color.ironSoft }]}>{joinedToNext ? 'Split the superset here' : '⤓ Superset with the next exercise'}</Text>
+                </Pressable>
+              )}
+              </View>
+              );
+            })}
+            {items.some((x) => x.superset) && (
+              <Text style={type.small}>In a superset you go straight from one exercise to the next, then rest once after the round, for the longest rest in the group.</Text>
+            )}
             <Pressable onPress={() => setPicker(true)} style={s.add}>
               <Text style={s.link}>+ Add exercise</Text>
             </Pressable>
@@ -148,5 +176,9 @@ const s = StyleSheet.create({
   icon: { fontSize: 18, color: color.ironSoft, paddingHorizontal: space(1) },
   step: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontSize: 20, color: color.iron, fontWeight: '700' },
+  grouped: { borderLeftWidth: 4, borderLeftColor: color.accent },
+  groupTag: { color: color.accent, fontWeight: '800', fontSize: 12 },
+  linkRow: { alignSelf: 'center', paddingVertical: space(1), minHeight: 32, justifyContent: 'center' },
+  small: { color: color.accent, fontWeight: '700', fontSize: 14 },
   add: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },
 });

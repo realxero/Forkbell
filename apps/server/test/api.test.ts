@@ -325,3 +325,20 @@ test('water: daily totals for a range, for Apple Health', async () => {
   assert.deepEqual(r.body.days, [{ date: '2026-10-20', ml: 750 }, { date: '2026-10-22', ml: 1000 }]);
   assert.equal((await u.call('GET', '/api/wellbeing/water?from=2026-01-01&to=2026-10-25')).status, 400, 'not a whole year at once');
 });
+
+test('a program day keeps its supersets, and a workout started from it has them', async () => {
+  const u = await newUser();
+  const list = (await u.call('GET', '/api/exercises')).body.exercises as { id: string; kind: string }[];
+  const [a, b, c] = list.filter((x) => x.kind === 'weight');
+  const program = (await u.call('POST', '/api/programs', { name: 'Arms' })).body.id;
+  const day = (await u.call('POST', `/api/programs/${program}/routines`, { name: 'Arm day' })).body.id;
+  const item = (exerciseId: string, superset: number | null) => ({ exerciseId, sets: 3, repMin: 8, repMax: 12, restSeconds: 60, superset });
+  const saved = await u.call('PUT', `/api/routines/${day}`, { name: 'Arm day', exercises: [item(a!.id, 4), item(b!.id, 4), item(c!.id, 9)] });
+  assert.equal(saved.status, 200, saved.text);
+  const routine = (await u.call('GET', '/api/programs')).body.programs.find((p: { id: string }) => p.id === program).routines[0];
+  assert.deepEqual(routine.exercises.map((x: { superset: number | null }) => x.superset), [1, 1, null], 'renumbered; one alone is no superset');
+  const w = (await u.call('POST', '/api/workouts', { date: '2026-10-25', routineId: day })).body.workout;
+  assert.deepEqual(w.exercises.map((x: { superset: number | null }) => x.superset), [1, 1, null], 'the workout starts with the superset');
+  const old = await u.call('PUT', `/api/routines/${day}`, { name: 'Arm day', exercises: [{ exerciseId: a!.id, sets: 3, repMin: 8, repMax: 12, restSeconds: 60 }] });
+  assert.equal(old.status, 200, 'an older app that sends no supersets still saves');
+});

@@ -202,7 +202,7 @@ export async function loadRoutines(tx: Tx, programIds: string[]): Promise<Map<st
       position: r.position,
       exercises: items
         .filter((i) => i.re.routineId === r.id)
-        .map(({ re, ex }) => ({ exercise: toExercise(ex), sets: re.sets, repMin: re.repMin, repMax: re.repMax, restSeconds: re.restSeconds })),
+        .map(({ re, ex }) => ({ exercise: toExercise(ex), sets: re.sets, repMin: re.repMin, repMax: re.repMax, restSeconds: re.restSeconds, superset: re.superset })),
     });
     out.set(r.programId, list);
   }

@@ -174,7 +174,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
             warmup: false,
             done: false,
           }));
-          return { exerciseId: ex.id, restSeconds: re.restSeconds, targetSets: re.sets, repMin: re.repMin, repMax: re.repMax, sets };
+          return { exerciseId: ex.id, restSeconds: re.restSeconds, targetSets: re.sets, repMin: re.repMin, repMax: re.repMax, sets, superset: re.superset };
         });
       }
       const [w] = await tx

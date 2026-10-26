@@ -98,3 +98,11 @@ export function nextSetKind(set: { warmup: boolean; drop?: boolean }, isFirst: b
   if (set.warmup) return isFirst ? { warmup: false, drop: false } : { warmup: false, drop: true };
   return { warmup: true, drop: false };
 }
+
+/** "Split the superset here": the exercises after i in its superset become their own (or none, if just one). */
+export function splitAfter(groups: Group[], i: number): (number | null)[] {
+  const run = supersetRun(groups, i);
+  if (!run.includes(i + 1)) return tidySupersets(groups);
+  const fresh = Math.max(0, ...groups.map((x) => x ?? 0)) + 1;
+  return tidySupersets(groups.map((g, j) => (j > i && run.includes(j) ? fresh : g)));
+}

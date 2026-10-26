@@ -108,6 +108,8 @@ export const routineExercises = pgTable('routine_exercises', {
   repMin: integer('rep_min').notNull(),
   repMax: integer('rep_max').notNull(),
   restSeconds: integer('rest_seconds').notNull(),
+  /** exercises with the same number are a superset or circuit */
+  superset: integer('superset'),
 });
 
 export const workouts = pgTable('workouts', {

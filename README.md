@@ -253,7 +253,7 @@ the exercise's record, and the workouts CSV has a distance column.
 
 ## Supersets, circuits, drop sets and plates
 
-- **Supersets and circuits.** An exercise's ⋯ menu has *Superset with the next exercise*. Do it again on the next one for a circuit of three or more. You go straight from one exercise to the next with no rest, then rest once after the last, for the longest rest time in the group. Moving an exercise out of the group, or *Leave the superset*, takes it out.
+- **Supersets and circuits.** An exercise's ⋯ menu has *Superset with the next exercise*. Do it again on the next one for a circuit of three or more. You go straight from one exercise to the next with no rest, then rest once after the last, for the longest rest time in the group. Moving an exercise out of the group, or *Leave the superset*, takes it out. Supersets can be saved in a program's day too: in the day's editor, *Superset with the next exercise* between two cards (and *Split the superset here* to undo it), so every workout started from that day begins with them.
 - **Drop sets.** Tap a set's number to cycle it: working, warm-up (W), drop set (D). A drop set starts straight after the set before it, with no rest. Drop sets count toward your volume but not toward records or next time's targets, since they're lighter on purpose.
 - **Plates.** Barbell exercises and plate-loaded machines have a *Plates* button that draws what to load on each side. Pick the bar (45, 35 or 15 lb; 20, 15 or 10 kg; or EZ, trap bar, machines, your own), set the plates your gym has, and it says when a weight can't be loaded exactly and offers the nearest ones.
 

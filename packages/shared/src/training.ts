@@ -103,6 +103,8 @@ export interface RoutineExercise {
   repMin: number;
   repMax: number;
   restSeconds: number;
+  /** exercises with the same number are a superset or circuit */
+  superset?: number | null;
 }
 
 export interface Routine {
@@ -358,6 +360,7 @@ export const saveRoutineSchema = z.object({
           repMin: z.number().int().min(1).max(100),
           repMax: z.number().int().min(1).max(100),
           restSeconds: z.number().int().min(0).max(900),
+          superset: z.number().int().min(1).max(20).nullish(),
         })
         .refine((e) => e.repMax >= e.repMin, 'The top of the rep range is below the bottom.'),
     )
