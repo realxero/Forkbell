@@ -165,6 +165,29 @@ Toolkit; the CPU image works too, just slower) and set
 through your Forkbell server, so the speech server never needs to be on the
 internet. If it's off, Bell falls back to the phone's voice.
 
+
+**Corrections.** Tell Bell the real numbers for something already logged
+("Peet's says it's 470") and it offers the corrected item marked *Replaces
+… when you tap Add*; the old entry is removed when you add the new one, so
+you don't end up with both. A calorie count you give is used exactly. Bell
+is told never to say it'll change something unless it does it in that reply.
+
+**Web search (optional).** Set `SEARCH_URL` to a SearXNG instance (with the
+JSON format turned on: `search: formats: [html, json]` in its
+`settings.yml`) and Bell searches for a restaurant or chain item's published
+nutrition before estimating, and says where the numbers came from. Only
+Bell's search words leave your server, to your SearXNG. A small one in the
+same Dockge stack:
+
+```yaml
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    volumes:
+      - ./data/searxng:/etc/searxng
+```
+
+then `SEARCH_URL=http://searxng:8080` for the app.
 ## Offline
 
 The web app keeps its own files with a service worker, and each device keeps a

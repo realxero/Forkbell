@@ -85,6 +85,14 @@ export async function deleteEntry(entry: DiaryEntry) {
   return send('DELETE', `/api/diary/${entry.id}`, undefined, { label: `Remove ${entry.food.name}` });
 }
 
+/** Remove an entry by its id (Bell's corrections), even if this phone hasn't loaded that day. */
+export async function removeEntryById(id: string, date: string) {
+  const entry = findCachedEntry(id);
+  if (entry) return deleteEntry(entry);
+  updateCache<DiaryDay>(`/api/diary/${date}`, (day) => day && withEntries(day, day.entries.filter((e) => e.id !== id)));
+  return send('DELETE', `/api/diary/${id}`, undefined, { label: 'Remove the old entry' });
+}
+
 /** An entry from any day on the device, for opening it offline. */
 export function findCachedEntry(id: string): DiaryEntry | null {
   for (const path of cachedPaths('/api/diary/')) {

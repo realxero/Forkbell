@@ -53,6 +53,8 @@ export const env = {
    * Kokoro-FastAPI on your network (http://192.168.1.20:8880/v1). Off when empty;
    * the app then uses the phone's own voices.
    */
+  /** a SearXNG instance Bell can search the web with (restaurant and chain nutrition); off when empty */
+  searchUrl: (process.env.SEARCH_URL || '').replace(/\/$/, ''),
   tts: {
     baseUrl: (process.env.TTS_BASE_URL || '').replace(/\/$/, ''),
     apiKey: process.env.TTS_API_KEY || '',

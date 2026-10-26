@@ -7,7 +7,7 @@ import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bellHistory, bellMood, forAmount, imageLinkIn, JUST_ESTIMATE, mealForTime, todayLocal, type BellMood, type BellQuestion, type BellReply, type FoodProposal, type Meal } from '@forkbell/shared';
 import { api, ApiError, post } from '../../../lib/api';
-import { addEntry } from '../../../lib/actions';
+import { addEntry, removeEntryById } from '../../../lib/actions';
 import { useAuth } from '../../../lib/auth';
 import { readCache, writeCache } from '../../../lib/sync';
 import { clipboardHasImage, imageFromLink, imageFromPasteEvent, pasteImage, pickImage, type ImageResult } from '../../../lib/images';
@@ -386,6 +386,8 @@ export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; ad
           grams: p.grams,
           food: p.food ?? { name: p.name, brand: p.brand, source: 'custom', sourceId: null, per100: p.per100!, servingGrams: null, servingLabel: null, barcode: null, portions: [] },
         });
+        // A correction: the entry it replaces goes once the new one is in.
+        if (p.replaces) await removeEntryById(p.replaces.id, p.date);
       }
       onAdded();
     } catch (e) {
@@ -422,6 +424,11 @@ export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; ad
                   {p.estimate ? ' · estimate' : p.food ? ' · from your foods' : ''}
                 </Text>
                 {p.note && <Text style={type.small}>{p.note}</Text>}
+                {p.replaces && (
+                  <Text style={[type.small, { fontWeight: '700' }]}>
+                    Replaces {p.replaces.name} ({p.replaces.kcal} kcal){added ? '' : ' when you tap Add'}
+                  </Text>
+                )}
                 {p.warnings?.length > 0 && <Text style={[type.small, { color: color.warnText, fontWeight: '700' }]}>⚠ {p.warnings.join(' · ')} (by name)</Text>}
               </View>
             </View>

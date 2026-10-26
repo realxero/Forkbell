@@ -3,6 +3,7 @@
 // it wants to log comes back as proposals the person reviews and confirms,
 // and so does water.
 import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences } from '@forkbell/shared';
+import { env } from '../env.ts';
 import type { ToolSpec } from './providers.ts';
 
 export type Internal = (path: string) => Promise<unknown>;
@@ -71,6 +72,10 @@ export const TOOLS: ToolSpec[] = [
               note: { type: 'string', description: 'short note shown on the card, e.g. "assumed one medium bowl"' },
               expected_kcal: { type: 'number', description: 'calories for this amount when a label, photo or the person stated them ("150 per bottle"); the item is refused if the numbers are more than 20% off' },
               amount_confirmed: { type: 'boolean', description: 'only when exactly 100 g really is what they had (they said so, it is their usual amount, or one serving is 100 g)' },
+              replaces_entry_id: {
+                type: 'string',
+                description: 'to correct something already logged (wrong calories, amount or food): the entry id from get_day. The card says it replaces that entry, and the old one is removed when they tap Add. Never propose a correction without it, or they get two.',
+              },
             },
             required: ['name', 'grams'],
           },
@@ -96,7 +101,31 @@ export const ASK_TOOL: ToolSpec = {
   },
 };
 
-export const toolsFor = (prefs: Preferences) => (prefs.bell.askWhenUnsure ? [...TOOLS, ASK_TOOL] : TOOLS);
+/** Searching the web, when the server has a SearXNG instance to search with (SEARCH_URL). */
+export const SEARCH_TOOL: ToolSpec = {
+  name: 'search_web',
+  description:
+    "Search the web. Use it for a restaurant, café or chain item before estimating (\"Peet's croissant grilled cheese calories\"), and for packaged foods not in search_foods. Results are titles, links and short snippets; use numbers only when a snippet states them for that exact item, and say where they came from.",
+  parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+};
+
+export const toolsFor = (prefs: Preferences) => [...TOOLS, ...(prefs.bell.askWhenUnsure ? [ASK_TOOL] : []), ...(env.searchUrl ? [SEARCH_TOOL] : [])];
+
+/** Top results from SearXNG: title, link and snippet. Only the search words leave the server. */
+export async function searchWeb(query: string): Promise<string> {
+  if (!env.searchUrl) return 'Web search is not set up on this server.';
+  const q = query.trim().slice(0, 200);
+  if (!q) return 'Give some search words.';
+  try {
+    const r = await fetch(`${env.searchUrl}/search?q=${encodeURIComponent(q)}&format=json&safesearch=1`, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/json' } });
+    if (!r.ok) return `Search failed (${r.status}). If this keeps happening, SearXNG may need the JSON format turned on.`;
+    const data = (await r.json()) as { results?: { title?: string; url?: string; content?: string }[] };
+    const top = (data.results ?? []).slice(0, 6).map((x) => ({ title: (x.title ?? '').slice(0, 120), url: (x.url ?? '').slice(0, 200), snippet: (x.content ?? '').replace(/\s+/g, ' ').slice(0, 320) }));
+    return top.length ? JSON.stringify(top) : 'No results.';
+  } catch (e) {
+    return `Search failed: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
 
 const trimFood = (f: Food & { id?: string }) => ({
   ...(f.id ? { id: f.id } : {}),
@@ -125,6 +154,8 @@ export interface ToolContext {
 export async function runTool(name: string, args: unknown, ctx: ToolContext): Promise<string> {
   const a = (args ?? {}) as Record<string, string>;
   switch (name) {
+    case 'search_web':
+      return searchWeb(String(a.query ?? ''));
     case 'propose_water': {
       const ml = parseWater(String(a.amount ?? ''), ctx.unit ?? 'lb');
       if (!ml) return 'That amount could not be read. Give a number and a unit, like "16.9 oz" or "500 ml", up to 5 L.';
@@ -137,7 +168,7 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
         date: day.date,
         goals: day.goals,
         totals: day.totals,
-        entries: day.entries.map((e) => ({ meal: e.meal, name: e.food.name, brand: e.food.brand, grams: e.grams, kcal: Math.round((e.food.per100.kcal * e.grams) / 100) })),
+        entries: day.entries.map((e) => ({ id: e.id, meal: e.meal, name: e.food.name, brand: e.food.brand, grams: e.grams, kcal: Math.round((e.food.per100.kcal * e.grams) / 100) })),
       });
     }
     case 'get_progress': {
@@ -208,6 +239,7 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
           }
         }
         // A stated calorie count must match the amount and numbers, within 20%.
+        let per100 = food ? null : item.per100!;
         if (item.expected_kcal) {
           const p100 = food?.per100 ?? item.per100!;
           const kcal = (p100.kcal * item.grams) / 100;
@@ -216,6 +248,20 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
             problems.push(`${item.name}: ${item.grams} g is ${Math.round(kcal)} kcal, but ${item.expected_kcal} kcal was stated. Use about ${grams} g, or the label's own numbers.`);
             continue;
           }
+          // Close enough to be the same food: use the stated number exactly (470, not 469).
+          const grams = Math.round(item.grams * 10) / 10;
+          if (per100) per100 = { ...per100, kcal: Math.round(((item.expected_kcal * 100) / grams) * 100) / 100 };
+        }
+        // A correction names the entry it replaces, so the old one goes when they tap Add.
+        let replaces: FoodProposal['replaces'] = null;
+        if (item.replaces_entry_id) {
+          const day = (await ctx.call(`/api/diary/${encodeURIComponent(item.date ?? ctx.today)}`)) as DiaryDay;
+          const old = day.entries.find((e) => e.id === item.replaces_entry_id);
+          if (!old) {
+            problems.push(`${item.name}: replaces_entry_id isn't an entry on ${item.date ?? ctx.today}; call get_day for that day and use its id.`);
+            continue;
+          }
+          replaces = { id: old.id, name: old.food.name, kcal: Math.round((old.food.per100.kcal * old.grams) / 100) };
         }
         ctx.proposals.push({
           name: food?.name ?? item.name,
@@ -224,10 +270,11 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
           meal: item.meal ?? ctx.meal,
           date: item.date ?? ctx.today,
           food,
-          per100: food ? null : item.per100!,
+          per100,
           estimate: food ? false : item.estimate !== false,
           note: item.note ?? null,
           warnings: checkFood(`${food?.name ?? item.name} ${food?.brand ?? item.brand ?? ''}`, ctx.prefs).reasons.filter((r) => !r.startsWith('you dislike') && !r.includes('never-suggest')),
+          replaces,
         });
       }
       const ok = parsed.data.items.length - problems.length;
@@ -280,6 +327,10 @@ ${opts.prefs.bell.askWhenUnsure
     ? `- If an unseen detail would change calories a lot (portion, oil, sauce, which size), ask ONE short question with ask_question instead of guessing. Log anything that is already clear in the same turn. If they answer "${JUST_ESTIMATE}", make a sensible assumption and say it in the note. Don't ask about small things (a splash of milk, a pinch of salt), and never ask twice about the same item.`
     : '- If an unseen detail would change calories a lot (oil, sauce, portion), make a sensible assumption, say it in the note, and invite a correction.'}
 - grams is what they ate, never 100 just because foods are stored per 100 g. Use what they said, what the photo shows, their usual amount, or a typical portion.
+- Never say you'll do something ("let me adjust that", "I'll update it") unless you call the tool for it in this same reply. If you can't do it, say so plainly.
+- To fix something already logged (they give the real calories, amount or food): call get_day, then propose the corrected item with replaces_entry_id set to the old entry's id, in this reply. The card shows it replaces the old one, which is removed when they tap Add.
+- When they give a calorie count from a label, menu or the restaurant, set expected_kcal to it and estimate=false: their number wins over any database.
+${env.searchUrl ? "- For a restaurant, café or chain item, search_web for its published nutrition before estimating, and say where the numbers came from. If nothing exact turns up, estimate and say so." : "- You can't search the web here. For a restaurant or chain item, estimate and say it's an estimate; their posted numbers beat yours, so invite them to share them. (Whoever runs the server can turn on web search with SEARCH_URL.)"}
 - Keep replies short and plain. Use their units.
 
 Safety:

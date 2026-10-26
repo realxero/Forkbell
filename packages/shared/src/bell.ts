@@ -18,6 +18,8 @@ export interface FoodProposal {
   note: string | null;
   /** name-based allergy or diet flags, e.g. "may contain milk" */
   warnings: string[];
+  /** a diary entry this corrects: it's removed when the person taps Add */
+  replaces?: { id: string; name: string; kcal: number } | null;
 }
 
 export const bellChatSchema = z.object({
@@ -92,6 +94,8 @@ export const proposeArgsSchema = z.object({
         expected_kcal: z.number().positive().max(20000).optional(),
         /** set when exactly 100 g really is what they had (their usual, or the serving size) */
         amount_confirmed: z.boolean().optional(),
+        /** a diary entry (id from get_day) this corrects; removed when they tap Add */
+        replaces_entry_id: z.string().uuid().optional(),
       }),
     )
     .min(1)
