@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
 import { z } from 'zod';
-import { BIG_JUMP, KOKORO_VOICES, TTS_VOICE, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
+import { BIG_JUMP, supersetLetter, KOKORO_VOICES, TTS_VOICE, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
 import { aiConfigFor } from '../bell/config.ts';
@@ -338,7 +338,7 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
 export function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string): string {
   const show = (kg: number | null) => (kg === null ? 'bodyweight' : `${Math.round((unit === 'lb' ? kg * 2.20462 : kg) * 2) / 2} ${unit}`);
   const set = (x: Workout['exercises'][number]['sets'][number]) =>
-    `${x.warmup ? 'warm-up ' : ''}${x.seconds ? `${x.seconds} s` : `${show(x.weightKg)} × ${x.reps ?? '?'}`}${x.rpe ? ` @ RPE ${x.rpe}` : ''}`;
+    `${x.warmup ? 'warm-up ' : x.drop ? 'drop set ' : ''}${x.seconds ? `${x.seconds} s` : `${show(x.weightKg)} × ${x.reps ?? '?'}`}${x.rpe ? ` @ RPE ${x.rpe}` : ''}`;
   const current = w.exercises.findIndex((e) => e.sets.some((x) => !x.done));
   // When the smallest jump is a big share of the weight (5 lb on a 15 lb raise), say so.
   const bigJump = (e: Workout['exercises'][number]) => {
@@ -356,7 +356,7 @@ export function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string
     const done = e.sets.filter((x) => x.done);
     const target = e.repMin ? ` (target ${e.targetSets ?? e.sets.length} sets of ${e.repMin}${e.repMax && e.repMax !== e.repMin ? `-${e.repMax}` : ''})` : '';
     return [
-      `${i === current ? '-> NOW: ' : '- '}${e.exercise.name} [${e.exercise.muscle}, ${e.exercise.equipment}]${target}, rest ${e.restSeconds} s`,
+      `${i === current ? '-> NOW: ' : '- '}${e.exercise.name} [${e.exercise.muscle}, ${e.exercise.equipment}]${target}, rest ${e.restSeconds} s${e.superset ? ` (superset ${supersetLetter(e.superset)}: done back to back with the others marked ${supersetLetter(e.superset)}, one rest after the round)` : ''}`,
       `  done: ${done.length ? done.map(set).join('; ') : 'nothing yet'}; ${e.sets.length - done.length} set(s) left`,
       e.previous.length ? `  last time: ${e.previous.map(set).join('; ')}` : '',
       e.pain ? `  they flagged pain here${e.painNote ? `: ${e.painNote}` : ''}` : '',

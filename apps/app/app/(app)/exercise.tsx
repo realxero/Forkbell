@@ -55,7 +55,7 @@ export default function ExerciseDetail() {
             ? units.roundLabel(r.value)
             : units.label(r.value);
   const setText = (x: SetEntry) =>
-    d?.exercise.kind === 'time' ? `${x.seconds ?? 0} s` : `${x.weightKg ? `${units.show(x.weightKg)}×` : ''}${x.reps ?? 0}${x.warmup ? ' (w)' : ''}`;
+    d?.exercise.kind === 'time' ? `${x.seconds ?? 0} s` : `${x.weightKg ? `${units.show(x.weightKg)}×` : ''}${x.reps ?? 0}${x.warmup ? ' (w)' : x.drop ? ' (d)' : ''}`;
   const top = d?.trend.length ? Math.max(...d.trend.map((t) => t.e1rmKg)) : 0;
   const bottom = d?.trend.length ? Math.min(...d.trend.map((t) => t.e1rmKg)) * 0.9 : 0;
 

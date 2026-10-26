@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BARS, DEFAULT_PLATES, loadPlates, warmupSets } from './plates.ts';
+import { usesPlates, BARS, DEFAULT_PLATES, loadPlates, warmupSets } from './plates.ts';
 
 const oly = BARS.find((b) => b.id === 'olympic-lb')!;
 test('plates per side on an Olympic bar', () => {
@@ -27,3 +27,17 @@ test('warm-up sets ramp up to the working weight', () => {
   assert.ok(warmupSets(65, oly, DEFAULT_PLATES.lb).length <= 2);
 });
 
+
+test('plates only for bars and plate-loaded machines', () => {
+  assert.equal(usesPlates({ name: 'Bench press', equipment: 'barbell' }), true);
+  assert.equal(usesPlates({ name: 'Leg press', equipment: 'machine' }), true);
+  assert.equal(usesPlates({ name: 'EZ-bar curl', equipment: 'e-z curl bar' }), true);
+  assert.equal(usesPlates({ name: 'Dumbbell bench press', equipment: 'dumbbell' }), false);
+  assert.equal(usesPlates({ name: 'Lat pulldown', equipment: 'cable' }), false);
+  assert.equal(usesPlates({ name: 'Leg extension', equipment: 'machine' }), false);
+});
+
+test('a 15 lb or 10 kg technique bar', () => {
+  assert.ok(BARS.some((b) => b.id === 'technique-lb' && b.weight === 15));
+  assert.ok(BARS.some((b) => b.id === 'technique-kg' && b.weight === 10));
+});

@@ -173,7 +173,7 @@ export async function saveWorkout(w: Workout) {
       name: w.name,
       date: w.date,
       notes: w.notes,
-      exercises: w.exercises.map((e) => ({ exerciseId: e.exercise.id, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, sets: e.sets, pain: e.pain ?? false, painNote: e.painNote ?? null })),
+      exercises: w.exercises.map((e) => ({ exerciseId: e.exercise.id, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, sets: e.sets, pain: e.pain ?? false, painNote: e.painNote ?? null, superset: e.superset ?? null })),
     },
     { label: `Save ${w.name}`, coalesceKey: `workout:${w.id}` },
   );

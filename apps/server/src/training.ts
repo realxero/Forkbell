@@ -2,7 +2,7 @@
 // takes a transaction from asUser(), so row-level security applies throughout.
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, workoutExercises, workoutSets, workouts, type Tx } from '@forkbell/db';
-import { picturePath, preferencesSchema, trainingTips, type Exercise, type ExerciseHowTo, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { picturePath, preferencesSchema, tidySupersets, trainingTips, type Exercise, type ExerciseHowTo, type PastSession, type Routine, type SaveWorkoutInput, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { users } from '@forkbell/db';
 
 type ExerciseRow = typeof exercises.$inferSelect;
@@ -37,13 +37,14 @@ export function toHowTo(r: ExerciseRow): ExerciseHowTo | null {
   };
 }
 
-export const toSet = (r: Pick<SetRow, 'weightKg' | 'reps' | 'seconds' | 'rpe' | 'warmup' | 'done'>): SetEntry => ({
+export const toSet = (r: Pick<SetRow, 'weightKg' | 'reps' | 'seconds' | 'rpe' | 'warmup' | 'done'> & Partial<Pick<SetRow, 'drop'>>): SetEntry => ({
   weightKg: r.weightKg,
   reps: r.reps,
   seconds: r.seconds,
   rpe: r.rpe,
   warmup: r.warmup,
   done: r.done,
+  drop: r.drop ?? false,
 });
 
 /** Sets grouped by workout_exercise id, in order. */
@@ -156,6 +157,7 @@ export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
     previous: previous.get(ex.id) ?? [],
     pain: we.pain,
     painNote: we.painNote,
+    superset: we.superset,
     tips: trainingTips(recent.get(ex.id) ?? [], w.date).filter((t) => showTip(ex.id, t)),
   }));
   return { id: w.id, date: w.date, name: w.name, routineId: w.routineId, startedAt: w.startedAt, finishedAt: w.finishedAt, notes: w.notes, exercises: list };
@@ -166,13 +168,14 @@ export async function saveWorkout(tx: Tx, id: string, input: SaveWorkoutInput) {
   const updated = await tx.update(workouts).set({ name: input.name, date: input.date, notes: input.notes }).where(eq(workouts.id, id)).returning({ id: workouts.id });
   if (!updated.length) return false;
   await tx.delete(workoutExercises).where(eq(workoutExercises.workoutId, id)); // sets go with them
+  const groups = tidySupersets(input.exercises.map((e) => e.superset ?? null));
   for (const [position, e] of input.exercises.entries()) {
     const [we] = await tx
       .insert(workoutExercises)
-      .values({ workoutId: id, exerciseId: e.exerciseId, position, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, pain: e.pain ?? false, painNote: e.painNote ?? null } as typeof workoutExercises.$inferInsert)
+      .values({ workoutId: id, exerciseId: e.exerciseId, position, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, pain: e.pain ?? false, painNote: e.painNote ?? null, superset: groups[position] ?? null } as typeof workoutExercises.$inferInsert)
       .returning({ id: workoutExercises.id });
     if (e.sets.length) {
-      await tx.insert(workoutSets).values(e.sets.map((s, i) => ({ workoutExerciseId: we!.id, position: i, ...s }) as typeof workoutSets.$inferInsert));
+      await tx.insert(workoutSets).values(e.sets.map((s, i) => ({ workoutExerciseId: we!.id, position: i, ...s, drop: Boolean(s.drop) && !s.warmup }) as typeof workoutSets.$inferInsert));
     }
   }
   return true;

@@ -212,6 +212,12 @@ use kilograms), or *Other amount* and type anything like "20 oz", "1.5 L" or
 the card, in Settings → Goals and targets. It works offline like the diary, is
 included in Export, and people you share wellbeing with can see it.
 
+## Supersets, circuits, drop sets and plates
+
+- **Supersets and circuits.** An exercise's ⋯ menu has *Superset with the next exercise*. Do it again on the next one for a circuit of three or more. You go straight from one exercise to the next with no rest, then rest once after the last, for the longest rest time in the group. Moving an exercise out of the group, or *Leave the superset*, takes it out.
+- **Drop sets.** Tap a set's number to cycle it: working, warm-up (W), drop set (D). A drop set starts straight after the set before it, with no rest. Drop sets count toward your volume but not toward records or next time's targets, since they're lighter on purpose.
+- **Plates.** Barbell exercises and plate-loaded machines have a *Plates* button that draws what to load on each side. Pick the bar (45, 35 or 15 lb; 20, 15 or 10 kg; or EZ, trap bar, machines, your own), set the plates your gym has, and it says when a weight can't be loaded exactly and offers the nearest ones.
+
 ## Training suggestions
 
 Rules, not AI, so they're instant and work offline. Set them up in Settings, Food and suggestions, under Training: the equipment you have, areas to go easy on (shoulders, elbows, wrists, lower back, knees), and exercises never to suggest.

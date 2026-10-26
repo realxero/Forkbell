@@ -85,7 +85,7 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
       let best: PersonalRecord | null = null;
       for (const sess of [...sessions].reverse()) // oldest first, so a tie keeps the first time
         for (const s of sess.sets) {
-          if (s.warmup) continue;
+          if (s.warmup || s.drop) continue; // drop sets are lighter on purpose
           const v = f(s);
           if (v && (!best || v > best.value + 0.01))
             best = { exerciseId: id, exerciseName: exercise.name, kind, value: v, weightKg: s.weightKg, reps: s.reps, seconds: s.seconds, date: sess.date };

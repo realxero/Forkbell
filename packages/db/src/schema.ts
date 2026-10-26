@@ -133,6 +133,8 @@ export const workoutExercises = pgTable('workout_exercises', {
   repMax: integer('rep_max'),
   pain: boolean('pain').notNull(),
   painNote: text('pain_note'),
+  /** exercises with the same number are done back to back */
+  superset: integer('superset'),
 });
 
 export const workoutSets = pgTable('workout_sets', {
@@ -146,6 +148,8 @@ export const workoutSets = pgTable('workout_sets', {
   rpe: num('rpe'),
   warmup: boolean('warmup').notNull(),
   done: boolean('done').notNull(),
+  /** straight after the set before it, lighter, no rest */
+  drop: boolean('drop_set').notNull().default(false),
 });
 
 export const weighIns = pgTable('weigh_ins', {

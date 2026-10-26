@@ -30,3 +30,4 @@ export * from './variations.ts';
 export * from './voices.ts';
 export * from './plates.ts';
 export * from './water.ts';
+export * from './supersets.ts';

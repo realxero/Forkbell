@@ -180,7 +180,7 @@ test('without a speech server, Bell says so and the app uses the phone’s voice
 test('water: add (once, even if sent twice), total by day, undo, and nobody else sees it', async () => {
   const a = await newUser('Alice');
   const b = await newUser('Bob');
-  const id = '6f1c2a4e-1b2c-4d3e-8f90-0123456789ab';
+  const id = crypto.randomUUID();
   assert.equal((await a.call('POST', '/api/wellbeing/water', { id, date: '2026-10-25', ml: 500 })).status, 201);
   assert.equal((await a.call('POST', '/api/wellbeing/water', { id, date: '2026-10-25', ml: 500 })).status, 201, 'a resend is fine');
   assert.equal((await a.call('POST', '/api/wellbeing/water', { date: '2026-10-25', ml: 237 })).status, 201);
@@ -201,4 +201,36 @@ test('water: add (once, even if sent twice), total by day, undo, and nobody else
   assert.deepEqual(me.preferences.water, { show: true, goalMl: 2000 }, 'the goal starts at 2 L, card shown');
   assert.equal((await a.call('PUT', '/api/me/preferences', { ...me.preferences, water: { show: false, goalMl: 3000 } })).status, 200);
   assert.deepEqual((await a.call('GET', '/api/me')).body.preferences.water, { show: false, goalMl: 3000 });
+});
+
+test('workouts keep supersets and drop sets; drop sets never set records', async () => {
+  const u = await newUser();
+  const list = (await u.call('GET', '/api/exercises')).body.exercises as { id: string; name: string; kind: string }[];
+  const [a, b, c] = list.filter((x) => x.kind === 'weight');
+  const started = await u.call('POST', '/api/workouts', { date: '2026-10-25' });
+  assert.ok(started.status < 300, started.text);
+  const id = started.body.workout.id;
+  const set = (kg: number, extra: Record<string, unknown> = {}) => ({ weightKg: kg, reps: 8, seconds: null, rpe: null, warmup: false, done: true, ...extra });
+  const ex = (exerciseId: string, sets: unknown[], superset: number | null) => ({ exerciseId, restSeconds: 90, targetSets: null, repMin: null, repMax: null, sets, superset });
+  const saved = await u.call('PUT', `/api/workouts/${id}`, {
+    name: 'Supersets',
+    date: '2026-10-25',
+    notes: null,
+    exercises: [ex(a!.id, [set(100), set(80, { drop: true }), set(60, { drop: true, warmup: true })], 7), ex(b!.id, [set(40)], 7), ex(c!.id, [set(20)], 9)],
+  });
+  assert.equal(saved.status, 200, saved.text);
+  const w = (await u.call('GET', `/api/workouts/${id}`)).body.workout;
+  assert.deepEqual(w.exercises.map((e: { superset: number | null }) => e.superset), [1, 1, null], 'renumbered, and a superset of one is none');
+  assert.deepEqual(w.exercises[0].sets.map((s: { drop: boolean }) => s.drop), [false, true, false], 'a warm-up is never also a drop set');
+  // An older app that doesn't send these still saves.
+  const old = await u.call('PUT', `/api/workouts/${id}`, { name: 'Old app', date: '2026-10-25', notes: null, exercises: [{ exerciseId: a!.id, restSeconds: 90, targetSets: null, repMin: null, repMax: null, sets: [{ weightKg: 100, reps: 8, seconds: null, rpe: null, warmup: false, done: true }] }] });
+  assert.equal(old.status, 200, old.text);
+  await u.call('PUT', `/api/workouts/${id}`, { name: 'Drops', date: '2026-10-25', notes: null, exercises: [ex(a!.id, [set(100, { reps: 3 }), set(90, { drop: true, reps: 12 })], null)] });
+  assert.ok((await u.call('POST', `/api/workouts/${id}/finish`, {})).status < 300);
+  const records = (await u.call('GET', `/api/exercises/${a!.id}`)).body.records as { kind: string; weightKg: number; reps: number }[];
+  const e1rm = records.find((r) => r.kind === 'e1rm');
+  assert.equal(e1rm?.weightKg, 100, 'the drop set (90 × 12) is not the best estimated max');
+  const csv = await u.call('GET', '/api/export/workouts.csv');
+  assert.match(csv.text, /,drop_set\r\n/);
+  assert.match(csv.text, /,yes\r\n/, 'the drop set is marked in the CSV');
 });

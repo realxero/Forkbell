@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { bigJump, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
+import { afterSet, bigJump, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet } from '../../lib/sync';
@@ -16,7 +16,7 @@ import { showToast } from '../../lib/toast';
 import { playSound, unlockAudio } from '../../lib/sounds';
 import { PlateCalculator, defaultBarId } from '../../components/PlateCalculator';
 import { FinishScreen } from '../../components/FinishScreen';
-import { BARS, DEFAULT_PLATES, fromKg, toKg, warmupSets } from '@forkbell/shared';
+import { BARS, DEFAULT_PLATES, fromKg, toKg, usesPlates, warmupSets } from '@forkbell/shared';
 import { FormCheck } from '../../components/FormCheck';
 import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
@@ -173,13 +173,41 @@ export default function WorkoutScreen() {
     }
     setHint(null);
     updateSet(i, k, patch);
-    if (!w!.finishedAt && e.restSeconds > 0) {
-      // What's next, for the notification: another set of this, or the next exercise.
-      const more = e.sets.some((x, j) => j !== k && !x.done);
-      restNext.current = more ? e.exercise.name : (w!.exercises.slice(i + 1).find((x) => x.sets.some((y) => !y.done))?.exercise.name ?? null);
-      setRestTotal(e.restSeconds);
-      setRestEnd(Date.now() + e.restSeconds * 1000);
+    if (w!.finishedAt) return;
+    // What now: straight into a drop set, on to the next exercise of a superset,
+    // or a rest (after a superset's last exercise, the longest rest of the group).
+    const list = w!.exercises.map((x, j) => (j === i ? { ...x, sets: x.sets.map((y, m) => (m === k ? { ...y, ...patch } : y)) } : x));
+    const then = afterSet(list, i, k);
+    const nextName = then.next === null ? null : list[then.next]!.exercise.name;
+    if (then.why === 'drop') {
+      setRestEnd(null);
+      showToast('Drop set: lighten the weight and go, no rest.');
+      return;
     }
+    if (then.why === 'superset') {
+      setRestEnd(null);
+      showToast(`Superset: straight on to ${nextName}.`);
+      return;
+    }
+    if (then.rest > 0) {
+      // For the notification: another set of this, or the next exercise.
+      restNext.current = nextName;
+      setRestTotal(then.rest);
+      setRestEnd(Date.now() + then.rest * 1000);
+    }
+  };
+
+  /** Superset numbers changed by hand (link, leave) or by moving and removing: keep them tidy. */
+  const withGroups = (list: WorkoutExercise[], groups: (number | null)[]) => list.map((x, j) => ({ ...x, superset: groups[j] ?? null }));
+  const tidy = (list: WorkoutExercise[]) => withGroups(list, tidySupersets(list.map((x) => x.superset ?? null)));
+  const linkNext = (i: number) => {
+    setMenu(null);
+    haptic.tap();
+    update((w) => ({ ...w, exercises: withGroups(w.exercises, linkWithNext(w.exercises.map((x) => x.superset ?? null), i)) }));
+  };
+  const unlink = (i: number) => {
+    setMenu(null);
+    update((w) => ({ ...w, exercises: withGroups(w.exercises, leaveSuperset(w.exercises.map((x) => x.superset ?? null), i)) }));
   };
 
   /** Swap in place: same sets and targets, the new exercise's own history and tips. */
@@ -223,14 +251,15 @@ export default function WorkoutScreen() {
       const j = i + by;
       if (j < 0 || j >= list.length) return w;
       [list[i], list[j]] = [list[j]!, list[i]!];
-      return { ...w, exercises: list };
+      // Moving out of a superset leaves it; moving within one keeps it.
+      return { ...w, exercises: tidy(list) };
     });
 
   /** The weight of the next working set: what's typed in, else last time's top set. */
   const nextWorkingWeight = (e: WorkoutExercise) =>
-    e.sets.find((x) => !x.done && !x.warmup && x.weightKg)?.weightKg ??
-    e.sets.find((x) => !x.warmup && x.weightKg)?.weightKg ??
-    [...e.previous].filter((x) => !x.warmup && x.weightKg).sort((a, b) => (b.weightKg ?? 0) - (a.weightKg ?? 0))[0]?.weightKg ??
+    e.sets.find((x) => !x.done && !x.warmup && !x.drop && x.weightKg)?.weightKg ??
+    e.sets.find((x) => !x.warmup && !x.drop && x.weightKg)?.weightKg ??
+    [...e.previous].filter((x) => !x.warmup && !x.drop && x.weightKg).sort((a, b) => (b.weightKg ?? 0) - (a.weightKg ?? 0))[0]?.weightKg ??
     null;
 
   /** Ramp-up sets before the working weight, loadable with your plates and the bar you use. */
@@ -353,7 +382,7 @@ export default function WorkoutScreen() {
               }}
               onRemove={() => {
                 setMenu(null);
-                update((w) => ({ ...w, exercises: w.exercises.filter((_, j) => j !== i) }));
+                update((w) => ({ ...w, exercises: tidy(w.exercises.filter((_, j) => j !== i)) }));
               }}
               onHowTo={() => {
                 setMenu(null);
@@ -373,6 +402,13 @@ export default function WorkoutScreen() {
                 await training.save((t) => ({ ...t, hiddenTips: [...new Set([...t.hiddenTips, e.exercise.id])] })).catch(() => {});
               }}
               onPain={(pain, painNote) => updateExercise(i, (x) => ({ ...x, pain, painNote }))}
+              group={(() => {
+                const run = supersetRun(w.exercises.map((x) => x.superset ?? null), i);
+                return run.length > 1 ? { letter: supersetLetter(e.superset ?? 1), at: run.indexOf(i) + 1, of: run.length } : null;
+              })()}
+              canLinkNext={i < w.exercises.length - 1}
+              onLinkNext={() => linkNext(i)}
+              onLeaveGroup={() => unlink(i)}
             />
           ))}
 
@@ -410,7 +446,7 @@ export default function WorkoutScreen() {
           const i = platesFor;
           if (i === null) return;
           updateExercise(i, (x) => {
-            const k = x.sets.findIndex((st) => !st.done && !st.warmup);
+            const k = x.sets.findIndex((st) => !st.done && !st.warmup && !st.drop);
             return k < 0 ? x : { ...x, sets: x.sets.map((st, j) => (j === k ? { ...st, weightKg: kg } : st)) };
           });
         }}
@@ -423,7 +459,7 @@ export default function WorkoutScreen() {
           const i = formFor;
           if (i === null || !r.reps) return;
           updateExercise(i, (x) => {
-            const k = x.sets.findIndex((st) => !st.done && !st.warmup);
+            const k = x.sets.findIndex((st) => !st.done && !st.warmup && !st.drop);
             if (k < 0) return x;
             return { ...x, sets: x.sets.map((st, j) => (j === k ? { ...st, reps: r.reps } : st)) };
           });
@@ -479,14 +515,29 @@ function ExerciseCard(props: {
   onHowTo: () => void;
   onHideTips: () => void;
   onPain: (pain: boolean, note: string | null) => void;
+  /** in a superset or circuit: its letter, and where this exercise is in it */
+  group: { letter: string; at: number; of: number } | null;
+  canLinkNext: boolean;
+  onLinkNext: () => void;
+  onLeaveGroup: () => void;
 }) {
   /** "Got it" hides the tips for this session only */
   const [tipsDismissed, setTipsDismissed] = useState(false);
   const { e, units } = props;
   const kind = e.exercise.kind;
   const target = e.repMin ? (e.repMin === e.repMax ? `${e.repMin}` : `${e.repMin}–${e.repMax}`) : null;
+  const group = props.group;
   return (
-    <View style={s.card}>
+    <View style={[s.card, group && s.grouped, group && group.at > 1 && s.groupedNext]}>
+      {group && (
+        <View style={s.groupTag} accessibilityLabel={`${group.of > 2 ? 'Circuit' : 'Superset'} ${group.letter}, exercise ${group.at} of ${group.of}. Straight on to the next, rest after the last.`}>
+          <Ionicons name={group.at < group.of ? 'arrow-down' : 'refresh'} size={13} color={color.onAccent} />
+          <Text style={s.groupTagText}>
+            {group.of > 2 ? 'Circuit' : 'Superset'} {group.letter} · {group.at} of {group.of}
+            {group.at < group.of ? ' · then straight on' : ' · then rest'}
+          </Text>
+        </View>
+      )}
       <View style={s.cardHead}>
         <Pressable style={{ flex: 1 }} onPress={() => router.push({ pathname: '/exercise', params: { id: e.exercise.id } })}>
           <Text style={[type.title, { fontSize: 18 }]}>{e.exercise.name}</Text>
@@ -509,6 +560,8 @@ function ExerciseCard(props: {
           {e.exercise.howTo && <Pressable onPress={props.onHowTo}><Text style={s.menuItem}>How to do it</Text></Pressable>}
           <Pressable onPress={() => props.onRest(-15)}><Text style={s.menuItem}>Rest −15 s</Text></Pressable>
           <Pressable onPress={() => props.onRest(15)}><Text style={s.menuItem}>Rest +15 s</Text></Pressable>
+          {props.canLinkNext && <Pressable onPress={props.onLinkNext}><Text style={s.menuItem}>Superset with the next exercise</Text></Pressable>}
+          {group && <Pressable onPress={props.onLeaveGroup}><Text style={s.menuItem}>Leave the {group.of > 2 ? 'circuit' : 'superset'}</Text></Pressable>}
           <Pressable onPress={() => props.onMove(-1)}><Text style={s.menuItem}>Move up</Text></Pressable>
           <Pressable onPress={() => props.onMove(1)}><Text style={s.menuItem}>Move down</Text></Pressable>
           <Pressable onPress={props.onFormCheck}><Text style={s.menuItem}>Check my form (camera)</Text></Pressable>
@@ -566,11 +619,16 @@ function ExerciseCard(props: {
           : kind === 'time'
             ? `${prev.seconds ?? 0} s`
             : `${prev.weightKg ? `${units.show(prev.weightKg)} × ` : ''}${prev.reps ?? 0}`;
-        const n = e.sets.slice(0, k + 1).filter((x) => !x.warmup).length;
+        // Working sets are numbered; warm-ups show W and drop sets D.
+        const n = e.sets.slice(0, k + 1).filter((x) => !x.warmup && !x.drop).length;
+        const label = set.warmup ? 'W' : set.drop ? 'D' : String(n);
+        const what = set.warmup ? 'Warm-up set' : set.drop ? 'Drop set' : `Set ${n}`;
+        const then = nextSetKind(set, k === 0);
+        const thenWhat = then.warmup ? 'a warm-up' : then.drop ? 'a drop set' : 'a working set';
         return (
           <View key={k} style={[s.setRow, set.done && s.setDone]}>
-            <Pressable style={s.colSet} onPress={() => props.onSet(k, { warmup: !set.warmup })} accessibilityLabel={set.warmup ? 'Warm-up set. Tap to make it a working set' : 'Tap to mark as a warm-up'}>
-              <Text style={[s.setNo, set.warmup && { color: color.carbs }]}>{set.warmup ? 'W' : n}</Text>
+            <Pressable style={s.colSet} onPress={() => { haptic.tap(); props.onSet(k, then); }} accessibilityLabel={`${what}. Tap to make it ${thenWhat}`}>
+              <Text style={[s.setNo, set.warmup && { color: color.carbs }, set.drop && { color: color.over }]}>{label}</Text>
             </Pressable>
             <Text style={[s.colPrev, type.small, type.number]} numberOfLines={1}>{prevText}</Text>
             {kind === 'time' ? (
@@ -627,10 +685,10 @@ function ExerciseCard(props: {
       <View style={s.cardFoot}>
         <Pressable onPress={props.onAddSet} hitSlop={6}><Text style={s.addText}>+ Add set</Text></Pressable>
         {e.exercise.kind === 'weight' && (
-          <>
-            <Pressable onPress={props.onWarmupSets} hitSlop={6} accessibilityLabel={`Add warm-up sets for ${e.exercise.name}`}><Text style={s.addText}>Warm-up sets</Text></Pressable>
-            <Pressable onPress={props.onPlates} hitSlop={6} accessibilityLabel={`Plate calculator for ${e.exercise.name}`}><Text style={s.addText}>Plates</Text></Pressable>
-          </>
+          <Pressable onPress={props.onWarmupSets} hitSlop={6} accessibilityLabel={`Add warm-up sets for ${e.exercise.name}`}><Text style={s.addText}>Warm-up sets</Text></Pressable>
+        )}
+        {e.exercise.kind === 'weight' && usesPlates(e.exercise) && (
+          <Pressable onPress={props.onPlates} hitSlop={6} accessibilityLabel={`What to load on the bar for ${e.exercise.name}`}><Text style={s.addText}>Plates</Text></Pressable>
         )}
         {e.sets.length > 0 && (
           <Pressable onPress={props.onRemoveSet} hitSlop={6}><Text style={[s.addText, { color: color.ironSoft }]}>− Remove</Text></Pressable>
@@ -676,6 +734,10 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   hint: { ...type.small, color: color.over, textAlign: 'center' },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(3), gap: space(1) },
+  grouped: { borderLeftWidth: 4, borderLeftColor: color.accent },
+  groupedNext: { marginTop: -space(2), borderTopLeftRadius: 4, borderTopRightRadius: 4 },
+  groupTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 2, marginBottom: space(1) },
+  groupTagText: { color: color.onAccent, fontSize: 12, fontWeight: '800' },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space(2), marginBottom: space(1) },
   dots: { fontSize: 24, color: color.ironSoft, paddingHorizontal: space(1), lineHeight: 26 },
   menu: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4), rowGap: space(2), paddingVertical: space(2), borderTopWidth: 1, borderBottomWidth: 1, borderColor: color.line, marginBottom: space(1) },

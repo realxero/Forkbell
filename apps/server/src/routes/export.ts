@@ -93,7 +93,7 @@ export function exportRoutes({ asUser }: ReturnType<typeof t.connect>) {
       tx
         .select({
           date: t.workouts.date, workout: t.workouts.name, exercise: t.exercises.name, muscle: t.exercises.muscle, exPos: t.workoutExercises.position,
-          set: t.workoutSets.position, warmup: t.workoutSets.warmup, weightKg: t.workoutSets.weightKg, reps: t.workoutSets.reps, seconds: t.workoutSets.seconds, rpe: t.workoutSets.rpe,
+          set: t.workoutSets.position, warmup: t.workoutSets.warmup, drop: t.workoutSets.drop, weightKg: t.workoutSets.weightKg, reps: t.workoutSets.reps, seconds: t.workoutSets.seconds, rpe: t.workoutSets.rpe,
         })
         .from(t.workoutSets)
         .innerJoin(t.workoutExercises, eq(t.workoutExercises.id, t.workoutSets.workoutExerciseId))
@@ -103,8 +103,8 @@ export function exportRoutes({ asUser }: ReturnType<typeof t.connect>) {
         .orderBy(asc(t.workouts.startedAt), asc(t.workoutExercises.position), asc(t.workoutSets.position)),
     );
     const body = csv(
-      ['date', 'workout', 'exercise', 'muscle', 'set', 'warmup', 'weight_kg', 'weight_lb', 'reps', 'seconds', 'rpe'],
-      rows.map((x) => [x.date, x.workout, x.exercise, x.muscle, x.set + 1, x.warmup ? 'yes' : '', round(x.weightKg, 2), x.weightKg === null ? null : round(x.weightKg * 2.20462), x.reps, x.seconds, x.rpe]),
+      ['date', 'workout', 'exercise', 'muscle', 'set', 'warmup', 'weight_kg', 'weight_lb', 'reps', 'seconds', 'rpe', 'drop_set'],
+      rows.map((x) => [x.date, x.workout, x.exercise, x.muscle, x.set + 1, x.warmup ? 'yes' : '', round(x.weightKg, 2), x.weightKg === null ? null : round(x.weightKg * 2.20462), x.reps, x.seconds, x.rpe, x.drop ? 'yes' : '']),
     );
     return c.body(body, 200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="forkbell-workouts-${stamp()}.csv"` });
   });

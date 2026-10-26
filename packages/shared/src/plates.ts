@@ -18,6 +18,7 @@ export interface Bar {
 export const BARS: Bar[] = [
   { id: 'olympic-lb', name: 'Olympic bar', weight: 45, unit: 'lb', sides: 2 },
   { id: 'womens-lb', name: 'Women’s bar', weight: 35, unit: 'lb', sides: 2 },
+  { id: 'technique-lb', name: 'Technique bar', weight: 15, unit: 'lb', sides: 2 },
   { id: 'ez-lb', name: 'EZ curl bar', weight: 25, unit: 'lb', sides: 2 },
   { id: 'trap-lb', name: 'Trap / hex bar', weight: 55, unit: 'lb', sides: 2 },
   { id: 'smith-lb', name: 'Smith machine (typical)', weight: 20, unit: 'lb', sides: 2 },
@@ -27,6 +28,7 @@ export const BARS: Bar[] = [
   { id: 'none-lb', name: 'No bar (plates only)', weight: 0, unit: 'lb', sides: 2 },
   { id: 'olympic-kg', name: 'Olympic bar', weight: 20, unit: 'kg', sides: 2 },
   { id: 'womens-kg', name: 'Women’s bar', weight: 15, unit: 'kg', sides: 2 },
+  { id: 'technique-kg', name: 'Technique bar', weight: 10, unit: 'kg', sides: 2 },
   { id: 'ez-kg', name: 'EZ curl bar', weight: 10, unit: 'kg', sides: 2 },
   { id: 'trap-kg', name: 'Trap / hex bar', weight: 25, unit: 'kg', sides: 2 },
   { id: 'smith-kg', name: 'Smith machine (typical)', weight: 10, unit: 'kg', sides: 2 },
@@ -108,4 +110,17 @@ export function warmupSets(working: number, bar: Pick<Bar, 'weight' | 'sides'>, 
   }
   // Light lifts: one or two warm-ups is plenty.
   return working < bar.weight * 2 && bar.weight > 0 ? out.slice(0, 2) : out;
+}
+
+/**
+ * Whether you load plates for this exercise: barbells (straight, EZ, trap)
+ * and plate-loaded machines (leg press, hack squat, Smith, T-bar, landmine).
+ * Dumbbells, cables and pin-loaded machines don't get a plate calculator.
+ */
+export function usesPlates(exercise: { name: string; equipment: string }): boolean {
+  const eq = exercise.equipment.toLowerCase();
+  const n = exercise.name.toLowerCase();
+  if (/dumbbell|kettlebell|cable|band/.test(eq)) return false;
+  if (/barbell|e-?z|curl bar|trap bar|hex bar|olympic|smith/.test(eq)) return true;
+  return /barbell|leg press|hack squat|smith|t-?bar|landmine|trap bar|hex bar|ez[- ]?bar|skull ?crusher|plate[- ]loaded/.test(n);
 }

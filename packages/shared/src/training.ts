@@ -51,6 +51,8 @@ export interface SetEntry {
   rpe: number | null;
   warmup: boolean;
   done: boolean;
+  /** a drop set: straight after the set before it, lighter, with no rest (never also a warm-up) */
+  drop?: boolean;
 }
 
 export interface WorkoutExercise {
@@ -67,6 +69,8 @@ export interface WorkoutExercise {
   painNote?: string | null;
   /** safety tips from recent sessions */
   tips?: import('./training-tips.ts').TrainingTip[];
+  /** exercises with the same number are a superset (two) or circuit (three or more), done back to back */
+  superset?: number | null;
 }
 
 export interface Workout {
@@ -158,7 +162,8 @@ export function estimatedOneRepMax(weightKg: number, reps: number): number | nul
   return reps === 1 ? weightKg : weightKg * (1 + reps / 30);
 }
 
-const working = (sets: SetEntry[]) => sets.filter((s) => s.done && !s.warmup);
+/** Sets that say what you can lift: done, not warm-ups, and not drop sets (lighter on purpose). */
+const working = (sets: SetEntry[]) => sets.filter((s) => s.done && !s.warmup && !s.drop);
 
 export function setVolumeKg(s: SetEntry): number {
   return s.done && !s.warmup && s.weightKg && s.reps ? s.weightKg * s.reps : 0;
@@ -295,6 +300,7 @@ const setSchema = z.object({
   rpe: z.number().min(1).max(10).nullable(),
   warmup: z.boolean(),
   done: z.boolean(),
+  drop: z.boolean().optional(),
 });
 
 export const saveWorkoutSchema = z.object({
@@ -312,6 +318,7 @@ export const saveWorkoutSchema = z.object({
         sets: z.array(setSchema).max(50),
         pain: z.boolean().optional(),
         painNote: z.string().max(300).nullish(),
+        superset: z.number().int().min(1).max(20).nullish(),
       }),
     )
     .max(40),
