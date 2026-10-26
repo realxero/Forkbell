@@ -22,6 +22,10 @@ Each phase ends with something usable on web and iPhone.
 9. **More health (done).** Sleep, mood, medications, custom measurements, goal
    presets and per-weekday targets, family sharing with permissions.
 
+Since then (0.11): password sign-in alongside Authelia or instead of it,
+sign-up codes, a list of your sign-ins with sign-out, and version markers in the
+app, the server and every build.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.

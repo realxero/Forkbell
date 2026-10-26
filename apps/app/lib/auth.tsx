@@ -2,8 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import type { Me } from '@forkbell/shared';
-import { ApiError, loadConnection, getServerUrl, setServerUrl, setToken, post } from './api';
+import type { Me, SignInMethods } from '@forkbell/shared';
+import { ApiError, api, loadConnection, getServerUrl, setServerUrl, setToken, post } from './api';
 import { cachedGet, updateCache } from './sync';
 
 type Status = 'loading' | 'signedOut' | 'signedIn';
@@ -11,10 +11,20 @@ type Auth = {
   status: Status;
   me: Me | null;
   error: string | null;
+  /** How the server lets people in (and its version), once known. */
+  methods: SignInMethods | null;
+  /** Ask a server how to sign in. On the phone this also remembers the address. */
+  loadMethods: (serverAddress?: string) => Promise<SignInMethods | null>;
+  /** Single sign-on (Authelia). */
   signIn: (serverAddress?: string) => Promise<void>;
+  signInWithPassword: (username: string, password: string) => Promise<void>;
+  signUp: (details: { username: string; password: string; name?: string; code?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
 };
+
+/** What an older server (before 0.11) offers: single sign-on only, version unknown. */
+const OLD_SERVER: SignInMethods = { server: { version: 'older than 0.11', commit: null, buildNumber: null, builtAt: null }, sso: { name: 'Authelia' }, password: null };
 
 const AuthContext = createContext<Auth | null>(null);
 WebBrowser.maybeCompleteAuthSession();
@@ -29,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [methods, setMethods] = useState<SignInMethods | null>(null);
 
   const refreshMe = useCallback(async () => {
     try {
@@ -83,6 +94,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [refreshMe],
   );
 
+  const loadMethods = useCallback(async (serverAddress?: string) => {
+    setError(null);
+    if (Platform.OS !== 'web') {
+      if (!serverAddress && !getServerUrl()) return null;
+      await setServerUrl(normalizeServer(serverAddress ?? getServerUrl() ?? ''));
+    }
+    try {
+      const m = await api<SignInMethods>('/auth/methods');
+      if (!m || typeof m !== 'object' || !('server' in m)) throw new ApiError('not Forkbell', 404);
+      setMethods(m);
+      return m;
+    } catch (e) {
+      // A Forkbell server older than this app answers 404 here; it still has single sign-on.
+      // (It answers with its web page, or a 404.) Anything else, like no connection, is shown.
+      if (e instanceof ApiError && (e.status === 404 || e.status === 418)) {
+        setMethods(OLD_SERVER);
+        return OLD_SERVER;
+      }
+      setMethods(null);
+      setError(e instanceof Error ? e.message : String(e));
+      return null;
+    }
+  }, []);
+
+  /** A password sign-in or sign-up answered: keep the session, then load the account. */
+  const passwordSession = useCallback(
+    async (path: string, body: Record<string, unknown>) => {
+      setError(null);
+      try {
+        const native = Platform.OS !== 'web';
+        const r = await post<{ token?: string; ok?: boolean }>(path, { ...body, platform: native ? 'native' : 'web' });
+        // On the web the server set a cookie; the phone keeps the token in its keychain.
+        if (native) {
+          if (!r.token) throw new Error('The server signed you in but sent no session. Update the Forkbell server and try again.');
+          await setToken(r.token);
+        }
+        await refreshMe();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [refreshMe],
+  );
+  const signInWithPassword = useCallback(
+    (username: string, password: string) => passwordSession('/auth/password/login', { username, password }),
+    [passwordSession],
+  );
+  const signUp = useCallback(
+    (d: { username: string; password: string; name?: string; code?: string }) => passwordSession('/auth/password/signup', d),
+    [passwordSession],
+  );
+
   const signOut = useCallback(async () => {
     await post('/auth/logout', {}).catch(() => {});
     updateCache('/api/me', () => undefined);
@@ -91,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('signedOut');
   }, []);
 
-  return <AuthContext.Provider value={{ status, me, error, signIn, signOut, refreshMe }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ status, me, error, methods, loadMethods, signIn, signInWithPassword, signUp, signOut, refreshMe }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

@@ -4,6 +4,7 @@ import { router, useFocusEffect, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
+import { BUILD, sameRelease, versionLabel, type SignInMethods } from '@forkbell/shared';
 import { useAuth } from '../../../lib/auth';
 import { api } from '../../../lib/api';
 import { Logo } from '../../../components/Logo';
@@ -18,11 +19,15 @@ type Row = { icon: IconName; tint: string; title: string; detail?: string; href:
 export default function Settings() {
   const { me, signOut } = useAuth();
   const [bell, setBell] = useState<string | null>(null);
+  // null: not asked yet; 'old': a server from before version markers (0.11).
+  const [server, setServer] = useState<SignInMethods['server'] | 'old' | null>(null);
   useFocusEffect(
     useCallback(() => {
       api<{ enabled: boolean; model: string | null }>('/api/bell/status').then((b) => setBell(b.enabled ? (b.model ?? 'On') : 'Off'), () => setBell(null));
+      api<SignInMethods>('/auth/methods').then((m) => setServer(m?.server ?? 'old'), () => setServer('old'));
     }, []),
   );
+  const mismatch = server && server !== 'old' && !sameRelease(server.version, BUILD.version);
   const g = me?.goals;
   const goals = g?.kcal ? `${g.kcal.toLocaleString()} kcal${g.protein ? ` · ${g.protein} g protein` : ''}` : 'Not set';
   const groups: { title: string; rows: Row[] }[] = [
@@ -33,6 +38,7 @@ export default function Settings() {
         { icon: 'restaurant-outline', tint: '#E8590C', title: 'Food preferences and suggestions', detail: 'Allergies, diet, suggestions, patterns', href: '/preferences' },
         { icon: 'barbell-outline', tint: '#1C252B', title: 'Training setup', detail: me?.preferences.training?.equipment?.length ? `Equipment: ${me.preferences.training.equipment.join(', ')}` : 'Equipment you have (full gym), areas to protect', href: '/preferences' },
         { icon: 'color-palette-outline', tint: '#6A4BD1', title: 'Units and appearance', detail: `${me?.weightUnit === 'kg' ? 'Kilograms' : 'Pounds'} · theme · accent colour`, href: '/setting/appearance' },
+        { icon: 'lock-closed-outline', tint: '#3A4750', title: 'Sign-in and security', detail: 'Password, where you’re signed in', href: '/setting/security' },
       ],
     },
     {
@@ -94,13 +100,32 @@ export default function Settings() {
           <Logo size={40} />
           <Text style={[type.body, { fontWeight: '800' }]}>Forkbell</Text>
           <Text style={type.small}>Food and training, on your own server.</Text>
+          <View style={s.versions}>
+            <Text style={type.small} selectable>App {versionLabel(BUILD)}</Text>
+            <Text style={type.small} selectable>
+              Server {server === null ? '…' : server === 'old' ? 'older than 0.11 (update it)' : versionLabel(server)}
+            </Text>
+            {mismatch && (
+              <Text style={[type.small, { color: color.over, textAlign: 'center' }]}>
+                The app and the server are different versions. Update {versionNewer(server.version, BUILD.version) ? 'the app' : 'the server'} so they match.
+              </Text>
+            )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+/** Whether version a is newer than b (major.minor.patch). */
+function versionNewer(a: string, b: string) {
+  const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) > (pb[i] ?? 0);
+  return false;
+}
+
 const s = StyleSheet.create({
+  versions: { alignItems: 'center', gap: 2, marginTop: space(2), paddingHorizontal: space(4) },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(5), maxWidth: 640, width: '100%', alignSelf: 'center' },
   account: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },

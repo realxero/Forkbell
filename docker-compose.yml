@@ -53,7 +53,11 @@ services:
       db: { condition: service_healthy }
 
   server:
-    build: .
+    build:
+      context: .
+      args:
+        # Optional: the commit, if the build folder has no .git (Settings shows it).
+        GIT_SHA: ${GIT_SHA:-}
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -65,6 +69,10 @@ services:
       OIDC_ISSUER: ${OIDC_ISSUER}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
+      OIDC_NAME: ${OIDC_NAME:-Authelia}
+      PASSWORD_LOGIN: ${PASSWORD_LOGIN:-}
+      PASSWORD_SIGNUP: ${PASSWORD_SIGNUP:-off}
+      SIGNUP_CODE: ${SIGNUP_CODE:-}
       USDA_API_KEY: ${USDA_API_KEY:-}
       AI_PROVIDER: ${AI_PROVIDER:-}
       AI_API_KEY: ${AI_API_KEY:-}

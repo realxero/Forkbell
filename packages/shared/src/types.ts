@@ -123,3 +123,23 @@ export interface Recipe {
   cookedGrams: number | null;
   items: { food: Food; grams: number }[];
 }
+
+/** Settings → Sign-in and security. */
+export interface AccountSecurity {
+  /** Whether this server lets people sign in with a username and password. */
+  passwordLogin: boolean;
+  /** The single sign-on's name (e.g. Authelia), or null if it's off. */
+  sso: string | null;
+  /** How the account was made: an Authelia account can also have a password. */
+  accountKind: 'sso' | 'password';
+  username: string | null;
+  passwordChangedAt: string | null;
+  sessions: { id: string; method: 'sso' | 'password' | null; device: string | null; createdAt: string; expiresAt: string; current: boolean }[];
+}
+
+/** GET /auth/methods: how to sign in to a server, before anyone has. */
+export interface SignInMethods {
+  server: { version: string; commit: string | null; buildNumber: string | null; builtAt: string | null };
+  sso: { name: string } | null;
+  password: { signup: 'off' | 'code' | 'open' } | null;
+}

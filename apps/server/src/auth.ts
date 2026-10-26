@@ -1,10 +1,13 @@
-import { Hono, type MiddlewareHandler } from 'hono';
+import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import * as oidc from 'openid-client';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import type { Database } from '@forkbell/db';
+import { BUILD } from '@forkbell/shared';
+import { z } from 'zod';
 import { env } from './env.ts';
+import { USERNAME, decoyHash, hashPassword, lockedFor, noteFailure, noteSuccess, passwordProblem, verifyPassword } from './password.ts';
 
 /** userId: who is signed in. profileId: whose data this request is about (theirs, or someone who shared with them). */
 export type AppEnv = { Variables: { userId: string; profileId: string; tokenHash: string } };
@@ -42,7 +45,8 @@ const sweep = () => {
 
 let configPromise: Promise<oidc.Configuration> | null = null;
 function oidcConfig() {
-  configPromise ??= oidc.discovery(new URL(env.oidc.issuer), env.oidc.clientId, env.oidc.clientSecret).catch((err) => {
+  const o = env.oidc!;
+  configPromise ??= oidc.discovery(new URL(o.issuer), o.clientId, o.clientSecret).catch((err) => {
     configPromise = null; // retry discovery next time
     throw err;
   });
@@ -51,10 +55,108 @@ function oidcConfig() {
 
 const callbackUrl = `${env.publicUrl}/auth/callback`;
 
+/** A short description of where a sign-in came from, for the list of your devices. */
+export function describeDevice(userAgent: string | undefined, platform: 'web' | 'native') {
+  const ua = userAgent ?? '';
+  const os = /iPad/.test(ua) ? 'iPad' : /iPhone|iOS|Darwin/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux|CrOS/.test(ua) ? 'Linux' : null;
+  if (platform === 'native') return `Forkbell app${os ? ` on ${os}` : ''}`;
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'A browser';
+  return `${browser}${os ? ` on ${os}` : ''}`;
+}
+
+/** A new signed-in session; returns the token (only its hash is stored). */
+async function startSession(db: Database, userId: string, method: 'sso' | 'password', device: string) {
+  const token = randomBytes(32).toString('base64url');
+  const expires = new Date(Date.now() + env.sessionDays * 86_400_000);
+  const hash = hashToken(token);
+  await db.execute(sql`select auth_create_session(${userId}::uuid, ${hash}, ${expires.toISOString()}::timestamptz)`);
+  await db.execute(sql`select auth_tag_session(${hash}, ${method}, ${device})`);
+  return { token, expires };
+}
+
+/** The address a request came from. Behind Traefik that's the last X-Forwarded-For hop. */
+function clientIp(header: (name: string) => string | undefined) {
+  const xff = header('x-forwarded-for')?.split(',').map((s) => s.trim()).filter(Boolean);
+  return xff?.at(-1) ?? header('x-real-ip') ?? 'direct';
+}
+
+const credentials = z.object({
+  username: z.string().trim().toLowerCase().max(64),
+  password: z.string().max(500),
+  platform: z.enum(['web', 'native']).default('web'),
+});
+
+/** Sign-up is open when the server says so, or when it has nobody yet (the first account). */
+async function signupMode(db: Database) {
+  if (!env.password.enabled) return 'off';
+  if (env.password.signup !== 'off') return env.password.signup;
+  const [row] = await db.execute<{ n: string }>(sql`select auth_user_count() as n`);
+  return Number(row?.n ?? 1) === 0 ? 'open' : 'off';
+}
+
 export function authRoutes(db: Database) {
   const r = new Hono();
 
+  /** How to sign in to this server, and what version it is. Public: the sign-in screen asks before anyone has signed in. */
+  r.get('/methods', async (c) => {
+    c.header('cache-control', 'no-store');
+    return c.json({
+      server: BUILD,
+      sso: env.oidc ? { name: env.oidc.name } : null,
+      password: env.password.enabled ? { signup: await signupMode(db) } : null,
+    });
+  });
+
+  /** Hands out a session: a cookie on the web, the token itself to the phone app. */
+  const finish = (c: Context, platform: 'web' | 'native', s: { token: string; expires: Date }) => {
+    if (platform === 'native') return c.json({ token: s.token });
+    setCookie(c, COOKIE, s.token, { httpOnly: true, secure: env.secureCookies, sameSite: 'Lax', path: '/', expires: s.expires });
+    return c.json({ ok: true });
+  };
+
+  r.post('/password/login', async (c) => {
+    if (!env.password.enabled) return c.json({ error: 'This server doesn’t use passwords. Sign in with single sign-on.' }, 404);
+    const parsed = credentials.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success || !parsed.data.username || !parsed.data.password) return c.json({ error: 'Enter your username and password.' }, 400);
+    const { username, password, platform } = parsed.data;
+    const ip = clientIp((n) => c.req.header(n));
+    const wait = lockedFor(username, ip);
+    if (wait) return c.json({ error: `Too many wrong passwords. Try again in ${wait} minute${wait === 1 ? '' : 's'}.` }, 429);
+
+    const [row] = await db.execute<{ user_id: string; password_hash: string }>(sql`select * from auth_password_lookup(${username})`);
+    const ok = await verifyPassword(password, row?.password_hash ?? (await decoyHash()));
+    if (!row || !ok) {
+      noteFailure(username, ip);
+      return c.json({ error: 'That username and password don’t match.' }, 401);
+    }
+    noteSuccess(username);
+    return finish(c, platform, await startSession(db, row.user_id, 'password', describeDevice(c.req.header('user-agent'), platform)));
+  });
+
+  r.post('/password/signup', async (c) => {
+    const mode = await signupMode(db);
+    if (mode === 'off') return c.json({ error: 'This server isn’t taking new accounts. Ask whoever runs it.' }, 403);
+    const parsed = credentials
+      .extend({ name: z.string().trim().max(80).optional(), code: z.string().max(200).optional() })
+      .safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: 'Check your details and try again.' }, 400);
+    const { username, password, platform, name, code } = parsed.data;
+    const ip = clientIp((n) => c.req.header(n));
+    if (lockedFor('#signup-code', ip)) return c.json({ error: 'Too many tries from here. Wait a few minutes.' }, 429);
+    if (mode === 'code' && !sameSecret(code ?? '', env.password.signupCode)) {
+      noteFailure('#signup-code', ip);
+      return c.json({ error: 'That sign-up code isn’t right.' }, 403);
+    }
+    if (!USERNAME.test(username)) return c.json({ error: 'Usernames are 3 to 32 letters, numbers, dots, dashes or underscores.' }, 400);
+    const problem = passwordProblem(password, username);
+    if (problem) return c.json({ error: problem }, 400);
+    const [row] = await db.execute<{ id: string | null }>(sql`select auth_password_signup(${username}, ${await hashPassword(password)}, ${name || username}) as id`);
+    if (!row?.id) return c.json({ error: 'That username is taken. Pick another.' }, 409);
+    return finish(c, platform, await startSession(db, row.id, 'password', describeDevice(c.req.header('user-agent'), platform)));
+  });
+
   r.get('/login', async (c) => {
+    if (!env.oidc) return c.json({ error: 'Single sign-on is off on this server. Sign in with your username and password.' }, 404);
     sweep();
     const config = await oidcConfig();
     const verifier = oidc.randomPKCECodeVerifier();
@@ -72,6 +174,7 @@ export function authRoutes(db: Database) {
   });
 
   r.get('/callback', async (c) => {
+    if (!env.oidc) return c.text('Single sign-on is off on this server.', 404);
     const state = c.req.query('state') ?? '';
     const login = pending.get(state);
     pending.delete(state);
@@ -90,10 +193,7 @@ export function authRoutes(db: Database) {
       sql`select auth_upsert_user(${claims.iss}, ${claims.sub}, ${email}, ${name}) as id`,
     );
     const userId = row!.id;
-
-    const token = randomBytes(32).toString('base64url');
-    const expires = new Date(Date.now() + env.sessionDays * 86_400_000);
-    await db.execute(sql`select auth_create_session(${userId}::uuid, ${hashToken(token)}, ${expires.toISOString()}::timestamptz)`);
+    const { token, expires } = await startSession(db, userId, 'sso', describeDevice(c.req.header('user-agent'), login.platform));
 
     if (login.platform === 'native') {
       // The app exchanges this one-time code for the token, so the token never sits in a URL.
@@ -128,6 +228,13 @@ export function authRoutes(db: Database) {
   });
 
   return r;
+}
+
+/** Compare two secrets without leaking how much of them matched. */
+function sameSecret(a: string, b: string) {
+  const x = createHmac('sha256', env.sessionSecret).update(a).digest();
+  const y = createHmac('sha256', env.sessionSecret).update(b).digest();
+  return b.length > 0 && timingSafeEqual(x, y);
 }
 
 function readToken(authorization: string | undefined, cookie: string | undefined) {

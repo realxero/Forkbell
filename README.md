@@ -2,7 +2,7 @@
 
 Food and training, logged in one place on your own server. Web, iPhone and
 Android from one codebase, with Postgres row-level security and sign-in through
-Authelia (or any OpenID Connect provider).
+Authelia (or any OpenID Connect provider), a username and password, or both.
 
 **Status:** all nine roadmap phases are in. Food: search (Open Food Facts, USDA, about a hundred
 built-in common foods, your own), barcode scanning, one-tap logging from recent
@@ -42,8 +42,13 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
   read or change their own rows. A query that forgets to filter by user still
   can't leak anyone else's data. `pnpm --filter @forkbell/db rls-check` proves
   it against a real database, and CI runs it on every push.
-- **No passwords.** Sign-in is OIDC with PKCE. Authelia handles two-factor and
-  passkeys.
+- **Sign-in.** Single sign-on is OIDC with PKCE; Authelia handles two-factor
+  and passkeys. Password sign-in is optional (`PASSWORD_LOGIN`): passwords are
+  hashed with scrypt on the server and kept in a table the app role can't
+  read, a wrong username takes as long as a wrong password, and guessing is
+  limited per username and per address. Changing a password signs out your
+  other devices, and Settings → Sign-in and security lists every sign-in so you
+  can end any of them.
 - **Sessions** are random tokens; only an HMAC of each is stored, in a table the
   app role can't read. The web app uses an httpOnly cookie; the phone app keeps
   its token in the iOS Keychain / Android Keystore via SecureStore.
@@ -55,7 +60,9 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
 ## Self-hosting
 
 1. In Authelia, add the client from `docker/authelia-client.yml`, with your
-   real address in `redirect_uris`.
+   real address in `redirect_uris`. (Or skip Authelia: leave `OIDC_ISSUER`
+   empty and Forkbell uses usernames and passwords, and the first person to
+   open it creates the first account.)
 2. `cp .env.example .env` and fill in the top sections.
 3. `docker compose up -d --build`
 4. Point your reverse proxy at port 3000 and open `PUBLIC_URL`.
@@ -211,6 +218,32 @@ The exercise picker keeps your everyday list short. Search covers a full library
 Steps and pictures come from [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (public domain), pinned to one version in `packages/db/data/exercise-library.json`; `packages/db/scripts/build-exercise-library.mjs` rebuilds it. Your server fetches each picture the first time it's needed and keeps a copy, so phones only ever talk to your server, and only pictures in the library can be requested. Set `MEDIA_DIR` to a mounted folder and the copies last across updates; the server then also fetches the whole set (about 90 MB) once in the background, picking up where it left off after a restart.
 
 **On the phone**, pictures for your everyday exercises and any you've done save by themselves (about 7 MB), so how-to works at the gym with no signal. Settings, *Exercise pictures on this phone*, can download the whole library (about 87 MB) or remove the saved pictures.
+
+## Sign-in options
+
+- **Authelia only** (the default when `OIDC_ISSUER` is set): nothing changes.
+- **Authelia and passwords:** `PASSWORD_LOGIN=on`. The sign-in screen shows both.
+  Anyone with an Authelia account can add a password in Settings → Sign-in and
+  security. To let family make their own accounts without Authelia, set
+  `PASSWORD_SIGNUP=code` and a `SIGNUP_CODE`, and give them the code.
+- **Passwords only:** leave `OIDC_ISSUER` empty.
+- **Another provider** (Authentik, Pocket ID, Keycloak, Google...): point the
+  `OIDC_*` settings at it and set `OIDC_NAME` for the button.
+
+## Versions
+
+The version lives in the root `package.json`; change it everywhere with
+`node scripts/set-version.mjs 0.12.0`. Each release that adds features bumps
+the middle number (0.11 → 0.12), fixes bump the last.
+
+Builds are stamped with their commit and build number (`scripts/build-info.mjs`,
+run by the Dockerfile and the iOS workflow). To check what's running:
+
+- **App:** Settings, at the bottom: `App 0.11.0 (build 42, a1b2c3d)`, and the
+  server it's talking to. It warns when the two are different releases.
+  iOS Settings → General → iPhone Storage → Forkbell shows `0.11.0 (42)`.
+- **Server:** `curl https://forkbell.example.com/healthz`, or the
+  `x-forkbell-version` header on any answer. The server log says it on start.
 
 ## App icon
 

@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { AiSettings, AppearanceSection, GoalsSection, HealthSection, PhoneSection } from '../../../components/SettingsSections';
 import { DataSection } from '../../../components/DataSection';
 import { ShortcutsSection } from '../../../components/ShortcutsSection';
+import { SecuritySection } from '../../../components/SecuritySection';
 import { color, space, type } from '../../../lib/theme';
 
 const SECTIONS = {
@@ -15,6 +16,7 @@ const SECTIONS = {
   phone: { title: 'This phone', body: PhoneSection },
   data: { title: 'Export and backup', body: DataSection },
   shortcuts: { title: 'Siri and Shortcuts', body: ShortcutsSection },
+  security: { title: 'Sign-in and security', body: SecuritySection },
 } as const;
 
 /** One group of settings, opened from the Settings tab. */

@@ -25,3 +25,4 @@ export * from './muscle-map.ts';
 export * from './stretches.ts';
 export * from './weigh.ts';
 export * from './plate-volume.ts';
+export * from './version.ts';

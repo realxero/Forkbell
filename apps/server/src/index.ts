@@ -26,15 +26,25 @@ import { wellbeingRoutes } from './routes/wellbeing.ts';
 import { stretchRoutes } from './routes/stretches.ts';
 import { exportRoutes } from './routes/export.ts';
 import { shortcutRoutes } from './routes/shortcuts.ts';
+import { accountRoutes } from './routes/account.ts';
+import { BUILD } from '@forkbell/shared';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
 
 app.use('*', secureHeaders());
+// Every answer says which version it came from: curl -sI https://forkbell… | grep forkbell
+app.use('*', async (c, next) => {
+  await next();
+  c.header('x-forkbell-version', BUILD.version + (BUILD.commit ? `+${BUILD.commit.slice(0, 7)}` : ''));
+});
 // Only needed in development, when Expo's web server runs on another port.
-if (env.appUrl !== env.publicUrl) app.use('/api/*', cors({ origin: env.appUrl, credentials: true }));
+if (env.appUrl !== env.publicUrl) {
+  app.use('/api/*', cors({ origin: env.appUrl, credentials: true }));
+  app.use('/auth/*', cors({ origin: env.appUrl, credentials: true }));
+}
 
-app.get('/healthz', (c) => c.json({ ok: true }));
+app.get('/healthz', (c) => c.json({ ok: true, version: BUILD.version, commit: BUILD.commit, build: BUILD.buildNumber, builtAt: BUILD.builtAt }));
 app.route('/auth', authRoutes(database.db));
 
 // Exercise pictures: public, so they're mounted before the signed-in API.
@@ -75,6 +85,7 @@ api.use('*', async (c, next) => {
   c.set('profileId', profileId);
   return withRequestUser(userId, () => next());
 });
+api.route('/me/security', accountRoutes(database));
 api.route('/me', meRoutes(database));
 api.route('/diary', diaryRoutes(database));
 api.route('/foods', foodRoutes(database));
@@ -167,7 +178,8 @@ if (env.webDir) {
 }
 
 serve({ fetch: app.fetch, port: env.port }, (info) => {
-  console.log(`Forkbell server on :${info.port}`);
+  const ways = [env.oidc && `single sign-on (${env.oidc.name})`, env.password.enabled && `passwords (sign-up ${env.password.signup})`].filter(Boolean).join(' and ');
+  console.log(`Forkbell ${BUILD.version}${BUILD.commit ? ` (${BUILD.commit.slice(0, 7)})` : ''} on :${info.port}, sign-in with ${ways}`);
   // Not essential, and never in the way: errors are logged and the server carries on.
   void prefetchPictures().catch((e) => console.error('exercise pictures:', e));
 });

@@ -3,7 +3,6 @@
     "name": "Forkbell",
     "slug": "forkbell",
     "scheme": "forkbell",
-    "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",

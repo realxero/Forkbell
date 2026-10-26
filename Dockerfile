@@ -5,8 +5,13 @@ RUN corepack enable
 COPY . .
 # Files keep their host permissions; make sure the runtime user can read them.
 RUN chmod -R a+rX packages/db/migrations
-# Files keep their host permissions; make sure the runtime user can read them.
 RUN pnpm install --frozen-lockfile
+# Stamp the version and commit into the server and the web app (shown in
+# Settings, /healthz and the x-forkbell-version header). The commit comes from
+# .git when it's in the build folder, or pass it: --build-arg GIT_SHA=$(git rev-parse HEAD)
+ARG GIT_SHA=
+ARG FORKBELL_BUILD_NUMBER=
+RUN GIT_SHA=$GIT_SHA FORKBELL_BUILD_NUMBER=$FORKBELL_BUILD_NUMBER node scripts/build-info.mjs
 RUN pnpm --filter @forkbell/server build
 RUN pnpm --filter @forkbell/app build:form
 RUN cd apps/app && CI=1 npx expo export --platform web --output-dir /out/web
