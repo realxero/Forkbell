@@ -1,7 +1,8 @@
 // Charts for the Progress tab, drawn with SVG so they look the same on phones
 // and on the web, and follow light and dark mode.
-import { useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, Text, View } from 'react-native';
+import { api } from '../lib/api';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { daysBetween, type TrendPoint } from '@forkbell/shared';
 import { color, space, type } from '../lib/theme';
@@ -259,6 +260,90 @@ export function LogCalendar({ days, today }: { days: DayTotals[]; today: string 
           }}
         />
       ))}
+    </View>
+  );
+}
+
+const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Days logged as a month calendar: each day coloured green (logged, within
+ * your goal), red (over it) or grey (nothing logged), with ‹ › to go back
+ * through earlier months. Tap a day to open it.
+ */
+export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; today: string; goal: number | null; onOpenDay?: (date: string) => void }) {
+  const [month, setMonth] = useState(today.slice(0, 7));
+  const [fetched, setFetched] = useState<Record<string, { date: string; kcal: number }[]>>({});
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  const first = `${month}-01`;
+  const daysIn = new Date(y, m, 0).getDate();
+  const last = `${month}-${pad(daysIn)}`;
+  const lead = new Date(y, m - 1, 1).getDay();
+
+  // Months outside what Progress already loaded come from the server, once each.
+  useEffect(() => {
+    if (fetched[month] || first >= (days[0]?.date ?? today)) return;
+    let live = true;
+    api<{ days: { date: string; totals: { kcal: number } }[] }>(`/api/diary/totals?from=${first}&to=${last < today ? last : today}`)
+      .then((r) => live && setFetched((f) => ({ ...f, [month]: r.days.map((d) => ({ date: d.date, kcal: d.totals.kcal })) })))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [month]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const byDate = new Map<string, { kcal: number; goal: number | null }>();
+  for (const d of fetched[month] ?? []) byDate.set(d.date, { kcal: d.kcal, goal });
+  for (const d of days) byDate.set(d.date, { kcal: d.kcal, goal: d.goal });
+  const cells: (string | null)[] = [...Array.from({ length: lead }, () => null), ...Array.from({ length: daysIn }, (_, i) => `${month}-${pad(i + 1)}`)];
+  const logged = cells.filter((d) => d && (byDate.get(d)?.kcal ?? 0) > 0).length;
+  const go = (by: number) => {
+    const t = new Date(y, m - 1 + by, 1);
+    setMonth(`${t.getFullYear()}-${pad(t.getMonth() + 1)}`);
+  };
+  const title = new Date(y, m - 1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' });
+
+  return (
+    <View style={{ gap: space(2) }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable onPress={() => go(-1)} hitSlop={10} accessibilityLabel="Previous month" style={{ padding: 4 }}>
+          <Text style={{ color: color.accent, fontSize: 20, fontWeight: '800' }}>‹</Text>
+        </Pressable>
+        <Text style={[type.body, { flex: 1, textAlign: 'center', fontWeight: '700' }]}>
+          {title} · {logged} day{logged === 1 ? '' : 's'} logged
+        </Text>
+        <Pressable onPress={() => go(1)} disabled={month >= today.slice(0, 7)} hitSlop={10} accessibilityLabel="Next month" style={{ padding: 4, opacity: month >= today.slice(0, 7) ? 0.3 : 1 }}>
+          <Text style={{ color: color.accent, fontSize: 20, fontWeight: '800' }}>›</Text>
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: 'row' }}>
+        {WEEKDAYS.map((w, i) => (
+          <Text key={i} style={[type.small, { flex: 1, textAlign: 'center' }]}>
+            {w}
+          </Text>
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {cells.map((d, i) => {
+          if (!d) return <View key={`x${i}`} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />;
+          const v = byDate.get(d);
+          const future = d > today;
+          const bg = v && v.kcal > 0 ? (v.goal && v.kcal > v.goal * 1.05 ? color.over : color.fat) : color.track;
+          return (
+            <View key={d} style={{ width: `${100 / 7}%`, aspectRatio: 1, padding: 3 }}>
+              <Pressable
+                disabled={future || !onOpenDay}
+                onPress={() => onOpenDay?.(d)}
+                accessibilityLabel={`${shortDate(d)}: ${v && v.kcal > 0 ? `${Math.round(v.kcal)} kcal${v.goal && v.kcal > v.goal * 1.05 ? ', over your goal' : ''}` : future ? 'not yet' : 'nothing logged'}`}
+                style={{ flex: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: future ? 'transparent' : bg, opacity: future ? 0.35 : 1, borderWidth: d === today ? 2 : future ? 1 : 0, borderColor: d === today ? color.iron : color.line }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: v && v.kcal > 0 ? '#fff' : color.ironSoft }}>{Number(d.slice(8))}</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }

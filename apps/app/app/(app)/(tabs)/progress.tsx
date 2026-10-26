@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, dateSchema, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
 import { put } from '../../../lib/api';
@@ -10,7 +10,7 @@ import { useAuth } from '../../../lib/auth';
 import { useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { NumberField } from '../../../components/NumberField';
-import { CalorieBars, LogCalendar, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
+import { CalorieBars, LogMonth, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
 import { WellbeingCard } from '../../../components/WellbeingCard';
 import { RecapCard } from '../../../components/RecapCard';
 import { PatternsCard } from '../../../components/PatternsCard';
@@ -158,7 +158,7 @@ export default function ProgressScreen() {
                 </View>
                 <View style={s.card}>
                   <Text style={type.title}>Days logged</Text>
-                  <LogCalendar days={p.days} today={p.today} />
+                  <LogMonth days={p.days} today={p.today} goal={p.calorieGoal ?? null} onOpenDay={viewing ? undefined : (d) => router.push({ pathname: '/', params: { date: d } })} />
                   <Text style={type.small}>Green: logged and within your goal. Red: over it. Grey: nothing logged.</Text>
                 </View>
               </>
