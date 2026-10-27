@@ -1,3 +1,4 @@
+import Svg, { Circle, Polyline } from 'react-native-svg';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -32,7 +33,7 @@ type Progress = {
   goal: { weightKg: number | null; date: string | null; weeklyWorkoutGoal: number; plan: GoalPlan | null };
   streaks: Streaks;
   milestones: Milestone[];
-  measurements: { kind: string; custom: boolean; unit: string; latest: { date: string; value: number } | null; first: { date: string; value: number } | null }[];
+  measurements: { kind: string; custom: boolean; unit: string; latest: { date: string; value: number } | null; first: { date: string; value: number } | null; history?: { date: string; value: number }[] }[];
 };
 
 const CM_PER_IN = 2.54;
@@ -387,6 +388,7 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
               {m.latest ? `${show(m, m.latest.value)} ${shown(m)} · ${longDate(m.latest.date)}` : 'Not measured yet'}
               {m.first && m.latest ? ` · ${m.latest.value - m.first.value > 0 ? '+' : '−'}${show(m, Math.abs(m.latest.value - m.first.value))} since ${longDate(m.first.date)}` : ''}
             </Text>
+            {(m.history?.length ?? 0) > 1 && <Sparkline values={m.history!.map((x) => x.value)} />}
           </View>
           {!viewing && (
             <NumberField
@@ -450,3 +452,19 @@ const s = StyleSheet.create({
   buttonText: { color: color.chalk, fontSize: 16, fontWeight: '700' },
   milestone: { paddingVertical: space(1) },
 });
+
+/** A small line of a measurement over time, oldest to newest. */
+function Sparkline({ values }: { values: number[] }) {
+  const W = 140;
+  const H = 28;
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = hi - lo || 1;
+  const pts = values.map((v, i) => `${((i / (values.length - 1)) * (W - 4) + 2).toFixed(1)},${(H - 2 - ((v - lo) / span) * (H - 4)).toFixed(1)}`).join(' ');
+  return (
+    <Svg width={W} height={H} style={{ marginTop: 4 }} accessibilityLabel={`From ${values[0]} to ${values.at(-1)}`}>
+      <Polyline points={pts} fill="none" stroke={color.accent} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      <Circle cx={W - 2} cy={Number(pts.split(' ').at(-1)!.split(',')[1])} r={2.5} fill={color.accent} />
+    </Svg>
+  );
+}

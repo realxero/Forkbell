@@ -140,7 +140,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       milestones: milestones({ loggedDates, workoutDates, series, goalKg, unit }),
       measurements: [...MEASUREMENT_KINDS, ...custom].map((kind) => {
         const list = byKind.get(kind) ?? [];
-        return { kind, custom: custom.includes(kind), unit: list.at(-1)?.unit ?? 'cm', latest: list.at(-1) ?? null, first: list.length > 1 ? list[0]! : null };
+        return { kind, custom: custom.includes(kind), unit: list.at(-1)?.unit ?? 'cm', latest: list.at(-1) ?? null, first: list.length > 1 ? list[0]! : null, history: list.slice(-24).map((x) => ({ date: x.date, value: x.value })) };
       }),
     });
   });
