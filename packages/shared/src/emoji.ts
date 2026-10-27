@@ -15,7 +15,8 @@ const RULES: [RegExp, string][] = [
   [/\b(coffee|espresso|latte|cappuccino|americano|cold brew|mocha|macchiato|frappuccino)\b/i, '☕'],
   [/\b(tea|matcha|chai)\b/i, '🍵'],
   [/\b(cola|coke|pepsi|soda|sprite|dr pepper|root beer|ginger ale|pop)\b/i, '🥤'],
-  [/\b(energy drink|red bull|monster|celsius|gatorade|powerade|sports drink)\b/i, '🥫'],
+  // 🥫 is a can of tomatoes on iPhones, so drinks in cans and bottles get a drink.
+  [/\b(energy drink|red bull|monster|celsius|gatorade|powerade|bodyarmor|prime|electrolit|sports drink)\b/i, '🥤'],
   [/\b(beer|ale|lager|ipa)\b/i, '🍺'],
   [/\b(wine)\b/i, '🍷'],
   [/\b(smoothie|shake|protein shake)\b/i, '🥤'],

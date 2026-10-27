@@ -10,3 +10,8 @@ test('the name decides before the brand', () => {
   assert.equal(foodEmoji('Grande', 'Starbucks Coffee'), '☕', 'the brand helps when the name says nothing');
   assert.equal(foodEmoji('Whopper', 'Burger King'), '🍔');
 });
+
+test('sports and energy drinks are drinks, not a can of tomatoes', () => {
+  assert.equal(foodEmoji('Gatorade Cool Blue', 'Gatorade'), '🥤');
+  assert.equal(foodEmoji('Red Bull'), '🥤');
+});

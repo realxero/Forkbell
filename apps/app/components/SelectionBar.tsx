@@ -1,3 +1,4 @@
+import { KeyboardLift } from './KeyboardLift';
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -101,6 +102,7 @@ export function SelectionBar({ entries, onDone, onChanged }: { entries: DiaryEnt
       />
 
       <Modal visible={naming} transparent animationType="fade" onRequestClose={() => setNaming(false)}>
+        <KeyboardLift>
         <Pressable style={s.backdrop} onPress={() => setNaming(false)}>
           <Pressable style={s.sheet} onPress={() => {}}>
             <Text style={type.title}>Save as a meal</Text>
@@ -110,6 +112,7 @@ export function SelectionBar({ entries, onDone, onChanged }: { entries: DiaryEnt
             <Pressable disabled={!name.trim()} onPress={save} style={[s.primary, !name.trim() && { opacity: 0.4 }]}><Text style={s.primaryText}>Save meal</Text></Pressable>
           </Pressable>
         </Pressable>
+        </KeyboardLift>
       </Modal>
     </>
   );

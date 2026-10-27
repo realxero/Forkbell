@@ -1,3 +1,4 @@
+import { KeyboardLift } from './KeyboardLift';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -96,6 +97,7 @@ export function PlateCalculator({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardLift>
       <Pressable style={s.backdrop} onPress={onClose}>
         <Pressable style={s.sheet} onPress={() => {}}>
           <View style={s.head}>
@@ -179,6 +181,7 @@ export function PlateCalculator({
           </ScrollView>
         </Pressable>
       </Pressable>
+      </KeyboardLift>
     </Modal>
   );
 }

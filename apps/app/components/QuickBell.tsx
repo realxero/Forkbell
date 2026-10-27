@@ -1,3 +1,4 @@
+import { KeyboardLift } from './KeyboardLift';
 import { askBell } from '../lib/bell-ask';
 import { WaterProposal } from './WaterProposal';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -127,6 +128,8 @@ export function QuickBell() {
       )}
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+        {/* The sheet moves up with the keyboard, so what you type stays in view. */}
+        <KeyboardLift>
         <Pressable style={s.backdrop} onPress={() => !busy && setOpen(false)}>
           <Pressable style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
@@ -185,6 +188,7 @@ export function QuickBell() {
             </View>
           </Pressable>
         </Pressable>
+        </KeyboardLift>
       </Modal>
     </>
   );
@@ -195,7 +199,7 @@ const s = StyleSheet.create({
   bubble: { position: 'absolute', right: space(4), bottom: 96 + 58 + 12, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   fab: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '92%' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listening: { flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.dangerBg, borderRadius: 12, padding: space(3) },
   inputRow: { flexDirection: 'row', gap: space(2), alignItems: 'center' },

@@ -1,3 +1,4 @@
+import { KeyboardLift } from './KeyboardLift';
 // Ask Bell from inside a workout. Bell sees the session as it stands (what
 // you've done, what's left, last time), so "what weight next?" just works.
 // Short answers, quick questions to tap, and hold the mic to talk.
@@ -85,6 +86,7 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
         </View>
       )}
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+        <KeyboardLift>
         <Pressable style={s.backdrop} onPress={() => !busy && setOpen(false)}>
           <Pressable style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
@@ -117,6 +119,7 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
             </View>
           </Pressable>
         </Pressable>
+        </KeyboardLift>
       </Modal>
     </>
   );

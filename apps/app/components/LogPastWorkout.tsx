@@ -1,3 +1,4 @@
+import { KeyboardLift } from './KeyboardLift';
 // "Log a past workout" on Train: a workout you did without logging it (on
 // paper, phone dead). Pick the day, the time and how long, and optionally a
 // program day; it's saved as finished and opens so you can fill in the sets.
@@ -45,6 +46,7 @@ export function LogPastWorkout({ visible, program, onClose }: { visible: boolean
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardLift>
       <Pressable style={s.backdrop} onPress={onClose}>
         <Pressable style={s.sheet} onPress={() => {}}>
           <View style={s.head}>
@@ -82,6 +84,7 @@ export function LogPastWorkout({ visible, program, onClose }: { visible: boolean
           <CalendarSheet visible={calendar} selected={day} title="Which day?" onPick={(d) => { if (d <= todayLocal()) setDay(d); setCalendar(false); }} onClose={() => setCalendar(false)} />
         </Pressable>
       </Pressable>
+      </KeyboardLift>
     </Modal>
   );
 }

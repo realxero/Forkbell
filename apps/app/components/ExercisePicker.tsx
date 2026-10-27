@@ -1,3 +1,4 @@
+import { KeyboardLift } from './KeyboardLift';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -160,7 +161,9 @@ export function ExercisePicker({
   if (inline) return body;
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
+      <KeyboardLift>
       {body}
+      </KeyboardLift>
     </Modal>
   );
 }
