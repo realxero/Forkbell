@@ -1,3 +1,4 @@
+import { ImportRecipe } from '../../components/ImportRecipe';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -23,6 +24,7 @@ export default function Recipes() {
   const [list, setList] = useState<Recipe[] | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -66,7 +68,18 @@ export default function Recipes() {
           );
         })}
         <Pressable onPress={() => setDraft(blank)} style={s.primary}><Text style={s.primaryText}>New recipe</Text></Pressable>
+        <Pressable onPress={() => setImporting(true)} style={{ alignSelf: 'center', padding: space(3) }} accessibilityRole="button">
+          <Text style={s.link}>Import a recipe (link, Mealie or text)</Text>
+        </Pressable>
       </ScrollView>
+      <ImportRecipe
+        visible={importing}
+        onClose={() => setImporting(false)}
+        onReady={(d) => {
+          setImporting(false);
+          setDraft({ id: null, name: d.name, servings: d.servings, cooked: '', items: d.items });
+        }}
+      />
     </SafeAreaView>
   );
 }

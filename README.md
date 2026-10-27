@@ -274,6 +274,20 @@ photos (the amounts printed, read per serving and stored per 100 g). Many
 foods don't list them, so the card says how many of the day's foods counted,
 and the real day is likely higher.
 
+## Importing a recipe
+
+Recipes → *Import a recipe*: paste a link to a recipe (most recipe sites
+publish it in a form Forkbell can read), a link from your Mealie, or the
+ingredient list, one per line. Bell works out each ingredient's food and
+grams; foods you already have (or built-in ones) with the same name are used
+as they are. You see every ingredient with its amount and calories and can
+untick any, then they open in the recipe editor to adjust, add to and save.
+New ingredients are saved to your foods as estimates. Needs Bell (an AI key).
+
+For Mealie, set `MEALIE_URL` (how the server reaches it) and `MEALIE_TOKEN`
+(an API token from your Mealie profile) in the stack. Links to other private
+addresses are refused unless `AI_ALLOW_CUSTOM_URL=true`.
+
 ## Water
 
 A Water card on Today. Tap +8, +16.9 or +24 oz (+250, +500 or +750 ml if you

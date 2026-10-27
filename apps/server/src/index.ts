@@ -27,6 +27,7 @@ import { stretchRoutes } from './routes/stretches.ts';
 import { exportRoutes } from './routes/export.ts';
 import { shortcutRoutes } from './routes/shortcuts.ts';
 import { photoRoutes } from './routes/photos.ts';
+import { recipeImportRoutes } from './routes/recipe-import.ts';
 import { importRoutes } from './routes/import.ts';
 import { accountRoutes } from './routes/account.ts';
 import { BUILD } from '@forkbell/shared';
@@ -106,6 +107,8 @@ api.route('/health', healthRoutes(database));
 api.route('/shares', shareRoutes(database));
 api.route('/meals', mealRoutes(database));
 api.route('/ai', aiRoutes(database));
+// Before /recipes: reading a recipe from a link, Mealie or text (a preview; saving uses /recipes).
+api.route('/recipes/import', recipeImportRoutes(database));
 api.route('/recipes', recipeRoutes(database));
 api.route('/wellbeing', wellbeingRoutes(database));
 api.route('/stretches', stretchRoutes());

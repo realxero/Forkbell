@@ -187,3 +187,10 @@ test('web search: the status says where it comes from; your own address needs th
   assert.equal(me.preferences.webSearchUrl, null);
   assert.equal((await u.call('PUT', '/api/me/preferences', { ...me.preferences, webSearchUrl: 'ftp://nope' })).status, 400);
 });
+
+test('importing a recipe from a private address is refused unless the server allows it', async () => {
+  const u = await newUser();
+  const r = await u.call('POST', '/api/recipes/import/preview', { source: 'http://localhost:3882/recipe' });
+  assert.equal(r.status, 502, r.text);
+  assert.match(r.body.error, /private network/);
+});

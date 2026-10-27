@@ -38,3 +38,4 @@ export * from './rest-coach.ts';
 export * from './workout-import.ts';
 export * from './amounts.ts';
 export * from './micros.ts';
+export * from './recipe-page.ts';
