@@ -118,7 +118,7 @@ test('export: your diary as JSON and CSV, nothing secret, nothing of anyone else
   assert.ok(!/token_hash|tokenHash|keyCiphertext|key_ciphertext/.test(json.text), 'no secrets in the export');
   const csv = await a.call('GET', '/api/export/diary.csv');
   assert.match(csv.type, /text\/csv/);
-  assert.match(csv.text, /2026-10-24,breakfast,Regression oats,,50,190/);
+  assert.match(csv.text, /2026-10-24,breakfast,Regression oats,,50 g,50,190/);
   assert.equal((await b.call('GET', '/api/export')).body.data.diaryEntries.length, 0, "Bob's export has none of Alice's diary");
 });
 
@@ -468,4 +468,48 @@ test('vitamins and minerals are kept with a food, and only real numbers', async 
   const e = (await u.call('GET', '/api/diary/2026-10-25')).body.entries[0];
   assert.equal(e.food.per100.micros.calcium, 125, 'the diary has them for the day’s totals');
   assert.equal((await u.call('POST', '/api/foods', { name: 'Bad', brand: null, source: 'custom', per100: { kcal: 1, protein: 0, carbs: 0, fat: 0, micros: { calcium: -5 } }, servingGrams: null, barcode: null })).status, 400);
+});
+
+test('past days keep the goal they were logged against', async () => {
+  const u = await newUser();
+  const me = (await u.call('GET', '/api/me')).body;
+  await u.call('PUT', '/api/me/goals', { kcal: 2000, protein: 150, carbs: 200, fat: 70 });
+  const food = (await u.call('POST', '/api/foods', { name: 'Oats', brand: null, source: 'custom', per100: { kcal: 380, protein: 13, carbs: 67, fat: 7 }, servingGrams: null, barcode: null })).body.food;
+  assert.equal((await u.call('POST', '/api/diary', { date: '2026-01-10', meal: 'breakfast', grams: 100, foodId: food.id })).status, 201);
+  await u.call('PUT', '/api/me/goals', { kcal: 1500, protein: 150, carbs: 150, fat: 50 });
+  assert.equal((await u.call('GET', '/api/diary/2026-01-10')).body.goals.kcal, 2000, 'the old day shows its own goal');
+  const totals = (await u.call('GET', '/api/diary/totals?from=2026-01-01&to=2026-01-31')).body.days;
+  assert.equal(totals[0].goal, 2000, 'and the month view colours it against that');
+  assert.ok(me);
+});
+
+test('recipes carry vitamins and minerals; the diary export uses entry names and amounts', async () => {
+  const u = await newUser();
+  const milk = (await u.call('POST', '/api/foods', { name: 'Milk', brand: null, source: 'custom', per100: { kcal: 62, protein: 3.3, carbs: 5, fat: 3.3, micros: { calcium: 125 } }, servingGrams: 240, servingLabel: '1 cup', barcode: null })).body.food;
+  const oats = (await u.call('POST', '/api/foods', { name: 'Oats', brand: null, source: 'custom', per100: { kcal: 380, protein: 13, carbs: 67, fat: 7 }, servingGrams: null, barcode: null })).body.food;
+  const r = await u.call('POST', '/api/recipes', { name: 'Porridge', servings: 1, items: [{ foodId: milk.id, grams: 200 }, { foodId: oats.id, grams: 50 }] });
+  assert.ok(r.status < 300, r.text);
+  const porridge = r.body.recipe?.food ?? r.body.food;
+  assert.equal(porridge.per100.micros.calcium, 100, '250 mg of calcium in 250 g');
+  await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'breakfast', grams: 240, foodId: milk.id, amount: 1, unit: 'serving', name: 'Glass of milk' });
+  const csv = (await u.call('GET', '/api/export/diary.csv')).text;
+  assert.match(csv, /^date,meal,food,brand,amount,grams,kcal,.*calcium_mg/);
+  assert.match(csv, /Glass of milk,,1 serving \(240 g\),240,148.8,.*,300,/, 'its own name, the amount as logged, and the calcium');
+});
+
+test('Siri’s “how am I doing” includes water, and a fast when the timer is on', async () => {
+  const u = await newUser();
+  const made = await u.call('POST', '/api/shortcuts/keys', { label: 'Siri' });
+  const keyToken = made.body.key ?? made.body.token;
+  const today = '2026-10-25';
+  await u.call('POST', '/api/wellbeing/water', { date: today, ml: 500 });
+  const me = (await u.call('GET', '/api/me')).body;
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, fasting: { show: true, hours: 16 } });
+  await u.call('POST', '/api/wellbeing/fasts', { targetHours: 16, startedAt: new Date(Date.now() - 5 * 3_600_000).toISOString() });
+  const r = await fetch(`${BASE}/api/shortcuts/today?today=${today}`, { headers: { authorization: `Bearer ${keyToken}` } });
+  const body = (await r.json()) as { speak: string; waterMl: number; fastingHours: number };
+  assert.equal(r.status, 200, JSON.stringify(body));
+  assert.equal(body.waterMl, 500);
+  assert.match(body.speak, /17 ounces of water/);
+  assert.match(body.speak, /5 hours into your fast/);
 });

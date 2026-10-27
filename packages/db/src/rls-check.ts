@@ -151,6 +151,10 @@ try {
   await assert.rejects(as(bob, (tx) => tx`insert into water_entries (user_id, date, ml) values (${alice}, '2026-10-22', 250)`), "Bob can't log water for Alice");
   assert.equal((await as(bob, (tx) => tx`delete from water_entries returning id`)).length, 0, "or take hers back");
 
+  // Day goals: Alice's own.
+  await as(alice, (tx) => tx`insert into day_goals (user_id, date, goals) values (${alice}, '2026-10-22', '{"kcal": 2000}')`);
+  assert.equal((await as(bob, (tx) => tx`select * from day_goals`)).length, 0, "Bob can't see Alice's day goals");
+
   // Fasts: Alice's own.
   await as(alice, (tx) => tx`insert into fasts (started_at, target_hours) values (now() - interval '2 hours', 16)`);
   assert.equal((await as(bob, (tx) => tx`select * from fasts`)).length, 0, "Bob can't see Alice's fast");

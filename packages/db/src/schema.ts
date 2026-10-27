@@ -319,3 +319,10 @@ export const fasts = pgTable('fasts', {
   endedAt: timestamp('ended_at', { withTimezone: true, mode: 'string' }),
   targetHours: num('target_hours').notNull(),
 });
+
+/** The goals a day was logged against (see migration 0025). */
+export const dayGoals = pgTable('day_goals', {
+  userId: uuid('user_id').notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  goals: jsonb('goals').$type<{ kcal: number | null; protein: number | null; carbs: number | null; fat: number | null }>().notNull(),
+});

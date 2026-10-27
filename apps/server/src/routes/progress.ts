@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
-import { healthDaily, measurements, users, weighIns, workouts, type connect } from '@forkbell/db';
+import { healthDaily, measurements, users, weighIns, workouts, type connect, dayGoals } from '@forkbell/db';
 import { findPatterns, foodCheckIn, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
@@ -92,11 +92,15 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     // The last four weeks, day by day, for the charts.
     const byDate = new Map(data.intakeRows.map((r) => [r.date, r]));
     const weekdayGoals = (data.me.weekdayGoals ?? {}) as Record<string, { kcal: number | null } | undefined>;
+    // Days keep the goal they were logged against, so changing it doesn't recolour the past.
+    const kept = new Map(
+      (await asUser(c.get('profileId'), (tx) => tx.select().from(dayGoals).where(sql`${dayGoals.date} between ${addDays(today, -27)}::date and ${today}::date`))).map((g) => [g.date, g.goals.kcal]),
+    );
     const days = Array.from({ length: 28 }, (_, i) => {
       const date = addDays(today, i - 27);
       const r = byDate.get(date);
       const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-      const goal = weekdayGoals[String(new Date(Date.UTC(y, m - 1, d)).getUTCDay())]?.kcal ?? data.me.goalKcal;
+      const goal = (date < today ? kept.get(date) : undefined) ?? weekdayGoals[String(new Date(Date.UTC(y, m - 1, d)).getUTCDay())]?.kcal ?? data.me.goalKcal;
       return { date, kcal: Math.round(Number(r?.kcal ?? 0)), protein: Math.round(Number(r?.protein ?? 0)), carbs: Math.round(Number(r?.carbs ?? 0)), fat: Math.round(Number(r?.fat ?? 0)), goal };
     });
 

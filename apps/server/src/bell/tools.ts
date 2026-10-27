@@ -3,7 +3,7 @@ import { customAllowed } from './config.ts';
 // signed-in person, so row-level security applies); Bell never writes. Food
 // it wants to log comes back as proposals the person reviews and confirms,
 // and so does water.
-import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences, unitsFor } from '@forkbell/shared';
+import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences, unitsFor, entryName, entryAmountText, sumMicros, MICROS, microText } from '@forkbell/shared';
 import { env } from '../env.ts';
 import type { ToolSpec } from './providers.ts';
 
@@ -186,7 +186,16 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
         date: day.date,
         goals: day.goals,
         totals: day.totals,
-        entries: day.entries.map((e) => ({ id: e.id, meal: e.meal, name: e.food.name, brand: e.food.brand, grams: e.grams, kcal: Math.round((e.food.per100.kcal * e.grams) / 100) })),
+        entries: day.entries.map((e) => ({ id: e.id, meal: e.meal, name: entryName(e), brand: e.food.brand, amount: entryAmountText(e, ctx.unit ?? 'lb'), grams: e.grams, kcal: Math.round((e.food.per100.kcal * e.grams) / 100) })),
+        // Only from foods that list them; say so when you use these.
+        vitamins_minerals: (() => {
+          const m = sumMicros(day.entries);
+          if (!m.known) return null;
+          return {
+            counted: `${m.known} of ${m.of} foods list them`,
+            ...Object.fromEntries(MICROS.filter((x) => m.totals[x.key] !== undefined).map((x) => [x.name, `${microText(x.key, m.totals[x.key] ?? 0)} (${Math.round(((m.totals[x.key] ?? 0) / x.dv) * 100)}% of daily value)`])),
+          };
+        })(),
       });
     }
     case 'get_progress': {

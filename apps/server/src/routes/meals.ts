@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { foods, recipeItems, recipes, savedMealItems, savedMeals, type connect, type Tx } from '@forkbell/db';
-import { per100Problems, recipePer100, recipeSchema, savedMealSchema, type Recipe, type SavedMeal } from '@forkbell/shared';
+import { per100Problems, recipePer100, recipeSchema, savedMealSchema, type Recipe, type SavedMeal, cleanMicros } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 
@@ -90,6 +90,7 @@ export function recipeRoutes({ asUser }: ReturnType<typeof connect>) {
       sugar: per100.sugar,
       sodiumMg: per100.sodium,
       satFat: per100.satFat,
+      micros: cleanMicros(per100.micros),
       servingGrams: serving,
       servingLabel: '1 serving',
       portions: [{ label: '1 serving', grams: serving }, ...(input.servings > 1 ? [{ label: `whole recipe (${input.servings} servings)`, grams: Math.round(weight) }] : [])],

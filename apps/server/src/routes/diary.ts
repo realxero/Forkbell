@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { dayStatus, diaryEntries, foods, users, type connect } from '@forkbell/db';
-import { addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry } from '@forkbell/shared';
+import { dayGoals, dayStatus, diaryEntries, foods, users, type connect } from '@forkbell/db';
+import { addDays, addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { saveFood, BadFood } from './save-food.ts';
@@ -33,9 +33,12 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
       tx.select({ date: dayStatus.date }).from(dayStatus).where(sql`${dayStatus.date} between ${from.data}::date and ${to.data}::date`),
     );
     const done = new Set(finished.map((f) => f.date));
+    const [me] = await asUser(c.get('profileId'), (tx) => tx.select().from(users).where(eq(users.id, c.get('profileId'))).limit(1));
+    const kept = await asUser(c.get('profileId'), (tx) => tx.select().from(dayGoals).where(sql`${dayGoals.date} between ${from.data}::date and ${to.data}::date`));
+    const goalOn = new Map(kept.map((g) => [g.date, g.goals.kcal]));
     const byDate = new Map<string, { grams: number; food: ReturnType<typeof toFood> }[]>();
     for (const { entry, food } of rows) byDate.set(entry.date, [...(byDate.get(entry.date) ?? []), { grams: entry.grams, food: toFood(food) }]);
-    return c.json({ days: [...byDate.entries()].sort().map(([date, entries]) => ({ date, totals: sumEntries(entries), complete: done.has(date) })) });
+    return c.json({ days: [...byDate.entries()].sort().map(([date, entries]) => ({ date, totals: sumEntries(entries), complete: done.has(date), goal: goalOn.get(date) ?? goalsFor(date, me).kcal })) });
   });
 
   r.get('/entry/:id', async (c) => {
@@ -120,7 +123,8 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         date: date.data,
         entries,
         totals: sumEntries(entries),
-        goals: goalsFor(date.data, me),
+        // A day more than a day back shows the goals it was logged against; today, the current ones.
+        goals: (date.data < addDays(new Date().toISOString().slice(0, 10), -1) ? (await tx.select({ goals: dayGoals.goals }).from(dayGoals).where(eq(dayGoals.date, date.data)).limit(1))[0]?.goals : null) ?? goalsFor(date.data, me),
         complete: Boolean(finished),
       };
     });
@@ -147,6 +151,12 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
           .insert(diaryEntries)
           .values({ ...(input.id ? { id: input.id } : {}), userId, date: input.date, meal: input.meal, grams: input.grams, foodId: food.id, amount: input.amount ?? null, unit: input.unit ?? null, name: input.name ?? null })
           .returning();
+        // Remember the goals this day is being logged against.
+        const [owner] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
+        await tx
+          .insert(dayGoals)
+          .values({ userId, date: input.date, goals: goalsFor(input.date, owner) } as typeof dayGoals.$inferInsert)
+          .onConflictDoUpdate({ target: [dayGoals.userId, dayGoals.date], set: { goals: goalsFor(input.date, owner) } });
         return toEntry(row!, food);
       });
       if (!entry) return c.json({ error: 'That food was not found.' }, 404);

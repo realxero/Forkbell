@@ -274,7 +274,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
  */
 export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; today: string; goal: number | null; onOpenDay?: (date: string) => void }) {
   const [month, setMonth] = useState(today.slice(0, 7));
-  const [fetched, setFetched] = useState<Record<string, { date: string; kcal: number }[]>>({});
+  const [fetched, setFetched] = useState<Record<string, { date: string; kcal: number; goal: number | null }[]>>({});
   const [y, m] = month.split('-').map(Number) as [number, number];
   const first = `${month}-01`;
   const daysIn = new Date(y, m, 0).getDate();
@@ -285,8 +285,8 @@ export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; 
   useEffect(() => {
     if (fetched[month] || first >= (days[0]?.date ?? today)) return;
     let live = true;
-    api<{ days: { date: string; totals: { kcal: number } }[] }>(`/api/diary/totals?from=${first}&to=${last < today ? last : today}`)
-      .then((r) => live && setFetched((f) => ({ ...f, [month]: r.days.map((d) => ({ date: d.date, kcal: d.totals.kcal })) })))
+    api<{ days: { date: string; totals: { kcal: number }; goal?: number | null }[] }>(`/api/diary/totals?from=${first}&to=${last < today ? last : today}`)
+      .then((r) => live && setFetched((f) => ({ ...f, [month]: r.days.map((d) => ({ date: d.date, kcal: d.totals.kcal, goal: d.goal ?? goal })) })))
       .catch(() => {});
     return () => {
       live = false;
@@ -294,7 +294,7 @@ export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; 
   }, [month]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const byDate = new Map<string, { kcal: number; goal: number | null }>();
-  for (const d of fetched[month] ?? []) byDate.set(d.date, { kcal: d.kcal, goal });
+  for (const d of fetched[month] ?? []) byDate.set(d.date, { kcal: d.kcal, goal: d.goal });
   for (const d of days) byDate.set(d.date, { kcal: d.kcal, goal: d.goal });
   const cells: (string | null)[] = [...Array.from({ length: lead }, () => null), ...Array.from({ length: daysIn }, (_, i) => `${month}-${pad(i + 1)}`)];
   const logged = cells.filter((d) => d && (byDate.get(d)?.kcal ?? 0) > 0).length;

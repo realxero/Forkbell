@@ -64,9 +64,13 @@ export function recipePer100(items: { food: { per100: Per100 }; grams: number }[
   );
   const weight = cookedGrams && cookedGrams > 0 ? cookedGrams : items.reduce((s, i) => s + i.grams, 0);
   const per = (v: number) => Math.round((v * 100 * 10) / Math.max(weight, 1)) / 10;
+  // Vitamins and minerals from the ingredients that list them (a floor when some don't).
+  const microTotals: Record<string, number> = {};
+  for (const i of items) for (const [k, v] of Object.entries(i.food.per100.micros ?? {})) if (typeof v === 'number') microTotals[k] = (microTotals[k] ?? 0) + (v * i.grams) / 100;
+  const micros = Object.keys(microTotals).length ? Object.fromEntries(Object.entries(microTotals).map(([k, v]) => [k, Math.round(((v * 100) / Math.max(weight, 1)) * 1000) / 1000])) : null;
   return {
     weight,
-    per100: { kcal: Math.round((total.kcal * 100) / Math.max(weight, 1)), protein: per(total.protein), carbs: per(total.carbs), fat: per(total.fat), fiber: per(total.fiber), sugar: per(total.sugar), sodium: Math.round((total.sodium * 100) / Math.max(weight, 1)), satFat: items.some((i) => i.food.per100.satFat != null) ? per(total.satFat) : null },
+    per100: { kcal: Math.round((total.kcal * 100) / Math.max(weight, 1)), protein: per(total.protein), carbs: per(total.carbs), fat: per(total.fat), fiber: per(total.fiber), sugar: per(total.sugar), sodium: Math.round((total.sodium * 100) / Math.max(weight, 1)), satFat: items.some((i) => i.food.per100.satFat != null) ? per(total.satFat) : null, micros },
     total,
   };
 }

@@ -8,7 +8,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { shortcutKeys, type connect } from '@forkbell/db';
-import { dateSchema, mealForTime, todayLocal, type BellReply, type DiaryDay, type FoodProposal } from '@forkbell/shared';
+import { dateSchema, mealForTime, todayLocal, type BellReply, type DiaryDay, type FoodProposal, fastProgress, waterGoalMl, waterText, type Fasts, type Preferences, type WaterDay } from '@forkbell/shared';
 import { hashToken, SHORTCUT_PREFIX, type AppEnv } from '../auth.ts';
 
 type Internal = (path: string, userId: string, init?: { method: string; body: unknown }) => Promise<unknown>;
@@ -123,11 +123,27 @@ export function shortcutRoutes(db: ReturnType<typeof connect>, internal: Interna
     const left = (goal: number | null | undefined, have: number) => (goal ? Math.round(goal - have) : null);
     const kcal = left(day.goals?.kcal, day.totals.kcal);
     const protein = left(day.goals?.protein, day.totals.protein);
+    // Water and a fast that's going, when you use them.
+    const date = q.success ? q.data : todayLocal();
+    const me = (await internal('/api/me', c.get('userId')).catch(() => null)) as { preferences: Preferences; weightUnit: 'lb' | 'kg' } | null;
+    const prefs = me?.preferences;
+    const water = (await internal(`/api/wellbeing/water/${date}`, c.get('userId')).catch(() => null)) as WaterDay | null;
+    const fasting = prefs?.fasting.show ? ((await internal('/api/wellbeing/fasts', c.get('userId')).catch(() => null)) as Fasts | null) : null;
+    const unit = me?.weightUnit ?? 'lb';
+    const waterLine =
+      water && (prefs?.water.show || water.totalMl > 0)
+        ? water.totalMl >= waterGoalMl(prefs?.water.goalMl)
+          ? 'water goal reached'
+          : `${waterText(water.totalMl, unit).replace(' oz', ' ounces').replace(' ml', ' millilitres').replace(' L', ' litres')} of water`
+        : null;
+    const fastLine = fasting?.open ? `${Math.floor(fastProgress(fasting.open).hours)} hours into your fast` : null;
     const parts = [
       kcal === null ? `${Math.round(day.totals.kcal)} calories so far` : kcal >= 0 ? `${kcal} calories left` : `${-kcal} calories over`,
       protein === null ? null : protein > 0 ? `${protein} grams of protein to go` : 'protein done',
+      waterLine,
+      fastLine,
     ].filter(Boolean);
-    return c.json({ speak: `${parts.join(', and ')}.`, caloriesLeft: kcal, proteinLeft: protein, totals: day.totals, goals: day.goals });
+    return c.json({ speak: `${parts.join(', ')}.`.replace(/, ([^,]*)\.$/, ', and $1.'), caloriesLeft: kcal, proteinLeft: protein, totals: day.totals, goals: day.goals, waterMl: water?.totalMl ?? null, fastingHours: fasting?.open ? Math.round(fastProgress(fasting.open).hours * 10) / 10 : null });
   });
 
   return r;

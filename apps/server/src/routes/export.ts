@@ -1,3 +1,4 @@
+import { MICROS, entryAmountText } from '@forkbell/shared';
 // Your data, all of it, to keep or take elsewhere: one JSON file with every
 // table that's yours, plus spreadsheet-friendly CSVs of the food diary and
 // every set you've logged. Read as you, so row-level security applies, and
@@ -76,7 +77,7 @@ export function exportRoutes({ asUser }: ReturnType<typeof t.connect>) {
     const me = c.get('userId');
     const rows = await asUser(me, (tx) =>
       tx
-        .select({ date: t.diaryEntries.date, meal: t.diaryEntries.meal, grams: t.diaryEntries.grams, name: t.foods.name, brand: t.foods.brand, kcal: t.foods.kcal, protein: t.foods.protein, carbs: t.foods.carbs, fat: t.foods.fat, fiber: t.foods.fiber })
+        .select({ date: t.diaryEntries.date, meal: t.diaryEntries.meal, grams: t.diaryEntries.grams, amount: t.diaryEntries.amount, unit: t.diaryEntries.unit, ownName: t.diaryEntries.name, name: t.foods.name, brand: t.foods.brand, kcal: t.foods.kcal, protein: t.foods.protein, carbs: t.foods.carbs, fat: t.foods.fat, fiber: t.foods.fiber, sugar: t.foods.sugar, sodiumMg: t.foods.sodiumMg, micros: t.foods.micros, servingGrams: t.foods.servingGrams, servingLabel: t.foods.servingLabel, portions: t.foods.portions })
         .from(t.diaryEntries)
         .innerJoin(t.foods, eq(t.foods.id, t.diaryEntries.foodId))
         .where(eq(t.diaryEntries.userId, me))
@@ -84,8 +85,28 @@ export function exportRoutes({ asUser }: ReturnType<typeof t.connect>) {
     );
     const per = (v: number | null, g: number) => (v === null ? null : round((v * g) / 100));
     const body = csv(
-      ['date', 'meal', 'food', 'brand', 'grams', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'],
-      rows.map((x) => [x.date, x.meal, x.name, x.brand, round(x.grams), per(x.kcal, x.grams), per(x.protein, x.grams), per(x.carbs, x.grams), per(x.fat, x.grams), per(x.fiber, x.grams)]),
+      // The entry's own name when it has one; the amount as logged ("2 bars"); then the numbers, and vitamins and minerals where the food lists them.
+      ['date', 'meal', 'food', 'brand', 'amount', 'grams', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g', 'sugar_g', 'sodium_mg', ...MICROS.map((m) => `${m.key}_${m.unit === 'µg' ? 'ug' : 'mg'}`)],
+      rows.map((x) => {
+        const food = { name: x.name, servingGrams: x.servingGrams, servingLabel: x.servingLabel, portions: (x.portions ?? []) as { label: string; grams: number }[] };
+        const micros = (x.micros ?? {}) as Record<string, number | null>;
+        return [
+          x.date,
+          x.meal,
+          x.ownName || x.name,
+          x.brand,
+          entryAmountText({ grams: x.grams, amount: x.amount, unit: x.unit, food }),
+          round(x.grams),
+          per(x.kcal, x.grams),
+          per(x.protein, x.grams),
+          per(x.carbs, x.grams),
+          per(x.fat, x.grams),
+          per(x.fiber, x.grams),
+          per(x.sugar, x.grams),
+          per(x.sodiumMg, x.grams),
+          ...MICROS.map((m) => per(micros[m.key] ?? null, x.grams)),
+        ];
+      }),
     );
     return c.body(body, 200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="forkbell-diary-${stamp()}.csv"` });
   });

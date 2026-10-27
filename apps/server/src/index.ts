@@ -128,6 +128,8 @@ internalApi.route('/api/foods', foodRoutes(database));
 internalApi.route('/api/exercises', exerciseRoutes(database));
 internalApi.route('/api/workouts', workoutRoutes(database));
 internalApi.route('/api/progress', progressRoutes(database));
+internalApi.route('/api/wellbeing', wellbeingRoutes(database));
+internalApi.route('/api/me', meRoutes(database));
 const internal = async (path: string, userId: string, init?: { method: string; body: unknown }) => {
   const res = await internalApi.request(path, {
     method: init?.method ?? 'GET',
