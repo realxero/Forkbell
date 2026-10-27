@@ -125,14 +125,18 @@ export default function Scan() {
                 </View>
                 <View style={s.row}>
                   <TextInput
-                    value={it.edited ?? String(grams[i] ?? '')}
+                    value={it.edited ?? (grams[i] ? String(grams[i]) : '')}
+                    placeholder="g"
+                    placeholderTextColor={color.placeholder}
                     onChangeText={(v) => setItems((l) => l.map((x, j) => (j === i ? { ...x, edited: v } : x)))}
                     keyboardType="decimal-pad"
                     style={[s.input, s.grams]}
                     accessibilityLabel={`Grams of ${it.name}`}
                   />
                   <Text style={[type.small, { flex: 1 }]}>
-                    g · about {it.ml} ml{it.coverage < 0.6 ? ' · partly measured' : ''}{it.note ? ` · ${it.note}` : ''}
+                    {it.ml < 5 && it.edited === null && !(total && total > 0)
+                      ? 'g · couldn’t measure this one: type the grams, or weigh the plate below'
+                      : `g · about ${it.ml} ml${it.coverage < 0.6 ? ' · partly measured' : ''}${it.note ? ` · ${it.note}` : ''}`}
                   </Text>
                 </View>
               </View>
@@ -164,23 +168,24 @@ export default function Scan() {
 }
 
 /**
- * The photo with each food's box. The camera sees in landscape, so the photo
- * and its boxes turn together to stand upright on the phone.
+ * The photo with each food's box. The LiDAR module already turns the photo
+ * (and the depth map) upright, so it's shown as it is; turning it again here
+ * is what showed it on its side.
  */
 function PlateView({ photo, boxes }: { photo: Photo; boxes: [number, number, number, number][] }) {
   const [w, setW] = useState(0);
-  const h = w * (photo.width / photo.height);
+  const h = w * (photo.height / photo.width);
   return (
     <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={[s.photo, { height: h || 1 }]}>
       {w > 0 && (
-        <View style={{ position: 'absolute', width: h, height: w, left: (w - h) / 2, top: (h - w) / 2, transform: [{ rotate: '90deg' }] }}>
+        <View style={{ position: 'absolute', width: w, height: h, left: 0, top: 0 }}>
           <Image source={{ uri: photo.uri }} style={{ width: '100%', height: '100%' }} accessibilityLabel="Your plate" />
           {boxes.map((b, i) => (
             <View
               key={i}
               style={{ position: 'absolute', left: `${b[0] * 100}%`, top: `${b[1] * 100}%`, width: `${(b[2] - b[0]) * 100}%`, height: `${(b[3] - b[1]) * 100}%`, borderWidth: 3, borderColor: COLORS[i % COLORS.length], borderRadius: 8 }}
             >
-              <View style={[s.dot, { backgroundColor: COLORS[i % COLORS.length], transform: [{ rotate: '-90deg' }], margin: 4 }]}><Text style={s.dotText}>{i + 1}</Text></View>
+              <View style={[s.dot, { backgroundColor: COLORS[i % COLORS.length], margin: 4 }]}><Text style={s.dotText}>{i + 1}</Text></View>
             </View>
           ))}
         </View>

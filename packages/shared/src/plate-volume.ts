@@ -100,11 +100,15 @@ export function plateVolumes(scan: DepthScan, foods: FoodBox[]): VolumeResult {
       n = [-n[0], -n[1], -n[2]];
       d = -d;
     }
+    // Only surfaces the phone looks down on (tilted under 60°) can be the table: a fridge wall or
+    // the side of a container seen edge-on is often the biggest flat thing in view, and measuring
+    // food against it gave 0 ml.
+    if (Math.abs(n[2]) < 0.5) continue;
     let inliers = 0;
     for (const p of background) if (Math.abs(dot(n, p) + d) < PLANE_M) inliers++;
     if (!best || inliers > best.inliers) best = { n, d, inliers };
   }
-  if (!best || best.inliers < background.length * 0.35) return { ok: false, error: 'Couldn’t find a flat table around the plate. Try again on a clear table, holding the phone straight above.' };
+  if (!best || best.inliers < Math.max(30, background.length * 0.2)) return { ok: false, error: 'Couldn’t find a flat table around the plate. Try again on a clear table, holding the phone straight above.' };
   // Refine: a least-squares plane through all the table points the best guess agreed with,
   // so the answer doesn't depend on which three random points happened to win.
   const { n, d } = refinePlane(background.filter((p) => Math.abs(dot(best!.n, p) + best!.d) < PLANE_M), best);

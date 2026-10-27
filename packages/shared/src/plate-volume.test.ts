@@ -36,6 +36,18 @@ test('two foods are measured separately, and a slightly tilted phone still works
   assert.ok(r.tableTilt > 0 && r.tableTilt < 20);
 });
 
+test('a wall or the inside of a fridge beside the food is not taken for the table', () => {
+  // Left part of the view: a steep wall (normal mostly sideways), bigger than the bit of table showing.
+  const depth = Float32Array.from(scan([{ x0: 40, y0: 14, x1: 60, y1: 34, cm: 3 }]).depth);
+  const n = [-0.97, 0, 0.24];
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < 36; x++) depth[y * W + x] = 0.4 / (n[0]! * ((x - W / 2) / f) + n[2]!);
+  const r = plateVolumes({ width: W, height: H, depth, fx: f, fy: f, cx: W / 2, cy: H / 2 }, [box(38, 12, 62, 36)]);
+  assert.ok(r.ok, JSON.stringify(r));
+  // 20 × 20 pixels, 3 cm tall at 37 cm: about 657 ml.
+  assert.ok(Math.abs(r.volumes[0]!.ml - 657) < 657 * 0.15, `${r.volumes[0]!.ml} ml`);
+});
+
 test('no table showing is an error, not a guess', () => {
   const r = plateVolumes(scan([]), [box(0, 0, 64, 48)]);
   assert.equal(r.ok, false);
