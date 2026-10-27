@@ -26,6 +26,7 @@ import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
 import { WorkoutBell } from '../../components/WorkoutBell';
 import { WhenCard } from '../../components/WhenCard';
+import { useLiveHeartRate } from '../../lib/heart';
 import { ExerciseMenu } from '../../components/ExerciseMenu';
 import { SwipeRow } from '../../components/SwipeRow';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -81,6 +82,8 @@ export default function WorkoutScreen() {
   const [hr, setHr] = useState<{ bpm: number; at: number } | null>(null);
   const [recoveredBpm, setRecoveredBpm] = useState(recoveredAt(null, null));
   const [w, setW] = useState<Workout | null>(null);
+  /** a Bluetooth heart-rate sensor picked in Training setup, connected while the workout is going */
+  const sensor = useLiveHeartRate(Boolean(w && !w.finishedAt));
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const [picker, setPicker] = useState(false);
@@ -158,7 +161,7 @@ export default function WorkoutScreen() {
     void latestRestingHeartRate().then((r) => setRecoveredBpm(recoveredAt(r, age)));
   }, [hrOn, me?.preferences.body.birthYear]);
   useEffect(() => {
-    if (!hrOn || !restEnd) return;
+    if (!hrOn || !restEnd || sensor.state === 'connected') return; // the sensor is enough
     let live = true;
     const read = () => void latestHeartRate().then((r) => live && setHr(r));
     read();
@@ -168,7 +171,9 @@ export default function WorkoutScreen() {
       clearInterval(t);
     };
   }, [hrOn, restEnd !== null]); // eslint-disable-line react-hooks/exhaustive-deps
-  const hrFresh = hr && now - hr.at <= 60_000 ? hr : null;
+  // A Bluetooth sensor (Training setup) gives a reading every second; otherwise Apple Health's newest.
+  const hrNewest = sensor.reading && (!hr || sensor.reading.at >= hr.at) ? sensor.reading : hr;
+  const hrFresh = hrNewest && now - hrNewest.at <= 60_000 ? hrNewest : null;
 
   // The screen stays on while a workout is going (Settings → Training setup), so the timer is always there.
   const awake = Boolean(w && !w.finishedAt) && me?.preferences.keepAwake !== false;

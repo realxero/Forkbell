@@ -397,6 +397,20 @@ tracking a workout writes a reading every few seconds. Garmin and most
 other watches sync to Apple Health in batches, so with them the coach
 usually just keeps time.
 
+## Live heart rate from a watch or strap
+
+Apple Health only gets Garmin heart rate in batches, so the rest coach rarely
+had a fresh reading. Settings → Training setup → *Heart rate sensor* finds
+anything offering standard Bluetooth heart rate: a Garmin with **Broadcast
+Heart Rate** turned on (on most models in Settings → Wrist Heart Rate, or
+Health & Wellness → Wrist Heart Rate; during an activity, in its controls
+menu), or a Polar, Wahoo or similar chest strap. Pick it once; *Test* shows
+the live reading. During a workout Forkbell connects to it while the workout
+screen is open, reconnecting if it drops, and the ♥ on the rest bar and the
+rest coach use it (Apple Health stays the fallback). iPhone only, in a build
+that includes the module (modules/forkbell-heart, CoreBluetooth); nothing runs
+in the background.
+
 ## Training suggestions
 
 Rules, not AI, so they're instant and work offline. Set them up in Settings → Training setup: the equipment you have, areas to go easy on (shoulders, elbows, wrists, lower back, knees), and exercises never to suggest.

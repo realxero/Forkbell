@@ -6,6 +6,7 @@ import { ALLERGENS, BODY_AREAS, DIETS, EQUIPMENT_KINDS, checkFood, defaultPrefer
 import { put } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { Chip } from '../../components/AmountPicker';
+import { HeartSensorSettings } from '../../components/HeartSensorSettings';
 import { color, space, type } from '../../lib/theme';
 
 const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
@@ -182,6 +183,7 @@ export default function PreferencesScreen() {
         <Text style={s.label}>Never suggest these exercises</Text>
         <TextInput value={neverLifts} onChangeText={setNeverLifts} placeholder="e.g. upright row, good morning" placeholderTextColor={color.placeholder} style={s.input} />
         <Text style={s.note}>You can still log them; they just won’t be offered as swaps.</Text>
+            <HeartSensorSettings />
           </>
         )}
       </ScrollView>

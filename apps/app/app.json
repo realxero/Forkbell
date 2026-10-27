@@ -9,7 +9,10 @@
     "ios": {
       "bundleIdentifier": "com.realxero.forkbell",
       "supportsTablet": true,
-      "icon": "./assets/Forkbell.icon"
+      "icon": "./assets/Forkbell.icon",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Forkbell connects to a heart-rate sensor you choose (a watch broadcasting heart rate, or a chest strap) to show your heart rate during rests."
+      }
     },
     "android": {
       "package": "com.realxero.forkbell",
