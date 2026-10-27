@@ -59,6 +59,11 @@ before Cloudflare gives up, and clearer errors when something else answers.
 a connection" on slow answers), × 2 / × 3 and "make this one serving" for
 amounts, and vitamins and minerals.
 
+0.20: days keep their goals, recipe vitamins and minerals, a fuller diary
+export, Bell sees vitamins and minerals, Siri adds water and fasting,
+importing recipes (link, Mealie, text), and live heart rate from a Garmin or
+chest strap over Bluetooth.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
