@@ -93,6 +93,8 @@ export interface DiaryDay {
   goals: Goals;
   /** you marked this day finished: everything eaten is logged */
   complete?: boolean;
+  /** calories added to the goal for exercise, when that's turned on (Settings → Goals) */
+  bonus?: import('./exercise-bonus.ts').ExerciseBonus | null;
 }
 
 export interface Me {

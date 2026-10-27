@@ -112,7 +112,9 @@ export default function Diary() {
     }
   }, [day, viewing]);
 
-  const goal = day?.goals.kcal ?? null;
+  // Exercise adds to the goal when that's turned on (only activity above a usual day).
+  const bonus = day?.goals.kcal ? day.bonus?.kcal ?? 0 : 0;
+  const goal = day?.goals.kcal != null ? day.goals.kcal + bonus : null;
   const eaten = day?.totals.kcal ?? 0;
   const left = goal !== null ? goal - eaten : null;
 
@@ -153,7 +155,7 @@ export default function Diary() {
                 </Ring>
                 <View style={{ flex: 1, gap: space(3) }}>
                   <Stat icon="restaurant-outline" label="Eaten" value={eaten.toLocaleString()} />
-                  <Stat icon="flag-outline" label="Goal" value={goal ? goal.toLocaleString() : '–'} />
+                  <Stat icon="flag-outline" label={bonus > 0 ? `Goal · +${bonus} exercise` : 'Goal'} value={goal ? goal.toLocaleString() : '–'} />
                   <Stat icon="leaf-outline" label="Fiber" value={`${Math.round(day.totals.fiber)} g`} />
                 </View>
               </View>

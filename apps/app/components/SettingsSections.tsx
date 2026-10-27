@@ -62,6 +62,7 @@ export function GoalsSection() {
       </Pressable>
       {status && <Text style={type.body}>{status}</Text>}
       <WeekdayGoals />
+      <ExerciseAddsSetting />
       <WaterGoal />
       <FastingSetting />
     </View>
@@ -516,6 +517,30 @@ function FastingSetting() {
         </>
       )}
       <Text style={type.small}>Optional. If you’re pregnant, diabetic, on medication, or fasting has ever made eating feel hard, check with your doctor first.</Text>
+    </View>
+  );
+}
+
+/** Settings → Goals: whether exercise adds to the day's calorie goal. */
+function ExerciseAddsSetting() {
+  const { me, refreshMe } = useAuth();
+  const mode = me?.preferences.exerciseAdds ?? 'off';
+  const save = async (exerciseAdds: 'off' | 'half' | 'all') => {
+    if (!me) return;
+    await put('/api/me/preferences', { ...me.preferences, exerciseAdds }).catch(() => {});
+    await refreshMe();
+  };
+  return (
+    <View style={{ gap: space(2), marginTop: space(4) }}>
+      <Text style={type.label}>Exercise and your goal</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+        <Chip label="Doesn’t add" on={mode === 'off'} onPress={() => void save('off')} />
+        <Chip label="Adds half" on={mode === 'half'} onPress={() => void save('half')} />
+        <Chip label="Adds all" on={mode === 'all'} onPress={() => void save('all')} />
+      </View>
+      <Text style={type.small}>
+        Your daily burn (Progress) is worked out from your own logs and weight, so it already includes how active you usually are. With this on, only the active calories above your usual day (from Apple Health, compared with the last four weeks) are added to that day’s goal, so a long run earns more food and an ordinary day changes nothing. “Adds half” allows for watches overestimating. Needs a week of activity in Apple Health first.
+      </Text>
     </View>
   );
 }

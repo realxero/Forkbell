@@ -57,6 +57,8 @@ export const preferencesSchema = z.object({
     .regex(/^https?:\/\/[^\s]+$/, 'Use an address starting with http:// or https://')
     .nullable()
     .default(null),
+  /** exercise adds to the day's calorie goal: off, half or all of the activity above your usual day */
+  exerciseAdds: z.enum(['off', 'half', 'all']).default('off'),
   /** the Water card on Today: shown or hidden, and the daily goal in ml */
   water: z
     .object({ show: z.boolean().default(true), goalMl: z.number().int().min(250).max(10000).default(2000) })

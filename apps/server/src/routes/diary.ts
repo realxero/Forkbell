@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { dayGoals, dayStatus, diaryEntries, foods, users, type connect } from '@forkbell/db';
-import { addDays, addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry } from '@forkbell/shared';
+import { dayGoals, dayStatus, diaryEntries, foods, users, type connect, healthDaily } from '@forkbell/db';
+import { addDays, addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry, exerciseBonus, preferencesSchema } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { saveFood, BadFood } from './save-food.ts';
@@ -12,6 +12,22 @@ function goalsFor(date: string, me: typeof users.$inferSelect | undefined): Diar
   const weekday = String(new Date(Date.UTC(y, m - 1, d)).getUTCDay());
   const special = (me?.weekdayGoals as Record<string, DiaryDay['goals']> | undefined)?.[weekday];
   return special ?? { kcal: me?.goalKcal ?? null, protein: me?.goalProtein ?? null, carbs: me?.goalCarbs ?? null, fat: me?.goalFat ?? null };
+}
+
+/** Calories added to a day's goal for exercise: today's active energy above your usual day (Apple Health). */
+async function bonusFor(tx: Parameters<Parameters<ReturnType<typeof connect>['asUser']>[1]>[0], date: string, me: typeof users.$inferSelect | undefined) {
+  const mode = preferencesSchema.parse(me?.preferences ?? {}).exerciseAdds;
+  if (mode === 'off') return null;
+  const rows = await tx
+    .select({ date: healthDaily.date, value: healthDaily.value })
+    .from(healthDaily)
+    .where(sql`${healthDaily.kind} = 'active_kcal' and ${healthDaily.date} between ${addDays(date, -28)}::date and ${date}::date`);
+  // Two sources for a day: the larger, never both added.
+  const byDay = new Map<string, number>();
+  for (const r of rows) byDay.set(r.date, Math.max(byDay.get(r.date) ?? 0, r.value));
+  const today = byDay.get(date) ?? null;
+  byDay.delete(date);
+  return exerciseBonus(mode, today, [...byDay.values()]);
 }
 
 export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
@@ -126,6 +142,7 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
         // A day more than a day back shows the goals it was logged against; today, the current ones.
         goals: (date.data < addDays(new Date().toISOString().slice(0, 10), -1) ? (await tx.select({ goals: dayGoals.goals }).from(dayGoals).where(eq(dayGoals.date, date.data)).limit(1))[0]?.goals : null) ?? goalsFor(date.data, me),
         complete: Boolean(finished),
+        bonus: await bonusFor(tx, date.data, me),
       };
     });
     return c.json(day);

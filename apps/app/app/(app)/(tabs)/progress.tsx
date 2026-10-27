@@ -176,7 +176,7 @@ export default function ProgressScreen() {
                 <>
                   <Text style={[type.hero, type.number, { fontSize: 32 }]}>{p.energy.kcal.toLocaleString()} kcal</Text>
                   <Text style={type.small}>
-                    Worked out from what you logged on {p.energy.loggedDays} days and how your trend moved ({signed(p.energy.rateKgPerWeek!)} a week). Confidence: {p.energy.confidence}. It updates as you keep logging.
+                    Worked out from what you logged on {p.energy.loggedDays} days and how your trend moved ({signed(p.energy.rateKgPerWeek!)} a week). Confidence: {p.energy.confidence}. It updates as you keep logging, and already includes your usual activity; to have hard exercise days add to your goal, see Settings → Goals and targets.
                   </Text>
                 </>
               ) : (

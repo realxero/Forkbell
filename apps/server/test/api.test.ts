@@ -513,3 +513,15 @@ test('Siri’s “how am I doing” includes water, and a fast when the timer is
   assert.match(body.speak, /17 ounces of water/);
   assert.match(body.speak, /5 hours into your fast/);
 });
+
+test('exercise adds to the goal only when turned on, and only above a usual day', async () => {
+  const u = await newUser();
+  await u.call('PUT', '/api/me/goals', { kcal: 2000, protein: 150, carbs: 200, fat: 70 });
+  const days = Array.from({ length: 14 }, (_, i) => ({ date: `2026-10-${String(10 + i).padStart(2, '0')}`, kind: 'active_kcal', value: 400 }));
+  days.push({ date: '2026-10-25', kind: 'active_kcal', value: 1000 });
+  assert.equal((await u.call('POST', '/api/health/import', { source: 'apple_health', days, weights: [] })).status, 200);
+  assert.equal((await u.call('GET', '/api/diary/2026-10-25')).body.bonus, null, 'off to start');
+  const me = (await u.call('GET', '/api/me')).body;
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, exerciseAdds: 'half' });
+  assert.deepEqual((await u.call('GET', '/api/diary/2026-10-25')).body.bonus, { kcal: 300, activeKcal: 1000, usualKcal: 400 });
+});

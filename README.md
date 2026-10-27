@@ -302,6 +302,17 @@ another glass or an Undo updates it there (Settings → Apple Health → Send
 water). Bell knows today's water and your goal, so "how am I doing today?"
 includes it. Tell Bell "I drank a bottle of water" and it offers an Add button for 16.9 oz (500 ml); nothing is logged until you tap it, the same as food.
 
+## Daily burn, and exercise in your goal
+
+Progress → *Your daily burn* is worked out from what you log and how your
+weight trend moves (after about two weeks), so it already includes how active
+you usually are; goal presets in Settings → Goals and targets use it. By
+default, exercise doesn't change the day's goal. *Exercise and your goal* can
+add half or all of the active calories above your usual day (Apple Health,
+against the last four weeks): a long run earns more food, an ordinary day
+changes nothing, and nothing is counted twice. Today shows it as "Goal ·
++300 exercise".
+
 ## Fasting
 
 Off until you turn it on in Settings → Goals and targets. Then Today has a
