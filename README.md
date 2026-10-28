@@ -235,6 +235,14 @@ Checks: `pnpm typecheck`, `pnpm test`, and `pnpm --filter @forkbell/db rls-check
 - **A better burn estimate.** Once you have ten finished days in the last four weeks, the daily-burn estimate uses only finished days, so a half-logged day can't make it look like you burn less than you do.
 - **Smart reminders (phone only).** In Settings, *Reminders on this phone*. Forkbell learns when you usually log each meal and only nudges about meals you log most days, about an hour after your usual time, and only if that meal is still empty. An evening nudge to finish the day comes around when you usually do. They're local notifications scheduled on the phone, replanned whenever the app opens or you log something, so nothing goes through a push service. If you log on the web instead, the phone hears about it next time Forkbell opens there.
 
+## Your meals
+
+Settings → Food preferences and suggestions → *Meals*: rename any meal
+("Morning", "Post-gym"), turn on up to two more (they start as Meal 5 and
+Meal 6), hide ones you don't use, and put them in your order with the arrows.
+Today, the add screens, plans and Bell all use your names. What you've logged
+never moves: each meal keeps its place underneath, only the name changes.
+
 ## Amounts: servings, oz, cups
 
 Foods keep their numbers per 100 g underneath, but you never have to think

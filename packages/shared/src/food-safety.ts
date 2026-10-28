@@ -1,3 +1,5 @@
+import { MEALS } from './types.ts';
+import { DEFAULT_MEAL_SLOTS } from './meals.ts';
 // Allergies, diets and dislikes. This works from food names only (Forkbell
 // stores no ingredient lists), so it errs toward blocking and can't see
 // sauces, hidden ingredients or cross-contact. Screens that use it say so,
@@ -57,6 +59,11 @@ export const preferencesSchema = z.object({
     .regex(/^https?:\/\/[^\s]+$/, 'Use an address starting with http:// or https://')
     .nullable()
     .default(null),
+  /** your meal slots: names, which show, and their order (see meals.ts) */
+  meals: z
+    .array(z.object({ key: z.enum(MEALS), name: z.string().trim().min(1).max(30), show: z.boolean() }))
+    .max(6)
+    .default(DEFAULT_MEAL_SLOTS.map((s) => ({ ...s }))),
   /** exercise adds to the day's calorie goal: off, half or all of the activity above your usual day */
   exerciseAdds: z.enum(['off', 'half', 'all']).default('off'),
   /** the Water card on Today: shown or hidden, and the daily goal in ml */

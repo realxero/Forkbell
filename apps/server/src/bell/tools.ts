@@ -3,7 +3,7 @@ import { customAllowed } from './config.ts';
 // signed-in person, so row-level security applies); Bell never writes. Food
 // it wants to log comes back as proposals the person reviews and confirms,
 // and so does water.
-import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences, unitsFor, entryName, entryAmountText, sumMicros, MICROS, microText } from '@forkbell/shared';
+import { askArgsSchema, checkFood, parseWater, JUST_ESTIMATE, looksLikeDefaultAmount, per100Problems, proposeArgsSchema, type BellQuestion, type DiaryDay, type Food, type FoodProposal, type Meal, type Preferences, unitsFor, entryName, entryAmountText, sumMicros, MICROS, microText, shownMealSlots, DEFAULT_MEAL_NAMES } from '@forkbell/shared';
 import { env } from '../env.ts';
 import type { ToolSpec } from './providers.ts';
 
@@ -339,7 +339,13 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
 
 export function systemPrompt(opts: { today: string; localTime?: string; unit: 'lb' | 'kg'; name: string | null; prefs: Preferences }) {
   const p = opts.prefs;
+  // Meals they've renamed or added: the key to use, and what they call it.
+  const slots = shownMealSlots(p.meals);
+  const renamed = slots.filter((s) => s.name !== DEFAULT_MEAL_NAMES[s.key]);
   const rules = [
+    renamed.length || slots.length !== 4
+      ? `Their meals, in order: ${slots.map((s) => `${s.name} (meal: "${s.key}")`).join(', ')}. Use these keys for meal, and their names when talking about them. Only these meals show in the app.`
+      : '',
     p.allergies.length ? `Allergies: ${p.allergies.join(', ')}. Never suggest anything that may contain them, and say when you can't be sure.` : '',
     p.avoid.length ? `Never suggest: ${p.avoid.join(', ')}.` : '',
     p.diet !== 'none' ? `Diet: ${p.diet}. Only suggest foods that fit it.` : '',

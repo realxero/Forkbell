@@ -1,3 +1,4 @@
+import { applyMealPrefs } from './meals';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateCache('/api/me', () => undefined);
         throw new Error('The server’s answer didn’t look like a Forkbell account. Check the server address, then sign in again.');
       }
+      applyMealPrefs(me.preferences.meals); // your meal names, before anything shows them
       setMe(me);
       setStatus('signedIn');
     } catch (e) {

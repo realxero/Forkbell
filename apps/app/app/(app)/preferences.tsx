@@ -6,6 +6,7 @@ import { ALLERGENS, BODY_AREAS, DIETS, EQUIPMENT_KINDS, checkFood, defaultPrefer
 import { put } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { Chip } from '../../components/AmountPicker';
+import { MealSlotsEditor } from '../../components/MealSlotsEditor';
 import { HeartSensorSettings } from '../../components/HeartSensorSettings';
 import { color, space, type } from '../../lib/theme';
 
@@ -74,6 +75,9 @@ export default function PreferencesScreen() {
         <Text style={s.note}>
           Forkbell checks food names only; it has no ingredient lists. It errs toward keeping things out, but it can’t see sauces, hidden ingredients or cross-contact, so it never tells you a food is safe. Always check labels.
         </Text>
+
+        <Text style={s.section}>Meals</Text>
+        <MealSlotsEditor prefs={p} onChange={(meals) => setP({ ...p, meals })} />
 
         <Text style={s.section}>Diet</Text>
         <View style={s.chips}>{DIETS.map((d) => <Chip key={d} label={d === 'none' ? 'No restriction' : cap(d)} on={p.diet === d} onPress={() => setP({ ...p, diet: d })} />)}</View>

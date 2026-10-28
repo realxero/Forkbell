@@ -53,11 +53,12 @@ export interface PlannedReminder {
   meal?: Meal;
 }
 
-const MEAL_WORD: Record<Meal, string> = { breakfast: 'breakfast', lunch: 'lunch', dinner: 'dinner', snacks: 'your snacks' };
+const MEAL_WORD: Record<Meal, string> = { breakfast: 'breakfast', lunch: 'lunch', dinner: 'dinner', snacks: 'your snacks', meal5: 'your fifth meal', meal6: 'your sixth meal' };
 
-export function reminderText(r: PlannedReminder): { title: string; body: string } {
+/** `names`: your own meal names, when you've renamed them. */
+export function reminderText(r: PlannedReminder, names?: Partial<Record<Meal, string>>): { title: string; body: string } {
   return r.kind === 'meal'
-    ? { title: `Log ${MEAL_WORD[r.meal!]}?`, body: 'You usually have it logged by now. Already did it somewhere else? Ignore this.' }
+    ? { title: `Log ${names?.[r.meal!] ?? MEAL_WORD[r.meal!]}?`, body: 'You usually have it logged by now. Already did it somewhere else? Ignore this.' }
     : { title: 'Finish today’s log?', body: 'Mark the day finished once everything’s in, so your daily-burn estimate can count it.' };
 }
 

@@ -49,7 +49,7 @@ export const diaryEntries = pgTable('diary_entries', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull(),
   date: date('date', { mode: 'string' }).notNull(),
-  meal: text('meal', { enum: ['breakfast', 'lunch', 'dinner', 'snacks'] }).notNull(),
+  meal: text('meal', { enum: ['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6'] }).notNull(),
   foodId: uuid('food_id').notNull(),
   grams: num('grams').notNull(),
   /** how the amount was said: 1 (amount) bar (unit); grams stays the truth */

@@ -12,3 +12,11 @@ test('only activity above a usual day is added', () => {
   assert.equal(exerciseBonus('all', 900, [400, 400]), null, 'not enough days to know what usual is');
   assert.equal(exerciseBonus('all', 5000, usual)!.kcal, 1500, 'capped');
 });
+
+test('meal slots: your order and names, at least one showing', async () => {
+  const { mealSlots, shownMealSlots } = await import('./meals.ts');
+  assert.deepEqual(shownMealSlots(undefined).map((s) => s.key), ['breakfast', 'lunch', 'dinner', 'snacks']);
+  const mine = shownMealSlots([{ key: 'meal5', name: 'Pre-workout', show: true }, { key: 'breakfast', name: ' ', show: true }]);
+  assert.deepEqual(mine.map((s) => [s.key, s.name]), [['meal5', 'Pre-workout'], ['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snacks', 'Snacks']]);
+  assert.equal(mealSlots(['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6'].map((key) => ({ key, name: key, show: false })) as never).filter((s) => s.show).length, 1);
+});

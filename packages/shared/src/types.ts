@@ -1,4 +1,9 @@
-export const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'] as const;
+/**
+ * Meal slots. The first four are on by default; meal5 and meal6 are two more
+ * you can turn on, and every slot can be renamed (Settings → Food preferences
+ * → Meals). The keys never change, so renaming never moves anything you logged.
+ */
+export const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6'] as const;
 export type Meal = (typeof MEALS)[number];
 
 /** Nutrition per 100 g (or 100 ml, treated as grams). Always stored this way. */

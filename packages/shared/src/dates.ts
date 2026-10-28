@@ -12,6 +12,10 @@ export function addDays(date: string, days: number): string {
 }
 
 export function mealForTime(now = new Date()): 'breakfast' | 'lunch' | 'dinner' | 'snacks' {
+  return baseMealForTime(now);
+}
+
+function baseMealForTime(now: Date): 'breakfast' | 'lunch' | 'dinner' | 'snacks' {
   const h = now.getHours();
   if (h < 10) return 'breakfast';
   if (h < 15) return 'lunch';

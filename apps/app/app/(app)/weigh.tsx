@@ -1,3 +1,4 @@
+import { shownMeals } from '../../lib/meals';
 // Weigh a meal on your kitchen scale, food by food. Tare between foods and
 // type each weight, or keep the scale running and type what it shows after
 // each food. Pick a plate or bowl you've weighed once and you don't even
@@ -101,7 +102,7 @@ export default function Weigh() {
           )}
 
           <View style={s.chips}>
-            {MEALS.map((m) => <Chip key={m} label={MEAL_NAMES[m]} on={meal === m} onPress={() => setMeal(m)} />)}
+            {shownMeals().map((m) => <Chip key={m} label={MEAL_NAMES[m]} on={meal === m} onPress={() => setMeal(m)} />)}
           </View>
 
           <Text style={type.label}>On</Text>

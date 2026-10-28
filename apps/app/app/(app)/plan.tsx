@@ -1,3 +1,4 @@
+import { shownMeals } from '../../lib/meals';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -41,7 +42,7 @@ export default function Plan() {
         cachedGet<{ recent: RecentFood[]; frequent: RecentFood[] }>(`/api/foods/recent?today=${today}`).then((r) => [...r.frequent, ...r.recent], () => [] as RecentFood[]),
         Promise.all([...picked].sort().map((d) => cachedGet<DiaryDay>(`/api/diary/${d}`))),
       ]);
-      setPlans(planDays(days, { foods: foods as Food[], recent, prefs: me.preferences, kcalTarget: me.goals.kcal, proteinTarget: me.goals.protein, seed }));
+      setPlans(planDays(days, { foods: foods as Food[], recent, prefs: me.preferences, kcalTarget: me.goals.kcal, proteinTarget: me.goals.protein, seed, meals: shownMeals() }));
       setRemoved(new Set());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -87,7 +88,7 @@ export default function Plan() {
         {plans?.map((p) => (
           <View key={p.date} style={s.card}>
             <Text style={type.title}>{label(p.date, today)}</Text>
-            {MEALS.map((meal) => {
+            {shownMeals().map((meal) => {
               const items = p.items.map((it, i) => ({ it, i })).filter((x) => x.it.meal === meal);
               if (!items.length) return null;
               return (

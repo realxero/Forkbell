@@ -1,3 +1,4 @@
+import { shownMeals } from '../../../lib/meals';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -24,7 +25,7 @@ import { WaterCard } from '../../../components/WaterCard';
 import { MicrosCard } from '../../../components/MicrosCard';
 import { FastingCard } from '../../../components/FastingCard';
 
-const MEAL_ICONS: Record<Meal, ComponentProps<typeof Ionicons>['name']> = { breakfast: 'sunny-outline', lunch: 'partly-sunny-outline', dinner: 'moon-outline', snacks: 'cafe-outline' };
+const MEAL_ICONS: Record<Meal, ComponentProps<typeof Ionicons>['name']> = { breakfast: 'sunny-outline', lunch: 'partly-sunny-outline', dinner: 'moon-outline', snacks: 'cafe-outline' , meal5: 'restaurant-outline', meal6: 'nutrition-outline' };
 
 function Stat({ icon, label, value }: { icon: ComponentProps<typeof Ionicons>['name']; label: string; value: string }) {
   return (
@@ -175,7 +176,7 @@ export default function Diary() {
             )}
 
 
-            {MEALS.map((meal) => {
+            {shownMeals().map((meal) => {
               const entries = day.entries.filter((e) => e.meal === meal);
               const kcal = sumEntries(entries).kcal;
               return (

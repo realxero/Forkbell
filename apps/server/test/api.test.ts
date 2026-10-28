@@ -525,3 +525,18 @@ test('exercise adds to the goal only when turned on, and only above a usual day'
   await u.call('PUT', '/api/me/preferences', { ...me.preferences, exerciseAdds: 'half' });
   assert.deepEqual((await u.call('GET', '/api/diary/2026-10-25')).body.bonus, { kcal: 300, activeKcal: 1000, usualKcal: 400 });
 });
+
+test('meal slots: renamed and extra ones save, and food can go in them', async () => {
+  const u = await newUser();
+  const me = (await u.call('GET', '/api/me')).body;
+  assert.equal(me.preferences.meals.length, 6);
+  assert.deepEqual(me.preferences.meals.filter((m: { show: boolean }) => m.show).map((m: { key: string }) => m.key), ['breakfast', 'lunch', 'dinner', 'snacks']);
+  const meals = [{ key: 'breakfast', name: 'Morning', show: true }, { key: 'meal5', name: 'Pre-workout', show: true }, { key: 'lunch', name: 'Lunch', show: true }, { key: 'dinner', name: 'Dinner', show: true }, { key: 'snacks', name: 'Snacks', show: false }, { key: 'meal6', name: 'Meal 6', show: false }];
+  assert.equal((await u.call('PUT', '/api/me/preferences', { ...me.preferences, meals })).status, 200);
+  assert.deepEqual((await u.call('GET', '/api/me')).body.preferences.meals[1], { key: 'meal5', name: 'Pre-workout', show: true });
+  const food = (await u.call('POST', '/api/foods', { name: 'Banana', brand: null, source: 'custom', per100: { kcal: 89, protein: 1, carbs: 23, fat: 0.3 }, servingGrams: 118, barcode: null })).body.food;
+  const r = await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'meal5', grams: 118, foodId: food.id });
+  assert.equal(r.status, 201, r.text);
+  assert.equal((await u.call('GET', '/api/diary/2026-10-25')).body.entries[0].meal, 'meal5');
+  assert.equal((await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'brunch', grams: 1, foodId: food.id })).status, 400, 'only the six slots');
+});

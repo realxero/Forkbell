@@ -6,7 +6,9 @@ import { readCache } from '../lib/sync';
 import { setFoodServing } from '../lib/actions';
 import { color, space, type } from '../lib/theme';
 
-export const MEAL_NAMES: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
+// Your meal names (Settings → Food preferences → Meals), shared by every screen.
+export { MEAL_NAMES } from '../lib/meals';
+import { MEAL_NAMES, shownMeals } from '../lib/meals';
 
 type Props = {
   food: Food | FoodCandidate;
@@ -169,7 +171,7 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
       {goals?.kcal ? <Text style={type.small}>The bars show how much of the day’s goal this is.</Text> : null}
 
       <View style={s.chips} accessibilityRole="radiogroup" accessibilityLabel="Meal">
-        {MEALS.map((m) => (
+        {shownMeals().map((m) => (
           <Chip key={m} label={MEAL_NAMES[m]} on={meal === m} onPress={() => setMeal(m)} />
         ))}
       </View>

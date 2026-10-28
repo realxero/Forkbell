@@ -31,8 +31,8 @@ export function roleOf(food: Food): Role {
 }
 
 /** Share of the day's calories each meal gets. */
-const SHARE: Record<Meal, number> = { breakfast: 0.25, lunch: 0.3, dinner: 0.35, snacks: 0.1 };
-const SHAPE: Record<Meal, Role[]> = { breakfast: ['protein', 'starch', 'fruit'], lunch: ['protein', 'starch', 'veg'], dinner: ['protein', 'starch', 'veg'], snacks: ['fruit', 'fat'] };
+const SHARE: Record<Meal, number> = { breakfast: 0.25, lunch: 0.3, dinner: 0.35, snacks: 0.1, meal5: 0.15, meal6: 0.15 };
+const SHAPE: Record<Meal, Role[]> = { breakfast: ['protein', 'starch', 'fruit'], lunch: ['protein', 'starch', 'veg'], dinner: ['protein', 'starch', 'veg'], snacks: ['fruit', 'fat'], meal5: ['protein', 'fruit'], meal6: ['protein', 'fruit'] };
 // Breakfast proteins that read like breakfast.
 const BREAKFAST = /\b(eggs?|egg white|greek yogurt|cottage cheese|oats?|bagel|bread|cereal|granola|banana|berries|strawberr|blueberr)\b/i;
 // Concentrated foods (powders, nuts) make poor main dishes.
@@ -67,6 +67,8 @@ export function planDay(opts: {
   seed?: number;
   /** foods to avoid repeating (e.g. yesterday's dinner) */
   avoidIds?: string[];
+  /** the meal slots that show (the first four if not given) */
+  meals?: Meal[];
 }): DayPlan {
   const random = rng(opts.seed ?? 1);
   const usual = new Set(opts.recent.map((r) => r.food.id));
@@ -82,7 +84,8 @@ export function planDay(opts: {
   for (const [r, list] of byRole) byRole.set(r, list.map((f) => ({ f, k: (usual.has(f.id) ? 0 : 1) + random() })).sort((a, b) => a.k - b.k).map((x) => x.f));
 
   const planned = new Set([...(opts.avoidIds ?? []), ...opts.day.entries.map((e) => e.food.id)]);
-  const empty = MEALS.filter((m) => !opts.day.entries.some((e) => e.meal === m));
+  // Only slots that show (meal5 and meal6 are off unless you turned them on).
+  const empty = (opts.meals ?? (['breakfast', 'lunch', 'dinner', 'snacks'] as Meal[])).filter((m) => !opts.day.entries.some((e) => e.meal === m));
   const kcalLeft = Math.max(0, opts.kcalTarget - opts.day.totals.kcal);
   const proteinLeft = Math.max(0, (opts.proteinTarget ?? 0) - opts.day.totals.protein);
   const shareTotal = empty.reduce((s, m) => s + SHARE[m], 0) || 1;
