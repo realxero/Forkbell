@@ -98,8 +98,9 @@ page.on('console', (m) => {
 });
 page.on('response', (res) => {
   const url = res.url();
-  // 502/503 are expected without an AI key or with the picture source unreachable.
-  if (res.status() >= 500 && !(res.status() >= 502 && /\/api\/(bell|media)\//.test(url))) report(`server ${res.status()}`, `${res.request().method()} ${url}`);
+  // 502/503 are expected without an AI key (Bell, and recipe import, which uses Bell) or with
+  // the picture source or a recipe's web page unreachable; the app shows those as messages.
+  if (res.status() >= 500 && !(res.status() >= 502 && /\/api\/(bell|media|recipes\/import)\//.test(url))) report(`server ${res.status()}`, `${res.request().method()} ${url}`);
 });
 page.on('dialog', (d) => d.dismiss().catch(() => {}));
 
