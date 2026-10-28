@@ -67,6 +67,8 @@ chest strap over Bluetooth.
 0.21: your own meal names and two more meals, splitting a recipe across days,
 sleep and readiness scores, and AI apps (Claude Desktop) over MCP.
 
+0.22: importing food history from MyFitnessPal, Lose It, Cronometer or Yazio.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
