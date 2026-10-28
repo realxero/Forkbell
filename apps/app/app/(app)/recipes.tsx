@@ -1,4 +1,5 @@
 import { ImportRecipe } from '../../components/ImportRecipe';
+import { SplitRecipe } from '../../components/SplitRecipe';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -25,6 +26,7 @@ export default function Recipes() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [splitting, setSplitting] = useState<Recipe | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -62,6 +64,10 @@ export default function Recipes() {
                   <Text style={[type.body, { fontWeight: '700' }]}>{r.food.name}</Text>
                   <Text style={type.small}>{r.servings} servings · {kcal} kcal and {protein} g protein each · {r.items.length} ingredients</Text>
                 </View>
+                <Pressable onPress={() => setSplitting(r)} hitSlop={8} style={s.splitButton} accessibilityRole="button" accessibilityLabel={`Split ${r.food.name} across meals or days`}>
+                  <Ionicons name="git-branch-outline" size={16} color={color.accent} />
+                  <Text style={s.splitText}>Split</Text>
+                </Pressable>
                 <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
               </View>
             </Pressable>
@@ -72,6 +78,7 @@ export default function Recipes() {
           <Text style={s.link}>Import a recipe (link, Mealie or text)</Text>
         </Pressable>
       </ScrollView>
+      <SplitRecipe recipe={splitting} onClose={() => setSplitting(null)} />
       <ImportRecipe
         visible={importing}
         onClose={() => setImporting(false)}
@@ -218,6 +225,8 @@ function Editor({ draft, onClose, onSaved }: { draft: Draft; onClose: () => void
 }
 
 const s = StyleSheet.create({
+  splitButton: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: color.line, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 4 },
+  splitText: { color: color.accent, fontWeight: '700', fontSize: 13 },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: 16 },

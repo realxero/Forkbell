@@ -235,6 +235,13 @@ Checks: `pnpm typecheck`, `pnpm test`, and `pnpm --filter @forkbell/db rls-check
 - **A better burn estimate.** Once you have ten finished days in the last four weeks, the daily-burn estimate uses only finished days, so a half-logged day can't make it look like you burn less than you do.
 - **Smart reminders (phone only).** In Settings, *Reminders on this phone*. Forkbell learns when you usually log each meal and only nudges about meals you log most days, about an hour after your usual time, and only if that meal is still empty. An evening nudge to finish the day comes around when you usually do. They're local notifications scheduled on the phone, replanned whenever the app opens or you log something, so nothing goes through a push service. If you log on the web instead, the phone hears about it next time Forkbell opens there.
 
+## Splitting a recipe (meal prep)
+
+Recipes → *Split* on a recipe: for a batch you cook once and eat over
+several meals or days. Pick how many portions, one a day at a meal or across
+one day's meals, and the first day; each portion is logged as one serving on
+its day (works offline), and can be moved or removed like any entry.
+
 ## Your meals
 
 Settings → Food preferences and suggestions → *Meals*: rename any meal
