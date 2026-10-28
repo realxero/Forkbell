@@ -423,6 +423,16 @@ tracking a workout writes a reading every few seconds. Garmin and most
 other watches sync to Apple Health in batches, so with them the coach
 usually just keeps time.
 
+## Sleep and readiness
+
+From what your watch already sends to Apple Health: last night's sleep
+against your own usual (or 7½ hours until there's a week of it), and resting
+heart rate and HRV against your own last four weeks. A readiness score (0 to
+100: Ready to push, Normal, Take it easier) says what moved it ("resting heart
+rate 7 bpm above usual; 2.5 h less sleep than usual"). On Progress and, small,
+on Train. Rules, not AI; parts without a week of your own history are left out
+rather than guessed. Bell sees it too.
+
 ## Live heart rate from a watch or strap
 
 Apple Health only gets Garmin heart rate in batches, so the rest coach rarely

@@ -395,6 +395,8 @@ export interface HealthMetric {
 
 export interface Activity {
   metrics?: HealthMetric[];
+  /** sleep and readiness this morning, from your own history; null without enough data */
+  readiness?: import('./readiness.ts').Readiness | null;
   today: { steps: number | null; activeKcal: number | null };
   /** averages over the last 7 full days with data */
   week: { steps: number | null; activeKcal: number | null };

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { healthDaily, measurements, users, weighIns, workouts, type connect, dayGoals } from '@forkbell/db';
-import { findPatterns, foodCheckIn, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource } from '@forkbell/shared';
+import { findPatterns, foodCheckIn, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource, readiness } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -87,6 +87,11 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       week: { steps: avg('steps'), activeKcal: avg('active_kcal') },
       restingHr: hr,
       source: (data.health[0]?.source as HealthSource | undefined) ?? null,
+      // This morning against your own last four weeks (sleep is counted on the morning you woke).
+      readiness: readiness(
+        { date: today, sleepMin: valueOn('sleep_min', today), restingHr: valueOn('resting_hr', today), hrvMs: valueOn('hrv_ms', today) },
+        Array.from({ length: 28 }, (_, i) => addDays(today, -1 - i)).map((d) => ({ date: d, sleepMin: valueOn('sleep_min', d), restingHr: valueOn('resting_hr', d), hrvMs: valueOn('hrv_ms', d) })),
+      ),
     };
 
     // The last four weeks, day by day, for the charts.

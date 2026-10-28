@@ -1,3 +1,4 @@
+import { ReadinessCard } from '../../../components/ReadinessCard';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
@@ -166,6 +167,7 @@ export default function ProgressScreen() {
             )}
 
             {/* Everything from Apple Health / Health Connect */}
+            {!viewing && p.activity?.readiness && <ReadinessCard r={p.activity.readiness} />}
             {p.activity?.source && p.activity.metrics && p.activity.metrics.length > 0 && (
               <HealthCard metrics={p.activity.metrics} source={p.activity.source} unit={units.unit} today={p.today} />
             )}

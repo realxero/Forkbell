@@ -540,3 +540,18 @@ test('meal slots: renamed and extra ones save, and food can go in them', async (
   assert.equal((await u.call('GET', '/api/diary/2026-10-25')).body.entries[0].meal, 'meal5');
   assert.equal((await u.call('POST', '/api/diary', { date: '2026-10-25', meal: 'brunch', grams: 1, foodId: food.id })).status, 400, 'only the six slots');
 });
+
+test('readiness this morning comes from your own history', async () => {
+  const u = await newUser();
+  const days: { date: string; kind: string; value: number }[] = [];
+  for (let i = 1; i <= 14; i++) {
+    const date = new Date(Date.UTC(2026, 9, 25 - i)).toISOString().slice(0, 10);
+    days.push({ date, kind: 'sleep_min', value: 450 }, { date, kind: 'resting_hr', value: 55 + (i % 2) }, { date, kind: 'hrv_ms', value: 60 + (i % 3) });
+  }
+  days.push({ date: '2026-10-25', kind: 'sleep_min', value: 300 }, { date: '2026-10-25', kind: 'resting_hr', value: 64 }, { date: '2026-10-25', kind: 'hrv_ms', value: 45 });
+  assert.equal((await u.call('POST', '/api/health/import', { source: 'apple_health', days, weights: [] })).status, 200);
+  const r = (await u.call('GET', '/api/progress?today=2026-10-25')).body.activity.readiness;
+  assert.equal(r.label, 'Take it easier', JSON.stringify(r));
+  assert.equal(r.sleep.minutes, 300);
+  assert.ok(r.reasons.length >= 2);
+});

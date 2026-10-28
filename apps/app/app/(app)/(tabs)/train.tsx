@@ -1,3 +1,4 @@
+import { TrainReadiness } from '../../../components/ReadinessCard';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -138,6 +139,7 @@ export default function Train() {
         ) : null}
 
         <TrainingCheckInCard />
+        <TrainReadiness />
         <YourWeek
           program={program}
           finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
