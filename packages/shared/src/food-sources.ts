@@ -7,6 +7,7 @@ export const SOURCE_NAMES: Record<FoodSource, string> = {
   builtin: 'Forkbell',
   custom: 'you',
   recipe: 'your recipe',
+  import: 'another app (imported)',
 };
 
 /** Two barcodes for the same product (UPC-A, EAN-13 and GTIN-14 differ only by leading zeros). */

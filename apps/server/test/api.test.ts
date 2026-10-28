@@ -583,3 +583,25 @@ test('AI apps over MCP: a key that reads, a key that logs, and nowhere else', as
   const keys = (await u.call('GET', '/api/shortcuts/keys')).body.keys as { kind: string; canWrite: boolean }[];
   assert.deepEqual(keys.map((k) => [k.kind, k.canWrite]).sort(), [['mcp', false], ['mcp', true]]);
 });
+
+test('food history from another app: days add up exactly, logged days are left alone, foods stay out of lists', async () => {
+  const u = await newUser();
+  const line = (date: string, meal: string, name: string, kcal: number, protein: number, carbs: number, fat: number) => ({ date, meal, name, kcal, protein, carbs, fat, fiber: null, sugar: null, sodium: null });
+  const lines = [line('2025-03-14', 'breakfast', 'Breakfast (MyFitnessPal)', 420, 25, 55, 12), line('2025-03-14', 'dinner', 'Dinner (MyFitnessPal)', 1350, 80, 120, 60), line('2025-03-15', 'lunch', 'Lunch (MyFitnessPal)', 600, 40, 60, 20)];
+  // 2025-03-15 already has food in Forkbell.
+  const mine = (await u.call('POST', '/api/foods', { name: 'Toast', brand: null, source: 'custom', per100: { kcal: 265, protein: 9, carbs: 49, fat: 3 }, servingGrams: null, barcode: null })).body.food;
+  await u.call('POST', '/api/diary', { date: '2025-03-15', meal: 'breakfast', grams: 50, foodId: mine.id });
+  const preview = await u.call('POST', '/api/import/foods', { format: 'myfitnesspal', lines, dryRun: true });
+  assert.deepEqual(preview.body, { days: 1, lines: 2, skippedDays: 1, from: '2025-03-14', to: '2025-03-14', dryRun: true });
+  const done = await u.call('POST', '/api/import/foods', { format: 'myfitnesspal', lines, dryRun: false });
+  assert.equal(done.status, 200, done.text);
+  const day = (await u.call('GET', '/api/diary/2025-03-14')).body;
+  assert.equal(Math.round(day.totals.kcal), 1770, 'the day adds up exactly, even a 1,350 kcal dinner');
+  assert.equal(Math.round(day.totals.protein), 105);
+  assert.equal((await u.call('GET', '/api/diary/2025-03-15')).body.entries.length, 1, 'the day already logged is untouched');
+  assert.equal((await u.call('GET', '/api/foods/search?q=MyFitnessPal')).body.mine?.length ?? 0, 0, 'imported foods stay out of search');
+  const recent = (await u.call('GET', '/api/foods/recent?today=2025-03-16')).body.recent as { food: { name: string } }[];
+  assert.ok(!recent.some((r) => /MyFitnessPal/.test(r.food.name)), 'and out of recent foods');
+  const again = await u.call('POST', '/api/import/foods', { format: 'myfitnesspal', lines, dryRun: false });
+  assert.equal(again.body.lines, 0, 'importing twice adds nothing');
+});

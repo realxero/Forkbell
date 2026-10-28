@@ -42,3 +42,4 @@ export * from './recipe-page.ts';
 export * from './exercise-bonus.ts';
 export * from './meals.ts';
 export * from './readiness.ts';
+export * from './food-import.ts';

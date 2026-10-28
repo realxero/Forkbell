@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, desc, eq, gte, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, ilike, inArray, isNull, or, sql, ne } from 'drizzle-orm';
 import { diaryEntries, foods, type connect } from '@forkbell/db';
 import { addDays, barcodeVariants, chooseBarcodeMatch, crossCheck, rankResults, dateSchema, foodInputSchema, todayLocal, type FoodCandidate, type RecentFood, type RecentFoods } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
@@ -30,7 +30,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
       tx
         .select()
         .from(foods)
-        .where(and(or(eq(foods.ownerId, userId), isNull(foods.ownerId)), or(ilike(foods.name, like), ilike(foods.brand, like))))
+        .where(and(or(eq(foods.ownerId, userId), isNull(foods.ownerId)), ne(foods.source, 'import'), or(ilike(foods.name, like), ilike(foods.brand, like))))
         // yours before built-in, then names that start with the query, then shorter names
         .orderBy(sql`${foods.ownerId} is null`, sql`${foods.name} not ilike ${prefix}`, sql`length(${foods.name})`, desc(foods.createdAt))
         .limit(20),
@@ -54,7 +54,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/library', async (c) => {
     const userId = c.get('profileId');
     const rows = await asUser(userId, (tx) =>
-      tx.select().from(foods).where(or(eq(foods.ownerId, userId), isNull(foods.ownerId))).orderBy(desc(foods.createdAt)).limit(2000),
+      tx.select().from(foods).where(and(or(eq(foods.ownerId, userId), isNull(foods.ownerId)), ne(foods.source, 'import'))).orderBy(desc(foods.createdAt)).limit(2000),
     );
     return c.json({ foods: rows.map(toFood) });
   });
@@ -78,7 +78,7 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
         })
         .from(diaryEntries)
         .innerJoin(foods, eq(foods.id, diaryEntries.foodId))
-        .where(gte(diaryEntries.date, since))
+        .where(and(gte(diaryEntries.date, since), ne(foods.source, 'import')))
         .groupBy(foods.id),
     );
     const all: (RecentFood & { lastUsed: string })[] = rows.map((r) => ({

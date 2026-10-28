@@ -22,7 +22,7 @@ export interface Per100 {
   micros?: import('./micros.ts').Micros | null;
 }
 
-export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin' | 'recipe';
+export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin' | 'recipe' | 'import';
 
 /** A named amount, like "1 large" = 50 g. */
 export interface Portion {

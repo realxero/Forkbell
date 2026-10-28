@@ -411,6 +411,19 @@ and which will be added as your own. Nothing is saved until you tap Import.
 If a file from one of these apps doesn't come through right, the columns may
 have changed: open an issue with the first few lines of the file.
 
+## Importing food history (MyFitnessPal, Lose It, Cronometer, Yazio)
+
+Settings → Export, import and backup → *Import food history*: the food diary
+CSV from that app's export (on their website, usually under Reports or
+Account → Export). Forkbell works out which app made it from the columns
+(any CSV with a date and calories column works too), shows how many days and
+lines and which days you've already logged in Forkbell (those are left
+alone), then imports. Each line keeps its exact numbers, so every day adds up
+to what the other app had; MyFitnessPal exports only each meal's totals, so
+those come in as one line per meal. Imported foods stay out of search, your
+food list and recent foods. *Count these days as finished* (on by default)
+lets the daily-burn estimate use them with your weigh-ins.
+
 ## Past workouts
 
 *+ Log a past workout* at the bottom of Train is for one you did without

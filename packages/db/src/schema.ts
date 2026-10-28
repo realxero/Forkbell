@@ -26,7 +26,7 @@ export const foods = pgTable('foods', {
   ownerId: uuid('owner_id'),
   name: text('name').notNull(),
   brand: text('brand'),
-  source: text('source', { enum: ['custom', 'off', 'usda', 'builtin', 'recipe'] }).notNull(),
+  source: text('source', { enum: ['custom', 'off', 'usda', 'builtin', 'recipe', 'import'] }).notNull(),
   sourceId: text('source_id'),
   kcal: num('kcal').notNull(),
   protein: num('protein').notNull(),

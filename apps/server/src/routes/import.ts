@@ -6,8 +6,8 @@
 // then the import itself, in one transaction: all of it or none.
 import { Hono } from 'hono';
 import { sql } from 'drizzle-orm';
-import { exercises, workouts, type connect } from '@forkbell/db';
-import { guessEquipment, guessKind, guessMuscle, nameCandidates, exerciseKey, workoutImportSchema, type ImportedSet, type WorkoutImportResult } from '@forkbell/shared';
+import { dayStatus, diaryEntries, exercises, foods, workouts, type connect } from '@forkbell/db';
+import { guessEquipment, guessKind, guessMuscle, nameCandidates, exerciseKey, workoutImportSchema, type ImportedSet, type WorkoutImportResult, foodImportSchema, type FoodImportResult } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { saveWorkout } from '../training.ts';
 
@@ -94,6 +94,43 @@ export function importRoutes({ asUser }: ReturnType<typeof connect>) {
           })),
         });
       }
+      return summary;
+    });
+    return c.json(result);
+  });
+
+  /**
+   * Food history from another app. Days that already have food in Forkbell
+   * are left as they are. Each line becomes its own food (kept out of search
+   * and your lists), logged at a weight that keeps its numbers within a
+   * food's limits, so every day adds up to exactly what the other app had.
+   */
+  r.post('/foods', async (c) => {
+    const parsed = foodImportSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: `The file couldn’t be read: ${parsed.error.issues[0]?.message ?? 'check it'}.` }, 400);
+    const { lines, dryRun, markComplete } = parsed.data;
+    const userId = c.get('userId');
+    const result = await asUser(userId, async (tx) => {
+      const dates = [...new Set(lines.map((l) => l.date))].sort();
+      const had = new Set(
+        (await tx.selectDistinct({ date: diaryEntries.date }).from(diaryEntries).where(sql`${diaryEntries.date} between ${dates[0]}::date and ${dates.at(-1)}::date`)).map((d) => d.date),
+      );
+      const fresh = lines.filter((l) => !had.has(l.date));
+      const freshDays = [...new Set(fresh.map((l) => l.date))].sort();
+      const summary: FoodImportResult = { days: freshDays.length, lines: fresh.length, skippedDays: dates.length - freshDays.length, from: freshDays[0] ?? null, to: freshDays.at(-1) ?? null, dryRun };
+      if (dryRun || !fresh.length) return summary;
+      for (let i = 0; i < fresh.length; i += 500) {
+        const chunk = fresh.slice(i, i + 500);
+        // The weight that keeps every number per 100 g within a food's limits (900 kcal, 100 g of anything).
+        const grams = chunk.map((l) => Math.max(100, Math.ceil(l.kcal / 9), Math.ceil(l.protein), Math.ceil(l.carbs), Math.ceil(l.fat), Math.ceil(l.fiber ?? 0), Math.ceil(l.sugar ?? 0)));
+        const per = (v: number | null, g: number) => (v === null ? null : Math.round(((v * 100) / g) * 10) / 10);
+        const made = await tx
+          .insert(foods)
+          .values(chunk.map((l, j) => ({ ownerId: userId, source: 'import', name: l.name, brand: null, kcal: per(l.kcal, grams[j]!)!, protein: per(l.protein, grams[j]!)!, carbs: per(l.carbs, grams[j]!)!, fat: per(l.fat, grams[j]!)!, fiber: per(l.fiber, grams[j]!), sugar: per(l.sugar, grams[j]!), sodiumMg: per(l.sodium, grams[j]!), servingGrams: grams[j]! }) as typeof foods.$inferInsert))
+          .returning({ id: foods.id });
+        await tx.insert(diaryEntries).values(chunk.map((l, j) => ({ userId, date: l.date, meal: l.meal, grams: grams[j]!, foodId: made[j]!.id, amount: 1, unit: 'serving' }) as typeof diaryEntries.$inferInsert));
+      }
+      if (markComplete) await tx.insert(dayStatus).values(freshDays.map((date) => ({ userId, date }) as typeof dayStatus.$inferInsert)).onConflictDoNothing();
       return summary;
     });
     return c.json(result);
