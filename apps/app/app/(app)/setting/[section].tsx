@@ -1,3 +1,4 @@
+import { AiAppsSection } from '../../../components/AiAppsSection';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +27,7 @@ const SECTIONS = {
   phone: { title: 'This phone', body: PhoneSection },
   data: { title: 'Export, import and backup', body: DataSection },
   shortcuts: { title: 'Siri and Shortcuts', body: ShortcutsSection },
+  aiapps: { title: 'AI apps (Claude Desktop)', body: AiAppsSection },
   security: { title: 'Sign-in and security', body: SecuritySection },
 } as const;
 

@@ -16,6 +16,8 @@ const COOKIE = 'fb_session';
 const NATIVE_REDIRECT = 'forkbell://auth';
 /** Shortcut keys start with this, and only work on /api/shortcuts. */
 export const SHORTCUT_PREFIX = 'fbk_';
+/** Keys for AI apps start with this, and only work on /mcp. */
+export const MCP_PREFIX = 'fbm_';
 
 /**
  * Where to send the phone app after sign-in. Only the app's own scheme, plus
@@ -291,6 +293,7 @@ export function requireUser(db: Database): MiddlewareHandler<AppEnv> {
     // A Shortcut key can ask Bell and log what you confirm, nothing else, and can't make more keys.
     if (token.startsWith(SHORTCUT_PREFIX) && (!c.req.path.startsWith('/api/shortcuts/') || c.req.path.startsWith('/api/shortcuts/keys')))
       return c.json({ error: 'A Shortcut key only works for Siri and Shortcuts.' }, 403);
+    if (token.startsWith(MCP_PREFIX)) return c.json({ error: 'This key only works for AI apps, at /mcp.' }, 403);
     const tokenHash = hashToken(token);
     const [row] = await db.execute<{ id: string | null }>(sql`select auth_session_user(${tokenHash}) as id`);
     if (!row?.id) return c.json({ error: 'Your session ended. Sign in again.' }, 401);

@@ -555,3 +555,31 @@ test('readiness this morning comes from your own history', async () => {
   assert.equal(r.sleep.minutes, 300);
   assert.ok(r.reasons.length >= 2);
 });
+
+test('AI apps over MCP: a key that reads, a key that logs, and nowhere else', async () => {
+  const u = await newUser();
+  const rpc = async (token: string, body: unknown) => {
+    const r = await fetch(`${BASE}/mcp`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify(body) });
+    return { status: r.status, body: r.status === 202 ? null : ((await r.json()) as { result?: { tools?: { name: string }[]; content?: { text: string }[]; isError?: boolean; protocolVersion?: string }; error?: { message: string } }) };
+  };
+  const readKey = (await u.call('POST', '/api/shortcuts/keys', { label: 'Claude Desktop', kind: 'mcp' })).body.token as string;
+  assert.match(readKey, /^fbm_/);
+  const init = await rpc(readKey, { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } } });
+  assert.equal(init.body!.result!.protocolVersion, '2025-06-18');
+  assert.equal((await rpc(readKey, { jsonrpc: '2.0', method: 'notifications/initialized' })).status, 202);
+  const tools = (await rpc(readKey, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).body!.result!.tools!.map((t) => t.name);
+  assert.ok(tools.includes('get_day') && !tools.includes('log_food'), tools.join(','));
+  const day = await rpc(readKey, { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'get_day', arguments: { date: '2026-10-25' } } });
+  assert.match(day.body!.result!.content![0]!.text, /"date":"2026-10-25"/);
+  const refused = await rpc(readKey, { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'log_water', arguments: { amount: '500 ml' } } });
+  assert.equal(refused.body!.result!.isError, true, 'a read key can’t log');
+  assert.equal((await fetch(`${BASE}/api/me`, { headers: { authorization: `Bearer ${readKey}` } })).status, 403, 'and works nowhere but /mcp');
+
+  const writeKey = (await u.call('POST', '/api/shortcuts/keys', { label: 'Claude logging', kind: 'mcp', canWrite: true })).body.token as string;
+  const logged = await rpc(writeKey, { jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'log_food', arguments: { name: 'Apple', per100: { kcal: 52, protein: 0.3, carbs: 14, fat: 0.2 }, grams: 182, meal: 'snacks', date: '2026-10-25' } } });
+  assert.match(logged.body!.result!.content![0]!.text, /Logged Apple, 182 g \(95 kcal\)/);
+  assert.equal((await u.call('GET', '/api/diary/2026-10-25')).body.entries.length, 1);
+  assert.equal((await rpc('fbm_nope', { jsonrpc: '2.0', id: 6, method: 'ping' })).status, 401);
+  const keys = (await u.call('GET', '/api/shortcuts/keys')).body.keys as { kind: string; canWrite: boolean }[];
+  assert.deepEqual(keys.map((k) => [k.kind, k.canWrite]).sort(), [['mcp', false], ['mcp', true]]);
+});

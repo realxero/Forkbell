@@ -28,6 +28,7 @@ import { exportRoutes } from './routes/export.ts';
 import { shortcutRoutes } from './routes/shortcuts.ts';
 import { photoRoutes } from './routes/photos.ts';
 import { recipeImportRoutes } from './routes/recipe-import.ts';
+import { mcpRoutes } from './routes/mcp.ts';
 import { importRoutes } from './routes/import.ts';
 import { accountRoutes } from './routes/account.ts';
 import { BUILD } from '@forkbell/shared';
@@ -148,6 +149,8 @@ api.route('/bell', bellRoutes(database, internal));
 internalApi.route('/api/bell', bellRoutes(database, internal));
 api.route('/shortcuts', shortcutRoutes(database, internal));
 app.route('/api', api);
+// AI apps (Claude Desktop and others) over the Model Context Protocol, with their own keys.
+app.route('/mcp', mcpRoutes(database, internal));
 // An /api path this server doesn't have (often: the app is newer than the server)
 // answers in JSON, instead of falling through to the web app's page below.
 app.all('/api/*', (c) => c.json({ error: 'Your Forkbell server doesn’t have this yet. Update the server to the same version as the app.' }, 404));

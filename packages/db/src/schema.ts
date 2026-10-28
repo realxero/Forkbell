@@ -290,6 +290,10 @@ export const shortcutKeys = pgTable('shortcut_keys', {
   hint: text('hint').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
   lastUsedAt: timestamp('last_used_at', { withTimezone: true, mode: 'string' }),
+  /** 'shortcuts' (Siri) or 'mcp' (AI apps at /mcp) */
+  kind: text('kind', { enum: ['shortcuts', 'mcp'] }).notNull().default('shortcuts'),
+  /** an MCP key may log food and water */
+  canWrite: boolean('can_write').notNull().default(false),
 });
 
 /** Water: one row per glass or bottle. */

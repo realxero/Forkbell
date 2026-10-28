@@ -9,7 +9,7 @@ import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { shortcutKeys, type connect } from '@forkbell/db';
 import { dateSchema, mealForTime, todayLocal, type BellReply, type DiaryDay, type FoodProposal, fastProgress, waterGoalMl, waterText, type Fasts, type Preferences, type WaterDay } from '@forkbell/shared';
-import { hashToken, SHORTCUT_PREFIX, type AppEnv } from '../auth.ts';
+import { hashToken, MCP_PREFIX, SHORTCUT_PREFIX, type AppEnv } from '../auth.ts';
 
 type Internal = (path: string, userId: string, init?: { method: string; body: unknown }) => Promise<unknown>;
 
@@ -42,17 +42,19 @@ export function shortcutRoutes(db: ReturnType<typeof connect>, internal: Interna
 
   // Keys: made and removed in the app, never with a key.
   r.get('/keys', async (c) => {
-    const rows = await asUser(c.get('userId'), (tx) => tx.select({ id: shortcutKeys.id, label: shortcutKeys.label, hint: shortcutKeys.hint, createdAt: shortcutKeys.createdAt, lastUsedAt: shortcutKeys.lastUsedAt }).from(shortcutKeys).orderBy(desc(shortcutKeys.createdAt)));
+    const rows = await asUser(c.get('userId'), (tx) => tx.select({ id: shortcutKeys.id, label: shortcutKeys.label, hint: shortcutKeys.hint, createdAt: shortcutKeys.createdAt, lastUsedAt: shortcutKeys.lastUsedAt, kind: shortcutKeys.kind, canWrite: shortcutKeys.canWrite }).from(shortcutKeys).orderBy(desc(shortcutKeys.createdAt)));
     return c.json({ keys: rows });
   });
   r.post('/keys', async (c) => {
-    const { label } = (await c.req.json().catch(() => ({}))) as { label?: string };
+    const { label, kind, canWrite } = (await c.req.json().catch(() => ({}))) as { label?: string; kind?: string; canWrite?: boolean };
     const userId = c.get('userId');
-    const token = SHORTCUT_PREFIX + randomBytes(32).toString('base64url');
+    // A key for Siri (Shortcuts), or for AI apps over MCP (reading, and logging only if allowed).
+    const mcp = kind === 'mcp';
+    const token = (mcp ? MCP_PREFIX : SHORTCUT_PREFIX) + randomBytes(32).toString('base64url');
     const hash = hashToken(token);
     const expires = new Date(Date.now() + KEY_YEARS * 365 * 86_400_000);
     await db.db.execute(sql`select auth_create_session(${userId}::uuid, ${hash}, ${expires.toISOString()}::timestamptz)`);
-    await asUser(userId, (tx) => tx.insert(shortcutKeys).values({ label: (label ?? '').trim().slice(0, 60) || 'Shortcuts', tokenHash: hash, hint: `…${token.slice(-4)}` } as typeof shortcutKeys.$inferInsert));
+    await asUser(userId, (tx) => tx.insert(shortcutKeys).values({ label: (label ?? '').trim().slice(0, 60) || (mcp ? 'AI app' : 'Shortcuts'), tokenHash: hash, hint: `…${token.slice(-4)}`, kind: mcp ? 'mcp' : 'shortcuts', canWrite: mcp && canWrite === true } as typeof shortcutKeys.$inferInsert));
     return c.json({ token }, 201);
   });
   r.delete('/keys/:id', async (c) => {

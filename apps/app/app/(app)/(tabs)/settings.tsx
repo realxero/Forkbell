@@ -48,6 +48,7 @@ export default function Settings() {
         { icon: 'heart-outline', tint: '#D2423A', title: healthName ?? 'Apple Health and Health Connect', detail: healthSupported ? (getHealthSettings().connected ? 'Connected' : 'Not connected') : 'In the phone app', href: '/setting/health' },
         { icon: 'people-outline', tint: '#0F8B8D', title: 'Sharing with family', detail: 'Who can see your data', href: '/sharing' },
         { icon: 'mic-outline', tint: '#C2185B', title: 'Siri and Shortcuts', detail: 'Ask Bell and log food hands-free', href: '/setting/shortcuts' },
+        { icon: 'sparkles-outline', tint: '#6A4BC4', title: 'AI apps (Claude Desktop)', detail: 'Let an AI app read your data, and log if you allow', href: '/setting/aiapps' },
       ],
     },
     {

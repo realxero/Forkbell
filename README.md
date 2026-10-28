@@ -229,6 +229,19 @@ address in the app to your computer's LAN address instead of localhost.
 
 Checks: `pnpm typecheck`, `pnpm test`, and `pnpm --filter @forkbell/db rls-check`.
 
+## AI apps (Claude Desktop, over MCP)
+
+Settings → *AI apps (Claude Desktop)* makes a key for an app that speaks the
+Model Context Protocol. It can read your diary, progress (with readiness),
+recent foods, food search, workouts and exercises, so you can ask Claude
+Desktop "how has my protein been this week?". Switch on *This key can log
+food and water* to let it add to your diary too (log_food, log_water); the
+app asks you before each call. The screen gives the Claude Desktop config
+(through `mcp-remote`, which needs Node.js on that computer). Other apps:
+`https://your-server/mcp`, Streamable HTTP, with `Authorization: Bearer
+<key>`. A key works only at /mcp and nowhere else; remove it to cut that app
+off at once.
+
 ## Finishing a day and reminders
 
 - **Finish the day.** Once everything you ate is logged, tap *Finish today* at the bottom of the diary (or *Finish day* on a past day). The calendar shows finished days with a solid dot and logged-but-unfinished days with an outline, so gaps are easy to spot.

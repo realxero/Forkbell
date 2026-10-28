@@ -18,7 +18,7 @@ export function ShortcutsSection() {
   const [error, setError] = useState<string | null>(null);
   const server = getServerUrl() ?? 'https://your-forkbell';
   const load = useCallback(() => {
-    api<{ keys: Key[] }>('/api/shortcuts/keys').then((r) => setKeys(r.keys), (e) => setError(e instanceof Error ? e.message : String(e)));
+    api<{ keys: Key[] }>('/api/shortcuts/keys').then((r) => setKeys(r.keys.filter((k) => (k as Key & { kind?: string }).kind !== 'mcp')), (e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
   useEffect(load, [load]);
   const date = (iso: string) => new Date(iso).toLocaleDateString();
