@@ -99,8 +99,22 @@ async function startSession(db: Database, userId: string, method: 'sso' | 'passw
   return { token, expires };
 }
 
-/** The address a request came from. Behind Traefik that's the last X-Forwarded-For hop. */
-function clientIp(header: (name: string) => string | undefined) {
+/**
+ * The address a request came from, for the wrong-password limits.
+ *
+ * Behind a tunnel (Cloudflare Tunnel, Tailscale Funnel) every request reaches
+ * the reverse proxy from the tunnel's own container, so the last
+ * X-Forwarded-For hop is the same address for everyone, and 30 wrong guesses
+ * from anyone would lock everybody out. TRUSTED_IP_HEADER names the header the
+ * tunnel puts the visitor's real address in (cf-connecting-ip for Cloudflare).
+ * Only set it when the server can't be reached except through that tunnel, or
+ * anyone could send the header and pick their own address.
+ */
+export function clientIp(header: (name: string) => string | undefined, trusted = env.trustedIpHeader) {
+  if (trusted) {
+    const real = header(trusted)?.split(',')[0]?.trim();
+    if (real) return real;
+  }
   const xff = header('x-forwarded-for')?.split(',').map((s) => s.trim()).filter(Boolean);
   return xff?.at(-1) ?? header('x-real-ip') ?? 'direct';
 }

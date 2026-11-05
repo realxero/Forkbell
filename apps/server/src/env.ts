@@ -16,6 +16,8 @@ const publicUrl = required('PUBLIC_URL').replace(/\/$/, '');
 
 export const env = {
   port: Number(process.env.PORT ?? 3000),
+  /** The header a tunnel puts the visitor's real address in (cf-connecting-ip), for sign-in limits. */
+  trustedIpHeader: (process.env.TRUSTED_IP_HEADER ?? '').trim().toLowerCase() || null,
   databaseUrl: required('DATABASE_URL'),
   publicUrl,
   /** Where the web app lives; in dev the Expo server is on another port. */
