@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { todayLocal, type Readiness } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 export function ReadinessCard({ r, compact }: { r: Readiness; compact?: boolean }) {
   const tint = r.label === 'Ready to push' ? color.fat : r.label === 'Normal' ? color.accent : color.carbs;
@@ -41,7 +41,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   badge: { width: 52, height: 52, borderRadius: 26, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
-  score: { fontSize: 20, fontWeight: '800' },
+  score: { fontSize: textSize.title, fontWeight: '800' },
 });
 
 /** On Train: this morning's readiness, small, when there is one. */

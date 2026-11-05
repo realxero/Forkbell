@@ -14,7 +14,7 @@ import { formatDuration } from '../../lib/units';
 import { Chip } from '../../components/AmountPicker';
 import { HowToCard } from '../../components/HowTo';
 import { StretchSession } from '../../components/StretchSession';
-import { color, radius, space, type } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 
 const CREDIT = 'Steps and pictures: Free Exercise DB (public domain)';
 const BODY = MUSCLES.filter((m) => m !== 'full body');
@@ -54,7 +54,7 @@ export default function Stretches() {
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-        <Text style={[type.hero, { fontSize: 30 }]}>Warm-up and stretches</Text>
+        <Text style={type.pageTitle}>Warm-up and stretches</Text>
         <View style={s.tabs} accessibilityRole="tablist">
           {STRETCH_KINDS.map((k) => (
             <Pressable key={k.kind} onPress={() => setKind(k.kind)} style={[s.tab, kind === k.kind && s.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: kind === k.kind }}>
@@ -132,7 +132,7 @@ export default function Stretches() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   tabs: { flexDirection: 'row', backgroundColor: color.card, borderRadius: radius.pill, padding: 4, gap: 4 },
   tab: { flex: 1, minHeight: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   tabOn: { backgroundColor: color.accent },
@@ -140,7 +140,7 @@ const s = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   start: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.accent, borderRadius: radius.card, padding: space(4) },
-  startText: { color: color.onAccent, fontWeight: '800', fontSize: 17 },
+  startText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.row, padding: space(2) },
   thumb: { width: 72, height: 48, borderRadius: 8, backgroundColor: color.raised },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },

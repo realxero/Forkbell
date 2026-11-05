@@ -9,7 +9,7 @@ import { useAuth } from '../../lib/auth';
 import { Chip } from '../../components/AmountPicker';
 import { MealSlotsEditor } from '../../components/MealSlotsEditor';
 import { HeartSensorSettings } from '../../components/HeartSensorSettings';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 
 const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -200,9 +200,9 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(2), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space(2) },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
-  section: { ...type.title, fontSize: 17, marginTop: space(4) },
+  section: { ...type.heading, marginTop: space(4) },
   label: { ...type.small, marginTop: space(2) },
   note: { ...type.small },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },

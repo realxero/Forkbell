@@ -7,7 +7,7 @@ import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { formatDuration } from '../lib/units';
 import { haptic } from '../lib/haptics';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 type Icon = ComponentProps<typeof Ionicons>['name'];
 export interface ExerciseMenuProps {
@@ -57,7 +57,7 @@ export function ExerciseMenu(p: ExerciseMenuProps) {
       <Pressable feedback={false} style={s.backdrop} onPress={p.onClose} accessibilityLabel="Close">
         <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.handle} />
-          <Text style={[type.title, { fontSize: 20 }]} numberOfLines={1}>{p.name}</Text>
+          <Text style={[type.title, { fontSize: textSize.title }]} numberOfLines={1}>{p.name}</Text>
           <ScrollView contentContainerStyle={{ gap: space(3) }} style={{ maxHeight: 560 }}>
             <View style={[s.group, s.rest]}>
               <Ionicons name="timer-outline" size={22} color={color.accent} style={{ width: 28 }} />

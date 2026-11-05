@@ -9,7 +9,7 @@ import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { haptic } from '../lib/haptics';
-import { color } from '../lib/theme';
+import { color, textSize } from '../lib/theme';
 
 type Action = { label: string; icon: ComponentProps<typeof Ionicons>['name']; tint: string; run: () => void };
 const WIDTH = 92;
@@ -98,5 +98,5 @@ export function SwipeRow({ left, right, children }: { left?: Action; right?: Act
 const s = StyleSheet.create({
   wrap: { overflow: 'hidden' },
   action: { position: 'absolute', top: 0, bottom: 0, width: WIDTH, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  label: { color: '#FFFFFF', fontWeight: '700', fontSize: 13 },
+  label: { color: '#FFFFFF', fontWeight: '700', fontSize: textSize.small },
 });

@@ -9,7 +9,7 @@ import { addEntry, deleteEntry, saveMeal } from '../lib/actions';
 import { showToast } from '../lib/toast';
 import { CalendarSheet } from './Calendar';
 import { Chip, MEAL_NAMES } from './AmountPicker';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 const dayName = (date: string) => {
   const t = todayLocal();
@@ -122,9 +122,9 @@ export function SelectionBar({ entries, onDone, onChanged }: { entries: DiaryEnt
 const s = StyleSheet.create({
   bar: { position: 'absolute', left: space(3), right: space(3), bottom: space(3), backgroundColor: color.card, borderRadius: radius.card, borderWidth: 1, borderColor: color.line, padding: space(3), gap: space(2), shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, maxWidth: 616, alignSelf: 'center', width: '94%' },
   btn: { alignItems: 'center', gap: 2, paddingHorizontal: space(3), paddingVertical: space(1), minWidth: 72 },
-  btnText: { color: color.accent, fontWeight: '700', fontSize: 13 },
+  btnText: { color: color.accent, fontWeight: '700', fontSize: textSize.small },
   primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontSize: 16, fontWeight: '700' },
+  primaryText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '700' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: space(4) },
   sheet: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), maxWidth: 440, width: '100%', alignSelf: 'center' },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },

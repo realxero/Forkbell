@@ -11,7 +11,7 @@ import { api } from '../../../lib/api';
 import { Logo } from '../../../components/Logo';
 import { getHealthSettings, healthName, healthSupported } from '../../../lib/health-sync';
 import { pictureCacheSupported, remindersSupported } from '../../../components/SettingsSections';
-import { color, radius, space, type } from '../../../lib/theme';
+import { color, radius, space, type, textSize } from '../../../lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 type Row = { icon: IconName; tint: string; title: string; detail?: string; href: Href };
@@ -64,7 +64,7 @@ export default function Settings() {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={[type.hero, { fontSize: 34 }]}>Settings</Text>
+        <Text style={type.pageTitle}>Settings</Text>
         <View style={s.account}>
           <View style={s.avatar}><Text style={s.avatarText}>{(me?.name ?? me?.email ?? '?').slice(0, 1).toUpperCase()}</Text></View>
           <View style={{ flex: 1 }}>
@@ -132,7 +132,7 @@ const s = StyleSheet.create({
   content: { padding: space(4), paddingBottom: space(16), gap: space(5), maxWidth: 640, width: '100%', alignSelf: 'center' },
   account: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: color.onAccent, fontWeight: '900', fontSize: 18 },
+  avatarText: { color: color.onAccent, fontWeight: '900', fontSize: textSize.heading },
   groupTitle: { ...type.label, marginLeft: space(1) },
   group: { backgroundColor: color.card, borderRadius: radius.card, borderWidth: 1, borderColor: color.line, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingHorizontal: space(4), paddingVertical: space(3), minHeight: 56 },

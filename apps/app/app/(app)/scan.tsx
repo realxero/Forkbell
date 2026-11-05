@@ -14,7 +14,7 @@ import { post } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { capturePlate, lidarSupported } from '../../modules/forkbell-depth';
-import { color, radius, space, type } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 
 type Found = { name: string; box: [number, number, number, number]; density: number; note: string | null };
 type Item = Found & { ml: number; coverage: number; edited: string | null };
@@ -76,7 +76,7 @@ export default function Scan() {
       <SafeAreaView style={s.screen}>
         <View style={s.content}>
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-          <Text style={[type.hero, { fontSize: 30 }]}>Measure with LiDAR</Text>
+          <Text style={type.pageTitle}>Measure with LiDAR</Text>
           <Text style={type.body}>This needs the Forkbell app on an iPhone or iPad Pro with LiDAR, in a build that includes the LiDAR camera. Weighing on a scale works everywhere.</Text>
         </View>
       </SafeAreaView>
@@ -86,7 +86,7 @@ export default function Scan() {
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-        <Text style={[type.hero, { fontSize: 30 }]}>Measure with LiDAR</Text>
+        <Text style={type.pageTitle}>Measure with LiDAR</Text>
         <Text style={type.small}>{MEAL_NAMES[meal]}{date === todayLocal() ? '' : ` · ${date}`}</Text>
 
         {stage === 'start' && (
@@ -198,15 +198,15 @@ function PlateView({ photo, boxes }: { photo: Photo; boxes: [number, number, num
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   primary: { flexDirection: 'row', gap: space(2), alignItems: 'center', justifyContent: 'center', backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(4) },
-  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: 16 },
+  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
   photo: { width: '100%', overflow: 'hidden', borderRadius: radius.card, backgroundColor: color.raised },
   card: { backgroundColor: color.card, borderRadius: radius.row, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  grams: { width: 100, fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  grams: { width: 100, fontSize: textSize.title, fontWeight: '800', textAlign: 'center' },
   dot: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  dotText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  dotText: { color: '#fff', fontWeight: '800', fontSize: textSize.small },
 });

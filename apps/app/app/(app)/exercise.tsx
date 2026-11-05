@@ -9,7 +9,7 @@ import { HowToCard, CuesCard } from '../../components/HowTo';
 import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 
 type Detail = {
   exercise: Exercise;
@@ -70,7 +70,7 @@ export default function ExerciseDetail() {
         {!d && !error && <ActivityIndicator color={color.iron} />}
         {d && (
           <>
-            <Text style={[type.hero, { fontSize: 30 }]}>{d.exercise.name}</Text>
+            <Text style={type.pageTitle}>{d.exercise.name}</Text>
             <Text style={type.small}>
               {d.exercise.muscle.charAt(0).toUpperCase() + d.exercise.muscle.slice(1)} · {d.exercise.equipment}
               {d.exercise.custom ? ' · yours' : ''}
@@ -78,7 +78,7 @@ export default function ExerciseDetail() {
 
             {d.howTo && (
               <View style={s.card}>
-                <Text style={[type.title, { fontSize: 18 }]}>How to do it</Text>
+                <Text style={type.heading}>How to do it</Text>
                 <HowToCard howTo={d.howTo} name={d.exercise.name} short={d.sessions.length > 0} />
               </View>
             )}
@@ -90,9 +90,9 @@ export default function ExerciseDetail() {
               <View style={s.records}>
                 {d.records.map((r) => (
                   <View key={r.kind} style={s.record}>
-                    <Text style={[type.title, type.number, { fontSize: 18 }]}>{value(r)}</Text>
+                    <Text style={[type.heading, type.number]}>{value(r)}</Text>
                     <Text style={type.small}>{LABEL[r.kind]}</Text>
-                    <Text style={[type.small, { fontSize: 11 }]}>{shortDate(r.date)}</Text>
+                    <Text style={[type.small, { fontSize: textSize.caption }]}>{shortDate(r.date)}</Text>
                   </View>
                 ))}
               </View>
@@ -146,7 +146,7 @@ function ProgressIdeas({ ideas, timed }: { ideas: ProgressIdea[]; timed: boolean
   const shown = open ? ideas : ideas.slice(0, 3);
   return (
     <View style={s.card}>
-      <Text style={[type.title, { fontSize: 18 }]}>{timed ? 'Ways to progress' : 'Ways to progress besides weight'}</Text>
+      <Text style={type.heading}>{timed ? 'Ways to progress' : 'Ways to progress besides weight'}</Text>
       <Text style={type.small}>{timed ? 'Make it harder a little at a time.' : 'For when the next weight jump is too big, you’ve stalled, or there’s nothing heavier.'}</Text>
       {shown.map((i) => (
         <View key={i.key} style={{ gap: 2 }}>
@@ -167,7 +167,7 @@ function ProgressIdeas({ ideas, timed }: { ideas: ProgressIdea[]; timed: boolean
 function Variations({ list }: { list: Variation[] }) {
   return (
     <View style={s.card}>
-      <Text style={[type.title, { fontSize: 18 }]}>Variations</Text>
+      <Text style={type.heading}>Variations</Text>
       {list.map((v) => (
         <Pressable
           key={v.exercise.id}
@@ -183,7 +183,7 @@ function Variations({ list }: { list: Variation[] }) {
             <Text style={type.body}>{v.exercise.name}</Text>
             <Text style={type.small} numberOfLines={2}>{v.why.charAt(0).toUpperCase() + v.why.slice(1)}</Text>
           </View>
-          <Text style={[s.link, { fontSize: 20 }]}>›</Text>
+          <Text style={[s.link, { fontSize: textSize.title }]}>›</Text>
         </Pressable>
       ))}
     </View>
@@ -257,10 +257,10 @@ function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { 
 const s = StyleSheet.create({
   goalInput: { ...type.body, flex: 1, minHeight: 44, borderWidth: 1, borderColor: color.line, borderRadius: 10, paddingHorizontal: space(3), backgroundColor: color.chalk },
   goalButton: { minHeight: 44, paddingHorizontal: space(4), borderRadius: 10, backgroundColor: color.accent, justifyContent: 'center' },
-  goalButtonText: { color: color.onAccent, fontWeight: '700', fontSize: 16 },
+  goalButtonText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   records: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   record: { backgroundColor: color.card, borderRadius: 12, padding: space(3), minWidth: '30%', flexGrow: 1, gap: 2 },
@@ -272,5 +272,5 @@ const s = StyleSheet.create({
   item: { backgroundColor: color.card, borderRadius: 10, padding: space(3), gap: 2 },
   variation: { flexDirection: 'row', alignItems: 'center', gap: space(3), minHeight: 52, borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(2) },
   level: { borderWidth: 1, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 2, minWidth: 108, alignItems: 'center' },
-  levelText: { fontSize: 12, fontWeight: '800' },
+  levelText: { fontSize: textSize.label, fontWeight: '800' },
 });

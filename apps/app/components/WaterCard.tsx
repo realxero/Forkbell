@@ -13,7 +13,7 @@ import { addWater, undoWater } from '../lib/actions';
 import { haptic } from '../lib/haptics';
 import { showToast } from '../lib/toast';
 import { Confetti } from './Confetti';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 export function WaterCard({ date, readOnly }: { date: string; readOnly?: boolean }) {
   const { me } = useAuth();
@@ -80,7 +80,7 @@ export function WaterCard({ date, readOnly }: { date: string; readOnly?: boolean
       )}
       <View style={s.row}>
         <Ionicons name="water" size={22} color={color.water} />
-        <Text style={[type.title, { flex: 1, fontSize: 18 }]}>Water</Text>
+        <Text style={[type.heading, { flex: 1 }]}>Water</Text>
         <Text style={[type.body, type.number, { fontWeight: '800' }]} accessibilityLabel={`${waterText(total, unit)} of ${waterText(goal, unit)}`}>
           {waterText(total, unit)} <Text style={[type.small, { fontWeight: '400' }]}>of {waterText(goal, unit)}</Text>
         </Text>
@@ -140,7 +140,7 @@ const s = StyleSheet.create({
   bar: { height: 10, borderRadius: 5, backgroundColor: color.track, overflow: 'hidden' },
   fill: { height: 10, borderRadius: 5, backgroundColor: color.water },
   button: { flex: 1, minHeight: 42, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.water, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: color.waterText, fontWeight: '800', fontSize: 15 },
+  buttonText: { color: color.waterText, fontWeight: '800', fontSize: textSize.control },
   link: { color: color.waterText, fontWeight: '700' },
   input: { ...type.body, flex: 1, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
   addButton: { backgroundColor: color.water, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(2) },

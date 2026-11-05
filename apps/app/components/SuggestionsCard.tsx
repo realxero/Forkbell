@@ -6,7 +6,7 @@ import { put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { addEntry, deleteEntry, foodLibrary } from '../lib/actions';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
-import { color, space, type } from '../lib/theme';
+import { color, space, type, textSize } from '../lib/theme';
 
 /** The meal an idea goes into: the one for the time of day today, else the emptiest of lunch and dinner. */
 function mealFor(day: DiaryDay, isToday: boolean): Meal {
@@ -77,7 +77,7 @@ export function SuggestionsCard({ day, onChanged }: { day: DiaryDay; onChanged: 
 
   return (
     <View style={s.card}>
-      <Text style={[type.title, { fontSize: 17 }]}>Suggestions</Text>
+      <Text style={type.heading}>Suggestions</Text>
       {list.map((sg) => (
         <View key={sg.key} style={s.item}>
           <View style={s.row}>
@@ -110,7 +110,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.infoBg, borderRadius: 14, padding: space(4), gap: space(3) },
   item: { gap: space(1) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
-  x: { color: color.ironSoft, fontSize: 16 },
+  x: { color: color.ironSoft, fontSize: textSize.body },
   plus: { minWidth: 36, height: 32, borderRadius: 16, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(3) },
   plusText: { color: color.chalk, fontWeight: '800' },
 });

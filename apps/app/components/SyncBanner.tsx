@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearProblems, flush, useSync } from '../lib/sync';
-import { color, space } from '../lib/theme';
+import { color, space, textSize } from '../lib/theme';
 
 /**
  * A small pill near the bottom (clear of headers and the tab bar) when offline,
@@ -40,5 +40,5 @@ export function SyncBanner() {
 const s = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 100 },
   pill: { borderRadius: 20, paddingHorizontal: space(4), paddingVertical: space(2), maxWidth: 360, opacity: 0.95 },
-  text: { color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' },
+  text: { color: '#fff', fontWeight: '700', fontSize: textSize.small, textAlign: 'center' },
 });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
-import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent } from '../lib/theme';
+import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
@@ -444,9 +444,9 @@ const s = StyleSheet.create({
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   cta: { backgroundColor: color.accent, borderRadius: 14, padding: space(4), gap: 2 },
-  ctaText: { color: color.onAccent, fontSize: 17, fontWeight: '800' },
+  ctaText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '800' },
   account: { marginTop: space(8), paddingTop: space(4), borderTopWidth: 1, borderTopColor: color.line, gap: space(3) },
 });
 

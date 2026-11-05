@@ -39,7 +39,7 @@ function Stat({ icon, label, value }: { icon: ComponentProps<typeof Ionicons>['n
     </View>
   );
 }
-import { color, radius, space, type } from '../../../lib/theme';
+import { color, radius, space, type, textSize } from '../../../lib/theme';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
 import { MEAL_NAMES } from '../../../components/AmountPicker';
@@ -184,7 +184,7 @@ export default function Diary() {
                 <View key={meal} style={s.meal}>
                   <View style={s.mealHead}>
                     <View style={s.mealIcon}><Ionicons name={MEAL_ICONS[meal]} size={18} color={color.accent} /></View>
-                    <Text style={[type.title, { fontSize: 18, flex: 1 }]}>{MEAL_NAMES[meal]}</Text>
+                    <Text style={[type.heading, { flex: 1 }]}>{MEAL_NAMES[meal]}</Text>
                     {kcal > 0 && <Text style={[type.small, type.number, { fontWeight: '700' }]}>{kcal} kcal</Text>}
                     {(
                       <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date } })} hitSlop={8} style={s.addRound} accessibilityLabel={`Add food to ${MEAL_NAMES[meal]}`}>
@@ -322,31 +322,31 @@ const s = StyleSheet.create({
   finish: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
   finished: { backgroundColor: color.infoBg, borderColor: color.infoBg },
   finishButton: { minHeight: 44, paddingHorizontal: space(4), borderRadius: 22, backgroundColor: color.accent, justifyContent: 'center' },
-  finishButtonText: { color: color.onAccent, fontWeight: '700', fontSize: 16 },
+  finishButtonText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
   finishLink: { minHeight: 44, justifyContent: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   screen: { flex: 1, backgroundColor: color.chalk },
   dateBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space(5), paddingVertical: space(3) },
-  arrow: { fontSize: 32, lineHeight: 34, color: color.iron, paddingHorizontal: space(2) },
+  arrow: { fontSize: textSize.large, lineHeight: 34, color: color.iron, paddingHorizontal: space(2) },
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(4), maxWidth: 640, width: '100%', alignSelf: 'center' },
   error: { ...type.body, color: color.over },
   summary: { backgroundColor: color.card, borderRadius: radius.card, padding: space(5), gap: space(4), borderWidth: 1, borderColor: color.line },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: space(5) },
-  ringNumber: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5, color: color.iron },
+  ringNumber: { fontSize: textSize.large, fontWeight: '800', letterSpacing: -0.5, color: color.iron },
   macros: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: space(3), borderTopWidth: 1, borderTopColor: color.line },
   mealIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: color.infoBg, alignItems: 'center', justifyContent: 'center' },
   addRound: { width: 32, height: 32, borderRadius: 16, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   sheetButton: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  sheetButtonText: { color: color.onAccent, fontSize: 16, fontWeight: '700' },
+  sheetButtonText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '700' },
   chipBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: space(2), paddingHorizontal: space(3), borderRadius: radius.pill, borderWidth: 1, borderColor: color.line },
-  chipText: { color: color.accent, fontWeight: '700', fontSize: 14 },
+  chipText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   meal: { gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
   mealHead: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   entry: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2), borderTopWidth: 1, borderTopColor: color.line },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginTop: space(1) },
   add: { paddingVertical: space(3), paddingHorizontal: space(1) },
-  addText: { color: color.accent, fontWeight: '700', fontSize: 16 },
-  flag: { fontSize: 12, color: color.warnText, fontWeight: '600', marginTop: 2 },
-  copyText: { color: color.ironSoft, fontWeight: '600', fontSize: 16 },
+  addText: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
+  flag: { fontSize: textSize.label, color: color.warnText, fontWeight: '600', marginTop: 2 },
+  copyText: { color: color.ironSoft, fontWeight: '600', fontSize: textSize.body },
   copyDay: { backgroundColor: color.card, borderRadius: 12, padding: space(4), alignItems: 'center', borderWidth: 1, borderColor: color.line, borderStyle: 'dashed' },
 });

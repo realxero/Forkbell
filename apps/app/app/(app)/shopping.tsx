@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { aisleOf, nextDays, shoppingList, todayLocal, type DiaryDay, type ShoppingItem } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../../lib/sync';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 
 const KEY = 'device:shopping';
 type Saved = { ticked: string[]; extra: string[] };
@@ -47,7 +47,7 @@ export default function Shopping() {
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
           <Pressable onPress={() => void shareText(asText())} hitSlop={12}><Text style={s.link}>Share</Text></Pressable>
         </View>
-        <Text style={[type.hero, { fontSize: 30 }]}>Shopping list</Text>
+        <Text style={type.pageTitle}>Shopping list</Text>
         <Text style={type.small}>Everything planned or logged for today and the next 6 days, added up. Amounts are what you’ll eat, not package sizes.</Text>
         {error && <Text style={s.error}>{error}</Text>}
         {!items && !error && <ActivityIndicator color={color.iron} />}
@@ -82,7 +82,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },

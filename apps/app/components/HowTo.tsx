@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { EFFORT_GUIDE, exerciseCues, type Exercise, type ExerciseHowTo } from '@forkbell/shared';
 import { pictureSource } from '../lib/picture-cache';
 import { cachedGet } from '../lib/sync';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 // Saved on this phone when it can be (works with no signal), otherwise from your server.
 const src = pictureSource;
@@ -104,7 +104,7 @@ export function HowToCard({ howTo, name, short }: { howTo: ExerciseHowTo; name: 
           <Text style={s.link}>Show all {howTo.steps.length} steps</Text>
         </Pressable>
       )}
-      <Text style={[type.small, { fontSize: 11 }]}>{howTo.credit}</Text>
+      <Text style={[type.small, { fontSize: textSize.caption }]}>{howTo.credit}</Text>
     </View>
   );
 }
@@ -150,8 +150,8 @@ const s = StyleSheet.create({
   pair: { flexDirection: 'row', gap: space(2) },
   frame: { aspectRatio: 3 / 2, borderRadius: radius.row, backgroundColor: color.raised },
   step: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
-  num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: 13, color: color.onAccent, backgroundColor: color.accent },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: textSize.small, color: color.onAccent, backgroundColor: color.accent },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), gap: space(3), maxHeight: '88%', width: '100%', maxWidth: 640, alignSelf: 'center' },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

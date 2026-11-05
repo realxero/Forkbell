@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BUILD, versionLabel } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { getServerUrl } from '../lib/api';
-import { color, space, type } from '../lib/theme';
+import { color, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 type Mode = 'signIn' | 'signUp';
@@ -181,7 +181,7 @@ export default function Login() {
                     autoCorrect={false}
                     autoComplete="one-time-code"
                     textContentType="oneTimeCode"
-                    style={[s.input, { textAlign: 'center', letterSpacing: 2, fontSize: 22, fontWeight: '700' }]}
+                    style={[s.input, { textAlign: 'center', letterSpacing: 2, fontSize: textSize.stat, fontWeight: '700' }]}
                     accessibilityLabel="Code from your other device"
                     onSubmitEditing={() => signInCode.trim() && run('code', () => signInWithCode(signInCode))}
                   />
@@ -223,6 +223,6 @@ const s = StyleSheet.create({
   pressed: { opacity: 0.8 },
   or: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   orLine: { flex: 1, height: 1, backgroundColor: color.line },
-  link: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   version: { textAlign: 'center', color: color.ironSoft, marginTop: space(2) },
 });

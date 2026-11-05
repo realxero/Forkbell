@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { color, type } from '../lib/theme';
+import { color, type, textSize } from '../lib/theme';
 
 /** A progress ring. Past 100% it turns red and keeps the full circle. */
 export function Ring({
@@ -53,10 +53,10 @@ export function MacroRing({ label, value, goal, tint }: { label: string; value: 
     <View style={{ alignItems: 'center', gap: 4, flex: 1 }}>
       <Ring value={value} goal={goal} size={72} stroke={8} tint={tint}>
         <Text style={[type.body, type.number, { fontWeight: '800', color: over ? color.over : color.iron }]}>{Math.round(value)}</Text>
-        <Text style={[type.small, { fontSize: 11, marginTop: -2 }]}>g</Text>
+        <Text style={[type.small, { fontSize: textSize.caption, marginTop: -2 }]}>g</Text>
       </Ring>
       <Text style={[type.small, { fontWeight: '700', color: color.iron }]}>{label}</Text>
-      <Text style={[type.small, { fontSize: 11 }]}>{goal ? `${goal > value ? `${Math.round(goal - value)} left` : over ? `${Math.round(value - goal)} over` : 'done'}` : 'no goal'}</Text>
+      <Text style={[type.small, { fontSize: textSize.caption }]}>{goal ? `${goal > value ? `${Math.round(goal - value)} left` : over ? `${Math.round(value - goal)} over` : 'done'}` : 'no goal'}</Text>
     </View>
   );
 }

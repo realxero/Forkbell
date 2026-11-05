@@ -10,7 +10,7 @@ import { addEntry, foodLibrary } from '../../lib/actions';
 import { cachedGet } from '../../lib/sync';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { FoodIcon } from '../../components/FoodIcon';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 import { buttons } from '../../lib/buttons';
 
 const label = (date: string, today: string) => {
@@ -74,7 +74,7 @@ export default function Plan() {
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
           <Pressable onPress={() => router.push({ pathname: '/shopping' })} hitSlop={12}><Text style={s.link}>Shopping list</Text></Pressable>
         </View>
-        <Text style={[type.hero, { fontSize: 30 }]}>Plan</Text>
+        <Text style={type.pageTitle}>Plan</Text>
         <Text style={type.small}>Fills meals that are still empty, from foods you log and the common foods, keeping to your allergies, diet and dislikes.</Text>
         <View style={s.chips}>
           {week.map((d) => (
@@ -132,7 +132,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   row: { flexDirection: 'row', gap: space(5) },

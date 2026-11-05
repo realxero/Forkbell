@@ -6,7 +6,7 @@ import { Pressable } from './Tap';
 import { api } from '../lib/api';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { daysBetween, type TrendPoint } from '@forkbell/shared';
-import { color, space, type } from '../lib/theme';
+import { color, space, type, textSize } from '../lib/theme';
 
 // SVG text uses a serif font on the web unless told otherwise.
 const font = Platform.OS === 'web' ? { fontFamily: 'system-ui, -apple-system, sans-serif' } : {};
@@ -309,13 +309,13 @@ export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; 
     <View style={{ gap: space(2) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Pressable onPress={() => go(-1)} hitSlop={10} accessibilityLabel="Previous month" style={{ padding: 4 }}>
-          <Text style={{ color: color.accent, fontSize: 20, fontWeight: '800' }}>‹</Text>
+          <Text style={{ color: color.accent, fontSize: textSize.title, fontWeight: '800' }}>‹</Text>
         </Pressable>
         <Text style={[type.body, { flex: 1, textAlign: 'center', fontWeight: '700' }]}>
           {title} · {logged} day{logged === 1 ? '' : 's'} logged
         </Text>
         <Pressable onPress={() => go(1)} disabled={month >= today.slice(0, 7)} hitSlop={10} accessibilityLabel="Next month" style={{ padding: 4, opacity: month >= today.slice(0, 7) ? 0.3 : 1 }}>
-          <Text style={{ color: color.accent, fontSize: 20, fontWeight: '800' }}>›</Text>
+          <Text style={{ color: color.accent, fontSize: textSize.title, fontWeight: '800' }}>›</Text>
         </Pressable>
       </View>
       <View style={{ flexDirection: 'row' }}>
@@ -339,7 +339,7 @@ export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; 
                 accessibilityLabel={`${shortDate(d)}: ${v && v.kcal > 0 ? `${Math.round(v.kcal)} kcal${v.goal && v.kcal > v.goal * 1.05 ? ', over your goal' : ''}` : future ? 'not yet' : 'nothing logged'}`}
                 style={{ flex: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: future ? 'transparent' : bg, opacity: future ? 0.35 : 1, borderWidth: d === today ? 2 : future ? 1 : 0, borderColor: d === today ? color.iron : color.line }}
               >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: v && v.kcal > 0 ? '#fff' : color.ironSoft }}>{Number(d.slice(8))}</Text>
+                <Text style={{ fontSize: textSize.label, fontWeight: '700', color: v && v.kcal > 0 ? '#fff' : color.ironSoft }}>{Number(d.slice(8))}</Text>
               </Pressable>
             </View>
           );

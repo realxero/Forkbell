@@ -8,7 +8,7 @@ import { useAuth } from '../lib/auth';
 import { readCache, writeCache } from '../lib/sync';
 import { useViewing } from '../lib/profile';
 import { showToast } from '../lib/toast';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 const gotIt = (key: string) => readCache<boolean>(key) === true;
 
@@ -106,7 +106,7 @@ const s = StyleSheet.create({
   stat: { flex: 1, backgroundColor: color.raised, borderRadius: 12, padding: space(2) + 2, gap: 2 },
   actions: { flexDirection: 'row', gap: space(3), alignItems: 'center' },
   primary: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(2) + 2, paddingHorizontal: space(4) },
-  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: 15 },
+  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },
   secondary: { borderRadius: 10, paddingVertical: space(2) + 2, paddingHorizontal: space(4), borderWidth: 1, borderColor: color.line },
-  secondaryText: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  secondaryText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
 });

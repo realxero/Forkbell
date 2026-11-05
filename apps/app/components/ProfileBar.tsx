@@ -3,7 +3,7 @@ import { Pressable } from './Tap';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { setViewing, useViewing } from '../lib/profile';
-import { color, space } from '../lib/theme';
+import { color, space, textSize } from '../lib/theme';
 
 /** A bar across the top whenever you're looking at someone else's data. */
 export function ProfileBar() {
@@ -22,5 +22,5 @@ export function ProfileBar() {
 
 const s = StyleSheet.create({
   bar: { backgroundColor: color.protein, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingBottom: space(2), gap: space(3) },
-  text: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  text: { color: '#fff', fontWeight: '700', fontSize: textSize.control },
 });

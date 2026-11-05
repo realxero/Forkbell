@@ -7,7 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { rankSwaps, type Exercise, type Swap } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
 import { useTrainingSetup } from '../lib/training-setup';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 export function SwapSheet({ target, onPick, onPickAny, onClose }: { target: Exercise | null; onPick: (e: Exercise) => void; onPickAny: () => void; onClose: () => void }) {
   const { setup } = useTrainingSetup();
@@ -75,5 +75,5 @@ const s = StyleSheet.create({
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), minHeight: 56, padding: space(3), borderRadius: radius.row, backgroundColor: color.raised },
   any: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.row, borderWidth: 1, borderColor: color.accent },
-  anyText: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  anyText: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
 });

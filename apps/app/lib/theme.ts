@@ -219,12 +219,46 @@ export const space = (n: number) => n * 4;
 
 export const radius = { card: 18, row: 12, pill: 999 };
 
+/**
+ * Every text size in the app, smallest to largest. Screens use these (or the
+ * type styles below) rather than their own numbers, so a size means one thing
+ * everywhere. The only exceptions are the rotated plate labels and the
+ * weekday cells (9 and 10, to fit fixed-size shapes) and the sign-in wordmark.
+ */
+export const textSize = {
+  /** Credits, units under a ring, "Based on 30 days". */
+  caption: 11,
+  /** Uppercase labels, tags and badges. */
+  label: 12,
+  /** Secondary lines under a row. */
+  small: 13,
+  /** Words on small buttons, links, chips and toasts. */
+  control: 15,
+  /** Reading text, rows, main buttons. */
+  body: 16,
+  /** A card's own heading (Breakfast, Water, Variations). */
+  heading: 18,
+  /** A sheet's or section's title. */
+  title: 20,
+  /** Numbers you type or read at a glance in a card. */
+  stat: 22,
+  /** Page titles and big numbers (kcal left, hours fasted). */
+  large: 32,
+  /** The biggest words: onboarding and the day's main number. */
+  hero: 44,
+  /** Timers and the plate calculator's target, read from across a room. */
+  display: 48,
+} as const;
+
 export const type = {
   // Tabular figures keep columns of numbers from jittering as they change.
   number: { fontVariant: ['tabular-nums' as const] },
-  hero: { fontSize: 44, fontWeight: '800' as const, letterSpacing: -1, color: color.iron },
-  title: { fontSize: 20, fontWeight: '700' as const, color: color.iron },
-  body: { fontSize: 16, color: color.iron },
-  small: { fontSize: 13, color: color.ironSoft },
-  label: { fontSize: 12, fontWeight: '700' as const, letterSpacing: 0.6, textTransform: 'uppercase' as const, color: color.ironSoft },
+  hero: { fontSize: textSize.hero, fontWeight: '800' as const, letterSpacing: -1, color: color.iron },
+  /** The title at the top of every page, tab or not. */
+  pageTitle: { fontSize: textSize.large, fontWeight: '800' as const, letterSpacing: -1, color: color.iron },
+  title: { fontSize: textSize.title, fontWeight: '700' as const, color: color.iron },
+  heading: { fontSize: textSize.heading, fontWeight: '700' as const, color: color.iron },
+  body: { fontSize: textSize.body, color: color.iron },
+  small: { fontSize: textSize.small, color: color.ironSoft },
+  label: { fontSize: textSize.label, fontWeight: '700' as const, letterSpacing: 0.6, textTransform: 'uppercase' as const, color: color.ironSoft },
 };

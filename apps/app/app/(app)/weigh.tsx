@@ -19,7 +19,7 @@ import { showToast } from '../../lib/toast';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { VoiceButton, voiceAvailable } from '../../components/VoiceButton';
 import { lidarStatus, lidarSupported } from '../../modules/forkbell-depth';
-import { color, radius, space, type } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 
 type Pick = Food | FoodCandidate;
 type Item = { key: number; food: Pick; value: string; leftover: string | null };
@@ -90,7 +90,7 @@ export default function Weigh() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-          <Text style={[type.hero, { fontSize: 30 }]}>Weigh your meal</Text>
+          <Text style={type.pageTitle}>Weigh your meal</Text>
           {lidarSupported && (
             <Pressable onPress={() => router.push({ pathname: '/scan', params: { meal, date } })} style={s.lidar} accessibilityHint="Measures each food on the plate with the LiDAR camera">
               <Ionicons name="scan-outline" size={20} color={color.accent} />
@@ -330,20 +330,20 @@ function FoodPicker({ visible, recent, onPick, onClose }: { visible: boolean; re
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
-  small: { color: color.accent, fontWeight: '600', fontSize: 14 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
+  small: { color: color.accent, fontWeight: '600', fontSize: textSize.control },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   tabs: { flexDirection: 'row', backgroundColor: color.card, borderRadius: radius.pill, padding: 4, gap: 4 },
   tab: { flex: 1, minHeight: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(2) },
   tabOn: { backgroundColor: color.accent },
-  tabText: { fontWeight: '700', color: color.iron, fontSize: 14, textAlign: 'center' },
+  tabText: { fontWeight: '700', color: color.iron, fontSize: textSize.control, textAlign: 'center' },
   card: { backgroundColor: color.card, borderRadius: radius.row, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  big: { width: 120, fontSize: 22, fontWeight: '800', textAlign: 'center', fontVariant: ['tabular-nums'] },
+  big: { width: 120, fontSize: textSize.stat, fontWeight: '800', textAlign: 'center', fontVariant: ['tabular-nums'] },
   add: { flexDirection: 'row', alignItems: 'center', gap: space(2), minHeight: 48, justifyContent: 'center', borderRadius: radius.row, borderWidth: 1, borderColor: color.line, borderStyle: 'dashed' },
   primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(4), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: 16 },
+  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
   secondary: { minHeight: 44, justifyContent: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), gap: space(3), height: '80%', width: '100%', maxWidth: 640, alignSelf: 'center' },

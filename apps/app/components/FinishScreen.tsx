@@ -12,7 +12,7 @@ import { useAuth } from '../lib/auth';
 import { formatDuration, useUnit } from '../lib/units';
 import { BellAvatar } from './BellAvatar';
 import { Confetti } from './Confetti';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 const RECORD_NAMES: Record<PersonalRecord['kind'], string> = {
@@ -85,7 +85,7 @@ export function FinishScreen({ w, summary }: { w: Workout; summary: FinishSummar
         <View style={{ position: 'absolute', left: 0, right: 0, top: 0 }} pointerEvents="none"><Confetti /></View>
         <View style={s.hero}>
           <BellAvatar size={84} />
-          <Text style={[type.hero, { fontSize: 32, textAlign: 'center' }]}>{cheer}</Text>
+          <Text style={[type.hero, { fontSize: textSize.large, textAlign: 'center' }]}>{cheer}</Text>
           <Text style={[type.body, { textAlign: 'center' }]}>{w.name} is saved.</Text>
         </View>
 
@@ -174,7 +174,7 @@ const s = StyleSheet.create({
   row: { gap: 2, paddingVertical: space(1), borderTopWidth: 1, borderTopColor: color.line },
   pill: { backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(3), paddingVertical: space(1) },
   coolDown: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },
 });

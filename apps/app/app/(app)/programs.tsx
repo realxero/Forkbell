@@ -7,7 +7,7 @@ import type { Program } from '@forkbell/shared';
 import { cachedGet } from '../../lib/sync';
 import { api, del, post } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 import { buttons } from '../../lib/buttons';
 
 type Starter = { key: string; name: string; daysPerWeek: string; description: string; routines: string[] };
@@ -146,7 +146,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(2) },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.chalk, borderRadius: 10, padding: space(3) },

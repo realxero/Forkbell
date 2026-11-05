@@ -10,7 +10,7 @@ import { picturePaths, stretchDose, stretchSeconds, type Stretch } from '@forkbe
 import { HowToFrames } from './HowTo';
 import { haptic } from '../lib/haptics';
 import { formatDuration } from '../lib/units';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 export function StretchSession({ items, title, onClose }: { items: Stretch[] | null; title: string; onClose: () => void }) {
   const [i, setI] = useState(0);
@@ -88,7 +88,7 @@ export function StretchSession({ items, title, onClose }: { items: Stretch[] | n
         </View>
         {done ? (
           <View style={{ gap: space(4), padding: space(4) }}>
-            <Text style={[type.hero, { fontSize: 30 }]}>All done.</Text>
+            <Text style={type.pageTitle}>All done.</Text>
             <Text style={type.body}>{items?.length} moves, about {formatDuration(total)}.</Text>
             <Pressable onPress={onClose} style={s.primary}><Text style={s.primaryText}>Done</Text></Pressable>
           </View>
@@ -97,7 +97,7 @@ export function StretchSession({ items, title, onClose }: { items: Stretch[] | n
             <Text style={type.small}>{i + 1} of {items!.length}</Text>
             <View style={s.progress}><View style={[s.progressFill, { width: `${(100 * (i + (cur.sides ? side / 2 : 0))) / items!.length}%` }]} /></View>
             <HowToFrames images={picturePaths(cur)} name={cur.name} />
-            <Text style={[type.title, { fontSize: 24 }]}>{cur.name}</Text>
+            <Text style={[type.title, { fontSize: textSize.stat }]}>{cur.name}</Text>
             <Text style={type.small}>{stretchDose(cur).label}{cur.equipment !== 'none' ? ` · needs ${cur.equipment === 'something to hold' ? 'something to hold or lean on' : `a ${cur.equipment}`}` : ''}</Text>
             <View style={s.timerRow} accessibilityLiveRegion="polite">
               <Text style={s.timer}>{formatDuration(left)}</Text>
@@ -121,7 +121,7 @@ export function StretchSession({ items, title, onClose }: { items: Stretch[] | n
               </View>
             ))}
             <Text style={type.small}>Ease in and stop if anything hurts; a stretch should feel like gentle tension, never pain.</Text>
-            <Text style={[type.small, { fontSize: 11 }]}>Steps and pictures: Free Exercise DB (public domain)</Text>
+            <Text style={[type.small, { fontSize: textSize.caption }]}>Steps and pictures: Free Exercise DB (public domain)</Text>
           </ScrollView>
         ) : null}
       </SafeAreaView>
@@ -138,12 +138,12 @@ const s = StyleSheet.create({
   progress: { height: 6, borderRadius: 3, backgroundColor: color.line, overflow: 'hidden' },
   progressFill: { height: 6, backgroundColor: color.accent },
   timerRow: { flexDirection: 'row', alignItems: 'baseline', gap: space(3) },
-  timer: { fontSize: 48, fontWeight: '800', color: color.iron, fontVariant: ['tabular-nums'] },
+  timer: { fontSize: textSize.display, fontWeight: '800', color: color.iron, fontVariant: ['tabular-nums'] },
   controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space(6), marginVertical: space(2) },
   ctrl: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
   ctrlMain: { width: 68, height: 68, borderRadius: 34, backgroundColor: color.accent },
   step: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
-  num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: 13, color: color.onAccent, backgroundColor: color.accent },
+  num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: textSize.small, color: color.onAccent, backgroundColor: color.accent },
   primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: 16 },
+  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
 });

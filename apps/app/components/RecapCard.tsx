@@ -5,7 +5,7 @@ import type { ComponentProps } from 'react';
 import { todayLocal } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
 import { useViewing } from '../lib/profile';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 type Month = { start: string; daysLogged: number; avgKcal: number | null; avgProtein: number | null; weightChangeKg: number | null; workouts: number };
 const monthName = (start: string) => {
@@ -35,10 +35,10 @@ export function RecapCard({ unit }: { unit: 'lb' | 'kg' }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
         <View style={{ flex: 1 }} />
         <View style={{ width: 84, alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 12, fontWeight: '800', color: color.onAccent, backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.thisMonth.start)}</Text>
+          <Text style={{ fontSize: textSize.label, fontWeight: '800', color: color.onAccent, backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.thisMonth.start)}</Text>
         </View>
         <View style={{ width: 84, alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 12, fontWeight: '800', color: color.ironSoft, backgroundColor: color.raised, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.lastMonth.start)}</Text>
+          <Text style={{ fontSize: textSize.label, fontWeight: '800', color: color.ironSoft, backgroundColor: color.raised, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.lastMonth.start)}</Text>
         </View>
       </View>
       {rows.map(([icon, label, a, b]) => (

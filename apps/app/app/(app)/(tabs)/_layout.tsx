@@ -5,7 +5,7 @@ import { BellAvatar } from '../../../components/BellAvatar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { Platform, type ColorValue } from 'react-native';
-import { color } from '../../../lib/theme';
+import { color, textSize } from '../../../lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 const icon = (on: IconName, off: IconName) =>
@@ -33,7 +33,7 @@ export default function TabsLayout() {
           Platform.OS === 'web'
             ? { backgroundColor: color.card, borderTopColor: color.line, height: 74, paddingTop: 6, paddingBottom: 12 }
             : { backgroundColor: color.card, borderTopColor: color.line },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', lineHeight: 15, marginTop: 2 },
+        tabBarLabelStyle: { fontSize: textSize.caption, fontWeight: '700', lineHeight: 15, marginTop: 2 },
         tabBarItemStyle: { paddingBottom: 2 },
       }}
     >

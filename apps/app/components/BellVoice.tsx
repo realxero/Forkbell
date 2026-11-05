@@ -4,7 +4,7 @@ import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { kokoroLabel, voiceLabel, type VoiceInfo } from '@forkbell/shared';
 import { getVoiceChoice, listDeviceVoices, previewVoice, refreshDeviceVoices, serverVoices, setVoiceChoice, stopSpeaking, type VoiceChoice } from '../lib/speak';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 const same = (a: VoiceChoice, b: VoiceChoice) => a.kind === b.kind && (a.kind === 'auto' || (b.kind !== 'auto' && a.id === b.id));
 
@@ -45,7 +45,7 @@ export function BellVoice() {
 
   return (
     <View style={s.card}>
-      <Text style={[type.title, { fontSize: 18 }]}>Bell’s voice</Text>
+      <Text style={type.heading}>Bell’s voice</Text>
       <Text style={type.small}>Used when Bell reads answers out loud. Your pick is kept on this {Platform.OS === 'web' ? 'browser' : 'phone'}.</Text>
 
       {row({ kind: 'auto' }, 'Automatic', server && server.reachable !== false ? 'Your server’s natural voice, or the best one here if it’s off' : 'The best voice on this device', 'auto')}
@@ -94,5 +94,5 @@ const s = StyleSheet.create({
   pick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space(3), minHeight: 44 },
   play: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   tip: { gap: space(1), backgroundColor: color.chalk, borderRadius: 12, padding: space(3), marginTop: space(2) },
-  link: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
 });

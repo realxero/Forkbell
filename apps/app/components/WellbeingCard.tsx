@@ -6,7 +6,7 @@ import { todayLocal } from '@forkbell/shared';
 import { cachedGet, send } from '../lib/sync';
 import { useViewing } from '../lib/profile';
 import { Chip } from './AmountPicker';
-import { color, space, type } from '../lib/theme';
+import { color, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 export type CheckIn = { date: string; sleepHours: number | null; sleepQuality: number | null; mood: number | null; energy: number | null; note: string | null };
@@ -99,7 +99,7 @@ export function WellbeingCard({ healthSleepMin = null }: { healthSleepMin?: numb
       )}
 
       <View style={[s.row, { marginTop: space(2) }]}>
-        <Text style={[type.title, { fontSize: 17, flex: 1 }]}>Medications</Text>
+        <Text style={[type.heading, { flex: 1 }]}>Medications</Text>
         {!viewing && <Pressable onPress={() => router.push('/medications')}><Text style={s.link}>{active.length ? 'Manage' : 'Add'}</Text></Pressable>}
       </View>
       {active.length === 0 && <Text style={type.small}>Nothing added. Tick doses off each day to keep track.</Text>}
@@ -127,7 +127,7 @@ const s = StyleSheet.create({
   input: { ...type.body, width: 80, textAlign: 'center', backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(2) },
   small: { ...buttons.small, alignSelf: 'flex-start' },
   smallText: { ...buttons.smallText },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   dose: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   doseOn: { backgroundColor: color.fat, borderColor: color.fat },
 });

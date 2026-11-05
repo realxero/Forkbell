@@ -4,7 +4,7 @@ import { Pressable } from './Tap';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getServerUrl } from '../lib/api';
-import { color, nativeScheme, space, type } from '../lib/theme';
+import { color, nativeScheme, space, type, textSize } from '../lib/theme';
 
 export type FormCheckResult = { exercise: string; reps: number; goodReps: number; summary: string[]; pattern: string };
 
@@ -95,7 +95,7 @@ function NativePage({ url, onMessage }: { url: string; onMessage: (data: string)
 
 const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingVertical: space(2) },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   bar: { flexDirection: 'row', alignItems: 'center', gap: space(2), padding: space(4), borderTopWidth: 1, borderTopColor: color.line },
 });
 

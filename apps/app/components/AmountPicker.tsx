@@ -5,7 +5,7 @@ import { MEALS, amountFromGrams, amountText, forAmount, parseQuantity, unitFor, 
 import { useAuth } from '../lib/auth';
 import { readCache } from '../lib/sync';
 import { setFoodServing } from '../lib/actions';
-import { color, space, type } from '../lib/theme';
+import { color, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 // Your meal names (Settings → Food preferences → Meals), shared by every screen.
@@ -232,7 +232,7 @@ const s = StyleSheet.create({
   link: { color: color.accent, fontWeight: '700' },
   smallButton: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3) },
   smallButtonText: { color: color.chalk, fontWeight: '700' },
-  qty: { width: 110, fontSize: 22, fontWeight: '700', textAlign: 'center' },
+  qty: { width: 110, fontSize: textSize.stat, fontWeight: '700', textAlign: 'center' },
   unitRow: { gap: space(2), paddingVertical: space(1) },
   nutrition: { flexDirection: 'row', gap: space(3), backgroundColor: color.card, borderRadius: 12, padding: space(4), marginVertical: space(2) },
   error: { ...type.body, color: color.over },

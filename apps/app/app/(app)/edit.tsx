@@ -10,7 +10,7 @@ import { forAmount, entryName } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { removeWithUndo } from '../../components/EntryMenu';
 import { AmountPicker } from '../../components/AmountPicker';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 
 /** Change an entry's amount or meal, or remove it. */
 export default function EditEntry() {
@@ -145,12 +145,12 @@ const s = StyleSheet.create({
   fix: { gap: space(2), marginHorizontal: space(4), marginTop: space(2), padding: space(3), borderRadius: 14, backgroundColor: color.card, borderWidth: 1, borderColor: color.line },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(2) },
   save: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
-  saveText: { color: color.onAccent, fontWeight: '700', fontSize: 15 },
+  saveText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   nameInput: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3), color: color.iron },
   remove: { alignSelf: 'center', padding: space(3), marginTop: space(2) },
-  removeText: { color: color.over, fontWeight: '700', fontSize: 16 },
+  removeText: { color: color.over, fontWeight: '700', fontSize: textSize.body },
 });

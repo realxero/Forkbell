@@ -15,7 +15,7 @@ import { confirm } from '../lib/confirm';
 import { haptic } from '../lib/haptics';
 import { showToast } from '../lib/toast';
 import { Chip } from './AmountPicker';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 const PATH = '/api/wellbeing/fasts';
 
@@ -79,7 +79,7 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
   const head = (
     <View style={s.row}>
       <Ionicons name="hourglass-outline" size={22} color={color.fat} />
-      <Text style={[type.title, { flex: 1, fontSize: 18 }]}>Fasting</Text>
+      <Text style={[type.heading, { flex: 1 }]}>Fasting</Text>
       {f.streak > 0 && <Text style={type.small}>🔥 {f.streak} in a row</Text>}
     </View>
   );
@@ -89,7 +89,7 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
     return (
       <View style={s.card}>
         {head}
-        <Text style={[type.hero, { fontSize: 32 }, type.number]}>{hoursText(p.hours)}</Text>
+        <Text style={[type.hero, { fontSize: textSize.large }, type.number]}>{hoursText(p.hours)}</Text>
         <View style={s.bar} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(p.fraction * 100) }}>
           <View style={[s.fill, { width: `${p.fraction * 100}%` }]} />
         </View>

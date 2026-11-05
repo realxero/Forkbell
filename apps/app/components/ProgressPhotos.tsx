@@ -12,7 +12,7 @@ import { useUnit } from '../lib/units';
 import { confirm } from '../lib/confirm';
 import { Chip } from './AmountPicker';
 import { PhotoSlider } from './PhotoSlider';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 export const niceDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 const canUseCamera = Platform.OS !== 'web';
@@ -168,5 +168,5 @@ const s = StyleSheet.create({
   compare: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.row, backgroundColor: color.raised },
   viewer: { flex: 1, backgroundColor: '#000' },
   viewerBar: { flexDirection: 'row', alignItems: 'center', gap: space(5), padding: space(4), paddingBottom: space(10), backgroundColor: 'rgba(0,0,0,0.6)' },
-  viewerText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  viewerText: { color: '#fff', fontWeight: '700', fontSize: textSize.body },
 });

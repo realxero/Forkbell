@@ -12,7 +12,7 @@ import { photoSource, usePhotos } from '../../lib/photos';
 import { cachedGet } from '../../lib/sync';
 import { useUnit } from '../../lib/units';
 import { PhotoViewer, niceDate } from '../../components/ProgressPhotos';
-import { color, radius, space, type } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 
 export default function Photos() {
   const units = useUnit();
@@ -35,7 +35,7 @@ export default function Photos() {
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={[type.hero, { fontSize: 30 }]}>Progress photos</Text>
+        <Text style={type.pageTitle}>Progress photos</Text>
         <Text style={type.small}>Same spot, same light and the same time of day make them easiest to compare. Kept on your own server and in its nightly backup; only you can see them.</Text>
         {error && <Text style={{ color: color.over }}>{error}</Text>}
         {photos === null && !error && <ActivityIndicator color={color.iron} style={{ marginTop: space(6) }} />}
@@ -69,7 +69,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { paddingHorizontal: space(3), paddingTop: space(2) },
   back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', paddingVertical: space(1) },
-  backText: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  backText: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   day: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', gap: space(2) },

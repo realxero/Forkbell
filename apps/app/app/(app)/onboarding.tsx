@@ -9,7 +9,7 @@ import { useAuth } from '../../lib/auth';
 import { cachedGet } from '../../lib/sync';
 import { Logo } from '../../components/Logo';
 import { Chip } from '../../components/AmountPicker';
-import { color, radius, space, type } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 
 const KG_PER_LB = 0.45359237;
 const STEPS = ['welcome', 'units', 'you', 'goal', 'training', 'targets'] as const;
@@ -131,7 +131,7 @@ export default function Onboarding() {
             <View style={{ alignItems: 'center', gap: space(4), paddingTop: space(10) }}>
               <Logo size={120} />
               <Text style={[type.hero, { textAlign: 'center' }]}>Forkbell</Text>
-              <Text style={[type.body, { textAlign: 'center', fontSize: 18 }]}>Food, training and progress in one place, on your own server.</Text>
+              <Text style={[type.body, { textAlign: 'center', fontSize: textSize.heading }]}>Food, training and progress in one place, on your own server.</Text>
               <Text style={[type.small, { textAlign: 'center' }]}>A minute of questions sets your calorie and macro targets for your goal. You can change everything later.</Text>
             </View>
           )}
@@ -260,7 +260,7 @@ export default function Onboarding() {
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
     <View style={{ gap: space(3) }}>
-      <Text style={[type.hero, { fontSize: 30 }]}>{title}</Text>
+      <Text style={type.pageTitle}>{title}</Text>
       {note && <Text style={type.small}>{note}</Text>}
       {children}
     </View>
@@ -282,7 +282,7 @@ const s = StyleSheet.create({
   side: { width: 72 },
   dots: { flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 6 },
   dot: { width: 22, height: 5, borderRadius: 3, backgroundColor: color.track },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   content: { padding: space(4), paddingBottom: space(10), gap: space(3), maxWidth: 560, width: '100%', alignSelf: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   row: { flexDirection: 'row', gap: space(2) },
@@ -292,5 +292,5 @@ const s = StyleSheet.create({
   kcalCard: { alignItems: 'center', backgroundColor: color.card, borderRadius: radius.card, padding: space(5) },
   bottom: { padding: space(4), borderTopWidth: 1, borderTopColor: color.line, backgroundColor: color.chalk },
   primary: { backgroundColor: color.accent, borderRadius: 14, paddingVertical: space(4), alignItems: 'center', maxWidth: 560, width: '100%', alignSelf: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: 17 },
+  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
 });

@@ -16,7 +16,7 @@ import { BodyMap } from '../../../components/BodyMap';
 import { PlateCalculator } from '../../../components/PlateCalculator';
 import { useAuth } from '../../../lib/auth';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
-import { color, space, type } from '../../../lib/theme';
+import { color, space, type, textSize } from '../../../lib/theme';
 import { buttons } from '../../../lib/buttons';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
@@ -93,7 +93,7 @@ export default function Train() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
         <View style={s.head}>
-          <Text style={[type.hero, { fontSize: 34 }]}>Train</Text>
+          <Text style={type.pageTitle}>Train</Text>
           <View style={{ flexDirection: 'row', gap: space(4) }}>
             <Pressable onPress={() => setPlates(true)} hitSlop={10} accessibilityLabel="Plate calculator">
               <Text style={s.link}>Plates</Text>
@@ -202,7 +202,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(2) },
   live: { backgroundColor: color.iron },

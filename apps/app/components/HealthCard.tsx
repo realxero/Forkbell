@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Rect } from 'react-native-svg';
 import type { ComponentProps } from 'react';
 import { HEALTH_INFO, type HealthKind, type HealthMetric, type HealthSource } from '@forkbell/shared';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 const ORDER: [HealthKind, IconName, string][] = [
@@ -71,11 +71,11 @@ export function HealthCard({ metrics, source, unit, today }: { metrics: HealthMe
                 <Ionicons name={icon} size={16} color={tint} />
                 <Text style={[type.small, { fontWeight: '700', color: color.iron, flexShrink: 1 }]} numberOfLines={1}>{HEALTH_INFO[kind].label}</Text>
               </View>
-              <Text style={[type.number, { fontSize: 22, fontWeight: '800', color: color.iron }]}>
+              <Text style={[type.number, { fontSize: textSize.stat, fontWeight: '800', color: color.iron }]}>
                 {now ? now.value : '–'} <Text style={type.small}>{now?.unit}</Text>
               </Text>
               <Spark series={m.series} tint={tint} />
-              <Text style={[type.small, { fontSize: 11 }]}>
+              <Text style={[type.small, { fontSize: textSize.caption }]}>
                 {stale ? `${m.latestDate!.slice(5).replace('-', '/')} · ` : ''}
                 {avg ? `7-day avg ${avg.value}${avg.unit ? ` ${avg.unit}` : ''}` : ''}
               </Text>

@@ -22,7 +22,7 @@ import { FormCheck } from '../../components/FormCheck';
 import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 import { buttons } from '../../lib/buttons';
 import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
@@ -721,7 +721,7 @@ function ExerciseCard(props: {
       )}
       <View style={s.cardHead}>
         <Pressable style={{ flex: 1 }} onPress={() => router.push({ pathname: '/exercise', params: { id: e.exercise.id } })}>
-          <Text style={[type.title, { fontSize: 18 }]}>{e.exercise.name}</Text>
+          <Text style={type.heading}>{e.exercise.name}</Text>
           <Text style={type.small}>
             {e.targetSets && target && kind !== 'time' && kind !== 'cardio' ? `${e.targetSets} × ${target} reps · ` : ''}
             {kind === 'cardio' ? 'time and distance' : `rest ${formatDuration(e.restSeconds)}`}
@@ -958,24 +958,24 @@ const s = StyleSheet.create({
   howToButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: space(1) },
   tipActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   tipButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: space(3), borderRadius: 18, borderWidth: 1, borderColor: color.line },
-  tipButtonText: { color: color.accent, fontWeight: '700', fontSize: 14 },
+  tipButtonText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingVertical: space(3), gap: space(3) },
   content: { padding: space(3), paddingBottom: space(24), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   finish: { backgroundColor: color.fat, borderRadius: 8, paddingHorizontal: space(3), paddingVertical: space(2) },
-  finishText: { color: color.card, fontWeight: '800', fontSize: 15 },
+  finishText: { color: color.card, fontWeight: '800', fontSize: textSize.control },
   error: { ...type.body, color: color.over },
   hint: { ...type.small, color: color.over, textAlign: 'center' },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(3), gap: space(1) },
   grouped: { borderLeftWidth: 4, borderLeftColor: color.accent },
   groupedNext: { marginTop: -space(2), borderTopLeftRadius: 4, borderTopRightRadius: 4 },
   groupTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 2, marginBottom: space(1) },
-  groupTagText: { color: color.onAccent, fontSize: 12, fontWeight: '800' },
+  groupTagText: { color: color.onAccent, fontSize: textSize.label, fontWeight: '800' },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space(2), marginBottom: space(1) },
-  dots: { fontSize: 24, color: color.ironSoft, paddingHorizontal: space(1), lineHeight: 26 },
+  dots: { fontSize: textSize.stat, color: color.ironSoft, paddingHorizontal: space(1), lineHeight: 26 },
   setHead: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: space(1) },
-  th: { ...type.small, fontSize: 11, fontWeight: '700', textAlign: 'center' },
+  th: { ...type.small, fontSize: textSize.caption, fontWeight: '700', textAlign: 'center' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: 3, borderRadius: 8 },
   setDone: { backgroundColor: color.successBg },
   colSet: { width: 30, alignItems: 'center' },
@@ -988,19 +988,19 @@ const s = StyleSheet.create({
   cell: { ...type.body, ...type.number, textAlign: 'center', backgroundColor: color.chalk, borderRadius: 8, paddingVertical: space(2), paddingHorizontal: 2, minWidth: 0 },
   check: { height: 36, borderRadius: 8, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
   checkOn: { backgroundColor: color.fat, borderColor: color.fat },
-  checkText: { fontSize: 18, fontWeight: '800', color: color.ironSoft },
+  checkText: { fontSize: textSize.heading, fontWeight: '800', color: color.ironSoft },
   tip: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, borderRadius: 8, padding: space(2), marginBottom: space(1) },
   pain: { backgroundColor: color.dangerBg, borderRadius: 8, padding: space(2), gap: space(1), marginBottom: space(1) },
   painInput: { ...type.small, backgroundColor: color.card, borderRadius: 6, padding: space(2) },
   cardFoot: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: space(2) },
-  addText: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  addText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   addExercise: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },
   rest: { position: 'absolute', left: space(3), right: space(3), bottom: space(3), backgroundColor: color.iron, borderRadius: 14, padding: space(3), overflow: 'hidden', maxWidth: 616, alignSelf: 'center' },
   restFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: color.restFill },
   hr: { color: '#fff', fontWeight: '800', backgroundColor: color.over, borderRadius: 10, overflow: 'hidden', paddingHorizontal: space(2), paddingVertical: 2 },
-  restText: { color: color.chalk, fontWeight: '800', fontSize: 18, fontVariant: ['tabular-nums'] },
+  restText: { color: color.chalk, fontWeight: '800', fontSize: textSize.heading, fontVariant: ['tabular-nums'] },
   restButtons: { flexDirection: 'row', gap: space(5), marginTop: space(2) },
-  restButton: { color: color.chalk, fontWeight: '700', fontSize: 15 },
+  restButton: { color: color.chalk, fontWeight: '700', fontSize: textSize.control },
   stats: { flexDirection: 'row', backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },

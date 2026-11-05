@@ -18,7 +18,7 @@ const BellSection = () => (
     <BellVoice />
   </>
 );
-import { color, space, type } from '../../../lib/theme';
+import { color, space, type, textSize } from '../../../lib/theme';
 
 const SECTIONS = {
   goals: { title: 'Goals and targets', body: GoalsSection },
@@ -45,7 +45,7 @@ export default function SettingSection() {
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <Text style={[type.hero, { fontSize: 30 }]}>{def?.title ?? 'Settings'}</Text>
+        <Text style={type.pageTitle}>{def?.title ?? 'Settings'}</Text>
         {def ? <def.body /> : <Text style={type.body}>That page doesn’t exist.</Text>}
       </ScrollView>
     </SafeAreaView>
@@ -56,6 +56,6 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { paddingHorizontal: space(3), paddingTop: space(2) },
   back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', paddingVertical: space(1) },
-  backText: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  backText: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
 });

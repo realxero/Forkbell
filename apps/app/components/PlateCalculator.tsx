@@ -7,7 +7,7 @@ import { BARS, DEFAULT_PLATES, fromKg, loadPlates, toKg, type Bar, type WeightUn
 import { useTrainingSetup } from '../lib/training-setup';
 import { Chip } from './AmountPicker';
 import { ChipRow } from './ChipRow';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 // Competition plate colours, by kilogram size (lb plates use the nearest kg size).
 const PLATE_COLOR: [number, string][] = [
@@ -193,7 +193,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: space(3), justifyContent: 'center' },
   stepBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
-  target: { fontSize: 40, fontWeight: '900', color: color.iron, textAlign: 'center', minWidth: 120, fontVariant: ['tabular-nums'] },
+  target: { fontSize: textSize.display, fontWeight: '900', color: color.iron, textAlign: 'center', minWidth: 150, fontVariant: ['tabular-nums'] },
   box: { backgroundColor: color.raised, borderRadius: radius.card, padding: space(3), gap: space(2) },
   barDraw: { flexDirection: 'row', alignItems: 'center', height: 110, gap: 2 },
   sleeveStop: { width: 10, height: 34, borderRadius: 3, backgroundColor: '#9BA7AE' },
@@ -203,5 +203,5 @@ const s = StyleSheet.create({
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   link: { color: color.accent, fontWeight: '700' },
   primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: 16 },
+  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
 });

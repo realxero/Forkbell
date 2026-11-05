@@ -12,7 +12,7 @@ import { confirm } from '../../lib/confirm';
 import { updateCache } from '../../lib/sync';
 import { FoodIcon } from '../../components/FoodIcon';
 import { NumberField } from '../../components/NumberField';
-import { color, radius, space, type } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 
 type Item = { food: Food; grams: number };
 type Draft = { id: string | null; name: string; servings: string; cooked: string; items: Item[] };
@@ -44,7 +44,7 @@ export default function Recipes() {
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content}>
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-        <Text style={[type.hero, { fontSize: 30 }]}>Recipes</Text>
+        <Text style={type.pageTitle}>Recipes</Text>
         <Text style={type.small}>Add the ingredients once; Forkbell works out the numbers per serving. Recipes show up in food search like your other foods.</Text>
         {error && <Text style={s.error}>{error}</Text>}
         {!list && !error && <ActivityIndicator color={color.iron} />}
@@ -227,14 +227,14 @@ function Editor({ draft, onClose, onSaved }: { draft: Draft; onClose: () => void
 
 const s = StyleSheet.create({
   splitButton: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: color.line, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 4 },
-  splitText: { color: color.accent, fontWeight: '700', fontSize: 13 },
+  splitText: { color: color.accent, fontWeight: '700', fontSize: textSize.small },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2), borderWidth: 1, borderColor: color.line },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontSize: 16, fontWeight: '700' },
+  primaryText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '700' },
 });

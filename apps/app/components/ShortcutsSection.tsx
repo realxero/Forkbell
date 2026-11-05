@@ -7,7 +7,7 @@ import { Pressable } from './Tap';
 import * as Clipboard from 'expo-clipboard';
 import { api, del, getServerUrl, post } from '../lib/api';
 import { confirm } from '../lib/confirm';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 type Key = { id: string; label: string; hint: string; createdAt: string; lastUsedAt: string | null };
@@ -136,10 +136,10 @@ const s = StyleSheet.create({
   group: { ...type.small, marginTop: space(4), fontWeight: '700' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.row, padding: space(3) },
   fresh: { gap: space(2), backgroundColor: color.card, borderRadius: radius.row, padding: space(3), borderWidth: 1, borderColor: color.accent },
-  token: { fontFamily: 'Courier', fontSize: 13, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: 8 },
+  token: { fontFamily: 'Courier', fontSize: textSize.small, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: 8 },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   button: { ...buttons.small },
   buttonText: { ...buttons.smallText },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
-  num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: 13, color: color.onAccent, backgroundColor: color.accent },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
+  num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: textSize.small, color: color.onAccent, backgroundColor: color.accent },
 });

@@ -22,7 +22,7 @@ import type { FoodCheckIn } from '@forkbell/shared';
 import { HealthCard } from '../../../components/HealthCard';
 import { ProgressPhotosCard } from '../../../components/ProgressPhotos';
 import { useViewing } from '../../../lib/profile';
-import { color, space, type } from '../../../lib/theme';
+import { color, space, type, textSize } from '../../../lib/theme';
 import { buttons } from '../../../lib/buttons';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
@@ -104,7 +104,7 @@ export default function ProgressScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
-        <Text style={[type.hero, { fontSize: 34 }]}>Progress</Text>
+        <Text style={type.pageTitle}>Progress</Text>
         {error && <Text style={s.error}>{error}</Text>}
         {notice && <Text style={s.notice}>{notice}</Text>}
         {!p && !error && <ActivityIndicator color={color.iron} />}
@@ -154,7 +154,7 @@ export default function ProgressScreen() {
               <Text style={type.title}>Your daily burn</Text>
               {p.energy.kcal !== null ? (
                 <>
-                  <Text style={[type.hero, type.number, { fontSize: 32 }]}>{p.energy.kcal.toLocaleString()} kcal</Text>
+                  <Text style={[type.hero, type.number, { fontSize: textSize.large }]}>{p.energy.kcal.toLocaleString()} kcal</Text>
                   <Text style={type.small}>
                     Worked out from what you logged on {p.energy.loggedDays} days and how your trend moved ({signed(p.energy.rateKgPerWeek!)} a week). Confidence: {p.energy.confidence}. It updates as you keep logging, and already includes your usual activity; to have hard exercise days add to your goal, see Settings → Goals and targets.
                   </Text>
@@ -349,7 +349,7 @@ function TimelineSheet({ visible, reached, next, onClose }: { visible: boolean; 
       <SafeAreaView style={{ flex: 1, backgroundColor: color.chalk }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) }}>
           <Text style={type.title}>Timeline</Text>
-          <Pressable onPress={onClose} hitSlop={10}><Text style={{ color: color.accent, fontWeight: '700', fontSize: 16 }}>Done</Text></Pressable>
+          <Pressable onPress={onClose} hitSlop={10}><Text style={{ color: color.accent, fontWeight: '700', fontSize: textSize.body }}>Done</Text></Pressable>
         </View>
         <ScrollView contentContainerStyle={{ paddingHorizontal: space(4), paddingBottom: space(10) }}>
           {reached.map((m, i) => (
@@ -458,7 +458,7 @@ const s = StyleSheet.create({
   smallText: { ...buttons.smallText },
   suggest: { backgroundColor: color.infoBg, borderRadius: 12, padding: space(3), gap: space(2), marginTop: space(2) },
   step: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
-  stepText: { fontSize: 20, color: color.iron, fontWeight: '700' },
+  stepText: { fontSize: textSize.title, color: color.iron, fontWeight: '700' },
   button: { ...buttons.filled, marginTop: space(1) },
   buttonText: { ...buttons.filledText },
   milestone: { paddingVertical: space(1) },

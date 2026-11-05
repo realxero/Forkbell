@@ -6,7 +6,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
 import { addDays, formatClock, instant, parseClock, todayLocal } from '@forkbell/shared';
 import { CalendarSheet } from './Calendar';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 /** "18:30" on a day, as an instant in this phone's time zone. */
 export const atLocal = (date: string, hhmm: string) => {
@@ -81,6 +81,6 @@ export function WhenCard({ date, startedAt, finishedAt, onChange }: { date: stri
 
 const s = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2) },
-  link: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   field: { ...type.body, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
 });

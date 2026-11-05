@@ -6,7 +6,7 @@ import { planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, type Progra
 import { post, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Chip } from './AmountPicker';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const NARROW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -112,7 +112,7 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  link: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   week: { flexDirection: 'row', gap: 4 },
   day: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: space(2), borderRadius: 12, backgroundColor: color.raised },
   today: { borderWidth: 1.5, borderColor: color.accent },
@@ -122,6 +122,6 @@ const s = StyleSheet.create({
   sheet: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), maxWidth: 440, width: '100%', alignSelf: 'center' },
   starter: { backgroundColor: color.infoBg, borderRadius: 12, padding: space(3), gap: space(2) },
   primary: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: 15 },
+  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },
   secondary: { borderRadius: 10, paddingVertical: space(3), alignItems: 'center', borderWidth: 1, borderColor: color.line },
 });

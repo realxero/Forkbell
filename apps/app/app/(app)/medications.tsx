@@ -8,7 +8,7 @@ import { api, del, post, put } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { askForNotifications, refreshReminders, reminderSettings, remindersSupported } from '../../lib/reminders';
 import type { Med, Wellbeing } from '../../components/WellbeingCard';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 import { buttons } from '../../lib/buttons';
 
 const MAX_DOSES = 6;
@@ -57,7 +57,7 @@ export default function Medications() {
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-        <Text style={[type.hero, { fontSize: 30 }]}>Medications</Text>
+        <Text style={type.pageTitle}>Medications</Text>
         <Text style={type.small}>A simple checklist for medications and supplements. Forkbell doesn’t check doses or interactions; follow your prescription and ask your pharmacist or doctor about anything you’re unsure of.</Text>
         <Text style={type.small}>
           {remindersSupported
@@ -176,7 +176,7 @@ function DoseTimes({ times, onChange }: { times: (string | null)[]; onChange: (t
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },

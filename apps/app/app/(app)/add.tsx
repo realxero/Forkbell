@@ -14,7 +14,7 @@ import { AmountPicker, Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { BarcodeCamera } from '../../components/BarcodeCamera';
 import { FoodIcon } from '../../components/FoodIcon';
 import { MealShortcuts } from '../../components/MealShortcuts';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 import { buttons } from '../../lib/buttons';
 
 type Pick = Food | FoodCandidate;
@@ -503,18 +503,18 @@ const s = StyleSheet.create({
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   scanButton: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3) },
-  scanText: { color: color.chalk, fontWeight: '700', fontSize: 16 },
+  scanText: { color: color.chalk, fontWeight: '700', fontSize: textSize.body },
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, padding: space(3), borderRadius: 10 },
   plus: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
-  plusText: { color: color.chalk, fontSize: 22, lineHeight: 24, fontWeight: '700' },
+  plusText: { color: color.chalk, fontSize: textSize.stat, lineHeight: 24, fontWeight: '700' },
   added: { ...type.small, color: color.fatText, fontWeight: '700' },
   error: { ...type.body, color: color.over },
   button: { ...buttons.filled, marginTop: space(2) },
   buttonText: { ...buttons.filledText },
   secondary: { alignSelf: 'center', padding: space(3), minHeight: 44, justifyContent: 'center' },
   labelButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space(2), minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
-  labelButtonText: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  labelButtonText: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   readNote: { backgroundColor: color.infoBg, borderRadius: 10, padding: space(3), color: color.iron },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
 });

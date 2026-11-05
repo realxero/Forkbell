@@ -8,7 +8,7 @@ import { api, del, post, put } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { getViewing, setViewing } from '../../lib/profile';
 import { Chip } from '../../components/AmountPicker';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 import { buttons } from '../../lib/buttons';
 
 type Perm = 'food_read' | 'food_write' | 'training_read' | 'progress_read' | 'wellbeing_read';
@@ -55,7 +55,7 @@ export default function Sharing() {
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
-        <Text style={[type.hero, { fontSize: 30 }]}>Sharing</Text>
+        <Text style={type.pageTitle}>Sharing</Text>
         <Text style={type.small}>Share with family or a partner who has an account on this Forkbell server. You choose exactly what they can see, and either of you can end it at any time.</Text>
         {msg && <Text style={type.body}>{msg}</Text>}
         {!data && <ActivityIndicator color={color.iron} />}
@@ -112,7 +112,7 @@ export default function Sharing() {
           </Pressable>
           {code && (
             <View style={s.code}>
-              <Text style={[type.hero, { fontSize: 30, letterSpacing: 2 }]}>{code}</Text>
+              <Text style={[type.pageTitle, { letterSpacing: 2 }]}>{code}</Text>
               <Pressable onPress={() => void shareText(`Join me on Forkbell: Settings → Sharing → enter code ${code}`)}><Text style={s.link}>Send it</Text></Pressable>
             </View>
           )}
@@ -141,7 +141,7 @@ export default function Sharing() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
   person: { gap: space(2), borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(4), flexWrap: 'wrap' },

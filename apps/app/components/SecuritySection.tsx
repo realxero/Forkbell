@@ -4,7 +4,7 @@ import { Pressable } from './Tap';
 import type { AccountSecurity } from '@forkbell/shared';
 import { api, del, post, put } from '../lib/api';
 import { confirm } from '../lib/confirm';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -167,7 +167,7 @@ const s = StyleSheet.create({
   button: { ...buttons.small },
   buttonText: { ...buttons.smallText },
   quiet: { paddingVertical: space(3), paddingHorizontal: space(2), alignItems: 'center' },
-  quietText: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  quietText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2) },
   rowLine: { borderTopWidth: 1, borderTopColor: color.line },
 });
@@ -201,7 +201,7 @@ function SignInCode() {
       <Text style={type.small}>No password to type on the new phone or browser: on its sign-in screen, tap “Signed in on another device? Use a code” and type the code shown here.</Text>
       {code && left > 0 ? (
         <>
-          <Text style={{ fontSize: 34, fontWeight: '800', letterSpacing: 4, textAlign: 'center', color: color.iron }} selectable accessibilityLabel={`Code ${code.code.split('').join(' ')}`}>
+          <Text style={{ fontSize: textSize.large, fontWeight: '800', letterSpacing: 4, textAlign: 'center', color: color.iron }} selectable accessibilityLabel={`Code ${code.code.split('').join(' ')}`}>
             {code.code}
           </Text>
           <Text style={[type.small, { textAlign: 'center' }]}>Works once, for {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')} more. Only type it on a device you’re holding.</Text>

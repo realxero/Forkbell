@@ -8,7 +8,7 @@ import { useFocusEffect } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { api, del, getServerUrl, post } from '../lib/api';
 import { confirm } from '../lib/confirm';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 type Key = { id: string; label: string; hint: string; createdAt: string; lastUsedAt: string | null; kind: string; canWrite: boolean };
@@ -105,5 +105,5 @@ const s = StyleSheet.create({
   button: { ...buttons.filled },
   secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: color.line },
   buttonText: { ...buttons.filledText },
-  code: { fontFamily: 'Menlo', fontSize: 12, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: 8 },
+  code: { fontFamily: 'Menlo', fontSize: textSize.label, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: 8 },
 });

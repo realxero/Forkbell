@@ -12,7 +12,7 @@ import { post } from '../lib/api';
 import { cachedGet, updateCache } from '../lib/sync';
 import { Chip } from './AmountPicker';
 import { ChipRow } from './ChipRow';
-import { color, space, type } from '../lib/theme';
+import { color, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 type Listed = Exercise & { uses: number };
@@ -95,7 +95,7 @@ export function ExercisePicker({
             {!creating && (
               <Pressable onPress={() => setIdentify(true)} hitSlop={10} accessibilityLabel="What's this machine? Take a photo" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="camera-outline" size={22} color={color.accent} />
-                <Text style={[s.link, { fontSize: 14 }]}>What’s this?</Text>
+                <Text style={[s.link, { fontSize: textSize.control }]}>What’s this?</Text>
               </Pressable>
             )}
             <Pressable onPress={creating ? () => setCreating(false) : onClose} hitSlop={12}>
@@ -263,5 +263,5 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   button: { ...buttons.filled, marginTop: space(3) },
   buttonText: { ...buttons.filledText },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
 });

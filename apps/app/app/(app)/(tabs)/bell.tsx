@@ -18,7 +18,7 @@ import { NumberField } from '../../../components/NumberField';
 import { FoodIcon } from '../../../components/FoodIcon';
 import { VoiceButton, voiceAvailable } from '../../../components/VoiceButton';
 import { BellAvatar } from '../../../components/BellAvatar';
-import { color, space, type } from '../../../lib/theme';
+import { color, space, type, textSize } from '../../../lib/theme';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -171,13 +171,13 @@ export default function Bell() {
     return (
       <SafeAreaView style={s.screen} edges={['top']}>
         <View style={s.content}>
-          <Text style={[type.hero, { fontSize: 34 }]}>Bell</Text>
+          <Text style={type.pageTitle}>Bell</Text>
           <Text style={type.body}>
             Bell is Forkbell’s assistant: ask about your own data, log food by describing it or snapping a photo, and review everything before it’s added.
           </Text>
           <Text style={type.small}>{status.error ?? 'Add an AI key to turn it on. Google Gemini, Anthropic and OpenAI all work; Gemini has a free tier.'}</Text>
           <Pressable onPress={() => router.push('/setting/bell')} style={{ backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' }}>
-            <Text style={{ color: color.onAccent, fontWeight: '700', fontSize: 16 }}>Add a key in Settings</Text>
+            <Text style={{ color: color.onAccent, fontWeight: '700', fontSize: textSize.body }}>Add a key in Settings</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -195,7 +195,7 @@ export default function Bell() {
         <View style={s.head}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
             <BellAvatar size={36} mood={headMood} alive />
-            <Text style={[type.hero, { fontSize: 34 }]}>Bell</Text>
+            <Text style={type.pageTitle}>Bell</Text>
           </View>
           {messages.length > 0 && (
             <Pressable onPress={() => setMessages([])} hitSlop={12} style={s.headButton}>
@@ -468,17 +468,17 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingTop: space(4), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   headButton: { minHeight: 44, justifyContent: 'center' },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   choice: { minHeight: 44, justifyContent: 'center', paddingHorizontal: space(4), borderRadius: 22, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
   choiceOn: { backgroundColor: color.accent },
-  choiceText: { color: color.accent, fontWeight: '700', fontSize: 15 },
+  choiceText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   hearing: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingHorizontal: space(4), paddingVertical: space(3), backgroundColor: color.card, borderTopWidth: 1, borderTopColor: color.line },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.over },
   pasteRow: { flexDirection: 'row', paddingHorizontal: space(3), paddingTop: space(2), backgroundColor: color.card, borderTopWidth: 1, borderTopColor: color.line },
   pasteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: space(3), borderRadius: 18, borderWidth: 1, borderColor: color.line },
-  pasteText: { color: color.accent, fontWeight: '700', fontSize: 14 },
+  pasteText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   list: { padding: space(4), gap: space(3), paddingBottom: space(6), maxWidth: 640, width: '100%', alignSelf: 'center' },
   suggestion: { backgroundColor: color.card, borderRadius: 12, padding: space(3), borderWidth: 1, borderColor: color.line },
   bubble: { borderRadius: 16, padding: space(3), gap: space(2), maxWidth: '92%' },
@@ -497,7 +497,7 @@ const s = StyleSheet.create({
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: color.chalk },
   input: { ...type.body, flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: color.chalk, borderRadius: 22, paddingHorizontal: space(4), paddingVertical: space(3) },
   send: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
-  sendText: { color: color.chalk, fontWeight: '700', fontSize: 15 },
+  sendText: { color: color.chalk, fontWeight: '700', fontSize: textSize.control },
 });
 
 /**

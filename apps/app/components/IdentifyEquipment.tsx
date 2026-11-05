@@ -8,7 +8,7 @@ import { ApiError, post } from '../lib/api';
 import { pickImage } from '../lib/images';
 import { HowToSheet } from './HowTo';
 import { Thumb } from './ExercisePicker';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 type Result = {
   recognized: boolean;
@@ -88,7 +88,7 @@ export function IdentifyEquipment({ onClose, onPick }: { onClose: () => void; on
           {r && (
             <>
               <View style={s.block}>
-                <Text style={[type.title, { fontSize: 22 }]}>{r.recognized ? r.name : 'Not sure what this is'}</Text>
+                <Text style={[type.title, { fontSize: textSize.stat }]}>{r.recognized ? r.name : 'Not sure what this is'}</Text>
                 {!!r.what && <Text style={type.body}>{r.what}</Text>}
               </View>
               {list('Set it up', r.setup, 'construct-outline', color.accent)}
@@ -131,13 +131,13 @@ export function IdentifyEquipment({ onClose, onPick }: { onClose: () => void; on
 const s = StyleSheet.create({
   page: { flex: 1, padding: space(4), gap: space(3) },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   photo: { width: '100%', height: 240, borderRadius: radius.card },
   empty: { alignItems: 'center', gap: space(3), padding: space(6), borderRadius: radius.card, backgroundColor: color.card, borderWidth: 1, borderColor: color.line },
   block: { gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
   exRow: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   add: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: 16 },
+  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
   secondary: { borderWidth: 1, borderColor: color.line, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
 });

@@ -5,7 +5,7 @@ import { todayLocal, type Insight } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { cachedGet } from '../lib/sync';
 import { useViewing } from '../lib/profile';
-import { color, radius, space, type } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 /** What your own last 90 days say. Only patterns that pass the checks; always says it's a pattern, not proof. */
 export function PatternsCard() {
@@ -35,7 +35,7 @@ export function PatternsCard() {
             <Text style={{ color: color.accent, fontWeight: '900' }}>•</Text>
             <View style={{ flex: 1 }}>
               <Text style={type.body}>{i.text}</Text>
-              <Text style={[type.small, { fontSize: 11 }]}>Based on {i.days} days</Text>
+              <Text style={[type.small, { fontSize: textSize.caption }]}>Based on {i.days} days</Text>
             </View>
           </View>
         ))

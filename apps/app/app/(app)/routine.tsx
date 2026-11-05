@@ -9,7 +9,7 @@ import { api, del } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { formatDuration } from '../../lib/units';
 import { ExercisePicker } from '../../components/ExercisePicker';
-import { color, space, type } from '../../lib/theme';
+import { color, space, type, textSize } from '../../lib/theme';
 
 /** Edit one training day: its name, exercises, sets, rep range and rest. */
 export default function RoutineEditor() {
@@ -169,17 +169,17 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   input: { backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
-  icon: { fontSize: 18, color: color.ironSoft, paddingHorizontal: space(1) },
+  icon: { fontSize: textSize.heading, color: color.ironSoft, paddingHorizontal: space(1) },
   step: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
-  stepText: { fontSize: 20, color: color.iron, fontWeight: '700' },
+  stepText: { fontSize: textSize.title, color: color.iron, fontWeight: '700' },
   grouped: { borderLeftWidth: 4, borderLeftColor: color.accent },
-  groupTag: { color: color.accent, fontWeight: '800', fontSize: 12 },
+  groupTag: { color: color.accent, fontWeight: '800', fontSize: textSize.label },
   linkRow: { alignSelf: 'center', paddingVertical: space(1), minHeight: 32, justifyContent: 'center' },
-  small: { color: color.accent, fontWeight: '700', fontSize: 14 },
+  small: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   add: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },
 });
