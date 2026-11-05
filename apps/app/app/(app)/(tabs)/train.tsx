@@ -17,6 +17,7 @@ import { PlateCalculator } from '../../../components/PlateCalculator';
 import { useAuth } from '../../../lib/auth';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
 import { color, space, type } from '../../../lib/theme';
+import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
 function dayName(date: string) {
   const today = todayLocal();
@@ -198,7 +199,7 @@ export default function Train() {
 const s = StyleSheet.create({
   week: { backgroundColor: color.infoBg, borderRadius: 14, padding: space(4), gap: space(1) },
   screen: { flex: 1, backgroundColor: color.chalk },
-  content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   error: { ...type.body, color: color.over },

@@ -25,6 +25,16 @@ import { color, radius, space, type } from '../lib/theme';
 type Turn = BellTurn & { water?: { ml: number; date: string }; proposals?: FoodProposal[]; added?: boolean; answered?: string; mood?: BellMood };
 /** After this long without a message, the next question starts a new conversation. */
 const FRESH_AFTER = 15 * 60_000;
+/** Where the floating button sits: its bottom edge above the screen's bottom, and its size. */
+const FAB_BOTTOM = 96;
+const FAB_SIZE = 58;
+/**
+ * Space to leave at the end of a tab's list so its last card can scroll clear
+ * of the floating button: the button reaches FAB_BOTTOM + FAB_SIZE from the
+ * screen's bottom, the tab bar takes the first 74 or so of that, and a little
+ * air on top. Tabs that show Quick Bell use this as their bottom padding.
+ */
+export const QUICK_BELL_ROOM = FAB_BOTTOM + FAB_SIZE - 74 + space(4);
 
 export function QuickBell() {
   const { me } = useAuth();
@@ -196,9 +206,9 @@ export function QuickBell() {
 }
 
 const s = StyleSheet.create({
-  fabWrap: { position: 'absolute', right: space(4), bottom: 96 },
-  bubble: { position: 'absolute', right: space(4), bottom: 96 + 58 + 12, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
-  fab: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  fabWrap: { position: 'absolute', right: space(4), bottom: FAB_BOTTOM },
+  bubble: { position: 'absolute', right: space(4), bottom: FAB_BOTTOM + FAB_SIZE + 12, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  fab: { width: FAB_SIZE, height: FAB_SIZE, borderRadius: FAB_SIZE / 2, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '92%' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

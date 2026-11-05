@@ -23,6 +23,7 @@ import { HealthCard } from '../../../components/HealthCard';
 import { ProgressPhotosCard } from '../../../components/ProgressPhotos';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
+import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
 type Progress = {
   today: string;
@@ -438,7 +439,7 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
-  content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   error: { ...type.body, color: color.over },
   notice: { ...type.small, color: color.fatText, fontWeight: '700' },
   warning: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, padding: space(2), borderRadius: 8 },

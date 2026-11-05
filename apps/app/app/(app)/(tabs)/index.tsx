@@ -40,6 +40,7 @@ function Stat({ icon, label, value }: { icon: ComponentProps<typeof Ionicons>['n
   );
 }
 import { color, radius, space, type } from '../../../lib/theme';
+import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
 import { MEAL_NAMES } from '../../../components/AmountPicker';
 
@@ -326,7 +327,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   dateBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space(5), paddingVertical: space(3) },
   arrow: { fontSize: 32, lineHeight: 34, color: color.iron, paddingHorizontal: space(2) },
-  content: { padding: space(4), paddingBottom: space(16), gap: space(4), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(4), maxWidth: 640, width: '100%', alignSelf: 'center' },
   error: { ...type.body, color: color.over },
   summary: { backgroundColor: color.card, borderRadius: radius.card, padding: space(5), gap: space(4), borderWidth: 1, borderColor: color.line },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: space(5) },
