@@ -3,6 +3,7 @@ import Svg, { Circle, Polyline } from 'react-native-svg';
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
 import { Pressable } from '../../../components/Tap';
+import { TitleWithInfo } from '../../../components/Info';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, dateSchema, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
@@ -118,7 +119,9 @@ export default function ProgressScreen() {
             {/* Weigh-in (only for your own data) */}
             {viewing && <Text style={type.small}>{viewing.name}’s progress, read-only.</Text>}
             <View style={[s.card, viewing && { display: 'none' }]}>
-              <Text style={type.title}>Today’s weight</Text>
+              <TitleWithInfo title="Today’s weight">
+                Weigh in at the same time each day. The trend smooths out day-to-day water swings, so it moves more slowly than the scale and is the number to watch.
+              </TitleWithInfo>
               <View style={s.row}>
                 <TextInput value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder={latest ? units.show(latest.weightKg) : ''} style={[s.input, { flex: 1 }]} accessibilityLabel={`Today's weight in ${units.unit}`} />
                 <Text style={type.body}>{units.unit}</Text>
@@ -133,7 +136,7 @@ export default function ProgressScreen() {
               {latest && (
                 <Text style={type.small}>
                   Trend {units.label(latest.trendKg)}
-                  {weekAgo ? ` · ${signed(latest.trendKg - weekAgo.trendKg)} this week` : ''}. Weigh in at the same time each day; the trend smooths out water swings.
+                  {weekAgo ? ` · ${signed(latest.trendKg - weekAgo.trendKg)} this week` : ''}.
                 </Text>
               )}
             </View>
@@ -152,12 +155,16 @@ export default function ProgressScreen() {
 
             {/* Energy */}
             <View style={s.card}>
-              <Text style={type.title}>Your daily burn</Text>
+              <TitleWithInfo title="Your daily burn">
+                {p.energy.kcal !== null
+                  ? `Worked out from what you logged and how your weight trend moved (${signed(p.energy.rateKgPerWeek!)} a week). It updates as you keep logging, and already includes your usual activity. To have hard exercise days add to your goal, see Settings → Goals and targets.`
+                  : 'Forkbell works out what you really burn from your own food logs and weigh-ins, with no formulas or guesses. It already includes your usual activity.'}
+              </TitleWithInfo>
               {p.energy.kcal !== null ? (
                 <>
                   <Text style={[type.hero, type.number, { fontSize: textSize.large }]}>{p.energy.kcal.toLocaleString()} kcal</Text>
                   <Text style={type.small}>
-                    Worked out from what you logged on {p.energy.loggedDays} days and how your trend moved ({signed(p.energy.rateKgPerWeek!)} a week). Confidence: {p.energy.confidence}. It updates as you keep logging, and already includes your usual activity; to have hard exercise days add to your goal, see Settings → Goals and targets.
+                    From {p.energy.loggedDays} days of logging · confidence {p.energy.confidence}.
                   </Text>
                 </>
               ) : (
@@ -388,8 +395,9 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
   const list = p.measurements.filter((m) => !viewing || m.latest);
   return (
     <View style={s.card}>
-      <Text style={type.title}>Measurements</Text>
-      <Text style={type.small}>Tape around the same spot each time, or track anything else with your own unit. Today’s value replaces any earlier one from today.</Text>
+      <TitleWithInfo title="Measurements">
+        Tape around the same spot each time, or track anything else with your own unit. Today’s value replaces any earlier one from today.
+      </TitleWithInfo>
       {list.map((m) => (
         <View key={m.kind} style={s.row}>
           <View style={{ flex: 1 }}>

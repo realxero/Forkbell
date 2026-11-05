@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { todayLocal, type Readiness } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
+import { Info } from './Info';
 import { color, radius, space, type, textSize } from '../lib/theme';
 
 export function ReadinessCard({ r, compact }: { r: Readiness; compact?: boolean }) {
@@ -18,7 +19,14 @@ export function ReadinessCard({ r, compact }: { r: Readiness; compact?: boolean 
           <Text style={[s.score, { color: words }]}>{r.score}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[type.body, { fontWeight: '800' }]}>Readiness: {r.label}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+            <Text style={[type.body, { fontWeight: '800' }]}>Readiness: {r.label}</Text>
+            {!compact && (
+              <Info title="Readiness">
+                Worked out from what your watch sends to Apple Health (sleep, resting heart rate and heart-rate variability), against your own last four weeks rather than anyone else’s numbers.
+              </Info>
+            )}
+          </View>
           {r.sleep && (
             <Text style={type.small}>
               Sleep {hours(r.sleep.minutes)} · score {r.sleep.score}
@@ -29,7 +37,7 @@ export function ReadinessCard({ r, compact }: { r: Readiness; compact?: boolean 
       </View>
       {!compact && (
         <Text style={type.small}>
-          {r.reasons.length ? `${r.reasons.join('; ')}.` : 'Sleep and heart numbers are about your usual.'} Worked out from what your watch sends to Apple Health, against your own last four weeks.
+          {r.reasons.length ? `${r.reasons.join('; ')}.` : 'Sleep and heart numbers are about your usual.'}
           {r.label === 'Take it easier' ? ' A lighter session, or more rest between sets, makes sense today.' : ''}
         </Text>
       )}
