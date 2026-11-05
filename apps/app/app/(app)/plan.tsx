@@ -115,7 +115,7 @@ export default function Plan() {
             <Text style={[type.small, type.number]}>Plan total about {p.kcal.toLocaleString()} kcal and {Math.round(p.protein)} g protein. Tap an item to leave it out.</Text>
             {p.notes.map((n) => <Text key={n} style={s.note}>{n}</Text>)}
             {added.includes(p.date) ? (
-              <Text style={[type.small, { color: color.fat, fontWeight: '700' }]}>Added to the diary.</Text>
+              <Text style={[type.small, { color: color.fatText, fontWeight: '700' }]}>Added to the diary.</Text>
             ) : p.items.length > 0 ? (
               <Pressable disabled={busy} onPress={() => addPlan(p)} style={[s.button, busy && { opacity: 0.5 }]}><Text style={s.buttonText}>Add to {label(p.date, today)}</Text></Pressable>
             ) : null}

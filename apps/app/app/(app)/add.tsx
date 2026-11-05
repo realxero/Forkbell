@@ -288,7 +288,7 @@ function Row({ food, onPress }: { food: Pick; onPress: () => void }) {
         <Text style={type.body} numberOfLines={2}>{food.name}</Text>
         <Text style={type.small} numberOfLines={1}>
           {food.brand ? `${food.brand} · ` : ''}
-          <Text style={{ color: trusted ? color.fat : color.ironSoft, fontWeight: '700' }}>{trusted ? '✓ ' : ''}{kind.tag}</Text>
+          <Text style={{ color: trusted ? color.fatText : color.ironSoft, fontWeight: '700' }}>{trusted ? '✓ ' : ''}{kind.tag}</Text>
         </Text>
       </View>
       <Text style={[type.small, type.number, { textAlign: 'right' }]}>
@@ -506,7 +506,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, padding: space(3), borderRadius: 10 },
   plus: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
   plusText: { color: color.chalk, fontSize: 22, lineHeight: 24, fontWeight: '700' },
-  added: { ...type.small, color: color.fat, fontWeight: '700' },
+  added: { ...type.small, color: color.fatText, fontWeight: '700' },
   error: { ...type.body, color: color.over },
   button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(2) },
   buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },

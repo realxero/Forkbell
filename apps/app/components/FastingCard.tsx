@@ -99,7 +99,7 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
         {!readOnly && (
           <View style={s.row}>
             <Pressable onPress={() => void end()} style={[s.button, p.done && s.buttonOn]} accessibilityRole="button">
-              <Text style={[s.buttonText, p.done && { color: '#fff' }]}>{p.done ? 'End fast' : 'End early'}</Text>
+              <Text style={[s.buttonText, p.done && { color: color.onAccent }]}>{p.done ? 'End fast' : 'End early'}</Text>
             </Pressable>
             <Pressable onPress={() => void remove()} hitSlop={8}><Text style={[type.small, { color: color.ironSoft }]}>Remove</Text></Pressable>
           </View>
@@ -132,6 +132,6 @@ const s = StyleSheet.create({
   bar: { height: 10, borderRadius: 5, backgroundColor: color.track, overflow: 'hidden' },
   fill: { height: 10, borderRadius: 5, backgroundColor: color.fat },
   button: { flex: 1, minHeight: 42, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.fat, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(2) },
-  buttonOn: { backgroundColor: color.fat },
-  buttonText: { color: color.fat, fontWeight: '800', textAlign: 'center' },
+  buttonOn: { backgroundColor: color.fatText, borderColor: color.fatText },
+  buttonText: { color: color.fatText, fontWeight: '800', textAlign: 'center' },
 });

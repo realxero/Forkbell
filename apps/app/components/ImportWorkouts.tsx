@@ -123,7 +123,7 @@ export function ImportWorkouts() {
         </View>
       )}
       {done && (
-        <Text style={[type.body, { fontWeight: '700', color: color.fat }]}>
+        <Text style={[type.body, { fontWeight: '700', color: color.fatText }]}>
           Imported {done.workouts} workout{done.workouts === 1 ? '' : 's'} ({done.sets.toLocaleString()} sets){done.added.length ? ` and ${done.added.length} new exercise${done.added.length === 1 ? '' : 's'}` : ''}. They’re in Train → History, and your records include them.
         </Text>
       )}

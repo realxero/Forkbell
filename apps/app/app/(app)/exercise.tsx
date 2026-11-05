@@ -137,6 +137,7 @@ export default function ExerciseDetail() {
 }
 
 const LEVEL_TINT: Record<VariationLevel, string> = { harder: color.over, angle: color.accent, easier: color.fat };
+const LEVEL_WORDS: Record<VariationLevel, string> = { ...LEVEL_TINT, easier: color.fatText };
 
 /** Ways to make it harder without more weight: for big jumps, stalls, or no heavier weight. */
 function ProgressIdeas({ ideas, timed }: { ideas: ProgressIdea[]; timed: boolean }) {
@@ -175,7 +176,7 @@ function Variations({ list }: { list: Variation[] }) {
           accessibilityLabel={`${v.exercise.name}, ${VARIATION_LABEL[v.level]}`}
         >
           <View style={[s.level, { borderColor: LEVEL_TINT[v.level] }]}>
-            <Text style={[s.levelText, { color: LEVEL_TINT[v.level] }]}>{VARIATION_LABEL[v.level]}</Text>
+            <Text style={[s.levelText, { color: LEVEL_WORDS[v.level] }]}>{VARIATION_LABEL[v.level]}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={type.body}>{v.exercise.name}</Text>

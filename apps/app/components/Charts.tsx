@@ -80,7 +80,7 @@ export function WeightChart({ points, goalKg, show }: { points: TrendPoint[]; go
       <View style={{ flexDirection: 'row', gap: space(4), marginTop: space(2) }}>
         <Text style={type.small}>● weigh-ins</Text>
         <Text style={[type.small, { color: color.accent }]}>━ trend</Text>
-        {showGoal && <Text style={[type.small, { color: color.fat }]}>┅ goal {show(goalKg!)}</Text>}
+        {showGoal && <Text style={[type.small, { color: color.fatText }]}>┅ goal {show(goalKg!)}</Text>}
       </View>
     </View>
   );

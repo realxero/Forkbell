@@ -29,7 +29,7 @@ export function WaterProposal({ ml, date, onAdded }: { ml: number; date: string;
       <Ionicons name="water" size={20} color={color.water} />
       <Text style={[type.body, { flex: 1, fontWeight: '700' }]}>{waterText(ml, unit)} of water</Text>
       {state === 'added' ? (
-        <Text style={[type.small, { color: color.water, fontWeight: '800' }]}>Added ✓</Text>
+        <Text style={[type.small, { color: color.waterText, fontWeight: '800' }]}>Added ✓</Text>
       ) : (
         <Pressable onPress={() => void add()} disabled={state === 'adding'} style={s.button} accessibilityRole="button" accessibilityLabel={`Add ${waterText(ml, unit)} of water`}>
           <Text style={s.buttonText}>{state === 'adding' ? 'Adding…' : 'Add'}</Text>

@@ -819,7 +819,7 @@ function ExerciseCard(props: {
           >
             <View style={[s.setRow, set.done && s.setDone]}>
               <Pressable style={s.colSet} onPress={() => { haptic.tap(); props.onSet(k, then); }} accessibilityLabel={`${what}. Tap to make it ${thenWhat}`}>
-                <Text style={[s.setNo, set.warmup && { color: color.carbs }, set.drop && { color: color.over }]}>{label}</Text>
+                <Text style={[s.setNo, set.warmup && { color: color.carbsText }, set.drop && { color: color.over }]}>{label}</Text>
               </Pressable>
               <Text style={[s.colPrev, type.small, type.number]} numberOfLines={1}>{prevText}</Text>
               {kind === 'cardio' ? (

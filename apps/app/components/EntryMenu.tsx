@@ -105,7 +105,7 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
                     <FoodIcon name={o.food.name} brand={o.food.brand} size={34} />
                     <View style={{ flex: 1 }}>
                       <Text style={type.body} numberOfLines={1}>{o.food.name}</Text>
-                      <Text style={[type.small, { color: color.fat }]}>{o.why}</Text>
+                      <Text style={[type.small, { color: color.fatText }]}>{o.why}</Text>
                     </View>
                     <Pressable onPress={() => swapTo(o)} style={s.swap}><Text style={s.swapText}>Swap</Text></Pressable>
                   </View>

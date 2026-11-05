@@ -268,7 +268,7 @@ function GoalCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (bo
   return (
     <View style={s.card}>
       <Text style={type.title}>Goal</Text>
-      {plan?.reached && <Text style={[type.body, { color: color.fat, fontWeight: '700' }]}>You’re at your goal weight. 🎉</Text>}
+      {plan?.reached && <Text style={[type.body, { color: color.fatText, fontWeight: '700' }]}>You’re at your goal weight. 🎉</Text>}
       {plan && !plan.reached && <Text style={type.body}>{units.label(Math.abs(plan.remainingKg))} to go.</Text>}
       {paceText && <Text style={type.body}>{paceText}</Text>}
       {plan?.kcalForDate && <Text style={type.body}>To make {longDate(p.goal.date!)}, eat about {plan.kcalForDate.toLocaleString()} kcal a day.</Text>}
@@ -439,7 +439,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   error: { ...type.body, color: color.over },
-  notice: { ...type.small, color: color.fat, fontWeight: '700' },
+  notice: { ...type.small, color: color.fatText, fontWeight: '700' },
   warning: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, padding: space(2), borderRadius: 8 },
   card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },

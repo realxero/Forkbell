@@ -9,12 +9,13 @@ import { color, radius, space, type } from '../lib/theme';
 
 export function ReadinessCard({ r, compact }: { r: Readiness; compact?: boolean }) {
   const tint = r.label === 'Ready to push' ? color.fat : r.label === 'Normal' ? color.accent : color.carbs;
+  const words = r.label === 'Ready to push' ? color.fatText : r.label === 'Normal' ? color.accent : color.carbsText;
   const hours = (m: number) => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} m`;
   return (
     <View style={[s.card, compact && { padding: space(3) }]} accessibilityLabel={`Readiness ${r.score}, ${r.label}`}>
       <View style={s.row}>
         <View style={[s.badge, { borderColor: tint }]}>
-          <Text style={[s.score, { color: tint }]}>{r.score}</Text>
+          <Text style={[s.score, { color: words }]}>{r.score}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[type.body, { fontWeight: '800' }]}>Readiness: {r.label}</Text>

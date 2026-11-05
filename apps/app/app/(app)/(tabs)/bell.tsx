@@ -449,7 +449,7 @@ export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; ad
       })}
       {error && <Text style={s.error}>{error}</Text>}
       {added ? (
-        <Text style={[type.small, { color: color.fat, fontWeight: '700' }]}>Added to your diary.</Text>
+        <Text style={[type.small, { color: color.fatText, fontWeight: '700' }]}>Added to your diary.</Text>
       ) : (
         <Pressable disabled={busy || !kept.length} onPress={add} style={[s.add, (busy || !kept.length) && { opacity: 0.4 }]}>
           <Text style={s.sendText}>

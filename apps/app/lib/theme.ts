@@ -2,6 +2,10 @@
 // macros in competition bumper-plate colours (20 kg blue, 15 kg yellow,
 // 10 kg green, 25 kg red for "over").
 //
+// The bright macro colours are for rings, bars and icons. Words in those
+// colours use the *Text versions, which are darker in light mode so they stay
+// readable on white (4.5:1 or better); in dark mode they're the same colour.
+//
 // On the web every colour is a CSS variable, so switching light/dark is
 // instant and follows the system setting (see ThemeStyle). On phones the
 // palette is fixed when the app's code loads, because every screen's styles
@@ -20,10 +24,12 @@ const light = {
   protein: '#2B6BD6',
   carbs: '#D99A00',
   fat: '#2E9E62',
+  carbsText: '#8A5A00',
+  fatText: '#1F7A4A',
   over: '#D2423A',
   accent: '#2B6BD6',
   onAccent: '#FFFFFF',
-  placeholder: '#A3ACB1',
+  placeholder: '#7C868C',
   successBg: '#E5F4EC',
   infoBg: '#EAF1FC',
   warnBg: '#FFF4D6',
@@ -32,6 +38,7 @@ const light = {
   restFill: '#2F4350',
   track: '#E6E9EA',
   water: '#1E88C8',
+  waterText: '#13689C',
   waterBg: '#E4F2FB',
 } as const;
 
@@ -45,10 +52,12 @@ const dark: Record<keyof typeof light, string> = {
   protein: '#5C9BFF',
   carbs: '#F2C14E',
   fat: '#4CC38A',
+  carbsText: '#F2C14E',
+  fatText: '#4CC38A',
   over: '#FF6B61',
   accent: '#5C9BFF',
   onAccent: '#0E1215',
-  placeholder: '#5E6A71',
+  placeholder: '#76828A',
   successBg: '#13281D',
   infoBg: '#152238',
   warnBg: '#30260C',
@@ -57,6 +66,7 @@ const dark: Record<keyof typeof light, string> = {
   restFill: '#33505F',
   track: '#262D32',
   water: '#4FB3F0',
+  waterText: '#4FB3F0',
   waterBg: '#122A3A',
 };
 
@@ -104,12 +114,16 @@ export function isDark(choice: SchemeChoice) {
   return isWeb ? window.matchMedia?.('(prefers-color-scheme: dark)').matches === true : nativeScheme === 'dark';
 }
 
-/** Accent colours you can pick in Settings, each with a light and a dark version. */
+/**
+ * Accent colours you can pick in Settings, each with a light and a dark version.
+ * Buttons put white words on the light version and dark words on the dark one,
+ * so each pair is kept at 4.5:1 or better for those words.
+ */
 export const ACCENTS = {
   blue: { label: 'Blue', light: '#2B6BD6', dark: '#5C9BFF' },
-  teal: { label: 'Teal', light: '#0F8B8D', dark: '#3CC9C4' },
-  green: { label: 'Green', light: '#2E8B57', dark: '#4CC38A' },
-  orange: { label: 'Orange', light: '#D9661F', dark: '#FF9A52' },
+  teal: { label: 'Teal', light: '#0C7A7C', dark: '#3CC9C4' },
+  green: { label: 'Green', light: '#277A4C', dark: '#4CC38A' },
+  orange: { label: 'Orange', light: '#B8520F', dark: '#FF9A52' },
   red: { label: 'Red', light: '#C8382E', dark: '#FF6B61' },
   pink: { label: 'Pink', light: '#C2407E', dark: '#FF7AB6' },
   purple: { label: 'Purple', light: '#6A4BD1', dark: '#A48BFF' },

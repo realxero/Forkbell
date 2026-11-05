@@ -87,7 +87,7 @@ export function WaterCard({ date, readOnly }: { date: string; readOnly?: boolean
       <View style={s.bar} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}>
         <View style={[s.fill, { width: `${pct * 100}%` }]} />
       </View>
-      {total >= goal && <Text style={[type.small, { color: color.water, fontWeight: '700' }]}>Goal reached 💧</Text>}
+      {total >= goal && <Text style={[type.small, { color: color.waterText, fontWeight: '700' }]}>Goal reached 💧</Text>}
       {!readOnly && (
         <>
           <View style={s.row}>
@@ -139,8 +139,8 @@ const s = StyleSheet.create({
   bar: { height: 10, borderRadius: 5, backgroundColor: color.track, overflow: 'hidden' },
   fill: { height: 10, borderRadius: 5, backgroundColor: color.water },
   button: { flex: 1, minHeight: 42, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.water, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: color.water, fontWeight: '800', fontSize: 15 },
-  link: { color: color.water, fontWeight: '700' },
+  buttonText: { color: color.waterText, fontWeight: '800', fontSize: 15 },
+  link: { color: color.waterText, fontWeight: '700' },
   input: { ...type.body, flex: 1, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
   addButton: { backgroundColor: color.water, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(2) },
   addButtonText: { color: '#fff', fontWeight: '800' },
