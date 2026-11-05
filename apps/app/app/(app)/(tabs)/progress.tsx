@@ -112,6 +112,7 @@ export default function ProgressScreen() {
           <>
             {p.checkIn && <FoodCheckInCard checkIn={p.checkIn} unit={units.unit} onChanged={load} />}
 
+            <Text style={s.heading} accessibilityRole="header">Weight and goal</Text>
             {/* Weigh-in (only for your own data) */}
             {viewing && <Text style={type.small}>{viewing.name}’s progress, read-only.</Text>}
             <View style={[s.card, viewing && { display: 'none' }]}>
@@ -145,34 +146,7 @@ export default function ProgressScreen() {
               </View>
             )}
 
-            {/* Progress photos: only ever yours, so not shown when viewing someone */}
-            {!viewing && <ProgressPhotosCard weighIns={p.weighIns} />}
-
-            {/* Calories and macros, day by day */}
-            {p.days && (
-              <>
-                <View style={s.card}>
-                  <Text style={type.title}>Calories, last 2 weeks</Text>
-                  <CalorieBars days={p.days.slice(-14)} today={p.today} />
-                </View>
-                <View style={s.card}>
-                  <Text style={type.title}>Where your calories come from</Text>
-                  <Text style={type.small}>Last 7 days</Text>
-                  <MacroDonut days={p.days.slice(-7)} />
-                </View>
-                <View style={s.card}>
-                  <Text style={type.title}>Days logged</Text>
-                  <LogMonth days={p.days} today={p.today} goal={p.calorieGoal ?? null} onOpenDay={viewing ? undefined : (d) => router.push({ pathname: '/', params: { date: d } })} />
-                  <Text style={type.small}>Green: logged and within your goal. Red: over it. Grey: nothing logged.</Text>
-                </View>
-              </>
-            )}
-
-            {/* Everything from Apple Health / Health Connect */}
-            {!viewing && p.activity?.readiness && <ReadinessCard r={p.activity.readiness} />}
-            {p.activity?.source && p.activity.metrics && p.activity.metrics.length > 0 && (
-              <HealthCard metrics={p.activity.metrics} source={p.activity.source} unit={units.unit} today={p.today} />
-            )}
+            {!viewing && <GoalCard p={p} units={units} onSave={(body) => act(() => send('PUT', '/api/progress/goal', body, { label: 'Goal', coalesceKey: 'goal' }), 'Goal saved.')} />}
 
             {/* Energy */}
             <View style={s.card}>
@@ -210,8 +184,46 @@ export default function ProgressScreen() {
               )}
             </View>
 
-            {!viewing && <GoalCard p={p} units={units} onSave={(body) => act(() => send('PUT', '/api/progress/goal', body, { label: 'Goal', coalesceKey: 'goal' }), 'Goal saved.')} />}
+            <MeasurementsCard
+              p={p}
+              units={units}
+              onSave={(kind, value, unit) => act(() => send('PUT', '/api/progress/measurements', { date: todayLocal(), kind, value, unit }, { label: `${kind} measurement`, coalesceKey: `measure:${todayLocal()}:${kind}` }), 'Measurement saved.')}
+            />
 
+            {/* Progress photos: only ever yours, so not shown when viewing someone */}
+            {!viewing && <ProgressPhotosCard weighIns={p.weighIns} />}
+
+            {/* Calories and macros, day by day */}
+            {p.days && (
+              <>
+                <Text style={s.heading} accessibilityRole="header">Food</Text>
+                <View style={s.card}>
+                  <Text style={type.title}>Calories, last 2 weeks</Text>
+                  <CalorieBars days={p.days.slice(-14)} today={p.today} />
+                </View>
+                <View style={s.card}>
+                  <Text style={type.title}>Where your calories come from</Text>
+                  <Text style={type.small}>Last 7 days</Text>
+                  <MacroDonut days={p.days.slice(-7)} />
+                </View>
+                <View style={s.card}>
+                  <Text style={type.title}>Days logged</Text>
+                  <LogMonth days={p.days} today={p.today} goal={p.calorieGoal ?? null} onOpenDay={viewing ? undefined : (d) => router.push({ pathname: '/', params: { date: d } })} />
+                  <Text style={type.small}>Green: logged and within your goal. Red: over it. Grey: nothing logged.</Text>
+                </View>
+              </>
+            )}
+
+            <Text style={s.heading} accessibilityRole="header">Recovery and wellbeing</Text>
+            {/* Everything from Apple Health / Health Connect */}
+            {!viewing && p.activity?.readiness && <ReadinessCard r={p.activity.readiness} />}
+            {p.activity?.source && p.activity.metrics && p.activity.metrics.length > 0 && (
+              <HealthCard metrics={p.activity.metrics} source={p.activity.source} unit={units.unit} today={p.today} />
+            )}
+
+            <WellbeingCard healthSleepMin={p.activity?.metrics?.find((m) => m.kind === 'sleep_min' && m.latestDate === p.today)?.latest ?? null} />
+
+            <Text style={s.heading} accessibilityRole="header">Streaks and recaps</Text>
             {/* Streaks */}
             <View style={s.card}>
               <Text style={type.title}>Streaks</Text>
@@ -228,19 +240,11 @@ export default function ProgressScreen() {
               </Text>
             </View>
 
+            <Milestones list={p.milestones} />
+
             <RecapCard unit={units.unit} />
 
             <PatternsCard />
-
-            <WellbeingCard healthSleepMin={p.activity?.metrics?.find((m) => m.kind === 'sleep_min' && m.latestDate === p.today)?.latest ?? null} />
-
-            <Milestones list={p.milestones} />
-
-            <MeasurementsCard
-              p={p}
-              units={units}
-              onSave={(kind, value, unit) => act(() => send('PUT', '/api/progress/measurements', { date: todayLocal(), kind, value, unit }, { label: `${kind} measurement`, coalesceKey: `measure:${todayLocal()}:${kind}` }), 'Measurement saved.')}
-            />
           </>
         )}
       </ScrollView>
@@ -440,6 +444,8 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  // Group headings: Weight and goal, Food, Recovery and wellbeing, Streaks and recaps.
+  heading: { ...type.label, marginTop: space(3) },
   error: { ...type.body, color: color.over },
   notice: { ...type.small, color: color.fatText, fontWeight: '700' },
   warning: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, padding: space(2), borderRadius: 8 },
