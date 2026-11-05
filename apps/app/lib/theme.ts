@@ -40,6 +40,17 @@ const light = {
   water: '#1E88C8',
   waterText: '#13689C',
   waterBg: '#E4F2FB',
+  // Icon colours (Settings tiles, the Health card), each readable in both modes.
+  hueGreen: '#2E9E62',
+  hueOrange: '#E8590C',
+  hueBlue: '#2B6BD6',
+  huePurple: '#6A4BD1',
+  hueRed: '#D2423A',
+  hueTeal: '#0F8B8D',
+  huePink: '#C2185B',
+  hueYellow: '#B07C00',
+  hueSlate: '#1C252B',
+  hueGrey: '#5B6B73',
 } as const;
 
 const dark: Record<keyof typeof light, string> = {
@@ -68,6 +79,16 @@ const dark: Record<keyof typeof light, string> = {
   water: '#4FB3F0',
   waterText: '#4FB3F0',
   waterBg: '#122A3A',
+  hueGreen: '#4CC38A',
+  hueOrange: '#FF9A52',
+  hueBlue: '#5C9BFF',
+  huePurple: '#A48BFF',
+  hueRed: '#FF6B61',
+  hueTeal: '#3CC9C4',
+  huePink: '#FF7AB6',
+  hueYellow: '#F2C14E',
+  hueSlate: '#C9D2D8',
+  hueGrey: '#9BA7AE',
 };
 
 export type ColorName = keyof typeof light;

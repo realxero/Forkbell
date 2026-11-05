@@ -8,20 +8,20 @@ import { color, radius, space, type } from '../lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 const ORDER: [HealthKind, IconName, string][] = [
-  ['steps', 'footsteps-outline', '#2E9E62'],
-  ['active_kcal', 'flame-outline', '#E8590C'],
-  ['exercise_min', 'stopwatch-outline', '#2E9E62'],
-  ['sleep_min', 'bed-outline', '#6A4BD1'],
-  ['distance_m', 'walk-outline', '#0F8B8D'],
-  ['flights', 'trending-up-outline', '#D99A00'],
-  ['resting_hr', 'heart-outline', '#D2423A'],
-  ['hr_avg', 'pulse-outline', '#D2423A'],
-  ['hrv_ms', 'analytics-outline', '#C2407E'],
-  ['spo2_pct', 'water-outline', '#2B6BD6'],
-  ['resp_rate', 'cloud-outline', '#0F8B8D'],
-  ['vo2max', 'speedometer-outline', '#2E9E62'],
-  ['lean_kg', 'body-outline', '#6A4BD1'],
-  ['resting_kcal', 'battery-half-outline', '#5F6B73'],
+  ['steps', 'footsteps-outline', color.hueGreen],
+  ['active_kcal', 'flame-outline', color.hueOrange],
+  ['exercise_min', 'stopwatch-outline', color.hueGreen],
+  ['sleep_min', 'bed-outline', color.huePurple],
+  ['distance_m', 'walk-outline', color.hueTeal],
+  ['flights', 'trending-up-outline', color.hueYellow],
+  ['resting_hr', 'heart-outline', color.hueRed],
+  ['hr_avg', 'pulse-outline', color.hueRed],
+  ['hrv_ms', 'analytics-outline', color.huePink],
+  ['spo2_pct', 'water-outline', color.hueBlue],
+  ['resp_rate', 'cloud-outline', color.hueTeal],
+  ['vo2max', 'speedometer-outline', color.hueGreen],
+  ['lean_kg', 'body-outline', color.huePurple],
+  ['resting_kcal', 'battery-half-outline', color.hueGrey],
 ];
 
 /** Show a value in its everyday unit: sleep in hours, distance in km (or mi), lean mass in your unit. */

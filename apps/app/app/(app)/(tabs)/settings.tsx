@@ -34,29 +34,29 @@ export default function Settings() {
     {
       title: 'You',
       rows: [
-        { icon: 'flag-outline', tint: '#2E9E62', title: 'Goals and targets', detail: goals, href: '/setting/goals' },
-        { icon: 'restaurant-outline', tint: '#E8590C', title: 'Food preferences and suggestions', detail: 'Allergies, diet, suggestions, patterns', href: '/preferences' },
-        { icon: 'barbell-outline', tint: '#1C252B', title: 'Training setup', detail: me?.preferences.training?.equipment?.length ? `Equipment: ${me.preferences.training.equipment.join(', ')}` : 'Equipment you have (full gym), areas to protect', href: { pathname: '/preferences', params: { section: 'training' } } },
-        { icon: 'color-palette-outline', tint: '#6A4BD1', title: 'Units and appearance', detail: `${me?.weightUnit === 'kg' ? 'Kilograms' : 'Pounds'} · theme · accent colour`, href: '/setting/appearance' },
-        { icon: 'lock-closed-outline', tint: '#3A4750', title: 'Sign-in and security', detail: 'Password, where you’re signed in', href: '/setting/security' },
+        { icon: 'flag-outline', tint: color.hueGreen, title: 'Goals and targets', detail: goals, href: '/setting/goals' },
+        { icon: 'restaurant-outline', tint: color.hueOrange, title: 'Food preferences and suggestions', detail: 'Allergies, diet, suggestions, patterns', href: '/preferences' },
+        { icon: 'barbell-outline', tint: color.hueSlate, title: 'Training setup', detail: me?.preferences.training?.equipment?.length ? `Equipment: ${me.preferences.training.equipment.join(', ')}` : 'Equipment you have (full gym), areas to protect', href: { pathname: '/preferences', params: { section: 'training' } } },
+        { icon: 'color-palette-outline', tint: color.huePurple, title: 'Units and appearance', detail: `${me?.weightUnit === 'kg' ? 'Kilograms' : 'Pounds'} · theme · accent colour`, href: '/setting/appearance' },
+        { icon: 'lock-closed-outline', tint: color.hueSlate, title: 'Sign-in and security', detail: 'Password, where you’re signed in', href: '/setting/security' },
       ],
     },
     {
       title: 'Connections',
       rows: [
-        { icon: 'chatbubble-ellipses-outline', tint: '#2B6BD6', title: 'Bell (AI)', detail: bell ?? '', href: '/setting/bell' },
-        { icon: 'heart-outline', tint: '#D2423A', title: healthName ?? 'Apple Health and Health Connect', detail: healthSupported ? (getHealthSettings().connected ? 'Connected' : 'Not connected') : 'In the phone app', href: '/setting/health' },
-        { icon: 'people-outline', tint: '#0F8B8D', title: 'Sharing with family', detail: 'Who can see your data', href: '/sharing' },
-        { icon: 'mic-outline', tint: '#C2185B', title: 'Siri and Shortcuts', detail: 'Ask Bell and log food hands-free', href: '/setting/shortcuts' },
-        { icon: 'sparkles-outline', tint: '#6A4BC4', title: 'AI apps (Claude Desktop)', detail: 'Let an AI app read your data, and log if you allow', href: '/setting/aiapps' },
+        { icon: 'chatbubble-ellipses-outline', tint: color.hueBlue, title: 'Bell (AI)', detail: bell ?? '', href: '/setting/bell' },
+        { icon: 'heart-outline', tint: color.hueRed, title: healthName ?? 'Apple Health and Health Connect', detail: healthSupported ? (getHealthSettings().connected ? 'Connected' : 'Not connected') : 'In the phone app', href: '/setting/health' },
+        { icon: 'people-outline', tint: color.hueTeal, title: 'Sharing with family', detail: 'Who can see your data', href: '/sharing' },
+        { icon: 'mic-outline', tint: color.huePink, title: 'Siri and Shortcuts', detail: 'Ask Bell and log food hands-free', href: '/setting/shortcuts' },
+        { icon: 'sparkles-outline', tint: color.huePurple, title: 'AI apps (Claude Desktop)', detail: 'Let an AI app read your data, and log if you allow', href: '/setting/aiapps' },
       ],
     },
     {
       title: 'Your data',
-      rows: [{ icon: 'download-outline', tint: '#5B6B73', title: 'Export, import and backup', detail: 'Export everything; import workouts from Strong, Hevy or FitNotes', href: '/setting/data' }],
+      rows: [{ icon: 'download-outline', tint: color.hueGrey, title: 'Export, import and backup', detail: 'Export everything; import workouts from Strong, Hevy or FitNotes', href: '/setting/data' }],
     },
     ...(remindersSupported || pictureCacheSupported
-      ? [{ title: 'This phone', rows: [{ icon: 'notifications-outline' as IconName, tint: '#D99A00', title: 'Reminders and offline pictures', detail: 'Notifications, saved exercise pictures', href: '/setting/phone' as Href }] }]
+      ? [{ title: 'This phone', rows: [{ icon: 'notifications-outline' as IconName, tint: color.hueYellow, title: 'Reminders and offline pictures', detail: 'Notifications, saved exercise pictures', href: '/setting/phone' as Href }] }]
       : []),
   ];
 
@@ -78,7 +78,7 @@ export default function Settings() {
             <View style={s.group}>
               {grp.rows.map((r, i) => (
                 <Pressable key={r.title} onPress={() => router.push(r.href)} style={({ pressed }) => [s.row, i > 0 && s.rowLine, pressed && { backgroundColor: color.raised }]} accessibilityRole="button">
-                  <View style={[s.icon, { backgroundColor: r.tint }]}><Ionicons name={r.icon} size={18} color="#fff" /></View>
+                  <View style={[s.icon, { backgroundColor: r.tint }]}><Ionicons name={r.icon} size={18} color={color.onAccent} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={type.body}>{r.title}</Text>
                     {!!r.detail && <Text style={type.small} numberOfLines={1}>{r.detail}</Text>}
