@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify, enqueue, newId, type OutboxItem } from './outbox.ts';
+import { afterRetry, classify, enqueue, MAX_SERVER_ERRORS, newId, type OutboxItem } from './outbox.ts';
 
 let n = 0;
 const item = (path: string, coalesceKey: string | null = null, method: OutboxItem['method'] = 'PUT'): OutboxItem => ({
@@ -45,4 +45,23 @@ test('device ids look like real UUIDs', () => {
   const ids = new Set(Array.from({ length: 1000 }, () => newId()));
   assert.equal(ids.size, 1000);
   for (const id of ids) assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test('a change the server keeps failing is set aside, so it cannot block the rest', () => {
+  let x: Pick<OutboxItem, 'serverErrors'> = {};
+  for (let i = 1; i < MAX_SERVER_ERRORS; i++) {
+    const r = afterRetry(x, 500);
+    assert.equal(r.next, 'retry', `try ${i}`);
+    x = { serverErrors: r.serverErrors };
+  }
+  assert.equal(afterRetry(x, 503).next, 'hold');
+});
+
+test('no connection, being signed out or slowed down never sets a change aside', () => {
+  const tired = { serverErrors: MAX_SERVER_ERRORS + 3 };
+  for (const status of [0, 401, 408, 429]) {
+    const r = afterRetry(tired, status);
+    assert.equal(r.next, 'retry', `status ${status}`);
+    assert.equal(r.serverErrors, tired.serverErrors, 'and they do not count as server errors');
+  }
 });

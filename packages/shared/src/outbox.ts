@@ -16,6 +16,8 @@ export interface OutboxItem {
   attempts: number;
   /** whose data, when logging for someone who shared with you */
   profileId?: string | null;
+  /** how many times in a row the server answered with an error (5xx) */
+  serverErrors?: number;
 }
 
 /**
@@ -64,4 +66,22 @@ export function newId(random: () => number = Math.random): string {
   hex[16] = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16);
   const h = hex.join('');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/**
+ * A change the server keeps answering with an error (5xx) is set aside after
+ * this many tries in a row, so it can't hold back every change queued after it.
+ * It's kept, not dropped: the person can send it again or discard it.
+ */
+export const MAX_SERVER_ERRORS = 5;
+
+/**
+ * After a 'retry' answer: keep trying, or set the change aside. Only errors
+ * the server itself answered count. No connection, being signed out, or being
+ * asked to slow down (0, 401, 408, 429) never set anything aside.
+ */
+export function afterRetry(item: Pick<OutboxItem, 'serverErrors'>, status: number): { next: 'retry' | 'hold'; serverErrors: number } {
+  if (status < 500) return { next: 'retry', serverErrors: item.serverErrors ?? 0 };
+  const serverErrors = (item.serverErrors ?? 0) + 1;
+  return { next: serverErrors >= MAX_SERVER_ERRORS ? 'hold' : 'retry', serverErrors };
 }

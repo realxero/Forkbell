@@ -1,20 +1,22 @@
 // Offline support. Two parts, both kept on the device:
 //   cache   the last answer for each screen's data, shown when there's no connection
 //   outbox  changes made offline, sent in order when the connection returns
+//   held    changes the server kept failing, set aside so they can't block the
+//           rest; sent again or discarded when the person chooses
 // Screens read with cachedGet() and write with send(); they never need to know
 // whether they're online.
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
-import { classify, enqueue, newId, type OutboxItem } from '@forkbell/shared';
+import { afterRetry, classify, enqueue, newId, type OutboxItem } from '@forkbell/shared';
 import { api, ApiError } from './api';
 import { loadStore, saveStore } from './store';
 import { getViewing, isShareable } from './profile';
 
 type Entry = { t: number; data: unknown };
-type State = { cache: Record<string, Entry>; outbox: OutboxItem[]; problems: string[] };
+type State = { cache: Record<string, Entry>; outbox: OutboxItem[]; held: OutboxItem[]; problems: string[] };
 
 const MAX_CACHE = 120;
-let state: State = { cache: {}, outbox: [], problems: [] };
+let state: State = { cache: {}, outbox: [], held: [], problems: [] };
 let online = true;
 let syncing = false;
 let loaded: Promise<void> | null = null;
@@ -26,7 +28,7 @@ export { newId };
 export function initSync() {
   loaded ??= (async () => {
     const saved = (await loadStore()) as Partial<State> | null;
-    if (saved) state = { cache: saved.cache ?? {}, outbox: saved.outbox ?? [], problems: saved.problems ?? [] };
+    if (saved) state = { cache: saved.cache ?? {}, outbox: saved.outbox ?? [], held: saved.held ?? [], problems: saved.problems ?? [] };
     if (Platform.OS === 'web') {
       window.addEventListener('online', () => void flush());
       window.addEventListener('offline', () => setOnline(false));
@@ -177,6 +179,16 @@ export async function flush(): Promise<void> {
       const result = classify(status, item.method);
       if (result === 'retry') {
         item.attempts++;
+        const { next, serverErrors } = afterRetry(item, status);
+        item.serverErrors = serverErrors;
+        if (next === 'hold') {
+          // The server answered, but with an error, several times in a row: set it
+          // aside so the changes behind it can go up, and let the person choose.
+          state.outbox = state.outbox.slice(1);
+          state.held = [...state.held, item];
+          persist();
+          continue;
+        }
         setOnline(status !== 0 ? online : false);
         persist();
         break;
@@ -189,6 +201,21 @@ export async function flush(): Promise<void> {
     syncing = false;
     notify();
   }
+}
+
+/** Send the set-aside changes again, ahead of anything newer, in their order. */
+export async function retryHeld() {
+  if (!state.held.length) return;
+  state.outbox = [...state.held.map((h) => ({ ...h, serverErrors: 0 })), ...state.outbox];
+  state.held = [];
+  persist();
+  await flush();
+}
+
+/** Give up on the set-aside changes. */
+export function discardHeld() {
+  state.held = [];
+  persist();
 }
 
 export function clearProblems() {
@@ -205,7 +232,7 @@ export function useSync() {
     void initSync();
     return () => void listeners.delete(l);
   }, []);
-  return { online, syncing, pending: state.outbox.length, labels: state.outbox.map((o) => o.label), problems: state.problems };
+  return { online, syncing, pending: state.outbox.length, labels: state.outbox.map((o) => o.label), problems: state.problems, held: state.held.map((h) => h.label) };
 }
 
 /**

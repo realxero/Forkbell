@@ -32,6 +32,7 @@ import { mcpRoutes } from './routes/mcp.ts';
 import { importRoutes } from './routes/import.ts';
 import { accountRoutes } from './routes/account.ts';
 import { BUILD } from '@forkbell/shared';
+import { postgresCode, refusalFor } from './db-errors.ts';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
@@ -156,6 +157,13 @@ app.route('/mcp', mcpRoutes(database, internal));
 app.all('/api/*', (c) => c.json({ error: 'Your Forkbell server doesn’t have this yet. Update the server to the same version as the app.' }, 404));
 
 app.onError((err, c) => {
+  // A write the database will never accept: say so (4xx), so the phone's outbox
+  // drops it instead of retrying it, and everything queued after it, forever.
+  const refused = refusalFor(err);
+  if (refused) {
+    console.warn(`refused ${c.req.method} ${c.req.path}: Postgres ${postgresCode(err)} (${refused.status})`);
+    return c.json({ error: refused.error }, refused.status);
+  }
   console.error(err);
   return c.json({ error: 'Something went wrong on the server. Check its log.' }, 500);
 });

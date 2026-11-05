@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { clearProblems, flush, useSync } from '../lib/sync';
+import { clearProblems, discardHeld, flush, retryHeld, useSync } from '../lib/sync';
 import { color, space, textSize } from '../lib/theme';
 
 /**
@@ -9,8 +9,18 @@ import { color, space, textSize } from '../lib/theme';
  * syncing, or something couldn't be saved. Hidden otherwise.
  */
 export function SyncBanner() {
-  const { online, syncing, pending, problems } = useSync();
+  const { online, syncing, pending, problems, held } = useSync();
   const insets = useSafeAreaInsets();
+  if (held.length) {
+    const what = held.length === 1 ? `“${held[0]}”` : `${held.length} changes`;
+    return (
+      <View style={[s.wrap, { bottom: insets.bottom + 96 }]} pointerEvents="box-none">
+        <Pressable onPress={() => chooseHeld(what)} style={[s.pill, { backgroundColor: color.over }]} accessibilityLabel={`${what} couldn’t be saved. Choose to send again or discard.`}>
+          <Text style={s.text}>{what} couldn’t be saved: the server keeps answering with an error. Tap to choose.</Text>
+        </Pressable>
+      </View>
+    );
+  }
   if (problems.length) {
     return (
       <View style={[s.wrap, { bottom: insets.bottom + 96 }]} pointerEvents="box-none">
@@ -35,6 +45,21 @@ export function SyncBanner() {
       </Pressable>
     </View>
   );
+}
+
+/** Send the set-aside changes again, or discard them. Keeping them is the safe default. */
+function chooseHeld(what: string) {
+  const message = `The server answered ${what} with an error several times, so it was set aside to let your other changes through. If the server has been fixed, send it again.`;
+  if (Platform.OS === 'web') {
+    if (window.confirm(`Send ${what} again?\n\n${message}`)) void retryHeld();
+    else if (window.confirm(`Discard ${what}? This can’t be undone.`)) discardHeld();
+    return;
+  }
+  Alert.alert(`${what} couldn’t be saved`, message, [
+    { text: 'Keep for now', style: 'cancel' },
+    { text: 'Discard', style: 'destructive', onPress: () => Alert.alert(`Discard ${what}?`, 'This can’t be undone.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Discard', style: 'destructive', onPress: discardHeld }]) },
+    { text: 'Send again', onPress: () => void retryHeld() },
+  ]);
 }
 
 const s = StyleSheet.create({
