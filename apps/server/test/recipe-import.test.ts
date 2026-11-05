@@ -32,7 +32,7 @@ before(async () => {
     });
   });
   await new Promise<void>((r) => fake.listen(3883, r));
-  await startServer({ AI_PROVIDER: 'openai', AI_BASE_URL: 'http://localhost:3883/v1', AI_MODEL: 'm', AI_API_KEY: 'x', AI_ALLOW_CUSTOM_URL: 'true', MEALIE_URL: 'http://127.0.0.1:3883' });
+  await startServer({ AI_PROVIDER: 'openai', AI_BASE_URL: 'http://localhost:3883/v1', AI_MODEL: 'm', AI_API_KEY: 'x', AI_ALLOW_CUSTOM_URL: 'true', IMPORT_PRIVATE_LINKS: 'true', MEALIE_URL: 'http://127.0.0.1:3883' });
 });
 after(async () => {
   await stopServer();

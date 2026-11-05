@@ -4,14 +4,16 @@
 // have (or a built-in one) use it. This only previews: the app shows every
 // ingredient for you to check, then saves the recipe with the usual routes.
 import { Hono } from 'hono';
-import { lookup } from 'node:dns/promises';
+import { lookup as dnsLookup, type LookupAddress, type LookupOptions } from 'node:dns';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { foods, type connect } from '@forkbell/db';
 import { extractJson, per100Problems, recipeFromHtml, servingsFrom, type Food, type Per100, type RecipeFound as Found } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
-import { aiConfigFor, customAllowed } from '../bell/config.ts';
+import { aiConfigFor } from '../bell/config.ts';
 import { anthropic, openai } from '../bell/providers.ts';
 import { toFood } from '../serialize.ts';
 
@@ -41,24 +43,96 @@ function isPrivate(ip: string): boolean {
   return a === 10 || a === 127 || a === 0 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127);
 }
 
-/** A web page, following up to 3 redirects, checking each address. */
+/**
+ * Whether recipe links may point at this server's own network (a recipe site
+ * you host at home). Off by default. It has its own switch, separate from
+ * AI_ALLOW_CUSTOM_URL: letting Bell use your own AI server shouldn't also let
+ * anyone signed in make this server fetch addresses on your network.
+ */
+const privateLinksAllowed = () => process.env.IMPORT_PRIVATE_LINKS === 'true';
+
+const PRIVATE_LINK = 'That link is on a private network. Import it from Mealie, or ask whoever runs the server.';
+
+/**
+ * A DNS lookup that refuses private addresses at the moment of connecting.
+ * Checking a name first and then fetching it would look it up twice, and a
+ * name can answer with a public address the first time and a private one the
+ * second; checking the address the connection actually uses closes that gap.
+ */
+function publicOnly(hostname: string, options: LookupOptions, done: (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void) {
+  dnsLookup(hostname, { ...options, all: true }, (err, found) => {
+    if (err) return done(err, '');
+    const list = found as LookupAddress[];
+    if (!list.length) return done(Object.assign(new Error('not found'), { code: 'ENOTFOUND' }), '');
+    if (list.some((a) => isPrivate(a.address))) return done(Object.assign(new Error(PRIVATE_LINK), { code: 'FORKBELL_PRIVATE' }), '');
+    if (options.all) return done(null, list);
+    done(null, list[0]!.address, list[0]!.family);
+  });
+}
+
+type Got = { status: number; location: string | null; text: string };
+
+/** One request, no redirects followed, the body read up to MAX_PAGE. */
+function getOnce(target: URL, allowPrivate: boolean): Promise<Got> {
+  // A link that is an address itself is never looked up, so it's checked here.
+  const host = target.hostname.replace(/^\[|\]$/g, '');
+  if (!allowPrivate && isIP(host) && isPrivate(host)) return Promise.reject(Object.assign(new Error(PRIVATE_LINK), { code: 'FORKBELL_PRIVATE' }));
+  return new Promise((resolve, reject) => {
+    const req = (target.protocol === 'https:' ? httpsRequest : httpRequest)(
+      target,
+      {
+        method: 'GET',
+        timeout: 10_000,
+        headers: { 'user-agent': 'Forkbell recipe import', accept: 'text/html,application/xhtml+xml', 'accept-encoding': 'identity' },
+        ...(allowPrivate ? {} : { lookup: publicOnly }),
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        if (status >= 300 && status < 400) {
+          res.resume();
+          return resolve({ status, location: res.headers.location ?? null, text: '' });
+        }
+        const chunks: Buffer[] = [];
+        let size = 0;
+        res.on('data', (chunk: Buffer) => {
+          size += chunk.length;
+          if (size <= MAX_PAGE) chunks.push(chunk);
+          else res.destroy(); // enough to find a recipe in
+        });
+        const finish = () => resolve({ status, location: null, text: Buffer.concat(chunks).toString('utf8').slice(0, MAX_PAGE) });
+        res.on('end', finish);
+        res.on('close', finish);
+        res.on('error', reject);
+      },
+    );
+    req.on('timeout', () => req.destroy(Object.assign(new Error('The page took too long to answer.'), { code: 'ETIMEDOUT' })));
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+/** A web page, following up to 3 redirects, checking the address of every one. */
 async function fetchPage(url: string): Promise<string> {
+  const allowPrivate = privateLinksAllowed();
   let target = new URL(url);
   for (let hop = 0; hop < 4; hop++) {
     if (!/^https?:$/.test(target.protocol)) throw new Error('Only http and https links can be imported.');
-    if (!customAllowed()) {
-      const addrs = await lookup(target.hostname, { all: true }).catch(() => []);
-      if (!addrs.length) throw new Error('That site couldn’t be found.');
-      if (addrs.some((a) => isPrivate(a.address))) throw new Error('That link is on a private network. Import it from Mealie, or ask whoever runs the server.');
+    let got: Got;
+    try {
+      got = await getOnce(target, allowPrivate);
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === 'FORKBELL_PRIVATE') throw new Error(PRIVATE_LINK);
+      if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') throw new Error('That site couldn’t be found.');
+      if (code === 'ETIMEDOUT') throw new Error('The page took too long to answer.');
+      throw new Error('That page couldn’t be opened.');
     }
-    const r = await fetch(target, { redirect: 'manual', signal: AbortSignal.timeout(10_000), headers: { 'user-agent': 'Forkbell recipe import', accept: 'text/html,application/xhtml+xml' } });
-    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) {
-      target = new URL(r.headers.get('location')!, target);
+    if (got.status >= 300 && got.status < 400 && got.location) {
+      target = new URL(got.location, target);
       continue;
     }
-    if (!r.ok) throw new Error(`The page answered ${r.status}.`);
-    const text = await r.text();
-    return text.slice(0, MAX_PAGE);
+    if (got.status < 200 || got.status >= 300) throw new Error(`The page answered ${got.status}.`);
+    return got.text;
   }
   throw new Error('That link redirects too many times.');
 }
