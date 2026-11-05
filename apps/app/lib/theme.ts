@@ -146,7 +146,7 @@ export const ACCENTS = {
   green: { label: 'Green', light: '#277A4C', dark: '#4CC38A' },
   orange: { label: 'Orange', light: '#B8520F', dark: '#FF9A52' },
   red: { label: 'Red', light: '#C8382E', dark: '#FF6B61' },
-  pink: { label: 'Pink', light: '#C2407E', dark: '#FF7AB6' },
+  pink: { label: 'Pink', light: '#B03A72', dark: '#FF7AB6' },
   purple: { label: 'Purple', light: '#6A4BD1', dark: '#A48BFF' },
 } as const;
 export type AccentName = keyof typeof ACCENTS;

@@ -515,5 +515,5 @@ const s = StyleSheet.create({
   labelButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space(2), minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
   labelButtonText: { color: color.accent, fontWeight: '700', fontSize: 16 },
   readNote: { backgroundColor: color.infoBg, borderRadius: 10, padding: space(3), color: color.iron },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
 });

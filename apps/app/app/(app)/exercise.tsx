@@ -260,7 +260,7 @@ const s = StyleSheet.create({
   goalButtonText: { color: color.onAccent, fontWeight: '700', fontSize: 16 },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   error: { ...type.body, color: color.over },
   records: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   record: { backgroundColor: color.card, borderRadius: 12, padding: space(3), minWidth: '30%', flexGrow: 1, gap: 2 },

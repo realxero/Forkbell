@@ -175,7 +175,7 @@ function DoseTimes({ times, onChange }: { times: (string | null)[]; onChange: (t
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },

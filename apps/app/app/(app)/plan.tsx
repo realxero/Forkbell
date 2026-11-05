@@ -35,7 +35,7 @@ export default function Plan() {
 
   const build = useCallback(async () => {
     if (!me) return;
-    if (!me.goals.kcal) return setError('Set a calorie goal first (Goals and settings, or the suggestion on the Progress tab), so plans know how much to add.');
+    if (!me.goals.kcal) return setError('Set a calorie goal first (Settings → Goals and targets, or the suggestion on the Progress tab), so plans know how much to add.');
     setError(null);
     try {
       const [foods, recent, days] = await Promise.all([
@@ -131,7 +131,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between' },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   error: { ...type.body, color: color.over },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   row: { flexDirection: 'row', gap: space(5) },

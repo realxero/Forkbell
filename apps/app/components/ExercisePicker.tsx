@@ -262,5 +262,5 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(3) },
   buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
 });

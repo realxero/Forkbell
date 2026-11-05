@@ -161,7 +161,7 @@ export default function Diary() {
                   <Stat icon="leaf-outline" label="Fiber" value={`${Math.round(day.totals.fiber)} g`} />
                 </View>
               </View>
-              {goal === null && <Text style={type.small}>Set a calorie goal in Goals and settings to see what’s left.</Text>}
+              {goal === null && <Text style={type.small}>Set a calorie goal in Settings → Goals and targets to see what’s left.</Text>}
               <View style={s.macros}>
                 <MacroRing label="Protein" value={day.totals.protein} goal={day.goals.protein} tint={color.protein} />
                 <MacroRing label="Carbs" value={day.totals.carbs} goal={day.goals.carbs} tint={color.carbs} />
@@ -343,7 +343,7 @@ const s = StyleSheet.create({
   entry: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2), borderTopWidth: 1, borderTopColor: color.line },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginTop: space(1) },
   add: { paddingVertical: space(3), paddingHorizontal: space(1) },
-  addText: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  addText: { color: color.accent, fontWeight: '700', fontSize: 16 },
   flag: { fontSize: 12, color: color.warnText, fontWeight: '600', marginTop: 2 },
   copyText: { color: color.ironSoft, fontWeight: '600', fontSize: 16 },
   copyDay: { backgroundColor: color.card, borderRadius: 12, padding: space(4), alignItems: 'center', borderWidth: 1, borderColor: color.line, borderStyle: 'dashed' },

@@ -126,7 +126,7 @@ const s = StyleSheet.create({
   input: { ...type.body, width: 80, textAlign: 'center', backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(2) },
   small: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3), alignSelf: 'flex-start' },
   smallText: { color: color.chalk, fontWeight: '700', fontSize: 15 },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   dose: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   doseOn: { backgroundColor: color.fat, borderColor: color.fat },
 });

@@ -140,7 +140,7 @@ export default function Sharing() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
   person: { gap: space(2), borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(4), flexWrap: 'wrap' },

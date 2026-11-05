@@ -200,7 +200,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(2), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space(2) },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   error: { ...type.body, color: color.over },
   section: { ...type.title, fontSize: 17, marginTop: space(4) },
   label: { ...type.small, marginTop: space(2) },

@@ -148,7 +148,7 @@ const s = StyleSheet.create({
   saveText: { color: color.onAccent, fontWeight: '700', fontSize: 15 },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   error: { ...type.body, color: color.over },
   nameInput: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3), color: color.iron },
   remove: { alignSelf: 'center', padding: space(3), marginTop: space(2) },

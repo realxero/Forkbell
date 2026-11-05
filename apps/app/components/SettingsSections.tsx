@@ -443,7 +443,7 @@ const s = StyleSheet.create({
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center' },
   buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
-  link: { color: color.protein, fontWeight: '700', fontSize: 16 },
+  link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   cta: { backgroundColor: color.accent, borderRadius: 14, padding: space(4), gap: 2 },
   ctaText: { color: color.onAccent, fontSize: 17, fontWeight: '800' },
   account: { marginTop: space(8), paddingTop: space(4), borderTopWidth: 1, borderTopColor: color.line, gap: space(3) },
