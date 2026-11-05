@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Image, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { EFFORT_GUIDE, exerciseCues, type Exercise, type ExerciseHowTo } from '@forkbell/shared';
 import { pictureSource } from '../lib/picture-cache';
@@ -122,22 +123,20 @@ export function HowToSheet({ exercise, onClose }: { exercise: Exercise | null; o
   }, [exercise]);
   return (
     <Modal visible={Boolean(exercise)} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
-        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
-            <Text style={[type.title, { flex: 1 }]} numberOfLines={2}>{exercise?.name}</Text>
-            <Pressable onPress={onClose} hitSlop={12} style={s.close} accessibilityLabel="Close">
-              <Ionicons name="close" size={24} color={color.ironSoft} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={{ paddingBottom: space(6) }}>
-            {howTo === undefined && <ActivityIndicator color={color.iron} style={{ marginVertical: space(8) }} />}
-            {howTo === null && <Text style={type.body}>No steps or pictures for this one yet.</Text>}
-            {howTo && exercise && <HowToCard howTo={howTo} name={exercise.name} />}
-            {howTo !== undefined && exercise && <CuesCard exercise={exercise} />}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
+      <SheetFrame onClose={onClose} style={s.sheet}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
+          <Text style={[type.title, { flex: 1 }]} numberOfLines={2}>{exercise?.name}</Text>
+          <Pressable onPress={onClose} hitSlop={12} style={s.close} accessibilityLabel="Close">
+            <Ionicons name="close" size={24} color={color.ironSoft} />
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={{ paddingBottom: space(6) }}>
+          {howTo === undefined && <ActivityIndicator color={color.iron} style={{ marginVertical: space(8) }} />}
+          {howTo === null && <Text style={type.body}>No steps or pictures for this one yet.</Text>}
+          {howTo && exercise && <HowToCard howTo={howTo} name={exercise.name} />}
+          {howTo !== undefined && exercise && <CuesCard exercise={exercise} />}
+        </ScrollView>
+      </SheetFrame>
     </Modal>
   );
 }
@@ -152,7 +151,6 @@ const s = StyleSheet.create({
   step: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
   num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: textSize.small, color: color.onAccent, backgroundColor: color.accent },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), gap: space(3), maxHeight: '88%', width: '100%', maxWidth: 640, alignSelf: 'center' },
+  sheet: { maxHeight: '88%' },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

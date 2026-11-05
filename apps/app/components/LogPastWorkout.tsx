@@ -5,6 +5,7 @@ import { KeyboardLift } from './KeyboardLift';
 import { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { addDays, parseClock, todayLocal, type Program } from '@forkbell/shared';
@@ -49,51 +50,48 @@ export function LogPastWorkout({ visible, program, onClose }: { visible: boolean
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardLift>
-      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
-        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-          <View style={s.head}>
-            <Text style={type.title}>Log a past workout</Text>
-            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
-          </View>
-          <ScrollView contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
-            <Text style={type.small}>For a workout you did without logging it. It’s saved as finished; then add exercises and tick the sets you did.</Text>
-            <Text style={type.label}>Day</Text>
-            <Pressable onPress={() => setCalendar(true)} style={s.field} accessibilityRole="button"><Text style={type.body}>{nice(day)}</Text></Pressable>
-            <View style={{ flexDirection: 'row', gap: space(2) }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={type.label}>Started</Text>
-                <TextInput value={start} onChangeText={setStart} style={s.field} placeholder="6:00 pm" placeholderTextColor={color.placeholder} accessibilityLabel="Start time" />
-              </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={type.label}>Minutes</Text>
-                <TextInput value={minutes} onChangeText={setMinutes} keyboardType="number-pad" style={s.field} accessibilityLabel="How many minutes it took" />
-              </View>
+      <SheetFrame onClose={onClose} style={s.sheet}>
+        <View style={s.head}>
+          <Text style={type.title}>Log a past workout</Text>
+          <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
+        </View>
+        <ScrollView contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
+          <Text style={type.small}>For a workout you did without logging it. It’s saved as finished; then add exercises and tick the sets you did.</Text>
+          <Text style={type.label}>Day</Text>
+          <Pressable onPress={() => setCalendar(true)} style={s.field} accessibilityRole="button"><Text style={type.body}>{nice(day)}</Text></Pressable>
+          <View style={{ flexDirection: 'row', gap: space(2) }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={type.label}>Started</Text>
+              <TextInput value={start} onChangeText={setStart} style={s.field} placeholder="6:00 pm" placeholderTextColor={color.placeholder} accessibilityLabel="Start time" />
             </View>
-            {program && program.routines.length > 0 && (
-              <>
-                <Text style={type.label}>From your program (optional)</Text>
-                <View style={s.chips}>
-                  <Chip label="Empty" on={routineId === null} onPress={() => setRoutineId(null)} />
-                  {program.routines.map((r) => <Chip key={r.id} label={r.name} on={routineId === r.id} onPress={() => setRoutineId(r.id)} />)}
-                </View>
-              </>
-            )}
-            {problem && <Text style={[type.small, { color: color.over }]}>{problem}</Text>}
-            <Pressable onPress={() => void go()} disabled={busy} style={[s.button, busy && { opacity: 0.5 }]} accessibilityRole="button">
-              <Text style={s.buttonText}>{busy ? 'Saving…' : 'Log it and add the sets'}</Text>
-            </Pressable>
-          </ScrollView>
-          <CalendarSheet visible={calendar} selected={day} title="Which day?" onPick={(d) => { if (d <= todayLocal()) setDay(d); setCalendar(false); }} onClose={() => setCalendar(false)} />
-        </Pressable>
-      </Pressable>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={type.label}>Minutes</Text>
+              <TextInput value={minutes} onChangeText={setMinutes} keyboardType="number-pad" style={s.field} accessibilityLabel="How many minutes it took" />
+            </View>
+          </View>
+          {program && program.routines.length > 0 && (
+            <>
+              <Text style={type.label}>From your program (optional)</Text>
+              <View style={s.chips}>
+                <Chip label="Empty" on={routineId === null} onPress={() => setRoutineId(null)} />
+                {program.routines.map((r) => <Chip key={r.id} label={r.name} on={routineId === r.id} onPress={() => setRoutineId(r.id)} />)}
+              </View>
+            </>
+          )}
+          {problem && <Text style={[type.small, { color: color.over }]}>{problem}</Text>}
+          <Pressable onPress={() => void go()} disabled={busy} style={[s.button, busy && { opacity: 0.5 }]} accessibilityRole="button">
+            <Text style={s.buttonText}>{busy ? 'Saving…' : 'Log it and add the sets'}</Text>
+          </Pressable>
+        </ScrollView>
+        <CalendarSheet visible={calendar} selected={day} title="Which day?" onPick={(d) => { if (d <= todayLocal()) setDay(d); setCalendar(false); }} onClose={() => setCalendar(false)} />
+      </SheetFrame>
       </KeyboardLift>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(3), maxHeight: '90%', maxWidth: 640, width: '100%', alignSelf: 'center' },
+  sheet: { maxHeight: '90%' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   field: { ...type.body, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(3), color: color.iron },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },

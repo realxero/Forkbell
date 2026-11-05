@@ -6,6 +6,7 @@ import { shownMeals } from '../../lib/meals';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
+import { SheetFrame } from '../../components/Sheet';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -300,29 +301,27 @@ function FoodPicker({ visible, recent, onPick, onClose }: { visible: boolean; re
   );
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
-        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-          <View style={s.row}>
-            <TextInput value={q} onChangeText={setQ} placeholder="Search foods" placeholderTextColor={color.placeholder} style={[s.input, { flex: 1 }]} autoFocus returnKeyType="search" />
-            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
-          </View>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space(1), paddingBottom: space(8) }}>
-            {busy && <ActivityIndicator color={color.iron} />}
-            {found ? (
-              <>
-                {found.mine.map((f) => row(f, f.id))}
-                {found.results.map((f, i) => row(f, `${f.source}:${f.sourceId ?? i}`))}
-                {!busy && !found.mine.length && !found.results.length && <Text style={type.small}>Nothing found. Try another word, or add the food from the Add screen first.</Text>}
-              </>
-            ) : (
-              <>
-                <Text style={type.label}>Recent</Text>
-                {recentFoods.map((r) => row(r.food, r.food.id, `last ${r.lastGrams} g`))}
-              </>
-            )}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
+      <SheetFrame onClose={onClose} style={s.sheet}>
+        <View style={s.row}>
+          <TextInput value={q} onChangeText={setQ} placeholder="Search foods" placeholderTextColor={color.placeholder} style={[s.input, { flex: 1 }]} autoFocus returnKeyType="search" />
+          <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
+        </View>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space(1), paddingBottom: space(8) }}>
+          {busy && <ActivityIndicator color={color.iron} />}
+          {found ? (
+            <>
+              {found.mine.map((f) => row(f, f.id))}
+              {found.results.map((f, i) => row(f, `${f.source}:${f.sourceId ?? i}`))}
+              {!busy && !found.mine.length && !found.results.length && <Text style={type.small}>Nothing found. Try another word, or add the food from the Add screen first.</Text>}
+            </>
+          ) : (
+            <>
+              <Text style={type.label}>Recent</Text>
+              {recentFoods.map((r) => row(r.food, r.food.id, `last ${r.lastGrams} g`))}
+            </>
+          )}
+        </ScrollView>
+      </SheetFrame>
     </Modal>
   );
 }
@@ -345,8 +344,7 @@ const s = StyleSheet.create({
   primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(4), alignItems: 'center' },
   primaryText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
   secondary: { minHeight: 44, justifyContent: 'center' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), gap: space(3), height: '80%', width: '100%', maxWidth: 640, alignSelf: 'center' },
+  sheet: { height: '80%' },
   lidar: { flexDirection: 'row', alignItems: 'center', gap: space(2), backgroundColor: color.card, borderRadius: radius.row, padding: space(3) },
   pick: { paddingVertical: space(3), borderBottomWidth: 1, borderBottomColor: color.line },
 });

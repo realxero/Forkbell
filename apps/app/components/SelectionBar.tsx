@@ -2,6 +2,7 @@ import { KeyboardLift } from './KeyboardLift';
 import { useState } from 'react';
 import { Modal, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { addDays, sumEntries, todayLocal, type DiaryEntry, type Meal, entryName } from '@forkbell/shared';
@@ -104,15 +105,13 @@ export function SelectionBar({ entries, onDone, onChanged }: { entries: DiaryEnt
 
       <Modal visible={naming} transparent animationType="fade" onRequestClose={() => setNaming(false)}>
         <KeyboardLift>
-        <Pressable feedback={false} style={s.backdrop} onPress={() => setNaming(false)}>
-          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-            <Text style={type.title}>Save as a meal</Text>
-            <Text style={type.small}>{entries.map((e) => entryName(e)).join(', ')}</Text>
-            <TextInput value={name} onChangeText={setName} placeholder="Name, e.g. My usual breakfast" style={s.input} autoFocus maxLength={80} />
-            {error && <Text style={{ color: color.over }}>{error}</Text>}
-            <Pressable disabled={!name.trim()} onPress={save} style={[s.primary, !name.trim() && { opacity: 0.4 }]}><Text style={s.primaryText}>Save meal</Text></Pressable>
-          </Pressable>
-        </Pressable>
+        <SheetFrame onClose={() => setNaming(false)} kind="dialog">
+          <Text style={type.title}>Save as a meal</Text>
+          <Text style={type.small}>{entries.map((e) => entryName(e)).join(', ')}</Text>
+          <TextInput value={name} onChangeText={setName} placeholder="Name, e.g. My usual breakfast" style={s.input} autoFocus maxLength={80} />
+          {error && <Text style={{ color: color.over }}>{error}</Text>}
+          <Pressable disabled={!name.trim()} onPress={save} style={[s.primary, !name.trim() && { opacity: 0.4 }]}><Text style={s.primaryText}>Save meal</Text></Pressable>
+        </SheetFrame>
         </KeyboardLift>
       </Modal>
     </>
@@ -125,7 +124,5 @@ const s = StyleSheet.create({
   btnText: { color: color.accent, fontWeight: '700', fontSize: textSize.small },
   primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
   primaryText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '700' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: space(4) },
-  sheet: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), maxWidth: 440, width: '100%', alignSelf: 'center' },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
 });

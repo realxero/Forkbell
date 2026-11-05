@@ -2,6 +2,7 @@ import { askBell } from '../lib/bell-ask';
 import { useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
@@ -82,20 +83,18 @@ function QuickAdd({ visible, date, meal, onClose, onAdded }: { visible: boolean;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
-        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-          <Text style={type.title}>Quick add to {MEAL_NAMES[meal]}</Text>
-          {field('kcal', 'Calories')}
-          <View style={{ flexDirection: 'row', gap: space(2) }}>
-            {field('protein', 'Protein g', true)}
-            {field('carbs', 'Carbs g', true)}
-            {field('fat', 'Fat g', true)}
-          </View>
-          {field('name', 'Name (optional)')}
-          {error && <Text style={{ color: color.over }}>{error}</Text>}
-          <Pressable onPress={save} style={s.primary}><Text style={s.primaryText}>Add</Text></Pressable>
-        </Pressable>
-      </Pressable>
+      <SheetFrame onClose={onClose} kind="dialog">
+        <Text style={type.title}>Quick add to {MEAL_NAMES[meal]}</Text>
+        {field('kcal', 'Calories')}
+        <View style={{ flexDirection: 'row', gap: space(2) }}>
+          {field('protein', 'Protein g', true)}
+          {field('carbs', 'Carbs g', true)}
+          {field('fat', 'Fat g', true)}
+        </View>
+        {field('name', 'Name (optional)')}
+        {error && <Text style={{ color: color.over }}>{error}</Text>}
+        <Pressable onPress={save} style={s.primary}><Text style={s.primaryText}>Add</Text></Pressable>
+      </SheetFrame>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -189,8 +188,6 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginTop: space(1) },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: space(2), paddingHorizontal: space(3), borderRadius: 999, borderWidth: 1, borderColor: color.line },
   chipText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: space(4) },
-  sheet: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), maxWidth: 440, width: '100%', alignSelf: 'center' },
   page: { flex: 1, padding: space(4), gap: space(3) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },

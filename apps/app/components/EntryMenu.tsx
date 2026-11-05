@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { router } from 'expo-router';
@@ -89,63 +90,61 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
   return (
     <>
       <Modal visible={!picking} transparent animationType="fade" onRequestClose={close}>
-        <Pressable feedback={false} style={s.backdrop} onPress={close}>
-          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-            <View style={s.head}>
-              <FoodIcon name={entry.food.name} brand={entry.food.brand} size={40} />
-              <View style={{ flex: 1 }}>
-                <Text style={[type.body, { fontWeight: '700' }]} numberOfLines={1}>{entryName(entry)}</Text>
-                <Text style={type.small}>{entryAmountText(entry, me?.weightUnit ?? 'lb')} · {n.kcal} kcal · {MEAL_NAMES[entry.meal]}, {dayName(entry.date)}</Text>
-              </View>
+        <SheetFrame onClose={close} style={s.sheet}>
+          <View style={s.head}>
+            <FoodIcon name={entry.food.name} brand={entry.food.brand} size={40} />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.body, { fontWeight: '700' }]} numberOfLines={1}>{entryName(entry)}</Text>
+              <Text style={type.small}>{entryAmountText(entry, me?.weightUnit ?? 'lb')} · {n.kcal} kcal · {MEAL_NAMES[entry.meal]}, {dayName(entry.date)}</Text>
             </View>
-            {better ? (
-              <View style={{ gap: space(2), paddingVertical: space(2) }}>
-                <Text style={type.label}>Better options for your goal</Text>
-                {better.length === 0 && <Text style={type.small}>Nothing clearly lighter or higher in protein among your foods and the common ones. Bell can look further.</Text>}
-                {better.map((o) => (
-                  <View key={o.food.id} style={s.option}>
-                    <FoodIcon name={o.food.name} brand={o.food.brand} size={34} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={type.body} numberOfLines={1}>{o.food.name}</Text>
-                      <Text style={[type.small, { color: color.fatText }]}>{o.why}</Text>
-                    </View>
-                    <Pressable onPress={() => swapTo(o)} style={s.swap}><Text style={s.swapText}>Swap</Text></Pressable>
+          </View>
+          {better ? (
+            <View style={{ gap: space(2), paddingVertical: space(2) }}>
+              <Text style={type.label}>Better options for your goal</Text>
+              {better.length === 0 && <Text style={type.small}>Nothing clearly lighter or higher in protein among your foods and the common ones. Bell can look further.</Text>}
+              {better.map((o) => (
+                <View key={o.food.id} style={s.option}>
+                  <FoodIcon name={o.food.name} brand={o.food.brand} size={34} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={type.body} numberOfLines={1}>{o.food.name}</Text>
+                    <Text style={[type.small, { color: color.fatText }]}>{o.why}</Text>
                   </View>
-                ))}
-                {/* Bell looks further: real products, or what to order at a restaurant. */}
-                {item('chatbubble-ellipses-outline', 'Ask Bell for real products', () => {
-                  close();
-                  router.push({ pathname: '/bell', params: { ask: `Find 3 real, buyable alternatives to ${entry.food.name}${entry.food.brand ? ` (${entry.food.brand})` : ''} that fit my goal better. For each, say why and give calories and protein for about ${entry.grams} g, and offer to log one instead.` } });
-                })}
-                {item('restaurant-outline', 'At a restaurant? Ask Bell for menu options', () => {
-                  close();
-                  router.push({ pathname: '/bell', params: { ask: `I'm eating out${entry.food.brand ? ` at ${entry.food.brand}` : ''}. Instead of ${entry.food.name}, suggest 3 menu items that fit what I have left today, with how to order each.` } });
-                })}
-                <Pressable onPress={() => setBetter(null)}><Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>‹ Back</Text></Pressable>
-              </View>
-            ) : (
-            <>
-            {onSelect && item('checkmark-circle-outline', 'Select several…', () => { const e = entry; close(); onSelect(e); })}
-            {item('sparkles-outline', 'Better option for my goal', findBetter)}
-            {entry.date !== today && item('today-outline', `Copy to today (${MEAL_NAMES[mealForTime()].toLowerCase()})`, () => copyTo(today, mealForTime()))}
-            {item('arrow-forward-circle-outline', `Copy to ${entry.date === today ? 'tomorrow' : 'the next day'}`, () => copyTo(addDays(entry.date, 1), entry.meal))}
-            {item('calendar-outline', 'Copy to another day…', () => {
-              setTarget(entry.date);
-              setMeal(entry.meal);
-              setPicking(true);
-            })}
-            {item('create-outline', 'Change amount or meal', () => {
-              onClose();
-              router.push({ pathname: '/edit', params: { id: entry.id } });
-            })}
-            {item('trash-outline', 'Remove', () => {
-              close();
-              removeWithUndo(entry, onChanged);
-            }, true)}
-            </>
-            )}
-          </Pressable>
-        </Pressable>
+                  <Pressable onPress={() => swapTo(o)} style={s.swap}><Text style={s.swapText}>Swap</Text></Pressable>
+                </View>
+              ))}
+              {/* Bell looks further: real products, or what to order at a restaurant. */}
+              {item('chatbubble-ellipses-outline', 'Ask Bell for real products', () => {
+                close();
+                router.push({ pathname: '/bell', params: { ask: `Find 3 real, buyable alternatives to ${entry.food.name}${entry.food.brand ? ` (${entry.food.brand})` : ''} that fit my goal better. For each, say why and give calories and protein for about ${entry.grams} g, and offer to log one instead.` } });
+              })}
+              {item('restaurant-outline', 'At a restaurant? Ask Bell for menu options', () => {
+                close();
+                router.push({ pathname: '/bell', params: { ask: `I'm eating out${entry.food.brand ? ` at ${entry.food.brand}` : ''}. Instead of ${entry.food.name}, suggest 3 menu items that fit what I have left today, with how to order each.` } });
+              })}
+              <Pressable onPress={() => setBetter(null)}><Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>‹ Back</Text></Pressable>
+            </View>
+          ) : (
+          <>
+          {onSelect && item('checkmark-circle-outline', 'Select several…', () => { const e = entry; close(); onSelect(e); })}
+          {item('sparkles-outline', 'Better option for my goal', findBetter)}
+          {entry.date !== today && item('today-outline', `Copy to today (${MEAL_NAMES[mealForTime()].toLowerCase()})`, () => copyTo(today, mealForTime()))}
+          {item('arrow-forward-circle-outline', `Copy to ${entry.date === today ? 'tomorrow' : 'the next day'}`, () => copyTo(addDays(entry.date, 1), entry.meal))}
+          {item('calendar-outline', 'Copy to another day…', () => {
+            setTarget(entry.date);
+            setMeal(entry.meal);
+            setPicking(true);
+          })}
+          {item('create-outline', 'Change amount or meal', () => {
+            onClose();
+            router.push({ pathname: '/edit', params: { id: entry.id } });
+          })}
+          {item('trash-outline', 'Remove', () => {
+            close();
+            removeWithUndo(entry, onChanged);
+          }, true)}
+          </>
+          )}
+        </SheetFrame>
       </Modal>
       <CalendarSheet
         visible={picking}
@@ -169,8 +168,7 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
 }
 
 const s = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(1), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  sheet: { gap: space(1) },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingBottom: space(3), borderBottomWidth: 1, borderBottomColor: color.line, marginBottom: space(1) },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(3), paddingHorizontal: space(2), borderRadius: 10 },
   option: { flexDirection: 'row', alignItems: 'center', gap: space(3) },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, type Program } from '@forkbell/shared';
 import { post, put } from '../lib/api';
@@ -82,28 +83,26 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
       {saved.length > 0 && !program && <Text style={type.small}>No active program yet: tap Change days for a starter that fits.</Text>}
 
       <Modal visible={editing} transparent animationType="fade" onRequestClose={() => setEditing(false)}>
-        <Pressable feedback={false} style={s.backdrop} onPress={() => setEditing(false)}>
-          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-            <Text style={type.title}>Which days do you train?</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
-              {DAYS.map((name, i) => (
-                <Chip key={name} label={name} on={days.includes(i)} onPress={() => setDays((x) => (x.includes(i) ? x.filter((y) => y !== i) : [...x, i]))} />
-              ))}
+        <SheetFrame onClose={() => setEditing(false)} kind="dialog">
+          <Text style={type.title}>Which days do you train?</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+            {DAYS.map((name, i) => (
+              <Chip key={name} label={name} on={days.includes(i)} onPress={() => setDays((x) => (x.includes(i) ? x.filter((y) => y !== i) : [...x, i]))} />
+            ))}
+          </View>
+          <Text style={type.small}>{days.length} {days.length === 1 ? 'day' : 'days'} a week. Rest days are part of the plan.</Text>
+          {!program && days.length > 0 && starter && (
+            <View style={s.starter}>
+              <Text style={[type.body, { fontWeight: '700' }]}>Suggested: {starter.name}</Text>
+              <Text style={type.small}>A good fit for {days.length} {days.length === 1 ? 'day' : 'days'} a week. You can change it any time in Programs.</Text>
+              <Pressable onPress={useStarter} style={s.primary}><Text style={s.primaryText}>Use {starter.name} and save</Text></Pressable>
             </View>
-            <Text style={type.small}>{days.length} {days.length === 1 ? 'day' : 'days'} a week. Rest days are part of the plan.</Text>
-            {!program && days.length > 0 && starter && (
-              <View style={s.starter}>
-                <Text style={[type.body, { fontWeight: '700' }]}>Suggested: {starter.name}</Text>
-                <Text style={type.small}>A good fit for {days.length} {days.length === 1 ? 'day' : 'days'} a week. You can change it any time in Programs.</Text>
-                <Pressable onPress={useStarter} style={s.primary}><Text style={s.primaryText}>Use {starter.name} and save</Text></Pressable>
-              </View>
-            )}
-            {error && <Text style={{ color: color.over }}>{error}</Text>}
-            <Pressable onPress={save} style={program ? s.primary : s.secondary}>
-              <Text style={program ? s.primaryText : s.link}>Save days</Text>
-            </Pressable>
+          )}
+          {error && <Text style={{ color: color.over }}>{error}</Text>}
+          <Pressable onPress={save} style={program ? s.primary : s.secondary}>
+            <Text style={program ? s.primaryText : s.link}>Save days</Text>
           </Pressable>
-        </Pressable>
+        </SheetFrame>
       </Modal>
     </View>
   );
@@ -118,8 +117,6 @@ const s = StyleSheet.create({
   today: { borderWidth: 1.5, borderColor: color.accent },
   dot: { width: 10, height: 10, borderRadius: 5, marginVertical: 6 },
   name: { fontSize: 10, fontWeight: '700', color: color.iron, textAlign: 'center', paddingHorizontal: 2 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: space(4) },
-  sheet: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), maxWidth: 440, width: '100%', alignSelf: 'center' },
   starter: { backgroundColor: color.infoBg, borderRadius: 12, padding: space(3), gap: space(2) },
   primary: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
   primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },

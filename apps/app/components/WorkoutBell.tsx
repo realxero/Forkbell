@@ -6,6 +6,7 @@ import { askBell } from '../lib/bell-ask';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bellMood, mealForTime, todayLocal, type BellMood, type BellReply } from '@forkbell/shared';
 import { api, ApiError, post } from '../lib/api';
@@ -88,38 +89,36 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
       )}
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <KeyboardLift>
-        <Pressable feedback={false} style={s.backdrop} onPress={() => !busy && setOpen(false)}>
-          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-            <View style={s.head}>
-              <BellAvatar size={30} mood={busy ? 'thinking' : hearing !== null ? 'listening' : (messages.at(-1)?.mood ?? 'happy')} alive={open} />
-              <Text style={[type.title, { flex: 1 }]}>Bell · this workout</Text>
-              <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
-            </View>
-            <ScrollView ref={scroll} style={{ maxHeight: 360 }} contentContainerStyle={{ gap: space(2) }} keyboardShouldPersistTaps="handled">
-              {messages.length === 0 && <Text style={type.small}>Bell can see what you’ve done so far and what you did last time.</Text>}
-              {messages.map((m, i) => (
-                <View key={i} style={[s.msg, m.role === 'user' ? s.mine : s.theirs]}>
-                  <Text style={[type.body, m.role === 'user' && { color: color.chalk }]}>{m.text}</Text>
-                </View>
-              ))}
-              {busy && <ActivityIndicator color={color.accent} />}
-              {error && <Text style={{ color: color.over }}>{error}</Text>}
-            </ScrollView>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space(2) }} keyboardShouldPersistTaps="handled">
-              {QUICK.map((q) => (
-                <Pressable key={q} onPress={() => void ask(q, false)} disabled={busy} style={[s.quick, busy && { opacity: 0.5 }]}>
-                  <Text style={type.small}>{q}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <View style={s.inputRow}>
-              <TextInput value={text} onChangeText={setText} placeholder="Ask about this workout" placeholderTextColor={color.placeholder} style={s.input} returnKeyType="send" onSubmitEditing={() => { void ask(text, false); setText(''); }} />
-              <Pressable disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
-                <Ionicons name="arrow-up" size={20} color={color.onAccent} />
+        <SheetFrame onClose={() => !busy && setOpen(false)}>
+          <View style={s.head}>
+            <BellAvatar size={30} mood={busy ? 'thinking' : hearing !== null ? 'listening' : (messages.at(-1)?.mood ?? 'happy')} alive={open} />
+            <Text style={[type.title, { flex: 1 }]}>Bell · this workout</Text>
+            <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
+          </View>
+          <ScrollView ref={scroll} style={{ maxHeight: 360 }} contentContainerStyle={{ gap: space(2) }} keyboardShouldPersistTaps="handled">
+            {messages.length === 0 && <Text style={type.small}>Bell can see what you’ve done so far and what you did last time.</Text>}
+            {messages.map((m, i) => (
+              <View key={i} style={[s.msg, m.role === 'user' ? s.mine : s.theirs]}>
+                <Text style={[type.body, m.role === 'user' && { color: color.chalk }]}>{m.text}</Text>
+              </View>
+            ))}
+            {busy && <ActivityIndicator color={color.accent} />}
+            {error && <Text style={{ color: color.over }}>{error}</Text>}
+          </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space(2) }} keyboardShouldPersistTaps="handled">
+            {QUICK.map((q) => (
+              <Pressable key={q} onPress={() => void ask(q, false)} disabled={busy} style={[s.quick, busy && { opacity: 0.5 }]}>
+                <Text style={type.small}>{q}</Text>
               </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
+            ))}
+          </ScrollView>
+          <View style={s.inputRow}>
+            <TextInput value={text} onChangeText={setText} placeholder="Ask about this workout" placeholderTextColor={color.placeholder} style={s.input} returnKeyType="send" onSubmitEditing={() => { void ask(text, false); setText(''); }} />
+            <Pressable disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
+              <Ionicons name="arrow-up" size={20} color={color.onAccent} />
+            </Pressable>
+          </View>
+        </SheetFrame>
         </KeyboardLift>
       </Modal>
     </>
@@ -130,8 +129,6 @@ const s = StyleSheet.create({
   fabWrap: { position: 'absolute', right: space(4), bottom: space(6) },
   fab: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   bubble: { position: 'absolute', right: space(4), bottom: space(6) + 70, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   msg: { borderRadius: 14, padding: space(3), maxWidth: '88%' },
   mine: { alignSelf: 'flex-end', backgroundColor: color.iron },

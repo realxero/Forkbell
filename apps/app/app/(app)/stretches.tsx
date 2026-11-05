@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
+import { SheetFrame } from '../../components/Sheet';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -106,23 +107,21 @@ export default function Stretches() {
       </ScrollView>
 
       <Modal visible={Boolean(open)} transparent animationType="slide" onRequestClose={() => setOpen(null)}>
-        <Pressable feedback={false} style={s.backdrop} onPress={() => setOpen(null)}>
-          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-            <View style={s.row}>
-              <Text style={[type.title, { flex: 1 }]}>{open?.name}</Text>
-              <Pressable onPress={() => setOpen(null)} hitSlop={12} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
-            </View>
-            <ScrollView contentContainerStyle={{ gap: space(3), paddingBottom: space(6) }}>
-              {open && <Text style={type.small}>{stretchDose(open).label}</Text>}
-              {open && <HowToCard name={open.name} howTo={{ steps: open.steps, level: open.level, secondary: open.muscles.slice(1), images: picturePaths(open), credit: CREDIT }} />}
-              {open && (
-                <Pressable onPress={() => { const one = open; setOpen(null); setSession([one]); }} style={s.secondary}>
-                  <Text style={s.link}>Do this one with a timer</Text>
-                </Pressable>
-              )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
+        <SheetFrame onClose={() => setOpen(null)} style={s.sheet}>
+          <View style={s.row}>
+            <Text style={[type.title, { flex: 1 }]}>{open?.name}</Text>
+            <Pressable onPress={() => setOpen(null)} hitSlop={12} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
+          </View>
+          <ScrollView contentContainerStyle={{ gap: space(3), paddingBottom: space(6) }}>
+            {open && <Text style={type.small}>{stretchDose(open).label}</Text>}
+            {open && <HowToCard name={open.name} howTo={{ steps: open.steps, level: open.level, secondary: open.muscles.slice(1), images: picturePaths(open), credit: CREDIT }} />}
+            {open && (
+              <Pressable onPress={() => { const one = open; setOpen(null); setSession([one]); }} style={s.secondary}>
+                <Text style={s.link}>Do this one with a timer</Text>
+              </Pressable>
+            )}
+          </ScrollView>
+        </SheetFrame>
       </Modal>
       <StretchSession items={session} title={info.label} onClose={() => setSession(null)} />
     </SafeAreaView>
@@ -143,7 +142,6 @@ const s = StyleSheet.create({
   startText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.row, padding: space(2) },
   thumb: { width: 72, height: 48, borderRadius: 8, backgroundColor: color.raised },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), gap: space(3), maxHeight: '88%', width: '100%', maxWidth: 640, alignSelf: 'center' },
+  sheet: { maxHeight: '88%' },
   secondary: { minHeight: 44, justifyContent: 'center' },
 });

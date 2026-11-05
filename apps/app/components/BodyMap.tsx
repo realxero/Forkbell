@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Svg, { Path } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
@@ -134,47 +135,45 @@ export function BodyMap() {
       <Text style={type.small}>Tap a muscle for what it needs and exercises for it.</Text>
 
       <Modal visible={Boolean(picked)} transparent animationType="slide" onRequestClose={() => setPicked(null)}>
-        <Pressable feedback={false} style={s.backdrop} onPress={() => setPicked(null)}>
-          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-            {sel && (
-              <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
-                  <View style={[s.dot, { backgroundColor: FILL[sel.state], opacity: OPACITY[sel.state] }]} />
-                  <Text style={[type.title, { flex: 1 }]}>{cap(sel.muscle)}</Text>
-                  <Pressable onPress={() => setPicked(null)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
-                </View>
-                <Text style={[type.label, { color: color.iron }]}>{LABEL[sel.state]}</Text>
-                <Text style={type.body}>{sel.note}</Text>
-                {alt && <Text style={[type.body, { color: color.warnText }]}>Skip {sel.muscle} for now: {alt.muscle} could use the work more.</Text>}
-                <Text style={[type.label, { marginTop: space(2) }]}>{alt ? 'When it’s ready' : 'Exercises for it'}</Text>
-                <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={{ gap: space(2) }}>
-                  {forMuscle.length === 0 && <Text style={type.small}>Nothing with the equipment you have. Change it in Settings → Training setup.</Text>}
-                  {forMuscle.map((e) => (
-                    <Pressable
-                      key={e.id}
-                      onPress={() => {
-                        // iPhones can't show one sheet over another, so close this one and open the
-                        // exercise's own page: how to do it, your records and variations.
-                        setPicked(null);
-                        router.push({ pathname: '/exercise', params: { id: e.id } });
-                      }}
-                      style={({ pressed }) => [s.exRow, pressed && { opacity: 0.6 }]}
-                      accessibilityRole="button"
-                      accessibilityHint="Opens the exercise: how to do it, your records and variations"
-                    >
-                      <Thumb e={e} size={44} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={type.body}>{e.name}</Text>
-                        <Text style={type.small}>{e.equipment}{e.uses ? ` · you’ve done it ${e.uses}×` : ''}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </>
-            )}
-          </Pressable>
-        </Pressable>
+        <SheetFrame onClose={() => setPicked(null)} style={s.sheet}>
+          {sel && (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
+                <View style={[s.dot, { backgroundColor: FILL[sel.state], opacity: OPACITY[sel.state] }]} />
+                <Text style={[type.title, { flex: 1 }]}>{cap(sel.muscle)}</Text>
+                <Pressable onPress={() => setPicked(null)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
+              </View>
+              <Text style={[type.label, { color: color.iron }]}>{LABEL[sel.state]}</Text>
+              <Text style={type.body}>{sel.note}</Text>
+              {alt && <Text style={[type.body, { color: color.warnText }]}>Skip {sel.muscle} for now: {alt.muscle} could use the work more.</Text>}
+              <Text style={[type.label, { marginTop: space(2) }]}>{alt ? 'When it’s ready' : 'Exercises for it'}</Text>
+              <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={{ gap: space(2) }}>
+                {forMuscle.length === 0 && <Text style={type.small}>Nothing with the equipment you have. Change it in Settings → Training setup.</Text>}
+                {forMuscle.map((e) => (
+                  <Pressable
+                    key={e.id}
+                    onPress={() => {
+                      // iPhones can't show one sheet over another, so close this one and open the
+                      // exercise's own page: how to do it, your records and variations.
+                      setPicked(null);
+                      router.push({ pathname: '/exercise', params: { id: e.id } });
+                    }}
+                    style={({ pressed }) => [s.exRow, pressed && { opacity: 0.6 }]}
+                    accessibilityRole="button"
+                    accessibilityHint="Opens the exercise: how to do it, your records and variations"
+                  >
+                    <Thumb e={e} size={44} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={type.body}>{e.name}</Text>
+                      <Text style={type.small}>{e.equipment}{e.uses ? ` · you’ve done it ${e.uses}×` : ''}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </>
+          )}
+        </SheetFrame>
       </Modal>
     </View>
   );
@@ -187,7 +186,6 @@ const s = StyleSheet.create({
   key: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   swatch: { width: 12, height: 12, borderRadius: 4, borderWidth: 1, borderColor: color.line },
   dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: color.line },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(2), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  sheet: { gap: space(2) },
   exRow: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: 4 },
 });

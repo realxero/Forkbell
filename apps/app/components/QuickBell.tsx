@@ -4,6 +4,7 @@ import { WaterProposal } from './WaterProposal';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { bellHistory, bellMood, mealForTime, todayLocal, type BellMood, type BellReply, type BellTurn, type FoodProposal } from '@forkbell/shared';
@@ -141,64 +142,62 @@ export function QuickBell() {
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         {/* The sheet moves up with the keyboard, so what you type stays in view. */}
         <KeyboardLift>
-        <Pressable feedback={false} style={s.backdrop} onPress={() => !busy && setOpen(false)}>
-          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-            <View style={s.head}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
-                <BellAvatar size={30} mood={mood} alive={open} />
-                <Text style={type.title}>Ask Bell</Text>
+        <SheetFrame onClose={() => !busy && setOpen(false)}>
+          <View style={s.head}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+              <BellAvatar size={30} mood={mood} alive={open} />
+              <Text style={type.title}>Ask Bell</Text>
+            </View>
+            <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
+          </View>
+          <ScrollView ref={scroll} style={{ maxHeight: 420 }} contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
+            {hearing !== null && (
+              <View style={s.listening}>
+                <Ionicons name="mic" size={18} color={color.over} />
+                <Text style={[type.body, { flex: 1 }]}>{hearing || 'Listening… let go when you’re done'}</Text>
               </View>
-              <Pressable onPress={() => setOpen(false)} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
-            </View>
-            <ScrollView ref={scroll} style={{ maxHeight: 420 }} contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
-              {hearing !== null && (
-                <View style={s.listening}>
-                  <Ionicons name="mic" size={18} color={color.over} />
-                  <Text style={[type.body, { flex: 1 }]}>{hearing || 'Listening… let go when you’re done'}</Text>
-                </View>
-              )}
-              {turns.map((t, i) =>
-                t.role === 'user' ? (
-                  // An answer tapped on Bell's question shows on its button, not again here.
-                  turns[i - 1]?.answered === t.text ? null : (
-                    <Text key={i} style={[type.body, { fontWeight: '700' }]}>“{t.text}”</Text>
-                  )
-                ) : (
-                  <View key={i} style={{ gap: space(2) }}>
-                    {!!t.text && <Text style={type.body}>{t.text}</Text>}
-                    {t.question && <Question q={t.question} answered={t.answered} live={i === lastIndex && !busy} onAnswer={(a) => void ask(a, false, i)} />}
-                    {t.water && <WaterProposal ml={t.water.ml} date={t.water.date} onAdded={() => setExcited(true)} />}
-                    {t.proposals && (
-                      <Proposals items={t.proposals} added={Boolean(t.added)} onAdded={() => {
-                        setTurns((l) => l.map((x, j) => (j === i ? { ...x, added: true } : x)));
-                        setExcited(true);
-                      }} />
-                    )}
-                  </View>
-                ),
-              )}
-              {busy && <ActivityIndicator color={color.accent} />}
-              {error && <Text style={{ color: color.over }}>{error}</Text>}
-              {!turns.length && hearing === null && !error && (
-                <Text style={type.small}>{voice ? 'Hold the button and talk, or type below.' : 'Type a question, or what you ate.'} For example: “How much protein do I have left?” or “I had two eggs and toast”.</Text>
-              )}
-            </ScrollView>
-            <View style={s.inputRow}>
-              <TextInput value={text} onChangeText={setText} placeholder="Ask Bell" style={s.input} onSubmitEditing={() => { void ask(text, false); setText(''); }} returnKeyType="send" />
-              <Pressable disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
-                <Ionicons name="arrow-up" size={20} color={color.onAccent} />
-              </Pressable>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              {turns.length > 0 ? (
-                <Pressable onPress={startOver} hitSlop={8}><Text style={s.link}>New question</Text></Pressable>
+            )}
+            {turns.map((t, i) =>
+              t.role === 'user' ? (
+                // An answer tapped on Bell's question shows on its button, not again here.
+                turns[i - 1]?.answered === t.text ? null : (
+                  <Text key={i} style={[type.body, { fontWeight: '700' }]}>“{t.text}”</Text>
+                )
               ) : (
-                <View />
-              )}
-              <Pressable onPress={() => { setOpen(false); router.push('/bell'); }} hitSlop={8}><Text style={s.link}>Open the full chat ›</Text></Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
+                <View key={i} style={{ gap: space(2) }}>
+                  {!!t.text && <Text style={type.body}>{t.text}</Text>}
+                  {t.question && <Question q={t.question} answered={t.answered} live={i === lastIndex && !busy} onAnswer={(a) => void ask(a, false, i)} />}
+                  {t.water && <WaterProposal ml={t.water.ml} date={t.water.date} onAdded={() => setExcited(true)} />}
+                  {t.proposals && (
+                    <Proposals items={t.proposals} added={Boolean(t.added)} onAdded={() => {
+                      setTurns((l) => l.map((x, j) => (j === i ? { ...x, added: true } : x)));
+                      setExcited(true);
+                    }} />
+                  )}
+                </View>
+              ),
+            )}
+            {busy && <ActivityIndicator color={color.accent} />}
+            {error && <Text style={{ color: color.over }}>{error}</Text>}
+            {!turns.length && hearing === null && !error && (
+              <Text style={type.small}>{voice ? 'Hold the button and talk, or type below.' : 'Type a question, or what you ate.'} For example: “How much protein do I have left?” or “I had two eggs and toast”.</Text>
+            )}
+          </ScrollView>
+          <View style={s.inputRow}>
+            <TextInput value={text} onChangeText={setText} placeholder="Ask Bell" style={s.input} onSubmitEditing={() => { void ask(text, false); setText(''); }} returnKeyType="send" />
+            <Pressable disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
+              <Ionicons name="arrow-up" size={20} color={color.onAccent} />
+            </Pressable>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            {turns.length > 0 ? (
+              <Pressable onPress={startOver} hitSlop={8}><Text style={s.link}>New question</Text></Pressable>
+            ) : (
+              <View />
+            )}
+            <Pressable onPress={() => { setOpen(false); router.push('/bell'); }} hitSlop={8}><Text style={s.link}>Open the full chat ›</Text></Pressable>
+          </View>
+        </SheetFrame>
         </KeyboardLift>
       </Modal>
     </>
@@ -209,8 +208,6 @@ const s = StyleSheet.create({
   fabWrap: { position: 'absolute', right: space(4), bottom: FAB_BOTTOM },
   bubble: { position: 'absolute', right: space(4), bottom: FAB_BOTTOM + FAB_SIZE + 12, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   fab: { width: FAB_SIZE, height: FAB_SIZE, borderRadius: FAB_SIZE / 2, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, padding: space(4), paddingBottom: space(8), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center', maxHeight: '92%' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listening: { flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.dangerBg, borderRadius: 12, padding: space(3) },
   inputRow: { flexDirection: 'row', gap: space(2), alignItems: 'center' },

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
+import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { addDays, todayLocal } from '@forkbell/shared';
 import { api } from '../lib/api';
@@ -68,52 +69,48 @@ export function CalendarSheet({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
-        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
-          <View style={s.head}>
-            <Text style={type.title}>{title}</Text>
-            <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
-          </View>
-          <View style={s.monthRow}>
-            <Pressable onPress={() => shift(-1)} hitSlop={10} accessibilityLabel="Previous month"><Ionicons name="chevron-back" size={22} color={color.accent} /></Pressable>
-            <Text style={[type.body, { fontWeight: '700' }]}>{first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</Text>
-            <Pressable onPress={() => shift(1)} hitSlop={10} accessibilityLabel="Next month"><Ionicons name="chevron-forward" size={22} color={color.accent} /></Pressable>
-          </View>
-          <View style={s.grid}>
-            {WEEK.map((w, i) => <Text key={i} style={[s.cell, type.label, { textAlign: 'center' }]}>{w}</Text>)}
-            {cells.map((d, i) => {
-              if (!d) return <View key={`e${i}`} style={s.cell} />;
-              const kcal = totals[d];
-              const goal = goalFor(d);
-              const dot = kcal ? (goal && kcal > goal * 1.05 ? color.over : color.fat) : null;
-              // Logged but not finished: an outline, so half-logged days stand out.
-              const open = Boolean(kcal) && !finished.has(d) && d <= today;
-              const on = d === selected;
-              return (
-                <Pressable key={d} onPress={() => onPick(d)} style={s.cell} accessibilityLabel={`${d}${kcal ? `, ${kcal} kcal logged${finished.has(d) ? ', finished' : open ? ', not finished' : ''}` : ''}`}>
-                  <View style={[s.day, on && { backgroundColor: color.accent }, d === today && !on && { borderWidth: 1.5, borderColor: color.accent }]}>
-                    <Text style={[type.body, type.number, on && { color: color.onAccent, fontWeight: '800' }]}>{Number(d.slice(8))}</Text>
-                  </View>
-                  <View style={[s.dot, open ? { borderWidth: 1.5, borderColor: dot ?? color.ironSoft } : { backgroundColor: dot ?? 'transparent' }]} />
-                </Pressable>
-              );
-            })}
-          </View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4), rowGap: space(1) }}>
-            <Text style={type.small}><Text style={{ color: color.fat }}>●</Text> finished</Text>
-            <Text style={type.small}><Text style={{ color: color.fat }}>○</Text> logged, not finished</Text>
-            <Text style={type.small}><Text style={{ color: color.over }}>●</Text> over goal</Text>
-          </View>
-          {footer}
-        </Pressable>
-      </Pressable>
+      <SheetFrame onClose={onClose} kind="dialog">
+        <View style={s.head}>
+          <Text style={type.title}>{title}</Text>
+          <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
+        </View>
+        <View style={s.monthRow}>
+          <Pressable onPress={() => shift(-1)} hitSlop={10} accessibilityLabel="Previous month"><Ionicons name="chevron-back" size={22} color={color.accent} /></Pressable>
+          <Text style={[type.body, { fontWeight: '700' }]}>{first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</Text>
+          <Pressable onPress={() => shift(1)} hitSlop={10} accessibilityLabel="Next month"><Ionicons name="chevron-forward" size={22} color={color.accent} /></Pressable>
+        </View>
+        <View style={s.grid}>
+          {WEEK.map((w, i) => <Text key={i} style={[s.cell, type.label, { textAlign: 'center' }]}>{w}</Text>)}
+          {cells.map((d, i) => {
+            if (!d) return <View key={`e${i}`} style={s.cell} />;
+            const kcal = totals[d];
+            const goal = goalFor(d);
+            const dot = kcal ? (goal && kcal > goal * 1.05 ? color.over : color.fat) : null;
+            // Logged but not finished: an outline, so half-logged days stand out.
+            const open = Boolean(kcal) && !finished.has(d) && d <= today;
+            const on = d === selected;
+            return (
+              <Pressable key={d} onPress={() => onPick(d)} style={s.cell} accessibilityLabel={`${d}${kcal ? `, ${kcal} kcal logged${finished.has(d) ? ', finished' : open ? ', not finished' : ''}` : ''}`}>
+                <View style={[s.day, on && { backgroundColor: color.accent }, d === today && !on && { borderWidth: 1.5, borderColor: color.accent }]}>
+                  <Text style={[type.body, type.number, on && { color: color.onAccent, fontWeight: '800' }]}>{Number(d.slice(8))}</Text>
+                </View>
+                <View style={[s.dot, open ? { borderWidth: 1.5, borderColor: dot ?? color.ironSoft } : { backgroundColor: dot ?? 'transparent' }]} />
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4), rowGap: space(1) }}>
+          <Text style={type.small}><Text style={{ color: color.fat }}>●</Text> finished</Text>
+          <Text style={type.small}><Text style={{ color: color.fat }}>○</Text> logged, not finished</Text>
+          <Text style={type.small}><Text style={{ color: color.over }}>●</Text> over goal</Text>
+        </View>
+        {footer}
+      </SheetFrame>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: space(4) },
-  sheet: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), maxWidth: 440, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   monthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
