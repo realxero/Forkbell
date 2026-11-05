@@ -170,7 +170,6 @@ export default function Diary() {
               </View>
             </View>
 
-            {!viewing && <SuggestionsCard day={day} onChanged={load} />}
             {!viewing && date >= todayLocal() && (
               <Pressable onPress={() => router.push({ pathname: '/plan', params: { date } })} style={{ alignSelf: 'flex-start' }}>
                 <Text style={s.addText}>Plan {date === todayLocal() ? 'the rest of today' : 'this day'} ›</Text>
@@ -237,6 +236,8 @@ export default function Diary() {
               );
             })}
 
+            {/* Ideas come after the meals, so logging is the first thing on the screen. */}
+            {!viewing && <SuggestionsCard day={day} onChanged={load} />}
             {day.entries.length > 0 && <MicrosCard entries={day.entries} />}
             {date <= todayLocal() && <WaterCard date={date} readOnly={Boolean(viewing)} />}
             {date === todayLocal() && <FastingCard readOnly={Boolean(viewing)} />}
