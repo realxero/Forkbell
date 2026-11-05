@@ -19,6 +19,7 @@ import { FoodIcon } from '../../../components/FoodIcon';
 import { VoiceButton, voiceAvailable } from '../../../components/VoiceButton';
 import { BellAvatar } from '../../../components/BellAvatar';
 import { color, space, type, textSize } from '../../../lib/theme';
+import { Check } from '../../../components/Check';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -418,7 +419,7 @@ export function Proposals({ items, added, onAdded }: { items: FoodProposal[]; ad
                 accessibilityState={{ checked: p.keep }}
                 accessibilityLabel={`Include ${p.name}`}
               >
-                <Text style={{ color: color.card, fontWeight: '800' }}>{p.keep ? '✓' : ''}</Text>
+                <Check on={p.keep} tint={color.card} size={18} />
               </Pressable>
               <FoodIcon name={p.name} brand={p.brand} size={32} />
               <View style={{ flex: 1 }}>

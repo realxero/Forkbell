@@ -40,6 +40,7 @@ function Stat({ icon, label, value }: { icon: ComponentProps<typeof Ionicons>['n
   );
 }
 import { color, radius, space, type, textSize } from '../../../lib/theme';
+import { Check } from '../../../components/Check';
 import { FoodSkeleton } from '../../../components/Skeleton';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
@@ -211,7 +212,7 @@ export default function Diary() {
                       >
                         {selected ? (
                           <View style={[s.check, selected.includes(e.id) && s.checkOn]}>
-                            {selected.includes(e.id) && <Ionicons name="checkmark" size={20} color={color.onAccent} />}
+                            <Check on={selected.includes(e.id)} tint={color.onAccent} />
                           </View>
                         ) : (
                           <FoodIcon name={e.food.name} brand={e.food.brand} size={38} />

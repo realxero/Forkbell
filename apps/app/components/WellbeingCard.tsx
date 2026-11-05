@@ -7,6 +7,8 @@ import { cachedGet, send } from '../lib/sync';
 import { useViewing } from '../lib/profile';
 import { Chip } from './AmountPicker';
 import { color, space, type, textSize } from '../lib/theme';
+import { Check } from './Check';
+import { haptic } from '../lib/haptics';
 import { buttons } from '../lib/buttons';
 
 export type CheckIn = { date: string; sleepHours: number | null; sleepQuality: number | null; mood: number | null; energy: number | null; note: string | null };
@@ -69,6 +71,7 @@ export function WellbeingCard({ healthSleepMin = null }: { healthSleepMin?: numb
   };
   const dose = async (m: Med, slot: number) => {
     const next = m.today[slot] === 'taken' ? null : 'taken';
+    if (next === 'taken') haptic.tap();
     setW({ ...w, medications: w.medications.map((x) => (x.id === m.id ? { ...x, today: x.today.map((t, i) => (i === slot ? next : t)) } : x)) });
     await send('PUT', '/api/wellbeing/medication-logs', { medicationId: m.id, date: w.today, slot, status: next }, { label: `${m.name} dose`, coalesceKey: `dose:${m.id}:${w.today}:${slot}` });
     // A dose ticked off doesn't need its reminder any more (and an unticked one gets it back).
@@ -111,7 +114,8 @@ export function WellbeingCard({ healthSleepMin = null }: { healthSleepMin?: numb
           </View>
           {m.today.map((t, slot) => (
             <Pressable key={slot} disabled={Boolean(viewing)} onPress={() => dose(m, slot)} hitSlop={6} style={[s.dose, t === 'taken' && s.doseOn]} accessibilityRole="checkbox" accessibilityState={{ checked: t === 'taken' }} accessibilityLabel={`${m.name} dose ${slot + 1} taken`}>
-              <Text style={{ color: t === 'taken' ? color.card : color.ironSoft, fontWeight: '800' }}>{t === 'taken' ? '✓' : slot + 1}</Text>
+              <Check on={t === 'taken'} tint={color.card} />
+              {t !== 'taken' && <Text style={{ color: color.ironSoft, fontWeight: '800' }}>{slot + 1}</Text>}
             </Pressable>
           ))}
         </View>

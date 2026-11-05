@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { aisleOf, nextDays, shoppingList, todayLocal, type DiaryDay, type ShoppingItem } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../../lib/sync';
 import { color, space, type, textSize } from '../../lib/theme';
+import { Check } from '../../components/Check';
 import { SkeletonRows } from '../../components/Skeleton';
 
 const KEY = 'device:shopping';
@@ -60,7 +61,7 @@ export default function Shopping() {
               const done = saved.ticked.includes(i.name);
               return (
                 <Pressable key={i.name} onPress={() => toggle(i.name)} style={s.row} accessibilityRole="checkbox" accessibilityState={{ checked: done }}>
-                  <View style={[s.box, done && s.boxOn]}><Text style={{ color: color.card, fontWeight: '800' }}>{done ? '✓' : ''}</Text></View>
+                  <View style={[s.box, done && s.boxOn]}><Check on={done} tint={color.card} size={18} /></View>
                   <Text style={[type.body, { flex: 1 }, done && { textDecorationLine: 'line-through', color: color.ironSoft }]}>{i.name}</Text>
                   {i.grams > 0 && <Text style={[type.small, type.number]}>{amount(i.grams)}</Text>}
                 </Pressable>

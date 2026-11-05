@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
 import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent, textSize } from '../lib/theme';
+import { Check } from './Check';
 import { buttons } from '../lib/buttons';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
@@ -281,7 +282,7 @@ function Appearance() {
             accessibilityLabel={ACCENTS[k].label}
             style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENTS[k].light, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: accent === k ? color.iron : 'transparent' }}
           >
-            {accent === k && <Text style={{ color: '#fff', fontWeight: '900' }}>✓</Text>}
+            <Check on={accent === k} tint="#fff" />
           </Pressable>
         ))}
       </View>

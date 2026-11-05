@@ -23,6 +23,7 @@ import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, space, type, textSize } from '../../lib/theme';
+import { Check } from '../../components/Check';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 import { haptic, hapticsOn } from '../../lib/haptics';
@@ -884,7 +885,7 @@ function ExerciseCard(props: {
                 </>
               )}
               <Pressable onPress={() => props.onToggle(k)} style={[s.colDone, s.check, set.done && s.checkOn]} accessibilityRole="checkbox" accessibilityState={{ checked: set.done }} accessibilityLabel={`Set ${k + 1} done`}>
-                <Text style={[s.checkText, set.done && { color: color.card }]}>✓</Text>
+                <Check on={Boolean(set.done)} tint={color.card} offTint={color.ironSoft} size={22} />
               </Pressable>
             </View>
           </SwipeRow>
@@ -989,7 +990,6 @@ const s = StyleSheet.create({
   cell: { ...type.body, ...type.number, textAlign: 'center', backgroundColor: color.chalk, borderRadius: 8, paddingVertical: space(2), paddingHorizontal: 2, minWidth: 0 },
   check: { height: 36, borderRadius: 8, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
   checkOn: { backgroundColor: color.fat, borderColor: color.fat },
-  checkText: { fontSize: textSize.heading, fontWeight: '800', color: color.ironSoft },
   tip: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, borderRadius: 8, padding: space(2), marginBottom: space(1) },
   pain: { backgroundColor: color.dangerBg, borderRadius: 8, padding: space(2), gap: space(1), marginBottom: space(1) },
   painInput: { ...type.small, backgroundColor: color.card, borderRadius: 6, padding: space(2) },
