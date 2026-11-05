@@ -13,6 +13,7 @@ import { cachedGet, updateCache } from '../lib/sync';
 import { Chip } from './AmountPicker';
 import { ChipRow } from './ChipRow';
 import { color, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 type Listed = Exercise & { uses: number };
 const KINDS: { kind: ExerciseKind; label: string }[] = [
@@ -260,7 +261,7 @@ const s = StyleSheet.create({
   row: { backgroundColor: color.card, padding: space(3), borderRadius: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   error: { ...type.body, color: color.over },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(3) },
-  buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
+  button: { ...buttons.filled, marginTop: space(3) },
+  buttonText: { ...buttons.filledText },
   link: { color: color.accent, fontWeight: '700', fontSize: 16 },
 });

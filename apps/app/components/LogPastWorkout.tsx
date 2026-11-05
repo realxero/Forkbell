@@ -13,6 +13,7 @@ import { atLocal } from './WhenCard';
 import { CalendarSheet } from './Calendar';
 import { Chip } from './AmountPicker';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 export function LogPastWorkout({ visible, program, onClose }: { visible: boolean; program: Program | null; onClose: () => void }) {
   const [day, setDay] = useState(addDays(todayLocal(), -1));
@@ -96,6 +97,6 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   field: { ...type.body, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(3), color: color.iron },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
-  button: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  buttonText: { color: color.onAccent, fontWeight: '800', fontSize: 16 },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
 });

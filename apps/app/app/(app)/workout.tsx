@@ -23,6 +23,7 @@ import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, space, type } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
 import { WorkoutBell } from '../../components/WorkoutBell';
@@ -1001,6 +1002,6 @@ const s = StyleSheet.create({
   restButtons: { flexDirection: 'row', gap: space(5), marginTop: space(2) },
   restButton: { color: color.chalk, fontWeight: '700', fontSize: 15 },
   stats: { flexDirection: 'row', backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
 });

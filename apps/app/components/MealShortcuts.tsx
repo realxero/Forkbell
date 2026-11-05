@@ -11,6 +11,7 @@ import { confirm } from '../lib/confirm';
 import { MEAL_NAMES } from './AmountPicker';
 import { FoodIcon } from './FoodIcon';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const dayName = (date: string) => {
   const t = todayLocal();
@@ -147,6 +148,6 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: 4 },
   mealIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: color.infoBg, alignItems: 'center', justifyContent: 'center' },
-  button: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(2) + 2, alignItems: 'center', marginTop: space(1) },
-  buttonText: { color: color.onAccent, fontWeight: '700', fontSize: 15 },
+  button: { ...buttons.filled, marginTop: space(1) },
+  buttonText: { ...buttons.filledText },
 });

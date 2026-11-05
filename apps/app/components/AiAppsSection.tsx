@@ -9,6 +9,7 @@ import * as Clipboard from 'expo-clipboard';
 import { api, del, getServerUrl, post } from '../lib/api';
 import { confirm } from '../lib/confirm';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 type Key = { id: string; label: string; hint: string; createdAt: string; lastUsedAt: string | null; kind: string; canWrite: boolean };
 
@@ -101,8 +102,8 @@ export function AiAppsSection() {
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
+  button: { ...buttons.filled },
   secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: color.line },
-  buttonText: { color: color.chalk, fontWeight: '700' },
+  buttonText: { ...buttons.filledText },
   code: { fontFamily: 'Menlo', fontSize: 12, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: 8 },
 });

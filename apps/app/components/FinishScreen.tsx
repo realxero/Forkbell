@@ -13,6 +13,7 @@ import { formatDuration, useUnit } from '../lib/units';
 import { BellAvatar } from './BellAvatar';
 import { Confetti } from './Confetti';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const RECORD_NAMES: Record<PersonalRecord['kind'], string> = {
   weight: 'Heaviest weight',
@@ -174,6 +175,6 @@ const s = StyleSheet.create({
   pill: { backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(3), paddingVertical: space(1) },
   coolDown: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
   link: { color: color.accent, fontWeight: '700', fontSize: 16 },
-  button: { backgroundColor: color.accent, borderRadius: 14, paddingVertical: space(4), alignItems: 'center' },
-  buttonText: { color: color.onAccent, fontSize: 17, fontWeight: '800' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
 });

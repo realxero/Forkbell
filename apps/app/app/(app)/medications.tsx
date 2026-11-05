@@ -9,6 +9,7 @@ import { confirm } from '../../lib/confirm';
 import { askForNotifications, refreshReminders, reminderSettings, remindersSupported } from '../../lib/reminders';
 import type { Med, Wellbeing } from '../../components/WellbeingCard';
 import { color, space, type } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 
 const MAX_DOSES = 6;
 const doseCount = (v: string) => Math.min(MAX_DOSES, Math.max(1, Number(v) || 1));
@@ -181,6 +182,6 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   time: { minWidth: 104, textAlign: 'center', paddingVertical: space(2) },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontSize: 16, fontWeight: '700' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
 });

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
 import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
 import { router } from 'expo-router';
@@ -441,8 +442,8 @@ const s = StyleSheet.create({
   content: { padding: space(4), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space(2) },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
   link: { color: color.accent, fontWeight: '700', fontSize: 16 },
   cta: { backgroundColor: color.accent, borderRadius: 14, padding: space(4), gap: 2 },
   ctaText: { color: color.onAccent, fontSize: 17, fontWeight: '800' },

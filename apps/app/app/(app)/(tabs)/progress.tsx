@@ -23,6 +23,7 @@ import { HealthCard } from '../../../components/HealthCard';
 import { ProgressPhotosCard } from '../../../components/ProgressPhotos';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type } from '../../../lib/theme';
+import { buttons } from '../../../lib/buttons';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
 type Progress = {
@@ -453,13 +454,13 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginBottom: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  small: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3), alignSelf: 'flex-start' },
-  smallText: { color: color.chalk, fontWeight: '700', fontSize: 15 },
+  small: { ...buttons.small, alignSelf: 'flex-start' },
+  smallText: { ...buttons.smallText },
   suggest: { backgroundColor: color.infoBg, borderRadius: 12, padding: space(3), gap: space(2), marginTop: space(2) },
   step: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontSize: 20, color: color.iron, fontWeight: '700' },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center', marginTop: space(1) },
-  buttonText: { color: color.chalk, fontSize: 16, fontWeight: '700' },
+  button: { ...buttons.filled, marginTop: space(1) },
+  buttonText: { ...buttons.filledText },
   milestone: { paddingVertical: space(1) },
 });
 

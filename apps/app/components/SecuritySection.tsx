@@ -5,6 +5,7 @@ import type { AccountSecurity } from '@forkbell/shared';
 import { api, del, post, put } from '../lib/api';
 import { confirm } from '../lib/confirm';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -163,8 +164,8 @@ export function SecuritySection() {
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, borderWidth: 1, borderColor: color.line, padding: space(4), gap: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  button: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), paddingHorizontal: space(4), alignItems: 'center' },
-  buttonText: { color: color.onAccent, fontWeight: '700', fontSize: 15 },
+  button: { ...buttons.small },
+  buttonText: { ...buttons.smallText },
   quiet: { paddingVertical: space(3), paddingHorizontal: space(2), alignItems: 'center' },
   quietText: { color: color.accent, fontWeight: '700', fontSize: 15 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2) },

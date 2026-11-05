@@ -12,6 +12,7 @@ import { CalendarSheet } from './Calendar';
 import { Chip, MEAL_NAMES } from './AmountPicker';
 import { FoodIcon } from './FoodIcon';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const dayName = (date: string) => {
   const today = todayLocal();
@@ -175,6 +176,6 @@ const s = StyleSheet.create({
   option: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   swap: { backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(4), paddingVertical: space(2) },
   swapText: { color: color.onAccent, fontWeight: '800' },
-  button: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  buttonText: { color: color.onAccent, fontSize: 16, fontWeight: '700' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
 });

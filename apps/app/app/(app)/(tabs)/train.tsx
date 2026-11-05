@@ -17,6 +17,7 @@ import { PlateCalculator } from '../../../components/PlateCalculator';
 import { useAuth } from '../../../lib/auth';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
 import { color, space, type } from '../../../lib/theme';
+import { buttons } from '../../../lib/buttons';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
 function dayName(date: string) {
@@ -206,8 +207,8 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(2) },
   live: { backgroundColor: color.iron },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(2) },
-  buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
+  button: { ...buttons.filled, marginTop: space(2) },
+  buttonText: { ...buttons.filledText },
   row: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' },
   secondary: { paddingVertical: space(2) },
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },

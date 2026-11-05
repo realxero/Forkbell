@@ -9,6 +9,7 @@ import { confirm } from '../../lib/confirm';
 import { getViewing, setViewing } from '../../lib/profile';
 import { Chip } from '../../components/AmountPicker';
 import { color, space, type } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 
 type Perm = 'food_read' | 'food_write' | 'training_read' | 'progress_read' | 'wellbeing_read';
 type Person = { shareId: string; personId: string; name: string; permissions: Perm[] };
@@ -147,7 +148,7 @@ const s = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   code: { alignItems: 'center', gap: space(2), backgroundColor: color.chalk, borderRadius: 12, padding: space(4) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
-  small: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3) },
-  buttonText: { color: color.chalk, fontSize: 16, fontWeight: '700' },
+  button: { ...buttons.filled },
+  small: { ...buttons.small },
+  buttonText: { ...buttons.filledText },
 });

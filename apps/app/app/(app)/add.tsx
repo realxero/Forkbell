@@ -15,6 +15,7 @@ import { BarcodeCamera } from '../../components/BarcodeCamera';
 import { FoodIcon } from '../../components/FoodIcon';
 import { MealShortcuts } from '../../components/MealShortcuts';
 import { color, space, type } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 
 type Pick = Food | FoodCandidate;
 type SearchResult = { mine: Food[]; results: FoodCandidate[]; errors: string[] };
@@ -509,8 +510,8 @@ const s = StyleSheet.create({
   plusText: { color: color.chalk, fontSize: 22, lineHeight: 24, fontWeight: '700' },
   added: { ...type.small, color: color.fatText, fontWeight: '700' },
   error: { ...type.body, color: color.over },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(2) },
-  buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
+  button: { ...buttons.filled, marginTop: space(2) },
+  buttonText: { ...buttons.filledText },
   secondary: { alignSelf: 'center', padding: space(3), minHeight: 44, justifyContent: 'center' },
   labelButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space(2), minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
   labelButtonText: { color: color.accent, fontWeight: '700', fontSize: 16 },

@@ -11,6 +11,7 @@ import { MEAL_NAMES, mealNow, shownMeals } from '../lib/meals';
 import { showToast } from '../lib/toast';
 import { Chip } from './AmountPicker';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const dayName = (d: string) => (d === todayLocal() ? 'Today' : d === addDays(todayLocal(), 1) ? 'Tomorrow' : new Date(`${d}T12:00:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }));
 
@@ -89,6 +90,6 @@ const s = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   step: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
-  button: { backgroundColor: color.iron, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontWeight: '800', fontSize: 16 },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
 });

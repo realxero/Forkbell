@@ -11,6 +11,7 @@ import { cachedGet } from '../../lib/sync';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { FoodIcon } from '../../components/FoodIcon';
 import { color, space, type } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 
 const label = (date: string, today: string) => {
   if (date === today) return 'Today';
@@ -138,6 +139,6 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(2), paddingVertical: 3 },
   note: { ...type.small, color: color.warnText },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontSize: 16, fontWeight: '700' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
 });

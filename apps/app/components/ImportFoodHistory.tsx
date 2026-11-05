@@ -10,6 +10,7 @@ import { File } from 'expo-file-system';
 import { FOOD_IMPORT_APPS, parseFoodExport, type FoodImportFormat, type FoodImportResult, type ImportedFoodLine } from '@forkbell/shared';
 import { post } from '../lib/api';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const niceDate = (d: string | null) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '');
 
@@ -103,6 +104,6 @@ export function ImportFoodHistory() {
 
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.row, padding: space(3), gap: space(2) },
-  button: { backgroundColor: color.chalk, borderRadius: 10, paddingVertical: space(3), alignItems: 'center', borderWidth: 1, borderColor: color.line },
-  buttonText: { color: color.iron, fontWeight: '700', fontSize: 15 },
+  button: { ...buttons.quiet },
+  buttonText: { ...buttons.quietText },
 });

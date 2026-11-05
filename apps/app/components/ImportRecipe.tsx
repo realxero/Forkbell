@@ -10,6 +10,7 @@ import { post } from '../lib/api';
 import { createFood } from '../lib/actions';
 import { KeyboardLift } from './KeyboardLift';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 type Ingredient = { line: string; name: string; grams: number; per100: Per100; match: Food | null };
 type Preview = { name: string; servings: number; source: 'web' | 'mealie' | 'text'; ingredients: Ingredient[]; skipped: string[] };
@@ -148,7 +149,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   input: { ...type.body, minHeight: 140, textAlignVertical: 'top', backgroundColor: color.chalk, borderRadius: 10, borderWidth: 1, borderColor: color.line, padding: space(3), color: color.iron },
   row: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start', paddingVertical: space(1) },
-  button: { backgroundColor: color.iron, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontWeight: '800', fontSize: 16 },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
   link: { color: color.accent, fontWeight: '700' },
 });

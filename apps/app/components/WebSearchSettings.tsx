@@ -7,6 +7,7 @@ import { Pressable } from './Tap';
 import { api, post, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 type Status = { search?: { on: boolean; source: 'yours' | 'server' | null; server: boolean; yoursAllowed: boolean } };
 
@@ -116,7 +117,7 @@ export function WebSearchSettings() {
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2), marginTop: space(4) },
   input: { ...type.body, backgroundColor: color.chalk, borderRadius: 10, borderWidth: 1, borderColor: color.line, padding: space(3), color: color.iron },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), paddingHorizontal: space(4), alignItems: 'center' },
+  button: { ...buttons.small },
   secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: color.line },
-  buttonText: { color: color.chalk, fontWeight: '700' },
+  buttonText: { ...buttons.smallText },
 });

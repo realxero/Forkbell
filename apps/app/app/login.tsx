@@ -8,6 +8,7 @@ import { BUILD, versionLabel } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { getServerUrl } from '../lib/api';
 import { color, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -214,10 +215,10 @@ const s = StyleSheet.create({
   lede: { ...type.body, color: color.ironSoft, marginTop: -space(3) },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   error: { ...type.body, color: color.over },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
-  buttonQuiet: { backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, paddingVertical: space(4), alignItems: 'center' },
-  buttonQuietText: { color: color.iron, fontSize: 17, fontWeight: '700' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
+  buttonQuiet: { ...buttons.quiet },
+  buttonQuietText: { ...buttons.quietText },
   dim: { opacity: 0.4 },
   pressed: { opacity: 0.8 },
   or: { flexDirection: 'row', alignItems: 'center', gap: space(2) },

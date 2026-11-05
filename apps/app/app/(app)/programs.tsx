@@ -8,6 +8,7 @@ import { cachedGet } from '../../lib/sync';
 import { api, del, post } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { color, space, type } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 
 type Starter = { key: string; name: string; daysPerWeek: string; description: string; routines: string[] };
 
@@ -152,8 +153,8 @@ const s = StyleSheet.create({
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },
   inline: { flexDirection: 'row', gap: space(2), alignItems: 'center' },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  small: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3) },
-  smallText: { color: color.chalk, fontWeight: '700', fontSize: 15 },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center', marginTop: space(1) },
-  buttonText: { color: color.chalk, fontSize: 16, fontWeight: '700' },
+  small: { ...buttons.small },
+  smallText: { ...buttons.smallText },
+  button: { ...buttons.filled, marginTop: space(1) },
+  buttonText: { ...buttons.filledText },
 });

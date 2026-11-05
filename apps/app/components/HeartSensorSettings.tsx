@@ -9,6 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { heartSensorSupported, scanHeartSensors, type HeartSensor } from '../modules/forkbell-heart';
 import { saveHeartSensor, savedHeartSensor, useLiveHeartRate } from '../lib/heart';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 export function HeartSensorSettings() {
   const [saved, setSaved] = useState(savedHeartSensor());
@@ -101,7 +102,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2), marginTop: space(4) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   found: { paddingVertical: space(2), borderTopWidth: 1, borderColor: color.line },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
-  buttonText: { color: color.chalk, fontWeight: '700' },
+  button: { ...buttons.filled },
+  buttonText: { ...buttons.filledText },
   link: { color: color.accent, fontWeight: '700' },
 });

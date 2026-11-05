@@ -43,6 +43,6 @@ export function WaterProposal({ ml, date, onAdded }: { ml: number; date: string;
 
 const s = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space(2), backgroundColor: color.waterBg, borderRadius: radius.row, padding: space(3) },
-  button: { backgroundColor: color.water, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(2) },
-  buttonText: { color: '#fff', fontWeight: '800' },
+  button: { backgroundColor: color.waterText, borderRadius: radius.row, paddingHorizontal: space(4), paddingVertical: space(3) },
+  buttonText: { color: color.onAccent, fontWeight: '800' },
 });

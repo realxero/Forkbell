@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth';
 import { readCache } from '../lib/sync';
 import { setFoodServing } from '../lib/actions';
 import { color, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 // Your meal names (Settings → Food preferences → Meals), shared by every screen.
 export { MEAL_NAMES } from '../lib/meals';
@@ -235,6 +236,6 @@ const s = StyleSheet.create({
   unitRow: { gap: space(2), paddingVertical: space(1) },
   nutrition: { flexDirection: 'row', gap: space(3), backgroundColor: color.card, borderRadius: 12, padding: space(4), marginVertical: space(2) },
   error: { ...type.body, color: color.over },
-  button: { backgroundColor: color.iron, borderRadius: 10, paddingVertical: space(4), alignItems: 'center', marginTop: space(2) },
-  buttonText: { color: color.chalk, fontSize: 17, fontWeight: '700' },
+  button: { ...buttons.filled, marginTop: space(2) },
+  buttonText: { ...buttons.filledText },
 });
