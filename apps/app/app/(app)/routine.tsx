@@ -106,9 +106,9 @@ export default function RoutineEditor() {
                 )}
                 <View style={s.row}>
                   <Text style={[type.body, { fontWeight: '700', flex: 1 }]}>{x.exercise.name}</Text>
-                  <Pressable onPress={() => move(i, -1)} hitSlop={6}><Text style={s.icon}>↑</Text></Pressable>
-                  <Pressable onPress={() => move(i, 1)} hitSlop={6}><Text style={s.icon}>↓</Text></Pressable>
-                  <Pressable onPress={() => setItems((l) => regroup(l!.filter((_, j) => j !== i)))} hitSlop={6}><Text style={[s.icon, { color: color.over }]}>✕</Text></Pressable>
+                  <Pressable onPress={() => move(i, -1)} hitSlop={6} accessibilityLabel={`Move ${x.exercise.name} up`}><Text style={s.icon}>↑</Text></Pressable>
+                  <Pressable onPress={() => move(i, 1)} hitSlop={6} accessibilityLabel={`Move ${x.exercise.name} down`}><Text style={s.icon}>↓</Text></Pressable>
+                  <Pressable onPress={() => setItems((l) => regroup(l!.filter((_, j) => j !== i)))} hitSlop={6} accessibilityLabel={`Remove ${x.exercise.name}`}><Text style={[s.icon, { color: color.over }]}>✕</Text></Pressable>
                 </View>
                 <Stepper label="Sets" value={x.sets} min={1} max={20} onChange={(v) => change(i, { sets: v })} />
                 {x.exercise.kind !== 'time' && x.exercise.kind !== 'cardio' && (

@@ -601,8 +601,8 @@ export default function WorkoutScreen() {
             </View>
             {restLeft > 0 && (
               <View style={s.restButtons}>
-                <Pressable onPress={() => setRestEnd((t) => (t ? t - 15000 : t))} hitSlop={8}><Text style={s.restButton}>−15</Text></Pressable>
-                <Pressable onPress={() => { setRestEnd((t) => (t ? t + 15000 : t)); setRestTotal((t) => t + 15); }} hitSlop={8}><Text style={s.restButton}>+15</Text></Pressable>
+                <Pressable onPress={() => setRestEnd((t) => (t ? t - 15000 : t))} hitSlop={8} accessibilityLabel="15 seconds less rest"><Text style={s.restButton}>−15</Text></Pressable>
+                <Pressable onPress={() => { setRestEnd((t) => (t ? t + 15000 : t)); setRestTotal((t) => t + 15); }} hitSlop={8} accessibilityLabel="15 seconds more rest"><Text style={s.restButton}>+15</Text></Pressable>
                 <Pressable onPress={() => setRestEnd(null)} hitSlop={8}><Text style={s.restButton}>Skip</Text></Pressable>
               </View>
             )}

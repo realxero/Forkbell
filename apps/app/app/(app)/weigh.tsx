@@ -237,7 +237,7 @@ function Containers({ list, onSave }: { list: Container[]; onSave: (next: Contai
         <View key={c.id} style={s.row}>
           <Text style={[type.body, { flex: 1 }]}>{c.name}</Text>
           <Text style={type.body}>{c.grams} g</Text>
-          <Pressable onPress={async () => (await confirm(`Remove ${c.name}?`, 'You can weigh it again any time.', 'Remove')) && run(list.filter((x) => x.id !== c.id))} hitSlop={8}>
+          <Pressable onPress={async () => (await confirm(`Remove ${c.name}?`, 'You can weigh it again any time.', 'Remove')) && run(list.filter((x) => x.id !== c.id))} hitSlop={8} accessibilityLabel={`Remove ${c.name}`}>
             <Ionicons name="trash-outline" size={20} color={color.over} />
           </Pressable>
         </View>
