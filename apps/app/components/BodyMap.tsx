@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Svg, { Path } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
@@ -133,8 +134,8 @@ export function BodyMap() {
       <Text style={type.small}>Tap a muscle for what it needs and exercises for it.</Text>
 
       <Modal visible={Boolean(picked)} transparent animationType="slide" onRequestClose={() => setPicked(null)}>
-        <Pressable style={s.backdrop} onPress={() => setPicked(null)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={() => setPicked(null)}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             {sel && (
               <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>

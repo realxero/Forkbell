@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { dismissToast, useToast } from '../lib/toast';
 import { color, space } from '../lib/theme';
 

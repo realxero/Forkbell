@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import type { AccountSecurity } from '@forkbell/shared';
 import { api, del, post, put } from '../lib/api';
 import { confirm } from '../lib/confirm';

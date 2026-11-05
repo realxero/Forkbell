@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { addDays, todayLocal } from '@forkbell/shared';
 import { api } from '../lib/api';
@@ -67,8 +68,8 @@ export function CalendarSheet({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.head}>
             <Text style={type.title}>{title}</Text>
             <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>

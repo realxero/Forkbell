@@ -1,6 +1,7 @@
 import { useAuth } from '../../lib/auth';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dataKind, forAmount, KIND_INFO, mealForTime, type NutritionCheck, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods, entryAmountText } from '@forkbell/shared';

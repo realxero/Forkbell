@@ -1,6 +1,7 @@
 import { KeyboardLift } from './KeyboardLift';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BARS, DEFAULT_PLATES, fromKg, loadPlates, toKg, type Bar, type WeightUnit } from '@forkbell/shared';
 import { useTrainingSetup } from '../lib/training-setup';
@@ -98,8 +99,8 @@ export function PlateCalculator({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardLift>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.head}>
             <Text style={type.title}>Plate calculator</Text>
             <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>

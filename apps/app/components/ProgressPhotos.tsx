@@ -2,7 +2,8 @@
 // photo library), and your first and latest photo of a pose side by side, with
 // your weight trend on each day. Only ever shown to you.
 import { useState } from 'react';
-import { ActivityIndicator, Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { POSES, POSE_NAMES, firstAndLatest, todayLocal, trendOnDate, type Pose, type ProgressPhoto, type TrendPoint } from '@forkbell/shared';

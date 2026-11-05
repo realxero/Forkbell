@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import { router } from 'expo-router';
 import { todayLocal } from '@forkbell/shared';
 import { cachedGet, send } from '../lib/sync';

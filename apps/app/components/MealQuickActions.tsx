@@ -1,6 +1,7 @@
 import { askBell } from '../lib/bell-ask';
 import { useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
@@ -81,8 +82,8 @@ function QuickAdd({ visible, date, meal, onClose, onAdded }: { visible: boolean;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <Text style={type.title}>Quick add to {MEAL_NAMES[meal]}</Text>
           {field('kcal', 'Calories')}
           <View style={{ flexDirection: 'row', gap: space(2) }}>

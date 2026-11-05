@@ -2,7 +2,8 @@
 // (Pre-workout, Second breakfast...), hide ones you don't use, and put them
 // in your order. What's logged stays put: renaming only changes the name.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { mealSlots, type MealSlot, type Preferences } from '@forkbell/shared';
 import { color, space, type } from '../lib/theme';

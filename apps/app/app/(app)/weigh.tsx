@@ -4,7 +4,8 @@ import { shownMeals } from '../../lib/meals';
 // each food. Pick a plate or bowl you've weighed once and you don't even
 // need to tare. Leftovers come off. Everything is logged at once.
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -299,8 +300,8 @@ function FoodPicker({ visible, recent, onPick, onClose }: { visible: boolean; re
   );
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.row}>
             <TextInput value={q} onChangeText={setQ} placeholder="Search foods" placeholderTextColor={color.placeholder} style={[s.input, { flex: 1 }]} autoFocus returnKeyType="search" />
             <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>

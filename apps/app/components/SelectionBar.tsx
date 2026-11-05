@@ -1,6 +1,7 @@
 import { KeyboardLift } from './KeyboardLift';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { addDays, sumEntries, todayLocal, type DiaryEntry, type Meal, entryName } from '@forkbell/shared';
@@ -103,8 +104,8 @@ export function SelectionBar({ entries, onDone, onChanged }: { entries: DiaryEnt
 
       <Modal visible={naming} transparent animationType="fade" onRequestClose={() => setNaming(false)}>
         <KeyboardLift>
-        <Pressable style={s.backdrop} onPress={() => setNaming(false)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={() => setNaming(false)}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             <Text style={type.title}>Save as a meal</Text>
             <Text style={type.small}>{entries.map((e) => entryName(e)).join(', ')}</Text>
             <TextInput value={name} onChangeText={setName} placeholder="Name, e.g. My usual breakfast" style={s.input} autoFocus maxLength={80} />

@@ -1,7 +1,8 @@
 // Every progress photo, newest day first, with your weight trend on each day.
 // Tap one to see it big or delete it.
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from '../../components/Tap';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';

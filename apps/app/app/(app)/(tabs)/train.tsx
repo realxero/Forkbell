@@ -1,6 +1,7 @@
 import { TrainReadiness } from '../../../components/ReadinessCard';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, todayLocal, weekStart, weeklyGaps, type Program, type Workout, type WorkoutSummary, instant } from '@forkbell/shared';

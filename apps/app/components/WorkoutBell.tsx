@@ -4,7 +4,8 @@ import { KeyboardLift } from './KeyboardLift';
 // Short answers, quick questions to tap, and hold the mic to talk.
 import { askBell } from '../lib/bell-ask';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { bellMood, mealForTime, todayLocal, type BellMood, type BellReply } from '@forkbell/shared';
 import { api, ApiError, post } from '../lib/api';
@@ -87,8 +88,8 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
       )}
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <KeyboardLift>
-        <Pressable style={s.backdrop} onPress={() => !busy && setOpen(false)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={() => !busy && setOpen(false)}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
               <BellAvatar size={30} mood={busy ? 'thinking' : hearing !== null ? 'listening' : (messages.at(-1)?.mood ?? 'happy')} alive={open} />
               <Text style={[type.title, { flex: 1 }]}>Bell · this workout</Text>

@@ -2,7 +2,8 @@
 // phone they open the share sheet (Save to Files, AirDrop, Mail), on the web
 // they download.
 import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { File, Paths } from 'expo-file-system';
 import { authHeaders, getServerUrl } from '../lib/api';

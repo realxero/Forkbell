@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import { api, del, post, put } from '../lib/api';
 import { Chip } from './AmountPicker';
 import { color, radius, space, type } from '../lib/theme';

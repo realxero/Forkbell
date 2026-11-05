@@ -3,7 +3,8 @@
 // keep it for workouts. The rest coach then has a live reading every second
 // instead of waiting for Apple Health.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { heartSensorSupported, scanHeartSensors, type HeartSensor } from '../modules/forkbell-heart';
 import { saveHeartSensor, savedHeartSensor, useLiveHeartRate } from '../lib/heart';

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, type Program } from '@forkbell/shared';
 import { post, put } from '../lib/api';
@@ -81,8 +82,8 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
       {saved.length > 0 && !program && <Text style={type.small}>No active program yet: tap Change days for a starter that fits.</Text>}
 
       <Modal visible={editing} transparent animationType="fade" onRequestClose={() => setEditing(false)}>
-        <Pressable style={s.backdrop} onPress={() => setEditing(false)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={() => setEditing(false)}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             <Text style={type.title}>Which days do you train?</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
               {DAYS.map((name, i) => (

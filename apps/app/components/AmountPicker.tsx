@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import { MEALS, amountFromGrams, amountText, forAmount, parseQuantity, unitFor, unitsFor, type DiaryDay, type Food, type FoodCandidate, type Meal } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { readCache } from '../lib/sync';

@@ -2,7 +2,8 @@
 // timer for each one. Sided ones count down twice ("first side", "other side")
 // with a buzz to switch. Pause any time; Back and Next skip around.
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { picturePaths, stretchDose, stretchSeconds, type Stretch } from '@forkbell/shared';

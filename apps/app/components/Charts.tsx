@@ -1,7 +1,8 @@
 // Charts for the Progress tab, drawn with SVG so they look the same on phones
 // and on the web, and follow light and dark mode.
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { api } from '../lib/api';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { daysBetween, type TrendPoint } from '@forkbell/shared';

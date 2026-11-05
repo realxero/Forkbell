@@ -2,7 +2,8 @@
 // Pick muscles and start a short guided routine, or browse and open any one.
 // Opened from a workout with the muscles it trains, it can start straight away.
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -105,8 +106,8 @@ export default function Stretches() {
       </ScrollView>
 
       <Modal visible={Boolean(open)} transparent animationType="slide" onRequestClose={() => setOpen(null)}>
-        <Pressable style={s.backdrop} onPress={() => setOpen(null)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={() => setOpen(null)}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             <View style={s.row}>
               <Text style={[type.title, { flex: 1 }]}>{open?.name}</Text>
               <Pressable onPress={() => setOpen(null)} hitSlop={12} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>

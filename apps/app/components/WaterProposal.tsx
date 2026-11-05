@@ -1,7 +1,8 @@
 // Water Bell suggests logging: one tap to add it, the same as food. Nothing
 // is logged until then; Undo on the Water card takes it back.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { waterText } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';

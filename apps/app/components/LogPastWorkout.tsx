@@ -3,7 +3,8 @@ import { KeyboardLift } from './KeyboardLift';
 // paper, phone dead). Pick the day, the time and how long, and optionally a
 // program day; it's saved as finished and opens so you can fill in the sets.
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { addDays, parseClock, todayLocal, type Program } from '@forkbell/shared';
@@ -47,8 +48,8 @@ export function LogPastWorkout({ visible, program, onClose }: { visible: boolean
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardLift>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.head}>
             <Text style={type.title}>Log a past workout</Text>
             <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>

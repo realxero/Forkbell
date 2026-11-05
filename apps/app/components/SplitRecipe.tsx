@@ -2,7 +2,8 @@
 // the week (meal prep). Pick how many portions, the meal and the first day;
 // each portion is logged as one serving on its day, offline too.
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { addDays, forAmount, mealForTime, todayLocal, type Meal, type Recipe } from '@forkbell/shared';
 import { addEntry } from '../lib/actions';
@@ -45,8 +46,8 @@ export function SplitRecipe({ recipe, onClose }: { recipe: Recipe | null; onClos
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.head}>
             <Text style={type.title} numberOfLines={1}>Split {recipe.food.name}</Text>
             <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>

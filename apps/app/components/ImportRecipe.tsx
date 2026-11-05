@@ -2,7 +2,8 @@
 // the ingredient list. Bell works out each ingredient; you check them here,
 // then they open in the recipe editor like any recipe, to adjust and save.
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { forAmount, type Food, type Per100 } from '@forkbell/shared';
 import { post } from '../lib/api';
@@ -63,8 +64,8 @@ export function ImportRecipe({ visible, onClose, onReady }: { visible: boolean; 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
       <KeyboardLift>
-        <Pressable style={s.backdrop} onPress={close}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={close}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
               <Text style={type.title}>Import a recipe</Text>
               <Pressable onPress={close} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>

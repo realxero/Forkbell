@@ -1,6 +1,7 @@
 import { useAuth } from '../lib/auth';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { addDays, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type SavedMeal, entryName, entryAmountText } from '@forkbell/shared';

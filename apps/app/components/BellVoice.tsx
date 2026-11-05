@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { kokoroLabel, voiceLabel, type VoiceInfo } from '@forkbell/shared';
 import { getVoiceChoice, listDeviceVoices, previewVoice, refreshDeviceVoices, serverVoices, setVoiceChoice, stopSpeaking, type VoiceChoice } from '../lib/speak';

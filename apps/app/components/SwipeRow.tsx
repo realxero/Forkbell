@@ -4,7 +4,8 @@
 // On the web, and for VoiceOver, the same actions come from the row's
 // long-press menu and its accessibility actions instead.
 import { useRef, type ReactNode } from 'react';
-import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, PanResponder, Platform, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { haptic } from '../lib/haptics';

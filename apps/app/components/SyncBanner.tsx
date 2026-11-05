@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearProblems, flush, useSync } from '../lib/sync';
 import { color, space } from '../lib/theme';

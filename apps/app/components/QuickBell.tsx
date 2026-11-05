@@ -2,7 +2,8 @@ import { KeyboardLift } from './KeyboardLift';
 import { askBell } from '../lib/bell-ask';
 import { WaterProposal } from './WaterProposal';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { bellHistory, bellMood, mealForTime, todayLocal, type BellMood, type BellReply, type BellTurn, type FoodProposal } from '@forkbell/shared';
@@ -130,8 +131,8 @@ export function QuickBell() {
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         {/* The sheet moves up with the keyboard, so what you type stays in view. */}
         <KeyboardLift>
-        <Pressable style={s.backdrop} onPress={() => !busy && setOpen(false)}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={() => !busy && setOpen(false)}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
                 <BellAvatar size={30} mood={mood} alive={open} />

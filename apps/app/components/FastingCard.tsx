@@ -2,7 +2,8 @@
 // targets. Start now or from when you last ate, watch it count, end it any
 // time. A notification when the goal is reached. Works offline.
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { FAST_PRESETS, instant, fastProgress, hoursText, todayLocal, type Fasts } from '@forkbell/shared';

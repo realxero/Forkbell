@@ -1,7 +1,8 @@
 // Ranked swaps for one exercise, each with why it fits. Uses your equipment,
 // areas to protect and never-suggest list; "Pick any exercise" is always there.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { rankSwaps, type Exercise, type Swap } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
@@ -29,8 +30,8 @@ export function SwapSheet({ target, onPick, onPickAny, onClose }: { target: Exer
 
   return (
     <Modal visible={Boolean(target)} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.head}>
             <Text style={[type.title, { flex: 1 }]} numberOfLines={2}>
               Swap {target?.name}

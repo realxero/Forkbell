@@ -2,7 +2,8 @@
 // rows with icons instead of a block of links, rest time as a stepper, and
 // the risky ones (pain, remove) apart at the bottom.
 import type { ComponentProps, ReactNode } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { formatDuration } from '../lib/units';
 import { haptic } from '../lib/haptics';
@@ -53,8 +54,8 @@ export function ExerciseMenu(p: ExerciseMenuProps) {
 
   return (
     <Modal visible={p.visible} transparent animationType="slide" onRequestClose={p.onClose}>
-      <Pressable style={s.backdrop} onPress={p.onClose} accessibilityLabel="Close">
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={p.onClose} accessibilityLabel="Close">
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={s.handle} />
           <Text style={[type.title, { fontSize: 20 }]} numberOfLines={1}>{p.name}</Text>
           <ScrollView contentContainerStyle={{ gap: space(3) }} style={{ maxHeight: 560 }}>

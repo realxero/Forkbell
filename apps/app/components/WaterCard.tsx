@@ -2,7 +2,8 @@
 // any amount typed ("20 oz", "1.5 L"), and Undo for the last one. Works
 // offline: every change shows straight away and is sent when it can be.
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { parseWater, reachedGoal, waterButtons, waterGoalMl, waterText, type WaterDay } from '@forkbell/shared';

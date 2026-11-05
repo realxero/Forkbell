@@ -2,7 +2,8 @@
 // Model Context Protocol) to read your Forkbell, and optionally log to it.
 // Each key works only at /mcp; remove one and that app loses access at once.
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { useFocusEffect } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { api, del, getServerUrl, post } from '../lib/api';

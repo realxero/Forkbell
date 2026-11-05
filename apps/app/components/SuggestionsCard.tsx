@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import { forAmount, mealForTime, suggestForDay, todayLocal, type DiaryDay, type Food, type Meal, type Pattern, type RecentFood, type Suggestion } from '@forkbell/shared';
 import { put } from '../lib/api';
 import { useAuth } from '../lib/auth';

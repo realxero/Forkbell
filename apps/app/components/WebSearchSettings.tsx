@@ -2,7 +2,8 @@
 // restaurant's or a product's published numbers. Your own address works when
 // the server allows custom addresses; otherwise the server's own, if it has one.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import { api, post, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { color, radius, space, type } from '../lib/theme';

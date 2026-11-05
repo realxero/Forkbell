@@ -3,7 +3,8 @@
 // previewed (days, lines, dates, days already here), then imported in one go.
 // Days you've already logged in Forkbell are never touched.
 import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { FOOD_IMPORT_APPS, parseFoodExport, type FoodImportFormat, type FoodImportResult, type ImportedFoodLine } from '@forkbell/shared';

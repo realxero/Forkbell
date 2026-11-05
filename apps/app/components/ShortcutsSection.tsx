@@ -2,7 +2,8 @@
 // shortcuts with it, step by step, using the action names as the Shortcuts
 // app shows them.
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import * as Clipboard from 'expo-clipboard';
 import { api, del, getServerUrl, post } from '../lib/api';
 import { confirm } from '../lib/confirm';

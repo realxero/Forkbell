@@ -1,6 +1,7 @@
 import { shownMeals } from '../../../lib/meals';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MEALS, addDays, checkFood, forAmount, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, entryAmountText, entryName } from '@forkbell/shared';

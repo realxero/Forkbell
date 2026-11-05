@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { router } from 'expo-router';
@@ -87,8 +88,8 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
   return (
     <>
       <Modal visible={!picking} transparent animationType="fade" onRequestClose={close}>
-        <Pressable style={s.backdrop} onPress={close}>
-          <Pressable style={s.sheet} onPress={() => {}}>
+        <Pressable feedback={false} style={s.backdrop} onPress={close}>
+          <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
             <View style={s.head}>
               <FoodIcon name={entry.food.name} brand={entry.food.brand} size={40} />
               <View style={{ flex: 1 }}>

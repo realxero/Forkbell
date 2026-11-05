@@ -2,7 +2,8 @@
 // Open Food Facts, USDA). Many don't, so it says how many foods counted and
 // the numbers are a floor, not the whole day.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { MICROS, microText, sumMicros, type DiaryEntry } from '@forkbell/shared';
 import { color, radius, space, type } from '../lib/theme';

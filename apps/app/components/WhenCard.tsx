@@ -2,7 +2,8 @@
 // on the wrong day, forgot to tap Finish). Records are read from the history
 // as it now stands, so moving a workout moves its records with it.
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable } from './Tap';
 import { addDays, formatClock, instant, parseClock, todayLocal } from '@forkbell/shared';
 import { CalendarSheet } from './Calendar';
 import { color, radius, space, type } from '../lib/theme';

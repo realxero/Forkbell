@@ -2,7 +2,8 @@
 // (so you see the movement without a video), the steps, and the level.
 // With Reduce Motion on, the two pictures sit side by side instead.
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Image, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { EFFORT_GUIDE, exerciseCues, type Exercise, type ExerciseHowTo } from '@forkbell/shared';
 import { pictureSource } from '../lib/picture-cache';
@@ -121,8 +122,8 @@ export function HowToSheet({ exercise, onClose }: { exercise: Exercise | null; o
   }, [exercise]);
   return (
     <Modal visible={Boolean(exercise)} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={s.backdrop} onPress={onClose}>
-        <Pressable style={s.sheet} onPress={() => {}}>
+      <Pressable feedback={false} style={s.backdrop} onPress={onClose}>
+        <Pressable feedback={false} style={s.sheet} onPress={() => {}}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(3) }}>
             <Text style={[type.title, { flex: 1 }]} numberOfLines={2}>{exercise?.name}</Text>
             <Pressable onPress={onClose} hitSlop={12} style={s.close} accessibilityLabel="Close">

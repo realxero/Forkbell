@@ -3,7 +3,8 @@
 // added, what's already here), then imported in one go. Importing the same
 // file again adds nothing.
 import { useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from './Tap';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { IMPORT_APPS, parseWorkoutExport, type ImportedWorkout, type ImportFormat, type WeightUnit, type WorkoutImportResult } from '@forkbell/shared';
