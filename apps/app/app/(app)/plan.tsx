@@ -1,6 +1,6 @@
 import { shownMeals } from '../../lib/meals';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { cachedGet } from '../../lib/sync';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { FoodIcon } from '../../components/FoodIcon';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
 const label = (date: string, today: string) => {
@@ -86,7 +87,7 @@ export default function Plan() {
           <Pressable onPress={() => setSeed((x) => x + 1)}><Text style={s.link}>Shuffle</Text></Pressable>
         </View>
         {error && <Text style={s.error}>{error}</Text>}
-        {!plans && !error && <ActivityIndicator color={color.iron} />}
+        {!plans && !error && <SkeletonCards count={3} />}
         {plans?.map((p) => (
           <View key={p.date} style={s.card}>
             <Text style={type.title}>{label(p.date, today)}</Text>

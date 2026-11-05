@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { confirm } from '../../lib/confirm';
 import { formatDuration } from '../../lib/units';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonCards } from '../../components/Skeleton';
 
 /** Edit one training day: its name, exercises, sets, rep range and rest. */
 export default function RoutineEditor() {
@@ -87,7 +88,7 @@ export default function RoutineEditor() {
           </Pressable>
         </View>
         {error && <Text style={s.error}>{error}</Text>}
-        {!items && !error && <ActivityIndicator color={color.iron} />}
+        {!items && !error && <SkeletonCards count={3} />}
         {items && (
           <>
             <TextInput value={name} onChangeText={setName} style={[s.input, type.title]} accessibilityLabel="Day name" />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { TextInput } from 'react-native';
 import { removeWithUndo } from '../../components/EntryMenu';
 import { AmountPicker } from '../../components/AmountPicker';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonCards } from '../../components/Skeleton';
 
 /** Change an entry's amount or meal, or remove it. */
 export default function EditEntry() {
@@ -50,7 +51,7 @@ export default function EditEntry() {
           </Pressable>
         </View>
         {!entry ? (
-          error ? <Text style={[s.error, { padding: space(4) }]}>{error}</Text> : <ActivityIndicator color={color.iron} style={{ marginTop: space(10) }} />
+          error ? <Text style={[s.error, { padding: space(4) }]}>{error}</Text> : <SkeletonCards count={2} style={{ padding: space(4) }} />
         ) : (
           <AmountPicker
             food={entry.food}

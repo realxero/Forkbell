@@ -15,6 +15,7 @@ import { BarcodeCamera } from '../../components/BarcodeCamera';
 import { FoodIcon } from '../../components/FoodIcon';
 import { MealShortcuts } from '../../components/MealShortcuts';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonRows } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
 type Pick = Food | FoodCandidate;
@@ -245,7 +246,7 @@ function RecentList({
   onQuickAdd: (r: RecentFood) => void;
 }) {
   const { me } = useAuth();
-  if (!data) return <ActivityIndicator color={color.iron} style={{ marginTop: space(4) }} />;
+  if (!data) return <SkeletonRows rows={5} style={{ marginTop: space(2) }} />;
   if (!data.recent.length) return <Text style={[type.small, { marginTop: space(2) }]}>Foods you log show up here, so the next time takes one tap.</Text>;
   const list = data[tab];
   return (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { shareText } from '../../lib/share';
 import { router } from 'expo-router';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { aisleOf, nextDays, shoppingList, todayLocal, type DiaryDay, type ShoppingItem } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../../lib/sync';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonRows } from '../../components/Skeleton';
 
 const KEY = 'device:shopping';
 type Saved = { ticked: string[]; extra: string[] };
@@ -50,7 +51,7 @@ export default function Shopping() {
         <Text style={type.pageTitle}>Shopping list</Text>
         <Text style={type.small}>Everything planned or logged for today and the next 6 days, added up. Amounts are what you’ll eat, not package sizes.</Text>
         {error && <Text style={s.error}>{error}</Text>}
-        {!items && !error && <ActivityIndicator color={color.iron} />}
+        {!items && !error && <SkeletonRows rows={5} />}
         {items && all.length === 0 && <Text style={type.body}>Nothing planned yet. Plan a few days first, or add items below.</Text>}
         {aisles.map((a) => (
           <View key={a} style={s.card}>

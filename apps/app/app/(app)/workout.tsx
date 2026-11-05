@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 import { haptic, hapticsOn } from '../../lib/haptics';
 import { cancelRestAlert, scheduleRestAlert } from '../../lib/reminders';
@@ -462,7 +463,7 @@ export default function WorkoutScreen() {
   if (!w)
     return (
       <SafeAreaView style={s.screen}>
-        {error ? <Text style={[s.error, { padding: space(4) }]}>{error}</Text> : <ActivityIndicator color={color.iron} style={{ marginTop: space(10) }} />}
+        {error ? <Text style={[s.error, { padding: space(4) }]}>{error}</Text> : <SkeletonCards count={3} style={{ padding: space(4) }} />}
       </SafeAreaView>
     );
 

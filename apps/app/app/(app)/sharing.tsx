@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { shareText } from '../../lib/share';
 import { router, useFocusEffect } from 'expo-router';
@@ -9,6 +9,7 @@ import { confirm } from '../../lib/confirm';
 import { getViewing, setViewing } from '../../lib/profile';
 import { Chip } from '../../components/AmountPicker';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
 type Perm = 'food_read' | 'food_write' | 'training_read' | 'progress_read' | 'wellbeing_read';
@@ -58,7 +59,7 @@ export default function Sharing() {
         <Text style={type.pageTitle}>Sharing</Text>
         <Text style={type.small}>Share with family or a partner who has an account on this Forkbell server. You choose exactly what they can see, and either of you can end it at any time.</Text>
         {msg && <Text style={type.body}>{msg}</Text>}
-        {!data && <ActivityIndicator color={color.iron} />}
+        {!data && <SkeletonCards count={2} />}
 
         {data && data.sharedWithMe.length > 0 && (
           <View style={s.card}>

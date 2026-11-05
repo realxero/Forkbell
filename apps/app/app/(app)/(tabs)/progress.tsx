@@ -1,7 +1,7 @@
 import { ReadinessCard } from '../../../components/ReadinessCard';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { HealthCard } from '../../../components/HealthCard';
 import { ProgressPhotosCard } from '../../../components/ProgressPhotos';
 import { useViewing } from '../../../lib/profile';
 import { color, space, type, textSize } from '../../../lib/theme';
+import { SkeletonCards } from '../../../components/Skeleton';
 import { buttons } from '../../../lib/buttons';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
@@ -107,7 +108,7 @@ export default function ProgressScreen() {
         <Text style={type.pageTitle}>Progress</Text>
         {error && <Text style={s.error}>{error}</Text>}
         {notice && <Text style={s.notice}>{notice}</Text>}
-        {!p && !error && <ActivityIndicator color={color.iron} />}
+        {!p && !error && <SkeletonCards count={4} />}
 
         {p && (
           <>

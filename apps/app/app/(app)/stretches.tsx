@@ -2,7 +2,7 @@
 // Pick muscles and start a short guided routine, or browse and open any one.
 // Opened from a workout with the muscles it trains, it can start straight away.
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { SheetFrame } from '../../components/Sheet';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -16,6 +16,7 @@ import { Chip } from '../../components/AmountPicker';
 import { HowToCard } from '../../components/HowTo';
 import { StretchSession } from '../../components/StretchSession';
 import { color, radius, space, type, textSize } from '../../lib/theme';
+import { SkeletonRows } from '../../components/Skeleton';
 
 const CREDIT = 'Steps and pictures: Free Exercise DB (public domain)';
 const BODY = MUSCLES.filter((m) => m !== 'full body');
@@ -80,7 +81,7 @@ export default function Stretches() {
         )}
 
         {error && <Text style={{ color: color.over }}>{error}</Text>}
-        {!all && !error && <ActivityIndicator color={color.iron} />}
+        {!all && !error && <SkeletonRows rows={5} />}
         {routine.length > 0 && (
           <Pressable onPress={() => setSession(routine)} style={s.start} accessibilityHint="Starts a guided routine with a timer">
             <Ionicons name="play" size={20} color={color.onAccent} />

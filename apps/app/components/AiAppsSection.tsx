@@ -2,13 +2,14 @@
 // Model Context Protocol) to read your Forkbell, and optionally log to it.
 // Each key works only at /mcp; remove one and that app loses access at once.
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { useFocusEffect } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { api, del, getServerUrl, post } from '../lib/api';
 import { confirm } from '../lib/confirm';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { SkeletonRows } from './Skeleton';
 import { buttons } from '../lib/buttons';
 
 type Key = { id: string; label: string; hint: string; createdAt: string; lastUsedAt: string | null; kind: string; canWrite: boolean };
@@ -74,7 +75,7 @@ export function AiAppsSection() {
         </View>
       )}
       <Text style={type.label}>Keys</Text>
-      {keys === null && !problem && <ActivityIndicator color={color.iron} />}
+      {keys === null && !problem && <SkeletonRows rows={2} />}
       {keys?.length === 0 && <Text style={type.small}>None yet.</Text>}
       {keys?.map((k) => (
         <View key={k.id} style={[s.card, s.row]}>

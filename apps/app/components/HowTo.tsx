@@ -2,7 +2,7 @@
 // (so you see the movement without a video), the steps, and the level.
 // With Reduce Motion on, the two pictures sit side by side instead.
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Image, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Image, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,6 +10,7 @@ import { EFFORT_GUIDE, exerciseCues, type Exercise, type ExerciseHowTo } from '@
 import { pictureSource } from '../lib/picture-cache';
 import { cachedGet } from '../lib/sync';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { SkeletonCards } from './Skeleton';
 
 // Saved on this phone when it can be (works with no signal), otherwise from your server.
 const src = pictureSource;
@@ -131,7 +132,7 @@ export function HowToSheet({ exercise, onClose }: { exercise: Exercise | null; o
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={{ paddingBottom: space(6) }}>
-          {howTo === undefined && <ActivityIndicator color={color.iron} style={{ marginVertical: space(8) }} />}
+          {howTo === undefined && <SkeletonCards count={2} />}
           {howTo === null && <Text style={type.body}>No steps or pictures for this one yet.</Text>}
           {howTo && exercise && <HowToCard howTo={howTo} name={exercise.name} />}
           {howTo !== undefined && exercise && <CuesCard exercise={exercise} />}

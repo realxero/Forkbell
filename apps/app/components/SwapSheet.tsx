@@ -1,7 +1,7 @@
 // Ranked swaps for one exercise, each with why it fits. Uses your equipment,
 // areas to protect and never-suggest list; "Pick any exercise" is always there.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -9,6 +9,7 @@ import { rankSwaps, type Exercise, type Swap } from '@forkbell/shared';
 import { cachedGet } from '../lib/sync';
 import { useTrainingSetup } from '../lib/training-setup';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { SkeletonRows } from './Skeleton';
 
 export function SwapSheet({ target, onPick, onPickAny, onClose }: { target: Exercise | null; onPick: (e: Exercise) => void; onPickAny: () => void; onClose: () => void }) {
   const { setup } = useTrainingSetup();
@@ -41,7 +42,7 @@ export function SwapSheet({ target, onPick, onPickAny, onClose }: { target: Exer
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={{ gap: space(2) }}>
-          {!swaps && !error && <ActivityIndicator color={color.iron} style={{ marginVertical: space(6) }} />}
+          {!swaps && !error && <SkeletonRows rows={3} />}
           {error && <Text style={[type.body, { color: color.over }]}>{error}</Text>}
           {swaps?.length === 0 && (
             <Text style={type.body}>

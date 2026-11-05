@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { cachedGet } from '../../lib/sync';
 import { api, del, post } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
 type Starter = { key: string; name: string; daysPerWeek: string; description: string; routines: string[] };
@@ -59,7 +60,7 @@ export default function Programs() {
           </Pressable>
         </View>
         {error && <Text style={s.error}>{error}</Text>}
-        {!data && !error && <ActivityIndicator color={color.iron} />}
+        {!data && !error && <SkeletonCards count={3} />}
 
         {active && (
           <View style={s.card}>

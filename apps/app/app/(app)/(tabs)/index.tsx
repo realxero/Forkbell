@@ -1,6 +1,6 @@
 import { shownMeals } from '../../../lib/meals';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,6 +40,7 @@ function Stat({ icon, label, value }: { icon: ComponentProps<typeof Ionicons>['n
   );
 }
 import { color, radius, space, type, textSize } from '../../../lib/theme';
+import { FoodSkeleton } from '../../../components/Skeleton';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
 import { MEAL_NAMES } from '../../../components/AmountPicker';
@@ -144,7 +145,7 @@ export default function Diary() {
         {error && <Text style={s.error}>{error}</Text>}
         <StreakCheer enabled={!viewing && date === todayLocal()} tick={(day?.totals.kcal ?? 0) > 0 ? 1 : 0} />
         {notice && <Text style={type.small}>{notice}</Text>}
-        {!day && !error && <ActivityIndicator color={color.iron} style={{ marginTop: space(10) }} />}
+        {!day && !error && <FoodSkeleton />}
 
         {day && (
           <>

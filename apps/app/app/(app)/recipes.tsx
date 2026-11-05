@@ -1,7 +1,7 @@
 import { ImportRecipe } from '../../components/ImportRecipe';
 import { SplitRecipe } from '../../components/SplitRecipe';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { updateCache } from '../../lib/sync';
 import { FoodIcon } from '../../components/FoodIcon';
 import { NumberField } from '../../components/NumberField';
 import { color, radius, space, type, textSize } from '../../lib/theme';
+import { SkeletonRows } from '../../components/Skeleton';
 
 type Item = { food: Food; grams: number };
 type Draft = { id: string | null; name: string; servings: string; cooked: string; items: Item[] };
@@ -47,7 +48,7 @@ export default function Recipes() {
         <Text style={type.pageTitle}>Recipes</Text>
         <Text style={type.small}>Add the ingredients once; Forkbell works out the numbers per serving. Recipes show up in food search like your other foods.</Text>
         {error && <Text style={s.error}>{error}</Text>}
-        {!list && !error && <ActivityIndicator color={color.iron} />}
+        {!list && !error && <SkeletonRows rows={4} />}
         {list?.length === 0 && <Text style={type.body}>No recipes yet.</Text>}
         {list?.map((r) => {
           const serving = r.food.servingGrams ?? 100;

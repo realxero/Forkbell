@@ -1,6 +1,6 @@
 import { TrainReadiness } from '../../../components/ReadinessCard';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import { PlateCalculator } from '../../../components/PlateCalculator';
 import { useAuth } from '../../../lib/auth';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
 import { color, space, type, textSize } from '../../../lib/theme';
+import { SkeletonRows } from '../../../components/Skeleton';
 import { buttons } from '../../../lib/buttons';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
 
@@ -107,7 +108,7 @@ export default function Train() {
           </View>
         </View>
         {error && <Text style={s.error}>{error}</Text>}
-        {!history && !error && <ActivityIndicator color={color.iron} />}
+        {!history && !error && <SkeletonRows rows={4} />}
 
         {open ? (
           <Pressable onPress={() => router.push({ pathname: '/workout', params: { id: open.id } })} style={[s.card, s.live]}>

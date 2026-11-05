@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
 import { color, space, type, textSize } from '../../lib/theme';
+import { SkeletonCards } from '../../components/Skeleton';
 
 type Detail = {
   exercise: Exercise;
@@ -67,7 +68,7 @@ export default function ExerciseDetail() {
           <Text style={s.link}>‹ Back</Text>
         </Pressable>
         {error && <Text style={s.error}>{error}</Text>}
-        {!d && !error && <ActivityIndicator color={color.iron} />}
+        {!d && !error && <SkeletonCards count={3} />}
         {d && (
           <>
             <Text style={type.pageTitle}>{d.exercise.name}</Text>

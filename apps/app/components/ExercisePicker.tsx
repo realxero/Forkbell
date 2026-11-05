@@ -1,6 +1,6 @@
 import { KeyboardLift } from './KeyboardLift';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../lib/auth';
@@ -13,6 +13,7 @@ import { cachedGet, updateCache } from '../lib/sync';
 import { Chip } from './AmountPicker';
 import { ChipRow } from './ChipRow';
 import { color, space, type, textSize } from '../lib/theme';
+import { SkeletonRows } from './Skeleton';
 import { buttons } from '../lib/buttons';
 
 type Listed = Exercise & { uses: number };
@@ -133,7 +134,7 @@ export function ExercisePicker({
               </Pressable>
             )}
             {error && <Text style={s.error}>{error}</Text>}
-            {!list && !error && <ActivityIndicator color={color.iron} />}
+            {!list && !error && <SkeletonRows rows={6} />}
             {used.length > 0 && <Text style={s.section}>You’ve done these</Text>}
             {used.map((e) => <Row key={e.id} e={e} onPress={() => onPick(e)} />)}
             {rest.length > 0 && <Text style={s.section}>{used.length ? 'Everything else' : 'Exercises'}</Text>}
