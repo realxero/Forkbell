@@ -7,9 +7,10 @@
 import { Hono } from 'hono';
 import { eq, sql } from 'drizzle-orm';
 import { shortcutKeys, users, type connect } from '@forkbell/db';
-import { BUILD, MEALS, parseWater, preferencesSchema, todayLocal, waterText, type Meal } from '@forkbell/shared';
+import { BUILD, MEALS, parseWater, preferencesSchema, todayIn, waterText, type Meal } from '@forkbell/shared';
 import { MCP_PREFIX, hashToken } from '../auth.ts';
 import { runTool, TOOLS, type ToolContext } from '../bell/tools.ts';
+import { timeZoneOf } from '../today.ts';
 
 type Internal = (path: string, userId: string, init?: { method: string; body: unknown }) => Promise<unknown>;
 type Rpc = { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };
@@ -114,8 +115,8 @@ export function mcpRoutes(db: ReturnType<typeof connect>, internal: Internal) {
   });
 
   async function contextFor(userId: string): Promise<ToolContext> {
-    const [me] = await db.asUser(userId, (tx) => tx.select({ unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1));
-    return { call: (path: string) => internal(path, userId), today: todayLocal(), meal: 'snacks', proposals: [], prefs: preferencesSchema.parse(me?.prefs ?? {}), userText: '', question: null, unit: (me?.unit ?? 'lb') as 'lb' | 'kg' };
+    const [me] = await db.asUser(userId, (tx) => tx.select({ unit: users.weightUnit, prefs: users.preferences, tz: users.timeZone }).from(users).where(eq(users.id, userId)).limit(1));
+    return { call: (path: string) => internal(path, userId), today: todayIn(me?.tz), meal: 'snacks', proposals: [], prefs: preferencesSchema.parse(me?.prefs ?? {}), userText: '', question: null, unit: (me?.unit ?? 'lb') as 'lb' | 'kg' };
   }
 
   async function logFood(userId: string, a: Record<string, unknown>) {
@@ -123,7 +124,7 @@ export function mcpRoutes(db: ReturnType<typeof connect>, internal: Internal) {
     const meal = String(a.meal) as Meal;
     if (!(grams > 0 && grams <= 5000)) return text('grams must be between 0 and 5000.', true);
     if (!MEALS.includes(meal)) return text(`meal must be one of ${MEALS.join(', ')}.`, true);
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(a.date ?? '')) ? String(a.date) : todayLocal();
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(a.date ?? '')) ? String(a.date) : todayIn(await timeZoneOf(db.asUser, userId));
     const p = a.per100 as { kcal?: number; protein?: number; carbs?: number; fat?: number } | undefined;
     const body = a.food_id
       ? { date, meal, grams, foodId: String(a.food_id) }
@@ -139,7 +140,7 @@ export function mcpRoutes(db: ReturnType<typeof connect>, internal: Internal) {
   async function logWater(userId: string, a: Record<string, unknown>) {
     const ml = parseWater(String(a.amount ?? ''), 'kg');
     if (!ml) return text('Give an amount with a unit, like "16.9 oz" or "500 ml".', true);
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(a.date ?? '')) ? String(a.date) : todayLocal();
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(a.date ?? '')) ? String(a.date) : todayIn(await timeZoneOf(db.asUser, userId));
     await internal('/api/wellbeing/water', userId, { method: 'POST', body: { date, ml } });
     return text(`Logged ${waterText(ml, 'kg')} of water on ${date}.`);
   }

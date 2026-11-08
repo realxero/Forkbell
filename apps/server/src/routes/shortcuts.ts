@@ -8,8 +8,9 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { shortcutKeys, type connect } from '@forkbell/db';
-import { dateSchema, mealForTime, todayLocal, type BellReply, type DiaryDay, type FoodProposal, fastProgress, waterGoalMl, waterText, type Fasts, type Preferences, type WaterDay } from '@forkbell/shared';
+import { dateSchema, mealForTime, todayIn, type BellReply, type DiaryDay, type FoodProposal, fastProgress, waterGoalMl, waterText, type Fasts, type Preferences, type WaterDay } from '@forkbell/shared';
 import { hashToken, MCP_PREFIX, SHORTCUT_PREFIX, type AppEnv } from '../auth.ts';
+import { timeZoneOf } from '../today.ts';
 
 type Internal = (path: string, userId: string, init?: { method: string; body: unknown }) => Promise<unknown>;
 
@@ -71,11 +72,12 @@ export function shortcutRoutes(db: ReturnType<typeof connect>, internal: Interna
     const parsed = askSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Send text.', speak: 'Sorry, I didn’t get a question.' }, 400);
     const userId = c.get('userId');
+    const tz = await timeZoneOf(asUser, userId);
     let reply: BellReply;
     try {
       reply = (await internal('/api/bell/chat', userId, {
         method: 'POST',
-        body: { messages: [{ role: 'user', text: parsed.data.text }], today: parsed.data.today ?? todayLocal(), meal: mealForTime(), localTime: parsed.data.localTime },
+        body: { messages: [{ role: 'user', text: parsed.data.text }], today: parsed.data.today ?? todayIn(tz), meal: mealForTime(new Date(), tz), localTime: parsed.data.localTime },
       })) as BellReply;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -121,12 +123,12 @@ export function shortcutRoutes(db: ReturnType<typeof connect>, internal: Interna
   r.get('/today', async (c) => {
     touch(c);
     const q = dateSchema.safeParse(c.req.query('today'));
-    const day = (await internal(`/api/diary/${q.success ? q.data : todayLocal()}`, c.get('userId'))) as DiaryDay;
+    const date = q.success ? q.data : todayIn(await timeZoneOf(asUser, c.get('userId')));
+    const day = (await internal(`/api/diary/${date}`, c.get('userId'))) as DiaryDay;
     const left = (goal: number | null | undefined, have: number) => (goal ? Math.round(goal - have) : null);
     const kcal = left(day.goals?.kcal, day.totals.kcal);
     const protein = left(day.goals?.protein, day.totals.protein);
     // Water and a fast that's going, when you use them.
-    const date = q.success ? q.data : todayLocal();
     const me = (await internal('/api/me', c.get('userId')).catch(() => null)) as { preferences: Preferences; weightUnit: 'lb' | 'kg' } | null;
     const prefs = me?.preferences;
     const water = (await internal(`/api/wellbeing/water/${date}`, c.get('userId')).catch(() => null)) as WaterDay | null;

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
-import { goalsSchema, preferencesSchema, type Me } from '@forkbell/shared';
+import { goalsSchema, isTimeZone, preferencesSchema, type Me } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -20,6 +20,7 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
       // Stored as given; defaults fill anything missing (and anything added later).
       preferences: preferencesSchema.parse(u.preferences ?? {}),
       weekdayGoals: (u.weekdayGoals ?? {}) as Me['weekdayGoals'],
+      timeZone: u.timeZone,
     };
     return c.json(me);
   });
@@ -55,6 +56,14 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
     const parsed = z.object({ weightUnit: z.enum(['lb', 'kg']) }).safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: 'Pick lb or kg.' }, 400);
     await asUser(c.get('profileId'), (tx) => tx.update(users).set({ weightUnit: parsed.data.weightUnit }).where(eq(users.id, c.get('profileId'))));
+    return c.json(parsed.data);
+  });
+
+  /** The phone's time zone, so "today" on the server (AI apps, Shortcuts) is your today. Always your own, even while viewing someone else. */
+  r.put('/time-zone', async (c) => {
+    const parsed = z.object({ timeZone: z.string().max(64).refine(isTimeZone, 'Unknown time zone.') }).safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Send a time zone.' }, 400);
+    await asUser(c.get('userId'), (tx) => tx.update(users).set({ timeZone: parsed.data.timeZone }).where(eq(users.id, c.get('userId'))));
     return c.json(parsed.data);
   });
 

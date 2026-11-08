@@ -7,6 +7,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BASE, caller, newUser, serverLog, startServer, stopServer } from './harness.ts';
+import { todayIn } from '@forkbell/shared';
 
 const NOT_HERE = 'Your Forkbell server doesn’t have this yet. Update the server to the same version as the app.';
 const anon = caller(null);
@@ -582,6 +583,29 @@ test('AI apps over MCP: a key that reads, a key that logs, and nowhere else', as
   assert.equal((await rpc('fbm_nope', { jsonrpc: '2.0', id: 6, method: 'ping' })).status, 401);
   const keys = (await u.call('GET', '/api/shortcuts/keys')).body.keys as { kind: string; canWrite: boolean }[];
   assert.deepEqual(keys.map((k) => [k.kind, k.canWrite]).sort(), [['mcp', false], ['mcp', true]]);
+});
+
+test('the phone’s time zone: kept per person, and “today” over MCP is their today, not the server’s', async () => {
+  const u = await newUser();
+  assert.equal((await u.call('GET', '/api/me')).body.timeZone, null);
+  assert.equal((await u.call('PUT', '/api/me/time-zone', { timeZone: 'Mars/Olympus_Mons' })).status, 400);
+  // Somewhere it isn't UTC's date right now: 14 hours ahead or 11 behind always covers it.
+  const utc = new Date().toISOString().slice(0, 10);
+  const tz = todayIn('Pacific/Kiritimati') !== utc ? 'Pacific/Kiritimati' : 'Pacific/Pago_Pago';
+  const theirs = todayIn(tz);
+  assert.notEqual(theirs, utc);
+  assert.equal((await u.call('PUT', '/api/me/time-zone', { timeZone: tz })).status, 200);
+  assert.equal((await u.call('GET', '/api/me')).body.timeZone, tz);
+
+  const key = (await u.call('POST', '/api/shortcuts/keys', { label: 'Claude logging', kind: 'mcp', canWrite: true })).body.token as string;
+  const r = await fetch(`${BASE}/mcp`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'log_water', arguments: { amount: '250 ml' } } }),
+  });
+  const said = ((await r.json()) as { result: { content: { text: string }[] } }).result.content[0]!.text;
+  assert.match(said, new RegExp(`on ${theirs}`), said);
+  assert.equal((await u.call('GET', `/api/wellbeing/water/${theirs}`)).body.totalMl, 250);
 });
 
 test('food history from another app: days add up exactly, logged days are left alone, foods stay out of lists', async () => {

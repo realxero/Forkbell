@@ -3,8 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import type { Me, SignInMethods } from '@forkbell/shared';
-import { ApiError, api, loadConnection, getServerUrl, setServerUrl, setToken, post } from './api';
+import { deviceTimeZone, type Me, type SignInMethods } from '@forkbell/shared';
+import { ApiError, api, loadConnection, getServerUrl, setServerUrl, setToken, post, put } from './api';
 import { cachedGet, updateCache } from './sync';
 
 type Status = 'loading' | 'signedOut' | 'signedIn';
@@ -56,6 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       applyMealPrefs(me.preferences.meals); // your meal names, before anything shows them
       setMe(me);
       setStatus('signedIn');
+      // The server works out "today" for AI apps and Shortcuts in your time zone, so keep it current
+      // (travel, daylight saving rules). An older server without this just says no.
+      const tz = deviceTimeZone();
+      if (tz && 'timeZone' in me && me.timeZone !== tz) {
+        put('/api/me/time-zone', { timeZone: tz })
+          .then(() => updateCache<Me>('/api/me', (m) => (m ? { ...m, timeZone: tz } : m)))
+          .catch(() => {});
+      }
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) updateCache('/api/me', () => undefined);
       setMe(null);

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, desc, eq, ilike, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { exercises, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
-import { estimatedOneRepMax, exerciseInputSchema, preferencesSchema, progressIdeas, setVolumeKg, todayLocal, trainingTips, variationsOf, type PersonalRecord, type SetEntry } from '@forkbell/shared';
+import { estimatedOneRepMax, exerciseInputSchema, preferencesSchema, progressIdeas, setVolumeKg, todayIn, trainingTips, variationsOf, type PersonalRecord, type SetEntry } from '@forkbell/shared';
 import { users } from '@forkbell/db';
 import type { AppEnv } from '../auth.ts';
 import { recentSessions, toExercise, toHowTo, toSet } from '../training.ts';
@@ -59,9 +59,9 @@ export function exerciseRoutes({ asUser }: ReturnType<typeof connect>) {
         .orderBy(desc(workouts.date), desc(workouts.startedAt), asc(workoutExercises.position), asc(workoutSets.position));
       // Safety tips for adding this exercise to today's workout.
       const recent = await recentSessions(tx, [id], { id: '00000000-0000-0000-0000-000000000000', startedAt: new Date().toISOString() });
-      const [me] = await tx.select({ prefs: users.preferences }).from(users).limit(1);
+      const [me] = await tx.select({ prefs: users.preferences, tz: users.timeZone }).from(users).where(eq(users.id, c.get('profileId'))).limit(1);
       const prefs = preferencesSchema.parse(me?.prefs ?? {});
-      const tips = trainingTips(recent.get(id) ?? [], todayLocal()).filter((t) => t.kind === 'pain' || (prefs.trainingTips && !prefs.training.hiddenTips.includes(id)));
+      const tips = trainingTips(recent.get(id) ?? [], todayIn(me?.tz)).filter((t) => t.kind === 'pain' || (prefs.trainingTips && !prefs.training.hiddenTips.includes(id)));
       // Everything you could pick, for variations of the same movement.
       const library = await tx
         .select({ ex: exercises, uses: usesSql })

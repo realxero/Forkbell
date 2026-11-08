@@ -111,6 +111,8 @@ export interface Me {
   preferences: import('./food-safety.ts').Preferences;
   /** goals for particular weekdays, "0" = Sunday */
   weekdayGoals: Partial<Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', Goals>>;
+  /** IANA time zone the app last reported, e.g. "America/New_York"; missing from older servers */
+  timeZone?: string | null;
 }
 
 /** A food you've logged before, with the amount you used last time. */
