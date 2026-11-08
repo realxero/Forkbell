@@ -18,6 +18,8 @@ type State = { cache: Record<string, Entry>; outbox: OutboxItem[]; held: OutboxI
 const MAX_CACHE = 120;
 let state: State = { cache: {}, outbox: [], held: [], problems: [] };
 let online = true;
+/** Who's signed in. Changes are stamped with this and only sent while that person is signed in. */
+let owner: string | null = null;
 let syncing = false;
 let loaded: Promise<void> | null = null;
 const listeners = new Set<() => void>();
@@ -94,8 +96,8 @@ const isOffline = (e: unknown) => e instanceof ApiError && (e.status === 0 || e.
  */
 export async function cachedGet<T>(path: string): Promise<T> {
   await initSync();
-  if (state.outbox.length) await flush();
-  if (state.outbox.length) {
+  if (state.outbox.some(belongs)) await flush();
+  if (state.outbox.some(belongs)) {
     // Still can't send: the server doesn't have our changes yet, so the copy is more current.
     const copy = readCache<T>(path);
     if (copy !== undefined) return copy;
@@ -123,7 +125,7 @@ export type SendResult<T> = { queued: false; data: T } | { queued: true };
  */
 export async function send<T = unknown>(method: OutboxItem['method'], path: string, body: unknown, opts: SendOptions): Promise<SendResult<T>> {
   await initSync();
-  if (!state.outbox.length) {
+  if (!state.outbox.some(belongs)) {
     try {
       const data = await api<T>(path, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
       setOnline(true);
@@ -144,10 +146,43 @@ export async function send<T = unknown>(method: OutboxItem['method'], path: stri
     createdAt: Date.now(),
     attempts: 0,
     profileId: isShareable(path) ? (getViewing()?.id ?? null) : null,
+    userId: owner,
   });
   persist();
   void flush();
   return { queued: true };
+}
+
+/** A change made by whoever is signed in now (older changes from before stamping count as theirs). */
+const belongs = (item: OutboxItem) => owner !== null && (!item.userId || item.userId === owner);
+
+/** Tell sync who is signed in (null when nobody is). Their waiting changes go up straight away. */
+export function setSyncOwner(id: string | null) {
+  if (owner === id) return;
+  owner = id;
+  notify();
+  if (id) void flush();
+}
+
+/**
+ * Signing out: drop this person's waiting and set-aside changes and every
+ * cached copy of their data, so the next person to sign in on this phone
+ * neither sends nor sees any of it. Settings that belong to the phone
+ * (theme, sounds, the health connection, ...) stay.
+ */
+const PERSONAL_DEVICE_KEYS = ['device:bell-chat', 'device:shopping', 'device:checkin:', 'device:fast-asked', 'device:rest-asked', 'device:streak-cheers'];
+export async function forgetAccount() {
+  await initSync();
+  state.outbox = state.outbox.filter((o) => o.userId && o.userId !== owner);
+  state.held = state.held.filter((o) => o.userId && o.userId !== owner);
+  state.problems = [];
+  for (const k of Object.keys(state.cache)) {
+    if (!k.startsWith('device:') || PERSONAL_DEVICE_KEYS.some((p) => k.startsWith(p))) delete state.cache[k];
+  }
+  owner = null;
+  if (saveTimer) clearTimeout(saveTimer);
+  await saveStore(state);
+  notify();
 }
 
 /** Send waiting changes in order. Stops at the first one that can't go yet. */
@@ -156,12 +191,14 @@ export async function flush(): Promise<void> {
     while (syncing) await new Promise((r) => setTimeout(r, 100));
     return;
   }
-  if (!state.outbox.length) return;
+  if (!state.outbox.some(belongs)) return;
   syncing = true;
   notify();
   try {
-    while (state.outbox.length) {
-      const item = state.outbox[0]!;
+    while (state.outbox.some(belongs)) {
+      // Only the signed-in person's changes, in their order; anyone else's wait for them.
+      const item = state.outbox.find(belongs)!;
+      const drop = () => (state.outbox = state.outbox.filter((o) => o.id !== item.id));
       let status = 0;
       try {
         await api(item.path, {
@@ -184,7 +221,7 @@ export async function flush(): Promise<void> {
         if (next === 'hold') {
           // The server answered, but with an error, several times in a row: set it
           // aside so the changes behind it can go up, and let the person choose.
-          state.outbox = state.outbox.slice(1);
+          drop();
           state.held = [...state.held, item];
           persist();
           continue;
@@ -193,7 +230,7 @@ export async function flush(): Promise<void> {
         persist();
         break;
       }
-      state.outbox = state.outbox.slice(1);
+      drop();
       setOnline(true);
       persist();
     }
@@ -223,6 +260,12 @@ export function clearProblems() {
   persist();
 }
 
+/** The signed-in person's waiting changes right now (for a decision made after a flush). */
+export function waitingNow() {
+  const mine = state.outbox.filter((o) => !o.userId || o.userId === owner);
+  return { count: mine.length, labels: mine.map((o) => o.label) };
+}
+
 /** Connection and sync status for the banner. */
 export function useSync() {
   const [, set] = useState(0);
@@ -232,7 +275,8 @@ export function useSync() {
     void initSync();
     return () => void listeners.delete(l);
   }, []);
-  return { online, syncing, pending: state.outbox.length, labels: state.outbox.map((o) => o.label), problems: state.problems, held: state.held.map((h) => h.label) };
+  const mine = state.outbox.filter((o) => !o.userId || o.userId === owner);
+  return { online, syncing, pending: mine.length, labels: mine.map((o) => o.label), problems: state.problems, held: state.held.map((h) => h.label) };
 }
 
 /**

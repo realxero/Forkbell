@@ -26,6 +26,12 @@ colors:
   warn-bg: "#FFF4D6"
   warn-text: "#8A5A00"
   danger-bg: "#FDECEA"
+  tile-purple: "#6A4BD1"
+  tile-magenta: "#B0337A"
+  tile-teal: "#0F7F80"
+  tile-copper: "#A4572A"
+  tile-slate: "#1C252B"
+  tile-grey: "#5B6B73"
 typography:
   display:
     fontFamily: "system-ui, -apple-system, SF Pro, Roboto, sans-serif"
@@ -187,6 +193,9 @@ A neutral chalk-and-iron base with bumper-plate macro colours. Every colour has 
 - **Empty Track** (#E6E9EA): the unfilled part of rings and bars.
 - **Rest Slate** (#2F4350): the rest-timer fill.
 - **Tints**: Success (#E5F4EC), Info (#EAF1FC), Warn (#FFF4D6 with #8A5A00 words) and Danger (#FDECEA) backgrounds for banners and notes.
+
+### Tiles
+The small coloured squares behind icons in Settings rows and on the Health card, iPhone Settings style. They use their own six colours, chosen to stay clear of every plate so a tile never reads as a macro: **Purple** (#6A4BD1), **Magenta** (#B0337A), **Teal** (#0F7F80), **Copper** (#A4572A), **Slate** (#1C252B) and **Grey** (#5B6B73), each with a lighter dark-mode twin. Icons on them are On Accent (white in light mode, near-black in dark), at 4.2:1 or better. Bell's tile is the accent, and Sign out's is Over red (a destructive action).
 
 ### Named Rules
 **The Plates Carry Meaning Rule.** A plate colour always means its subject: blue is protein, yellow carbs, green fat, red over, water blue water. A plate colour may mark an action about its own subject (an "Add water" button in water blue), but never decorates something unrelated.

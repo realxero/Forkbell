@@ -69,6 +69,14 @@ sleep and readiness scores, and AI apps (Claude Desktop) over MCP.
 
 0.22: importing food history from MyFitnessPal, Lose It, Cronometer or Yazio.
 
+0.23: a design pass over every tab. Food has an iron calorie ring and one way
+into each meal; Train puts starting a workout first and gives training its
+own colours; Progress leads with your trend, goal and burn, edits goals in a
+sheet with a calendar, and keeps training together. Bell can be retried
+without logging twice, stays usable offline and can be stopped; signing out
+can't hand waiting changes to the next person. AI apps and Shortcuts log to
+your day in your own time zone.
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.
