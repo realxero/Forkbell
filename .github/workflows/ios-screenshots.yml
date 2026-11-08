@@ -25,15 +25,18 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 60
     env:
-      PGDATA: ${{ runner.temp }}/pg
       DATABASE_ADMIN_URL: postgres://forkbell_admin@localhost:5432/forkbell
       DATABASE_URL: postgres://forkbell_app:shots-app@localhost:5432/forkbell
       APP_DB_PASSWORD: shots-app
       SERVER: http://localhost:3999
       SEED_USERNAME: sam
       SEED_PASSWORD: screenshots-only-0123
-      OUT: ${{ runner.temp }}/screenshots
     steps:
+      # The runner's temp folder is only known once the job is running.
+      - name: Paths
+        run: |
+          echo "PGDATA=$RUNNER_TEMP/pg" >> "$GITHUB_ENV"
+          echo "OUT=$RUNNER_TEMP/screenshots" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
