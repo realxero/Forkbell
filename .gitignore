@@ -14,3 +14,4 @@ web-build/
 apps/app/public/form/form.js
 apps/app/public/form/wasm/
 e2e/monkey-report.json
+graphify-out/
