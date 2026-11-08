@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { todayLocal } from '@forkbell/shared';
@@ -13,14 +13,20 @@ const monthName = (start: string) => {
   return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'short' });
 };
 
-/** This month so far, next to last month. */
-export function RecapCard({ unit }: { unit: 'lb' | 'kg' }) {
+export type Recap = { thisMonth: Month; lastMonth: Month };
+
+/** This month so far and last month, or null when neither has anything logged. */
+export function useRecap() {
   const viewing = useViewing();
-  const [r, setR] = useState<{ thisMonth: Month; lastMonth: Month } | null>(null);
+  const [r, setR] = useState<Recap | null>(null);
   useEffect(() => {
-    cachedGet<{ thisMonth: Month; lastMonth: Month }>(`/api/progress/recap?today=${todayLocal()}`).then(setR, () => setR(null));
+    cachedGet<Recap>(`/api/progress/recap?today=${todayLocal()}`).then(setR, () => setR(null));
   }, [viewing]);
-  if (!r || (!r.thisMonth.daysLogged && !r.lastMonth.daysLogged)) return null;
+  return r && (r.thisMonth.daysLogged || r.lastMonth.daysLogged) ? r : null;
+}
+
+/** This month so far, next to last month, as rows (no card of its own). */
+export function RecapTable({ r, unit }: { r: Recap; unit: 'lb' | 'kg' }) {
   const w = (kg: number | null) => (kg === null ? '–' : `${kg > 0 ? '+' : ''}${Math.round((unit === 'lb' ? kg * 2.20462 : kg) * 10) / 10} ${unit}`);
   const rows: [ComponentProps<typeof Ionicons>['name'], string, string, string][] = [
     ['calendar-outline', 'Days logged', String(r.thisMonth.daysLogged), String(r.lastMonth.daysLogged)],
@@ -30,19 +36,18 @@ export function RecapCard({ unit }: { unit: 'lb' | 'kg' }) {
     ['barbell-outline', 'Workouts', String(r.thisMonth.workouts), String(r.lastMonth.workouts)],
   ];
   return (
-    <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) }}>
-      <Text style={type.title}>Monthly recap</Text>
+    <View style={{ gap: space(3) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
         <View style={{ flex: 1 }} />
         <View style={{ width: 84, alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: textSize.label, fontWeight: '800', color: color.onAccent, backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.thisMonth.start)}</Text>
+          <Text style={[s.month, { color: color.chalk, backgroundColor: color.iron }]}>{monthName(r.thisMonth.start)}</Text>
         </View>
         <View style={{ width: 84, alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: textSize.label, fontWeight: '800', color: color.ironSoft, backgroundColor: color.raised, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' }}>{monthName(r.lastMonth.start)}</Text>
+          <Text style={[s.month, { color: color.ironSoft, backgroundColor: color.raised }]}>{monthName(r.lastMonth.start)}</Text>
         </View>
       </View>
       {rows.map(([icon, label, a, b]) => (
-        <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+        <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }} accessible accessibilityLabel={`${label}: ${a} this month, ${b} last month`}>
           <Ionicons name={icon} size={18} color={color.ironSoft} />
           <Text style={[type.body, { flex: 1 }]}>{label}</Text>
           <Text style={[type.body, type.number, { width: 84, textAlign: 'right', fontWeight: '800' }]}>{a}</Text>
@@ -52,3 +57,7 @@ export function RecapCard({ unit }: { unit: 'lb' | 'kg' }) {
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  month: { fontSize: textSize.label, fontWeight: '800', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3, overflow: 'hidden' },
+});

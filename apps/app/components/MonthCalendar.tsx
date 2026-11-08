@@ -12,8 +12,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-export function MonthCalendar({ value, onChange, min }: { value: string | null; onChange: (date: string) => void; min?: string }) {
-  const start = value ?? min ?? todayLocal();
+export function MonthCalendar({ value, onChange, min, max }: { value: string | null; onChange: (date: string) => void; min?: string; max?: string }) {
+  const today = todayLocal();
+  const start = value ?? min ?? today;
   const [cursor, setCursor] = useState(() => ({ y: Number(start.slice(0, 4)), m: Number(start.slice(5, 7)) - 1 }));
   const first = new Date(cursor.y, cursor.m, 1);
   const days = new Date(cursor.y, cursor.m + 1, 0).getDate();
@@ -24,6 +25,7 @@ export function MonthCalendar({ value, onChange, min }: { value: string | null; 
   const title = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   const minMonth = min ? min.slice(0, 7) : null;
   const atMin = minMonth !== null && iso(cursor.y, cursor.m, 1).slice(0, 7) <= minMonth;
+  const atMax = max !== undefined && iso(cursor.y, cursor.m, 1).slice(0, 7) >= max.slice(0, 7);
 
   return (
     <View style={s.wrap}>
@@ -32,7 +34,7 @@ export function MonthCalendar({ value, onChange, min }: { value: string | null; 
           <Ionicons name="chevron-back" size={20} color={color.iron} />
         </Pressable>
         <Text style={[type.heading, { flex: 1, textAlign: 'center' }]} accessibilityRole="header">{title}</Text>
-        <Pressable onPress={() => move(1)} style={s.arrow} accessibilityLabel="Next month">
+        <Pressable onPress={() => move(1)} disabled={atMax} style={[s.arrow, atMax && { opacity: 0.3 }]} accessibilityLabel="Next month">
           <Ionicons name="chevron-forward" size={20} color={color.iron} />
         </Pressable>
       </View>
@@ -44,14 +46,15 @@ export function MonthCalendar({ value, onChange, min }: { value: string | null; 
           if (d === null) return <View key={`e${i}`} style={s.cell} />;
           const date = iso(cursor.y, cursor.m, d);
           const on = date === value;
-          const off = Boolean(min && date < min);
+          const off = Boolean((min && date < min) || (max && date > max));
+          const isToday = date === today;
           return (
             <Pressable
               key={date}
               onPress={() => onChange(date)}
               disabled={off}
-              style={[s.cell, s.day, on && s.dayOn, off && { opacity: 0.3 }]}
-              accessibilityLabel={new Date(cursor.y, cursor.m, d).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              style={[s.cell, s.day, isToday && !on && s.today, on && s.dayOn, off && { opacity: 0.3 }]}
+              accessibilityLabel={`${isToday ? 'Today, ' : ''}${new Date(cursor.y, cursor.m, d).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`}
               accessibilityState={{ selected: on, disabled: off }}
             >
               <Text style={[type.body, type.number, on && { color: color.chalk, fontWeight: '700' }]}>{d}</Text>
@@ -72,4 +75,6 @@ const s = StyleSheet.create({
   weekday: { textAlign: 'center', paddingVertical: space(1) },
   day: { height: 44, borderRadius: radius.pill },
   dayOn: { backgroundColor: color.iron },
+  // Today gets a ring so the month has a point to read from.
+  today: { borderWidth: 1.5, borderColor: color.ironSoft },
 });

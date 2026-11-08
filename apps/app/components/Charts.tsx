@@ -2,6 +2,7 @@
 // and on the web, and follow light and dark mode.
 import { useEffect, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable } from './Tap';
 import { api } from '../lib/api';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
@@ -285,14 +286,14 @@ export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; 
   return (
     <View style={{ gap: space(2) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={() => go(-1)} hitSlop={10} accessibilityLabel="Previous month" style={{ padding: 4 }}>
-          <Text style={{ color: color.accent, fontSize: textSize.title, fontWeight: '800' }}>‹</Text>
+        <Pressable onPress={() => go(-1)} accessibilityLabel="Previous month" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="chevron-back" size={20} color={color.iron} />
         </Pressable>
         <Text style={[type.body, { flex: 1, textAlign: 'center', fontWeight: '700' }]}>
           {title} · {logged} day{logged === 1 ? '' : 's'} logged
         </Text>
-        <Pressable onPress={() => go(1)} disabled={month >= today.slice(0, 7)} hitSlop={10} accessibilityLabel="Next month" style={{ padding: 4, opacity: month >= today.slice(0, 7) ? 0.3 : 1 }}>
-          <Text style={{ color: color.accent, fontSize: textSize.title, fontWeight: '800' }}>›</Text>
+        <Pressable onPress={() => go(1)} disabled={month >= today.slice(0, 7)} accessibilityLabel="Next month" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: month >= today.slice(0, 7) ? 0.3 : 1 }}>
+          <Ionicons name="chevron-forward" size={20} color={color.iron} />
         </Pressable>
       </View>
       <View style={{ flexDirection: 'row' }}>

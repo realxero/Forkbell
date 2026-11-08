@@ -2,8 +2,8 @@ import { ReadinessCard } from '../../../components/ReadinessCard';
 import { BodyMap } from '../../../components/BodyMap';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal, type ScrollViewInstance } from 'react-native';
 import { Pressable } from '../../../components/Tap';
 import { TitleWithInfo } from '../../../components/Info';
 import { router, useFocusEffect } from 'expo-router';
@@ -19,9 +19,10 @@ import { showToast } from '../../../lib/toast';
 import { Chip } from '../../../components/AmountPicker';
 import { MonthCalendar } from '../../../components/MonthCalendar';
 import { SheetFrame } from '../../../components/Sheet';
+import { KeyboardLift } from '../../../components/KeyboardLift';
 import { CalorieBars, LogMonth, MacroDonut, WeightChart, type DayTotals } from '../../../components/Charts';
 import { WellbeingCard } from '../../../components/WellbeingCard';
-import { RecapCard } from '../../../components/RecapCard';
+import { RecapTable, useRecap } from '../../../components/RecapCard';
 import { PatternsCard } from '../../../components/PatternsCard';
 import { FoodCheckInCard } from '../../../components/CheckInCards';
 import type { FoodCheckIn } from '@forkbell/shared';
@@ -47,6 +48,8 @@ type Progress = {
   measurements: { kind: string; custom: boolean; unit: string; latest: { date: string; value: number } | null; first: { date: string; value: number } | null; history?: { date: string; value: number }[] }[];
 };
 type GoalBody = { goalWeightKg: number | null; goalDate: string | null; weeklyWorkoutGoal: number };
+/** Saves something and resolves to null, or to plain words saying why it didn't save. */
+type Submit<T> = (value: T) => Promise<string | null>;
 
 const CM_PER_IN = 2.54;
 const RANGES = [
@@ -69,7 +72,7 @@ const readNumber = (t: string) => {
 function goalShort(p: Progress, label: (kg: number | null) => string) {
   const plan = p.goal.plan;
   if (!p.goal.weightKg) return 'Not set';
-  if (plan?.reached) return 'Reached';
+  if (plan?.reached) return 'At your goal';
   if (plan?.pace === 'toward' && plan.estimate) return `${longDate(plan.estimate.from)} – ${longDate(plan.estimate.to)}`;
   if (plan?.pace === 'flat') return 'Holding steady';
   if (plan?.pace === 'away') return 'Trend moving away';
@@ -85,6 +88,10 @@ export default function ProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [range, setRange] = useState(92);
   const [weight, setWeight] = useState('');
+  const [editingGoal, setEditingGoal] = useState(false);
+  const scroll = useRef<ScrollViewInstance>(null);
+  const goalY = useRef(0);
+  const recap = useRecap();
 
   const load = useCallback(async () => {
     try {
@@ -117,21 +124,49 @@ export default function ProgressScreen() {
       showToast(`Couldn’t ${what}. ${problem(e)}`, { action: { label: 'Try again', run: () => act(what, fn, done) } });
     }
   };
-  const saveGoal = (body: GoalBody, done?: { text: string; undo?: () => Promise<unknown> }) =>
-    act('save the goal', () => send('PUT', '/api/progress/goal', body, { label: 'Goal', coalesceKey: 'goal' }), done);
+  const putGoal = (body: GoalBody) => send('PUT', '/api/progress/goal', body, { label: 'Goal', coalesceKey: 'goal' });
   const goalBody = (p: Progress): GoalBody => ({ goalWeightKg: p.goal.weightKg, goalDate: p.goal.date, weeklyWorkoutGoal: p.goal.weeklyWorkoutGoal });
+
+  /** For the goal sheet: it stays open until this resolves, and shows the error itself. */
+  const submitGoal: Submit<GoalBody> = async (body) => {
+    if (!p) return null;
+    const before = goalBody(p);
+    try {
+      await putGoal(body);
+      await load();
+      showToast(body.goalWeightKg === null ? 'Goal cleared' : 'Goal saved', { action: { label: 'Undo', run: async () => { await putGoal(before); await load(); } } });
+      return null;
+    } catch (e) {
+      return problem(e);
+    }
+  };
+  const submitMeasurement: Submit<{ kind: string; value: number; unit: string }> = async ({ kind, value, unit }) => {
+    try {
+      await send('PUT', '/api/progress/measurements', { date: todayLocal(), kind, value, unit }, { label: `${kind} measurement`, coalesceKey: `measure:${todayLocal()}:${kind}` });
+      await load();
+      showToast(`${cap(kind)} saved`);
+      return null;
+    } catch (e) {
+      return problem(e);
+    }
+  };
 
   const shown = useMemo(() => (p ? p.weighIns.filter((w) => w.date >= addDays(p.today, -range)) : []), [p, range]);
   const latest = p?.weighIns.at(-1) ?? null;
   const weekAgo = p && latest ? [...p.weighIns].reverse().find((w) => w.date <= addDays(latest.date, -7)) : null;
   const signed = (kg: number) => `${kg > 0 ? '+' : kg < 0 ? '−' : ''}${units.show(Math.abs(kg))} ${units.unit}`;
   const typed = units.read(weight);
+  const toGoalCard = () => scroll.current?.scrollTo({ y: Math.max(0, goalY.current - space(4)), animated: true });
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <ScrollView
+        ref={scroll}
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        // Keeps a field you're typing in (weigh-in, a measurement) above the keyboard on iPhone.
+        automaticallyAdjustKeyboardInsets
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
         <Text style={type.pageTitle}>Progress</Text>
@@ -177,14 +212,27 @@ export default function ProgressScreen() {
                 )}
               </View>
               <View style={s.stats}>
-                <View style={s.tile}>
+                <Pressable
+                  onPress={viewing ? undefined : p.goal.weightKg ? toGoalCard : () => setEditingGoal(true)}
+                  style={s.tile}
+                  accessibilityHint={viewing ? undefined : p.goal.weightKg ? 'Shows the goal and how it’s worked out' : 'Opens the goal to set one'}
+                >
                   <Text style={type.label}>Goal</Text>
-                  <Text style={[type.body, type.number, { fontWeight: '800' }]}>{goalShort(p, units.label)}</Text>
-                </View>
-                <View style={s.tile}>
+                  <Text style={[type.body, type.number, { fontWeight: '800' }, !p.goal.weightKg && !viewing && { color: color.accent }]}>
+                    {!p.goal.weightKg && !viewing ? 'Set a goal' : goalShort(p, units.label)}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={toGoalCard} style={s.tile} accessibilityHint="Shows how your burn is worked out">
                   <Text style={type.label}>Daily burn</Text>
-                  <Text style={[type.body, type.number, { fontWeight: '800' }]}>{p.energy.kcal !== null ? `${p.energy.kcal.toLocaleString()} kcal` : 'Needs more logging'}</Text>
-                </View>
+                  {p.energy.kcal !== null ? (
+                    <Text style={[type.body, type.number, { fontWeight: '800' }]}>{p.energy.kcal.toLocaleString()} kcal</Text>
+                  ) : (
+                    <>
+                      <Text style={[type.body, { fontWeight: '800' }]}>Not yet</Text>
+                      {p.energy.needs && <Text style={type.small}>{p.energy.needs}</Text>}
+                    </>
+                  )}
+                </Pressable>
               </View>
               {!viewing && (
                 <View style={[s.row, { marginTop: space(1) }]}>
@@ -192,7 +240,7 @@ export default function ProgressScreen() {
                     value={weight}
                     onChangeText={setWeight}
                     keyboardType="decimal-pad"
-                    placeholder={latest ? `Today’s weight, e.g. ${units.show(latest.weightKg)}` : 'Today’s weight'}
+                    placeholder="Today’s weight"
                     placeholderTextColor={color.placeholder}
                     style={[s.input, { flex: 1 }]}
                     accessibilityLabel={`Today's weight in ${units.unit}`}
@@ -222,68 +270,31 @@ export default function ProgressScreen() {
               </View>
             )}
 
-            {!viewing && (
-              <GoalCard
+            <View onLayout={(e) => (goalY.current = e.nativeEvent.layout.y)}>
+              <GoalAndBurnCard
                 p={p}
                 units={units}
-                onSave={(body) => {
-                  const before = goalBody(p);
-                  saveGoal(body, { text: 'Goal saved', undo: () => send('PUT', '/api/progress/goal', before, { label: 'Goal', coalesceKey: 'goal' }) });
-                }}
+                signed={signed}
+                onEdit={viewing ? undefined : () => setEditingGoal(true)}
+                onUseKcal={
+                  viewing
+                    ? undefined
+                    : (kcal) => {
+                        const goals = me?.goals ?? { protein: null, carbs: null, fat: null, kcal: null };
+                        act(
+                          'update your calorie goal',
+                          async () => {
+                            await put('/api/me/goals', { ...goals, kcal });
+                            await refreshMe();
+                          },
+                          { text: `Calorie goal set to ${kcal.toLocaleString()}`, undo: async () => { await put('/api/me/goals', goals); await refreshMe(); } },
+                        );
+                      }
+                }
               />
-            )}
-
-            <View style={s.card}>
-              <TitleWithInfo title="Your daily burn">
-                {p.energy.kcal !== null
-                  ? `Worked out from what you logged and how your weight trend moved (${signed(p.energy.rateKgPerWeek!)} a week). It updates as you keep logging, and already includes your usual activity. To have hard exercise days add to your goal, see Settings → Goals and targets.`
-                  : 'Forkbell works out what you really burn from your own food logs and weigh-ins, with no formulas or guesses. It already includes your usual activity.'}
-              </TitleWithInfo>
-              {p.energy.kcal !== null ? (
-                <>
-                  <Text style={[type.pageTitle, type.number]}>{p.energy.kcal.toLocaleString()} kcal</Text>
-                  <Text style={type.small}>
-                    From {p.energy.loggedDays} days of logging · confidence {p.energy.confidence}.
-                  </Text>
-                </>
-              ) : (
-                <Text style={type.body}>
-                  Not enough data yet. {p.energy.needs} Then Forkbell works out what you really burn from your own numbers, no formulas or guesses.
-                </Text>
-              )}
-              {!viewing && p.goal.plan?.suggestedKcal && p.goal.plan.suggestedKcal !== p.calorieGoal && (
-                <View style={s.suggest}>
-                  <Text style={type.body}>
-                    {p.goal.plan.reached ? 'To stay where you are' : `To move toward ${units.label(p.goal.weightKg)} at a steady pace`}, eat about{' '}
-                    <Text style={{ fontWeight: '800' }}>{p.goal.plan.suggestedKcal.toLocaleString()} kcal</Text> a day.
-                  </Text>
-                  <Pressable
-                    onPress={() => {
-                      const goals = me?.goals ?? { protein: null, carbs: null, fat: null, kcal: null };
-                      act(
-                        'update your calorie goal',
-                        async () => {
-                          await put('/api/me/goals', { ...goals, kcal: p.goal.plan!.suggestedKcal });
-                          await refreshMe();
-                        },
-                        { text: `Calorie goal set to ${p.goal.plan!.suggestedKcal!.toLocaleString()}`, undo: async () => { await put('/api/me/goals', goals); await refreshMe(); } },
-                      );
-                    }}
-                    style={s.small}
-                  >
-                    <Text style={s.smallText}>Use as my calorie goal</Text>
-                  </Pressable>
-                </View>
-              )}
             </View>
 
-            <MeasurementsCard
-              p={p}
-              units={units}
-              onSave={(kind, value, unit) =>
-                act('save the measurement', () => send('PUT', '/api/progress/measurements', { date: todayLocal(), kind, value, unit }, { label: `${kind} measurement`, coalesceKey: `measure:${todayLocal()}:${kind}` }), { text: `${cap(kind)} saved` })
-              }
-            />
+            <MeasurementsCard p={p} units={units} onSave={submitMeasurement} />
 
             {/* Progress photos: only ever yours, so not shown when viewing someone */}
             {!viewing && <ProgressPhotosCard weighIns={p.weighIns} />}
@@ -304,7 +315,18 @@ export default function ProgressScreen() {
                 <View style={s.card}>
                   <Text style={type.title}>Days logged</Text>
                   <LogMonth days={p.days} today={p.today} goal={p.calorieGoal ?? null} onOpenDay={viewing ? undefined : (d) => router.push({ pathname: '/', params: { date: d } })} />
-                  <Text style={type.small}>Green: logged, at or under your calorie goal. Red: over your goal. Grey: nothing logged.</Text>
+                  <View style={s.legend}>
+                    <Key fill={color.fat} label="At or under your goal" />
+                    <Key fill={color.over} label="Over your goal" />
+                    <Key fill={color.track} label="Nothing logged" />
+                  </View>
+                  <View style={[s.iconLine, s.divided]}>
+                    <Ionicons name="flame-outline" size={20} color={color.iron} />
+                    <Text style={[type.body, type.number, { flex: 1 }]}>
+                      {p.streaks.foodDays} {p.streaks.foodDays === 1 ? 'day' : 'days'} of logging in a row
+                      <Text style={type.small}> · best {p.streaks.bestFoodDays}</Text>
+                    </Text>
+                  </View>
                 </View>
               </>
             )}
@@ -313,7 +335,7 @@ export default function ProgressScreen() {
             <WorkoutsCard
               streaks={p.streaks}
               weekly={p.goal.weeklyWorkoutGoal}
-              onChange={viewing ? undefined : (n) => saveGoal({ ...goalBody(p), weeklyWorkoutGoal: n })}
+              onChange={viewing ? undefined : (n) => act('save your weekly goal', () => putGoal({ ...goalBody(p), weeklyWorkoutGoal: n }))}
             />
             <BodyMap />
 
@@ -326,40 +348,51 @@ export default function ProgressScreen() {
 
             <WellbeingCard healthSleepMin={p.activity?.metrics?.find((m) => m.kind === 'sleep_min' && m.latestDate === p.today)?.latest ?? null} />
 
-            <Text style={s.heading} accessibilityRole="header">Streaks and recaps</Text>
-            <View style={s.card}>
-              <Text style={type.title}>Logging streak</Text>
-              <View style={s.iconLine}>
-                <Ionicons name="flame-outline" size={20} color={color.iron} />
-                <Text style={[type.body, type.number, { flex: 1 }]}>
-                  {p.streaks.foodDays} {p.streaks.foodDays === 1 ? 'day' : 'days'} of logging in a row
-                  <Text style={type.small}> · best {p.streaks.bestFoodDays}</Text>
-                </Text>
-              </View>
-            </View>
-
-            <Milestones list={p.milestones} />
-
-            <RecapCard unit={units.unit} />
-
+            <Text style={s.heading} accessibilityRole="header">Looking back</Text>
+            <ThisMonthCard list={p.milestones} recap={recap} unit={units.unit} />
             <PatternsCard />
           </>
         )}
       </ScrollView>
+
+      {p && (
+        <Modal visible={editingGoal} transparent animationType="slide" onRequestClose={() => setEditingGoal(false)}>
+          <GoalSheet p={p} units={units} onClose={() => setEditingGoal(false)} onSave={submitGoal} />
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
 
 type Units = ReturnType<typeof useUnit>;
 
+function Key({ fill, label }: { fill: string; label: string }) {
+  return (
+    <View style={s.key}>
+      <View style={[s.swatch, { backgroundColor: fill }]} />
+      <Text style={type.small}>{label}</Text>
+    </View>
+  );
+}
+
 /** This week's workouts against your weekly goal, the week streak, and the goal itself. */
 function WorkoutsCard({ streaks, weekly, onChange }: { streaks: Streaks; weekly: number; onChange?: (n: number) => void }) {
-  // Show the new goal straight away; the save follows (and queues when offline).
+  // Show the new goal straight away; save once the taps stop, so 3 → 6 is one save.
   const [goal, setGoal] = useState(weekly);
-  useEffect(() => setGoal(weekly), [weekly]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef(false);
+  useEffect(() => {
+    if (!pending.current) setGoal(weekly);
+  }, [weekly]);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const set = (n: number) => {
     setGoal(n);
-    onChange?.(n);
+    pending.current = true;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      pending.current = false;
+      onChange?.(n);
+    }, 600);
   };
   const done = streaks.workoutsThisWeek;
   return (
@@ -398,9 +431,12 @@ function WorkoutsCard({ streaks, weekly, onChange }: { streaks: Streaks; weekly:
   );
 }
 
-/** The weight goal as a sentence, with Edit opening a sheet. */
-function GoalCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (body: GoalBody) => void }) {
-  const [editing, setEditing] = useState(false);
+/**
+ * The weight goal and the daily burn, together: the burn is what the goal's
+ * calorie suggestion comes from. The summary carries the headline numbers;
+ * this card says how they're worked out.
+ */
+function GoalAndBurnCard({ p, units, signed, onEdit, onUseKcal }: { p: Progress; units: Units; signed: (kg: number) => string; onEdit?: () => void; onUseKcal?: (kcal: number) => void }) {
   const plan = p.goal.plan;
   const paceText =
     !plan || plan.reached
@@ -412,14 +448,17 @@ function GoalCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (bo
           : plan.pace === 'away'
             ? 'Your trend is moving away from this goal right now.'
             : 'Keep weighing in and logging to get a date estimate.';
+  const suggested = plan?.suggestedKcal && plan.suggestedKcal !== p.calorieGoal ? plan.suggestedKcal : null;
 
   return (
     <View style={s.card}>
       <View style={s.row}>
-        <Text style={[type.title, { flex: 1 }]}>Weight goal</Text>
-        <Pressable onPress={() => setEditing(true)} hitSlop={10} style={s.linkHit}>
-          <Text style={s.link}>{p.goal.weightKg ? 'Edit' : 'Set a goal'}</Text>
-        </Pressable>
+        <Text style={[type.title, { flex: 1 }]}>Goal and burn</Text>
+        {onEdit && (
+          <Pressable onPress={onEdit} hitSlop={10} style={s.linkHit} accessibilityLabel={p.goal.weightKg ? 'Edit goal' : 'Set a goal'}>
+            <Text style={s.link}>{p.goal.weightKg ? 'Edit goal' : 'Set a goal'}</Text>
+          </Pressable>
+        )}
       </View>
       {p.goal.weightKg ? (
         <Text style={[type.heading, type.number]}>
@@ -429,89 +468,127 @@ function GoalCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (bo
       ) : (
         <Text style={type.body}>No weight goal yet. Set one and Forkbell estimates when you’ll get there from your own trend.</Text>
       )}
-      {plan?.reached && <Text style={[type.body, { color: color.fatText, fontWeight: '700' }]}>You’re at your goal weight. 🎉</Text>}
+      {plan?.reached && <Text style={[type.body, { color: color.fatText, fontWeight: '700' }]}>You’re at your goal weight.</Text>}
       {plan && !plan.reached && <Text style={type.body}>{units.label(Math.abs(plan.remainingKg))} to go.</Text>}
       {p.goal.weightKg && paceText && <Text style={type.body}>{paceText}</Text>}
       {plan?.kcalForDate && <Text style={type.body}>To make {longDate(p.goal.date!)}, eat about {plan.kcalForDate.toLocaleString()} kcal a day.</Text>}
       {plan?.warnings.map((w) => <Text key={w} style={s.warning}>{w}</Text>)}
 
-      <Modal visible={editing} transparent animationType="slide" onRequestClose={() => setEditing(false)}>
-        <GoalSheet
-          p={p}
-          units={units}
-          onClose={() => setEditing(false)}
-          onSave={(body) => {
-            setEditing(false);
-            onSave(body);
-          }}
-        />
-      </Modal>
+      <View style={[s.divided, { gap: space(2) }]}>
+        <TitleWithInfo title="Your daily burn" style={type.heading}>
+          {p.energy.kcal !== null
+            ? `Worked out from what you logged and how your weight trend moved (${signed(p.energy.rateKgPerWeek!)} a week). It updates as you keep logging, and already includes your usual activity. To have hard exercise days add to your goal, see Settings → Goals and targets.`
+            : 'Forkbell works out what you really burn from your own food logs and weigh-ins, with no formulas or guesses. It already includes your usual activity.'}
+        </TitleWithInfo>
+        {p.energy.kcal !== null ? (
+          <Text style={type.body}>
+            About <Text style={[type.number, { fontWeight: '800' }]}>{p.energy.kcal.toLocaleString()} kcal</Text> a day, from {p.energy.loggedDays} days of logging (confidence {p.energy.confidence}).
+          </Text>
+        ) : (
+          <Text style={type.body}>
+            Not enough data yet. {p.energy.needs} Then Forkbell works out what you really burn from your own numbers, no formulas or guesses.
+          </Text>
+        )}
+        {onUseKcal && suggested && (
+          <View style={s.suggest}>
+            <Text style={type.body}>
+              {plan!.reached ? 'To stay where you are' : `To move toward ${units.label(p.goal.weightKg)} at a steady pace`}, eat about{' '}
+              <Text style={{ fontWeight: '800' }}>{suggested.toLocaleString()} kcal</Text> a day.
+            </Text>
+            <Pressable onPress={() => onUseKcal(suggested)} style={s.small}>
+              <Text style={s.smallText}>Use as my calorie goal</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
-function GoalSheet({ p, units, onClose, onSave }: { p: Progress; units: Units; onClose: () => void; onSave: (body: GoalBody) => void }) {
+/** Edit the weight goal. Stays open until the save goes through, so nothing typed is lost. */
+function GoalSheet({ p, units, onClose, onSave }: { p: Progress; units: Units; onClose: () => void; onSave: Submit<GoalBody> }) {
   const [goal, setGoal] = useState(p.goal.weightKg ? units.show(p.goal.weightKg) : '');
   const [date, setDate] = useState<string | null>(p.goal.date);
   const [byDate, setByDate] = useState(Boolean(p.goal.date));
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const kg = goal.trim() ? units.read(goal) : null;
   const bad = goal.trim() !== '' && kg === null;
-  const save = () => onSave({ goalWeightKg: kg, goalDate: byDate ? date : null, weeklyWorkoutGoal: p.goal.weeklyWorkoutGoal });
+  const today = todayLocal();
+
+  const submit = async (body: GoalBody) => {
+    setSaving(true);
+    setFailed(null);
+    const why = await onSave(body);
+    setSaving(false);
+    if (why) setFailed(why);
+    else onClose();
+  };
+  const save = () => submit({ goalWeightKg: kg, goalDate: byDate ? date : null, weeklyWorkoutGoal: p.goal.weeklyWorkoutGoal });
 
   return (
-    <SheetFrame onClose={onClose}>
-      <ScrollView contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
+    <KeyboardLift>
+      <SheetFrame onClose={saving ? () => {} : onClose}>
+        {/* Cancel and Save sit at the top, iPhone style, so the keyboard never covers them. */}
         <View style={s.row}>
-          <Text style={[type.title, { flex: 1 }]} accessibilityRole="header">Weight goal</Text>
-          <Pressable onPress={onClose} hitSlop={10} style={s.linkHit} accessibilityLabel="Cancel">
-            <Ionicons name="close" size={24} color={color.ironSoft} />
+          <Pressable onPress={onClose} disabled={saving} style={s.linkHit} hitSlop={10}>
+            <Text style={[s.link, { color: color.ironSoft }]}>Cancel</Text>
+          </Pressable>
+          <Text style={[type.title, { flex: 1, textAlign: 'center' }]} accessibilityRole="header">Weight goal</Text>
+          <Pressable onPress={save} disabled={bad || saving} style={[s.linkHit, (bad || saving) && { opacity: 0.4 }]} hitSlop={10} accessibilityState={{ disabled: bad || saving, busy: saving }}>
+            <Text style={s.link}>{saving ? 'Saving…' : 'Save'}</Text>
           </Pressable>
         </View>
-        <View style={{ gap: space(1) }}>
-          <Text style={type.small}>Goal weight ({units.unit})</Text>
-          <TextInput
-            value={goal}
-            onChangeText={setGoal}
-            keyboardType="decimal-pad"
-            placeholder="None"
-            placeholderTextColor={color.placeholder}
-            style={[s.input, bad && { borderColor: color.over }]}
-            accessibilityLabel={`Goal weight in ${units.unit}`}
-          />
-          {bad && <Text style={s.fieldProblem}>Enter a number, like {units.show(p.weighIns.at(-1)?.trendKg ?? 80)}.</Text>}
-        </View>
-        <View style={s.chips}>
-          <Chip label="No date" on={!byDate} onPress={() => setByDate(false)} />
-          <Chip label="By a date" on={byDate} onPress={() => { setByDate(true); if (!date) setDate(addDays(todayLocal(), 90)); }} />
-        </View>
-        {byDate && (
-          <>
-            <Text style={type.body}>{date ? `By ${longDate(date)}` : 'Pick a day'}</Text>
-            <MonthCalendar value={date} onChange={setDate} min={addDays(todayLocal(), 1)} />
-          </>
-        )}
-        <Pressable onPress={save} disabled={bad} style={[s.button, bad && { opacity: 0.4 }]} accessibilityState={{ disabled: bad }}>
-          <Text style={s.buttonText}>Save goal</Text>
-        </Pressable>
-        {p.goal.weightKg !== null && (
-          <Pressable onPress={() => onSave({ goalWeightKg: null, goalDate: null, weeklyWorkoutGoal: p.goal.weeklyWorkoutGoal })} style={s.quiet}>
-            <Text style={s.quietText}>Clear the goal</Text>
-          </Pressable>
-        )}
-      </ScrollView>
-    </SheetFrame>
+        <ScrollView contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+          {failed && (
+            <View style={s.problem} accessibilityLiveRegion="assertive">
+              <Text style={[type.small, { flex: 1, color: color.iron }]}>Couldn’t save the goal. {failed}</Text>
+            </View>
+          )}
+          <View style={{ gap: space(1) }}>
+            <Text style={type.small}>Goal weight ({units.unit})</Text>
+            <TextInput
+              value={goal}
+              onChangeText={setGoal}
+              keyboardType="decimal-pad"
+              placeholder="None"
+              placeholderTextColor={color.placeholder}
+              style={[s.input, bad && { borderColor: color.over }]}
+              accessibilityLabel={`Goal weight in ${units.unit}`}
+            />
+            {bad && <Text style={s.fieldProblem}>Enter a number, like {units.show(p.weighIns.at(-1)?.trendKg ?? 80)}.</Text>}
+          </View>
+          <View style={s.chips}>
+            <Chip label="No date" on={!byDate} onPress={() => setByDate(false)} />
+            <Chip label="By a date" on={byDate} onPress={() => { setByDate(true); if (!date) setDate(addDays(today, 90)); }} />
+          </View>
+          {byDate && (
+            <>
+              <Text style={type.body}>{date ? `By ${longDate(date)}` : 'Pick a day'}</Text>
+              <MonthCalendar value={date} onChange={setDate} min={addDays(today, 1)} max={addDays(today, 365 * 5)} />
+            </>
+          )}
+          {p.goal.weightKg !== null && (
+            <Pressable onPress={() => submit({ goalWeightKg: null, goalDate: null, weeklyWorkoutGoal: p.goal.weeklyWorkoutGoal })} disabled={saving} style={s.quiet}>
+              <Text style={s.quietText}>Clear the goal</Text>
+            </Pressable>
+          )}
+        </ScrollView>
+      </SheetFrame>
+    </KeyboardLift>
   );
 }
 
-function Milestones({ list }: { list: Milestone[] }) {
+/** This month next to last month, and the milestones reached along the way. */
+function ThisMonthCard({ list, recap, unit }: { list: Milestone[]; recap: ReturnType<typeof useRecap>; unit: 'lb' | 'kg' }) {
   const [timeline, setTimeline] = useState(false);
   const reached = list.filter((m) => m.reached).sort((a, b) => ((a.date ?? '') < (b.date ?? '') ? 1 : -1));
   const next = ['days', 'workouts', 'weight'].map((k) => list.find((m) => !m.reached && m.key.startsWith(k))).filter(Boolean) as Milestone[];
-  if (!reached.length && !next.length) return null;
+  if (!recap && !reached.length && !next.length) return null;
   return (
     <View style={s.card}>
       <View style={s.row}>
-        <Text style={[type.title, { flex: 1 }]}>Milestones</Text>
+        <Text style={[type.title, { flex: 1 }]}>This month</Text>
         {reached.length > 0 && (
           <Pressable onPress={() => setTimeline(true)} hitSlop={10} style={s.linkHit}>
             <Text style={s.link}>Timeline</Text>
@@ -519,7 +596,9 @@ function Milestones({ list }: { list: Milestone[] }) {
         )}
       </View>
       <TimelineSheet visible={timeline} reached={reached} next={list.filter((m) => !m.reached)} onClose={() => setTimeline(false)} />
-      {reached.slice(0, 6).map((m) => (
+      {recap && <RecapTable r={recap} unit={unit} />}
+      {reached.length > 0 && <Text style={[type.label, recap && s.divided]}>Milestones</Text>}
+      {reached.slice(0, 4).map((m) => (
         <View key={m.key} style={s.milestone}>
           <Ionicons name="checkmark-circle" size={20} color={color.fat} accessibilityLabel="Reached" />
           <View style={{ flex: 1 }}>
@@ -581,8 +660,10 @@ function TimelineSheet({ visible, reached, next, onClose }: { visible: boolean; 
   );
 }
 
+type Measurement = Progress['measurements'][number];
+
 /** Values first; tap a row to add today's number, and add your own kinds behind a link. */
-function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onSave: (kind: string, value: number, unit: string) => void }) {
+function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onSave: Submit<{ kind: string; value: number; unit: string }> }) {
   const viewing = useViewing();
   const inches = units.unit === 'lb';
   const [open, setOpen] = useState<string | null>(null);
@@ -592,29 +673,44 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
   const [newUnit, setNewUnit] = useState('');
   const [newValue, setNewValue] = useState('');
   const [tried, setTried] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   // Body measurements are stored in cm and shown in inches if you use pounds; your own ones keep their unit.
-  const shown = (m: Progress['measurements'][number]) => (m.custom || m.unit !== 'cm' ? m.unit : inches ? 'in' : 'cm');
-  const show = (m: Progress['measurements'][number], v: number) => String(Math.round((!m.custom && m.unit === 'cm' && inches ? v / CM_PER_IN : v) * 10) / 10);
+  const shown = (m: Measurement) => (m.custom || m.unit !== 'cm' ? m.unit : inches ? 'in' : 'cm');
+  const show = (m: Measurement, v: number) => String(Math.round((!m.custom && m.unit === 'cm' && inches ? v / CM_PER_IN : v) * 10) / 10);
   const list = p.measurements.filter((m) => !viewing || m.latest);
 
-  const commit = (m: Progress['measurements'][number]) => {
+  /** Save, and only close the entry once it went through; otherwise keep what was typed and say why. */
+  const run = async (value: { kind: string; value: number; unit: string }, after: () => void) => {
+    setSaving(true);
+    setFailed(null);
+    const why = await onSave(value);
+    setSaving(false);
+    if (why) setFailed(why);
+    else {
+      after();
+      setTried(false);
+    }
+  };
+  const commit = (m: Measurement) => {
     const v = readNumber(text);
     if (v === null) return setTried(true);
-    onSave(m.kind, !m.custom && m.unit === 'cm' && inches ? v * CM_PER_IN : v, m.custom ? m.unit : 'cm');
-    setOpen(null);
-    setText('');
-    setTried(false);
+    void run({ kind: m.kind, value: !m.custom && m.unit === 'cm' && inches ? v * CM_PER_IN : v, unit: m.custom ? m.unit : 'cm' }, () => {
+      setOpen(null);
+      setText('');
+    });
   };
   const addNew = () => {
     const v = readNumber(newValue);
     if (!newKind.trim() || !newUnit.trim() || v === null) return setTried(true);
-    onSave(newKind.trim(), v, newUnit.trim());
-    setNewKind('');
-    setNewUnit('');
-    setNewValue('');
-    setAdding(false);
-    setTried(false);
+    void run({ kind: newKind.trim(), value: v, unit: newUnit.trim() }, () => {
+      setNewKind('');
+      setNewUnit('');
+      setNewValue('');
+      setAdding(false);
+    });
   };
+  const failure = failed && <Text style={s.fieldProblem} accessibilityLiveRegion="assertive">Couldn’t save. {failed}</Text>;
 
   return (
     <View style={s.card}>
@@ -639,7 +735,7 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
               <View style={s.row}>{summary}</View>
             ) : (
               <Pressable
-                onPress={() => { setOpen(isOpen ? null : m.kind); setText(''); setTried(false); }}
+                onPress={() => { setOpen(isOpen ? null : m.kind); setText(''); setTried(false); setFailed(null); }}
                 style={[s.row, s.measureRow]}
                 accessibilityHint={isOpen ? 'Closes the entry' : `Adds today’s ${m.kind}`}
                 accessibilityState={{ expanded: isOpen }}
@@ -662,18 +758,19 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
                     style={[s.input, { flex: 1 }, tried && readNumber(text) === null && { borderColor: color.over }]}
                     accessibilityLabel={`${m.kind} today in ${shown(m)}`}
                   />
-                  <Pressable onPress={() => commit(m)} style={s.small}>
-                    <Text style={s.smallText}>Save</Text>
+                  <Pressable onPress={() => commit(m)} disabled={saving} style={[s.small, saving && { opacity: 0.5 }]} accessibilityState={{ busy: saving }}>
+                    <Text style={s.smallText}>{saving ? 'Saving…' : 'Save'}</Text>
                   </Pressable>
                 </View>
                 {tried && readNumber(text) === null && <Text style={s.fieldProblem}>Enter a number, like 82.5.</Text>}
+                {failure}
               </>
             )}
           </View>
         );
       })}
       {!viewing && !adding && (
-        <Pressable onPress={() => { setAdding(true); setOpen(null); setTried(false); }} hitSlop={8} style={s.linkHit}>
+        <Pressable onPress={() => { setAdding(true); setOpen(null); setTried(false); setFailed(null); }} hitSlop={8} style={s.linkHit}>
           <Text style={s.link}>+ Track something else</Text>
         </Pressable>
       )}
@@ -685,11 +782,12 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
             <TextInput value={newValue} onChangeText={setNewValue} placeholder="Today" placeholderTextColor={color.placeholder} keyboardType="decimal-pad" style={[s.input, { width: 96, textAlign: 'center' }, tried && readNumber(newValue) === null && { borderColor: color.over }]} accessibilityLabel="Today's value" />
           </View>
           {tried && <Text style={s.fieldProblem}>Give it a name, a unit and today’s number.</Text>}
+          {failure}
           <View style={s.row}>
-            <Pressable onPress={addNew} style={[s.small, { flex: 1 }]}>
-              <Text style={s.smallText}>Start tracking</Text>
+            <Pressable onPress={addNew} disabled={saving} style={[s.small, { flex: 1 }, saving && { opacity: 0.5 }]}>
+              <Text style={s.smallText}>{saving ? 'Saving…' : 'Start tracking'}</Text>
             </Pressable>
-            <Pressable onPress={() => { setAdding(false); setTried(false); }} style={[s.quiet, { flex: 1, paddingVertical: space(3) }]}>
+            <Pressable onPress={() => { setAdding(false); setTried(false); setFailed(null); }} style={[s.quiet, { flex: 1, paddingVertical: space(3) }]}>
               <Text style={[s.quietText, { fontSize: textSize.control }]}>Cancel</Text>
             </Pressable>
           </View>
@@ -702,7 +800,7 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  // Group headings: Weight and goal, Food, Training, Recovery and wellbeing, Streaks and recaps.
+  // Group headings: Weight and goal, Food, Training, Recovery and wellbeing, Looking back.
   heading: { ...type.label, marginTop: space(3) },
   problem: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.dangerBg, borderRadius: radius.card, padding: space(4) },
   retry: { ...buttons.small, minHeight: 44 },
@@ -711,7 +809,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   stats: { flexDirection: 'row', gap: space(2) },
-  tile: { flex: 1, backgroundColor: color.raised, borderRadius: radius.input, padding: space(3), gap: 2 },
+  tile: { flex: 1, backgroundColor: color.raised, borderRadius: radius.input, padding: space(3), gap: 2, minHeight: 44 },
   stat: { fontSize: textSize.stat, fontWeight: '800', color: color.iron },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
@@ -721,13 +819,15 @@ const s = StyleSheet.create({
   quietText: { ...buttons.quietText },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   linkHit: { minHeight: 44, justifyContent: 'center' },
-  suggest: { backgroundColor: color.infoBg, borderRadius: radius.row, padding: space(3), gap: space(2), marginTop: space(2) },
+  suggest: { backgroundColor: color.infoBg, borderRadius: radius.row, padding: space(3), gap: space(2), marginTop: space(1) },
+  divided: { borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(3), marginTop: space(1) },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: space(3) },
+  key: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  swatch: { width: 12, height: 12, borderRadius: 4 },
   step: { width: 44, height: 44, borderRadius: radius.pill, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   segments: { flexDirection: 'row', gap: 4 },
   segment: { flex: 1, height: 8, borderRadius: radius.pill },
   iconLine: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  button: { ...buttons.filled, marginTop: space(1) },
-  buttonText: { ...buttons.filledText },
   milestone: { flexDirection: 'row', alignItems: 'center', gap: space(2), paddingVertical: space(1) },
   measureRow: { minHeight: 44 },
   addBox: { gap: space(2), backgroundColor: color.raised, borderRadius: radius.row, padding: space(3) },
