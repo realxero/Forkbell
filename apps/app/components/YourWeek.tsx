@@ -7,6 +7,7 @@ import { planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, type Progra
 import { post, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Chip } from './AmountPicker';
+import { buttons } from '../lib/buttons';
 import { color, radius, space, type, textSize } from '../lib/theme';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -100,7 +101,7 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
           )}
           {error && <Text style={{ color: color.over }}>{error}</Text>}
           <Pressable onPress={save} style={program ? s.primary : s.secondary}>
-            <Text style={program ? s.primaryText : s.link}>Save days</Text>
+            <Text style={program ? s.primaryText : s.secondaryText}>Save days</Text>
           </Pressable>
         </SheetFrame>
       </Modal>
@@ -109,16 +110,17 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   week: { flexDirection: 'row', gap: 4 },
-  day: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: space(2), borderRadius: 12, backgroundColor: color.raised },
+  day: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: space(2), borderRadius: radius.input, backgroundColor: color.raised },
   today: { borderWidth: 1.5, borderColor: color.accent },
   dot: { width: 10, height: 10, borderRadius: 5, marginVertical: 6 },
   name: { fontSize: 10, fontWeight: '700', color: color.iron, textAlign: 'center', paddingHorizontal: 2 },
-  starter: { backgroundColor: color.infoBg, borderRadius: 12, padding: space(3), gap: space(2) },
-  primary: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },
-  secondary: { borderRadius: 10, paddingVertical: space(3), alignItems: 'center', borderWidth: 1, borderColor: color.line },
+  starter: { backgroundColor: color.infoBg, borderRadius: radius.row, padding: space(3), gap: space(2) },
+  primary: { ...buttons.small, minHeight: 44 },
+  primaryText: buttons.smallText,
+  secondary: { ...buttons.quiet, paddingVertical: space(3), minHeight: 44 },
+  secondaryText: { ...buttons.quietText, fontSize: textSize.control },
 });

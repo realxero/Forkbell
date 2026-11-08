@@ -12,9 +12,13 @@ import { useAuth } from '../lib/auth';
 import { Thumb } from './ExercisePicker';
 import { color, radius, space, type } from '../lib/theme';
 
-const FILL: Record<MuscleState, string> = { due: color.track, some: color.accent, good: color.fat, recovering: color.carbs, plenty: color.over };
-/** Some work shows as a paler accent; everything else is solid. */
-const OPACITY: Record<MuscleState, number> = { due: 1, some: 0.45, good: 1, recovering: 1, plenty: 1 };
+// Training has its own scale and never borrows the food plates (yellow carbs,
+// green fat, red over). Amount of work runs empty track -> pale accent -> accent
+// -> iron; a muscle that's recovering takes the rest-timer slate.
+const FILL: Record<MuscleState, string> = { due: color.track, some: color.accent, good: color.accent, recovering: color.restFill, plenty: color.iron };
+const OPACITY: Record<MuscleState, number> = { due: 1, some: 0.4, good: 1, recovering: 1, plenty: 1 };
+/** Recovering also gets a dashed outline, so it doesn't rely on colour alone. */
+const DASH: Partial<Record<MuscleState, string>> = { recovering: '10 8' };
 const LABEL: Record<MuscleState, string> = { due: 'Due', some: 'Some work', good: 'On track', recovering: 'Recovering', plenty: 'Plenty' };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -50,7 +54,7 @@ function piecesOf(view: BodyView): Piece[] {
     .flatMap((p) => p.d.map((d, i) => ({ key: `${p.slug}${i}`, d, m: SLUG_TO_MUSCLE[p.slug] ?? null })));
 }
 
-function Figure({ view, label, fill, opacity, onPick, picked }: { view: BodyView; label: string; fill: (m: MapMuscle) => string; opacity: (m: MapMuscle) => number; onPick: (m: MapMuscle) => void; picked: MapMuscle | null }) {
+function Figure({ view, label, fill, opacity, dash, onPick, picked }: { view: BodyView; label: string; fill: (m: MapMuscle) => string; opacity: (m: MapMuscle) => number; dash: (m: MapMuscle) => string | undefined; onPick: (m: MapMuscle) => void; picked: MapMuscle | null }) {
   const pieces = useMemo(() => piecesOf(view), [view]);
   const [, , w, h] = view.viewBox.split(' ').map(Number);
   // The picked muscle is drawn last so its outline isn't hidden by its neighbours.
@@ -66,8 +70,9 @@ function Figure({ view, label, fill, opacity, onPick, picked }: { view: BodyView
                 d={p.d}
                 fill={fill(p.m)}
                 fillOpacity={opacity(p.m)}
-                stroke={picked === p.m ? color.iron : color.line}
-                strokeWidth={picked === p.m ? 7 : 2}
+                stroke={picked === p.m ? color.iron : dash(p.m) ? color.chalk : color.line}
+                strokeWidth={picked === p.m ? 7 : dash(p.m) ? 5 : 2}
+                strokeDasharray={picked === p.m ? undefined : dash(p.m)}
                 strokeLinejoin="round"
                 onPress={() => onPick(p.m!)}
               />
@@ -83,7 +88,7 @@ function Figure({ view, label, fill, opacity, onPick, picked }: { view: BodyView
 }
 
 /**
- * Muscles this week on the Train tab: a front and back figure coloured by
+ * Muscles this week on the Progress tab: a front and back figure coloured by
  * how much each muscle got and how recently. Tap a muscle for what that means
  * and exercises for it; the line underneath says what to train next.
  */
@@ -119,13 +124,21 @@ export function BodyMap() {
     <View style={s.card}>
       <Text style={type.title}>Muscles this week</Text>
       <View style={s.figures}>
-        <Figure view={body.front} label="Front" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} onPick={setPicked} picked={picked} />
-        <Figure view={body.back} label="Back" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} onPick={setPicked} picked={picked} />
+        <Figure view={body.front} label="Front" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} dash={(m) => DASH[by[m].state]} onPick={setPicked} picked={picked} />
+        <Figure view={body.back} label="Back" fill={(m) => FILL[by[m].state]} opacity={(m) => OPACITY[by[m].state]} dash={(m) => DASH[by[m].state]} onPick={setPicked} picked={picked} />
+      </View>
+      {/* VoiceOver can't read colours off the figures, so each muscle is a button here instead. */}
+      <View style={s.hidden} accessible={false} importantForAccessibility="yes">
+        {stats.map((x) => (
+          <Pressable key={x.muscle} onPress={() => setPicked(x.muscle)} accessibilityLabel={`${cap(x.muscle)}: ${LABEL[x.state]}`} accessibilityHint="Shows what it needs and exercises for it" style={s.hiddenItem}>
+            <Text>{cap(x.muscle)}</Text>
+          </Pressable>
+        ))}
       </View>
       <View style={s.legend}>
         {(['due', 'some', 'good', 'recovering', 'plenty'] as MuscleState[]).map((k) => (
           <View key={k} style={s.key}>
-            <View style={[s.swatch, { backgroundColor: FILL[k], opacity: OPACITY[k] }]} />
+            <View style={[s.swatch, { backgroundColor: FILL[k], opacity: OPACITY[k] }, DASH[k] && s.swatchDashed]} />
             <Text style={type.small}>{LABEL[k]}</Text>
           </View>
         ))}
@@ -180,11 +193,15 @@ export function BodyMap() {
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   figures: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: space(3), width: '100%', maxWidth: 360, alignSelf: 'center' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: space(3), justifyContent: 'center' },
   key: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   swatch: { width: 12, height: 12, borderRadius: 4, borderWidth: 1, borderColor: color.line },
+  swatchDashed: { borderStyle: 'dashed', borderColor: color.chalk, borderWidth: 2 },
+  // Clipped to a point, so it's invisible but still read by VoiceOver and TalkBack (zero opacity would hide it from them too).
+  hidden: { position: 'absolute', left: 0, top: 0, width: 1, height: 1, overflow: 'hidden' },
+  hiddenItem: { width: 1, height: 1 },
   dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: color.line },
   sheet: { gap: space(2) },
   exRow: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: 4 },

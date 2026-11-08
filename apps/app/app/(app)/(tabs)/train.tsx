@@ -1,10 +1,11 @@
 import { TrainReadiness } from '../../../components/ReadinessCard';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, todayLocal, weekStart, weeklyGaps, type Program, type Workout, type WorkoutSummary, instant } from '@forkbell/shared';
+import { addDays, todayLocal, type Program, type Workout, type WorkoutSummary, instant } from '@forkbell/shared';
 import { ApiError } from '../../../lib/api';
 import { cachedGet } from '../../../lib/sync';
 import { startWorkout } from '../../../lib/actions';
@@ -12,64 +13,88 @@ import { LogPastWorkout } from '../../../components/LogPastWorkout';
 import { formatDuration, useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { YourWeek } from '../../../components/YourWeek';
-import { BodyMap } from '../../../components/BodyMap';
 import { PlateCalculator } from '../../../components/PlateCalculator';
 import { useAuth } from '../../../lib/auth';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
-import { color, space, type, textSize } from '../../../lib/theme';
+import { color, radius, space, type, textSize } from '../../../lib/theme';
 import { SkeletonRows } from '../../../components/Skeleton';
 import { buttons } from '../../../lib/buttons';
 import { QUICK_BELL_ROOM } from '../../../components/QuickBell';
+
+const PAGE = 20;
 
 function dayName(date: string) {
   const today = todayLocal();
   if (date === today) return 'Today';
   if (date === addDays(today, -1)) return 'Yesterday';
   const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const sameYear = y === Number(today.slice(0, 4));
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
 }
+
+/** Plain words for a failed request: what went wrong and what to do. */
+function problem(e: unknown) {
+  if (e instanceof ApiError) return e.status >= 500 ? 'Your server ran into a problem. Try again in a moment.' : 'Your server turned the request down. Pull to refresh, then try again.';
+  return 'Couldn’t reach your server. Check your connection, then try again.';
+}
+
+type Starting = 'routine' | 'empty' | null;
 
 export default function Train() {
   const units = useUnit();
+  const { me } = useAuth();
   const [open, setOpen] = useState<Workout | null>(null);
   const [program, setProgram] = useState<Program | null>(null);
+  const [hasPrograms, setHasPrograms] = useState(false);
   const [history, setHistory] = useState<WorkoutSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
+  const [more, setMore] = useState(false);
+  const [limit, setLimit] = useState(PAGE);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<{ from: Exclude<Starting, null>; message: string } | null>(null);
+  const [starting, setStarting] = useState<Starting>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
-  const [gaps, setGaps] = useState<string[]>([]);
   const [logPast, setLogPast] = useState(false);
+  const [plates, setPlates] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   const load = useCallback(async () => {
     try {
       const [o, p, h] = await Promise.all([
         cachedGet<{ workout: Workout | null }>('/api/workouts/open'),
         cachedGet<{ programs: Program[] }>('/api/programs'),
-        cachedGet<{ workouts: WorkoutSummary[] }>('/api/workouts?limit=20'),
+        cachedGet<{ workouts: WorkoutSummary[] }>(`/api/workouts?limit=${limit}`),
       ]);
       setOpen(o.workout);
       setProgram(p.programs.find((x) => x.active) ?? null);
+      setHasPrograms(p.programs.length > 0);
       setHistory(h.workouts.filter((w) => w.finishedAt));
-      setError(null);
-      // Not essential: an older server or no connection just means no card.
-      const today = todayLocal();
-      cachedGet<{ muscles: Record<string, number>; workouts: number }>(`/api/workouts/muscles?from=${weekStart(today)}&to=${today}`).then(
-        (m) => setGaps(weeklyGaps(m.muscles, m.workouts, today)),
-        () => setGaps([]),
-      );
+      setMore(h.workouts.length >= limit);
+      setLoadError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setLoadError(problem(e));
     }
-  }, []);
+  }, [limit]);
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
 
-  const start = async (routineId?: string) => {
-    setStarting(true);
+  // The running workout's clock: tick while this tab is showing.
+  useFocusEffect(
+    useCallback(() => {
+      if (!open) return;
+      setNow(Date.now());
+      const t = setInterval(() => setNow(Date.now()), 30_000);
+      return () => clearInterval(t);
+    }, [open]),
+  );
+  useEffect(() => setStartError(null), [pick]);
+
+  const start = async (from: Exclude<Starting, null>, routineId?: string) => {
+    setStarting(from);
+    setStartError(null);
     try {
       const w = await startWorkout(todayLocal(), routineId);
       router.push({ pathname: '/workout', params: { id: w.id } });
@@ -77,16 +102,25 @@ export default function Train() {
       // Already one going: open that instead.
       const id = e instanceof ApiError && e.status === 409 ? open?.id : null;
       if (id) router.push({ pathname: '/workout', params: { id } });
-      else setError(e instanceof Error ? e.message : String(e));
+      else setStartError({ from, message: `Couldn’t start the workout. ${problem(e)}` });
     } finally {
-      setStarting(false);
+      setStarting(null);
     }
   };
 
   const next = program?.routines.find((r) => r.id === (pick ?? program.nextRoutineId)) ?? null;
+  const busy = starting !== null;
 
-  const [plates, setPlates] = useState(false);
-  const { me: meForPlates } = useAuth();
+  const startProblem = (from: Exclude<Starting, null>, retry: () => void) =>
+    startError?.from === from && (
+      <View style={s.problem} accessibilityLiveRegion="polite">
+        <Text style={[type.small, { flex: 1, color: color.iron }]}>{startError.message}</Text>
+        <Pressable onPress={retry} style={s.retry}>
+          <Text style={buttons.smallText}>Try again</Text>
+        </Pressable>
+      </View>
+    );
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <ScrollView
@@ -96,9 +130,6 @@ export default function Train() {
         <View style={s.head}>
           <Text style={type.pageTitle}>Train</Text>
           <View style={{ flexDirection: 'row', gap: space(4) }}>
-            <Pressable onPress={() => setPlates(true)} hitSlop={10} accessibilityLabel="Plate calculator">
-              <Text style={s.link}>Plates</Text>
-            </Pressable>
             <Pressable onPress={() => router.push('/stretches')} hitSlop={10}>
               <Text style={s.link}>Stretches</Text>
             </Pressable>
@@ -107,18 +138,36 @@ export default function Train() {
             </Pressable>
           </View>
         </View>
-        {error && <Text style={s.error}>{error}</Text>}
-        {!history && !error && <SkeletonRows rows={4} />}
+
+        {loadError && (
+          <View style={s.problem} accessibilityLiveRegion="polite">
+            <Ionicons name="cloud-offline-outline" size={22} color={color.over} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[type.body, { fontWeight: '700' }]}>Couldn’t load your training</Text>
+              <Text style={type.small}>{loadError}</Text>
+            </View>
+            <Pressable onPress={() => void load()} style={s.retry}>
+              <Text style={buttons.smallText}>Try again</Text>
+            </Pressable>
+          </View>
+        )}
+        {!history && !loadError && <SkeletonRows rows={4} />}
 
         {open ? (
-          <Pressable onPress={() => router.push({ pathname: '/workout', params: { id: open.id } })} style={[s.card, s.live]}>
-            <Text style={[type.small, { color: color.chalk }]}>In progress · {formatDuration((Date.now() - instant(open.startedAt)) / 1000)}</Text>
+          <Pressable onPress={() => router.push({ pathname: '/workout', params: { id: open.id } })} style={[s.card, s.live]} accessibilityHint="Opens the workout you’re in">
+            <Text style={[type.small, type.number, { color: color.chalk }]}>In progress · {formatDuration(Math.max(0, now - instant(open.startedAt)) / 1000)}</Text>
             <Text style={[type.title, { color: color.chalk }]}>{open.name}</Text>
-            <Text style={[s.buttonText, { marginTop: space(2) }]}>Resume workout ›</Text>
+            <View style={s.resume}>
+              <Text style={s.buttonText}>Resume workout</Text>
+              <Ionicons name="chevron-forward" size={18} color={color.chalk} />
+            </View>
           </Pressable>
         ) : program && next ? (
           <View style={s.card}>
-            <Text style={type.small}>{program.name}</Text>
+            <Pressable onPress={() => router.push('/programs')} hitSlop={8} style={s.programLink} accessibilityLabel={`${program.name}. Programs`}>
+              <Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>{program.name}</Text>
+              <Ionicons name="chevron-forward" size={14} color={color.accent} />
+            </Pressable>
             <Text style={type.title}>{pick ? next.name : `Next up: ${next.name}`}</Text>
             <Text style={type.small} numberOfLines={2}>{next.exercises.map((e) => e.exercise.name).join(' · ') || 'No exercises yet. Edit this day to add some.'}</Text>
             {program.routines.length > 1 && (
@@ -128,90 +177,103 @@ export default function Train() {
                 ))}
               </View>
             )}
-            <Pressable onPress={() => start(next.id)} disabled={starting} style={[s.button, starting && { opacity: 0.5 }]}>
-              <Text style={s.buttonText}>Start {next.name}</Text>
+            <Pressable onPress={() => start('routine', next.id)} disabled={busy} style={[s.button, busy && { opacity: 0.5 }]} accessibilityState={{ busy: starting === 'routine', disabled: busy }}>
+              <Text style={s.buttonText}>{starting === 'routine' ? 'Starting…' : `Start ${next.name}`}</Text>
             </Pressable>
+            {startProblem('routine', () => start('routine', next.id))}
           </View>
         ) : history ? (
           <View style={s.card}>
-            <Text style={type.title}>Pick a program</Text>
-            <Text style={type.body}>Choose a starter plan and Forkbell suggests the weights for each session, adding a little when you hit the top of your rep range.</Text>
+            <Text style={type.title}>{hasPrograms ? 'Choose a program' : 'Pick a program'}</Text>
+            <Text style={type.body}>
+              {hasPrograms
+                ? 'None of your programs is running. Choose one and Forkbell lines up each session and suggests the weights.'
+                : 'Choose a starter plan and Forkbell suggests the weights for each session, adding a little when you hit the top of your rep range.'}
+            </Text>
             <Pressable onPress={() => router.push('/programs')} style={s.button}>
-              <Text style={s.buttonText}>See programs</Text>
+              <Text style={s.buttonText}>{hasPrograms ? 'Choose a program' : 'See programs'}</Text>
             </Pressable>
           </View>
         ) : null}
 
-        <TrainingCheckInCard />
-        <TrainReadiness />
+        {history && (
+          <View style={s.tools}>
+            {!open && (
+              <Pressable onPress={() => start('empty')} disabled={busy} style={[s.tool, busy && { opacity: 0.5 }]} accessibilityLabel="Start an empty workout" accessibilityState={{ busy: starting === 'empty', disabled: busy }}>
+                <Ionicons name="add-circle-outline" size={22} color={color.iron} />
+                <Text style={s.toolText}>{starting === 'empty' ? 'Starting…' : 'Empty workout'}</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => setPlates(true)} style={s.tool} accessibilityLabel="Plate calculator">
+              <Ionicons name="barbell-outline" size={22} color={color.iron} />
+              <Text style={s.toolText}>Plates</Text>
+            </Pressable>
+            <Pressable onPress={() => setLogPast(true)} style={s.tool} accessibilityLabel="Log a past workout">
+              <Ionicons name="time-outline" size={22} color={color.iron} />
+              <Text style={s.toolText}>Log past</Text>
+            </Pressable>
+          </View>
+        )}
+        {startProblem('empty', () => start('empty'))}
+
         <YourWeek
           program={program}
           finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
           onChanged={load}
         />
-        <BodyMap />
+        <TrainingCheckInCard />
+        <TrainReadiness />
 
-        {!open && (
-          <View style={s.row}>
-            <Pressable onPress={() => start()} disabled={starting} style={s.secondary}>
-              <Text style={s.link}>Start an empty workout</Text>
-            </Pressable>
-            {program && (
-              <Pressable onPress={() => router.push('/programs')} style={s.secondary}>
-                <Text style={s.link}>Programs</Text>
-              </Pressable>
-            )}
-          </View>
-        )}
-
-        {gaps.length > 0 && (
-          <View style={s.week} accessibilityRole="summary">
-            <Text style={[type.body, { fontWeight: '700' }]}>This week</Text>
-            <Text style={type.body}>
-              Nothing for your {gaps.length === 1 ? gaps[0] : `${gaps.slice(0, -1).join(', ')} or ${gaps.at(-1)}`} yet. A session or a few sets before Sunday keeps things balanced.
-            </Text>
-          </View>
-        )}
-
-        {history && history.length > 0 && <Text style={s.section}>History</Text>}
+        {history && history.length > 0 && <Text style={s.section} accessibilityRole="header">History</Text>}
         {history?.map((w) => (
-          <Pressable key={w.id} onPress={() => router.push({ pathname: '/workout', params: { id: w.id } })} style={({ pressed }) => [s.item, pressed && { opacity: 0.7 }]}>
+          <Pressable
+            key={w.id}
+            onPress={() => router.push({ pathname: '/workout', params: { id: w.id } })}
+            style={({ pressed }) => [s.item, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityHint="Opens the workout to change its sets, day or time"
+          >
             <View style={{ flex: 1 }}>
               <Text style={type.body}>{w.name}</Text>
-              <Text style={type.small}>
+              <Text style={[type.small, type.number]}>
                 {dayName(w.date)} · {w.sets} {w.sets === 1 ? 'set' : 'sets'}{w.volumeKg ? ` · ${units.label(w.volumeKg)}` : ''}
                 {w.finishedAt ? ` · ${formatDuration((instant(w.finishedAt) - instant(w.startedAt)) / 1000)}` : ''}
               </Text>
             </View>
-            <Text style={type.small}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
           </Pressable>
         ))}
+        {history && more && (
+          <Pressable onPress={() => setLimit((n) => n + PAGE)} style={s.more}>
+            <Text style={s.link}>Show more</Text>
+          </Pressable>
+        )}
         {history && history.length === 0 && !open && <Text style={type.small}>Finished workouts show up here.</Text>}
-        <Pressable onPress={() => setLogPast(true)} style={{ alignSelf: 'center', padding: space(3) }} accessibilityRole="button">
-          <Text style={s.link}>+ Log a past workout</Text>
-        </Pressable>
-        <Text style={[type.small, { textAlign: 'center' }]}>Open any workout in History to change its sets, day or time.</Text>
       </ScrollView>
       <LogPastWorkout visible={logPast} program={program} onClose={() => setLogPast(false)} />
-      <PlateCalculator visible={plates} weightKg={null} exercise={null} unit={meForPlates?.weightUnit ?? 'lb'} onClose={() => setPlates(false)} />
+      <PlateCalculator visible={plates} weightKg={null} exercise={null} unit={me?.weightUnit ?? 'lb'} onClose={() => setPlates(false)} />
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  week: { backgroundColor: color.infoBg, borderRadius: 14, padding: space(4), gap: space(1) },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
-  error: { ...type.body, color: color.over },
-  card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(2) },
+  link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
+  problem: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.dangerBg, borderRadius: radius.card, padding: space(4) },
+  retry: { ...buttons.small, minHeight: 44 },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   live: { backgroundColor: color.iron },
+  resume: { flexDirection: 'row', alignItems: 'center', gap: space(1), marginTop: space(2) },
+  programLink: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   button: { ...buttons.filled, marginTop: space(2) },
   buttonText: { ...buttons.filledText },
-  row: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' },
-  secondary: { paddingVertical: space(2) },
-  section: { ...type.small, fontWeight: '700', marginTop: space(3) },
-  item: { flexDirection: 'row', alignItems: 'center', backgroundColor: color.card, borderRadius: 10, padding: space(3), gap: space(2) },
+  tools: { flexDirection: 'row', gap: space(2) },
+  tool: { ...buttons.quiet, flex: 1, gap: space(1), paddingVertical: space(3), paddingHorizontal: space(2) },
+  toolText: { ...buttons.quietText, fontSize: textSize.control },
+  section: { ...type.label, marginTop: space(3) },
+  item: { flexDirection: 'row', alignItems: 'center', backgroundColor: color.card, borderRadius: radius.row, padding: space(3), gap: space(2), minHeight: 44 },
+  more: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: space(3) },
 });
