@@ -1,0 +1,145 @@
+name: iOS screenshots
+# The real app in the iOS Simulator, signed in to a throwaway server with a
+# month of sample data, photographed on every tab in light mode, dark mode and
+# with large text. Nothing here touches a real server or real data.
+# Run it from the Actions tab, or: gh workflow run ios-screenshots.yml --ref dev
+on:
+  # GitHub only offers the Run button once this file is on main, so a change to
+  # the screenshot setup on dev runs it too.
+  push:
+    branches: [dev]
+    paths: [e2e/screenshots/**, .github/workflows/ios-screenshots.yml]
+  workflow_dispatch:
+    inputs:
+      device:
+        description: Simulator to use (a name from `xcrun simctl list devices`; empty picks the newest iPhone Pro)
+        required: false
+        default: ''
+
+concurrency:
+  group: ios-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      PGDATA: ${{ runner.temp }}/pg
+      DATABASE_ADMIN_URL: postgres://forkbell_admin@localhost:5432/forkbell
+      DATABASE_URL: postgres://forkbell_app:shots-app@localhost:5432/forkbell
+      APP_DB_PASSWORD: shots-app
+      SERVER: http://localhost:3999
+      SEED_USERNAME: sam
+      SEED_PASSWORD: screenshots-only-0123
+      OUT: ${{ runner.temp }}/screenshots
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, check-latest: true, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+
+      # A throwaway Postgres, migrated, and a Forkbell server with passwords only.
+      - name: Database
+        run: |
+          brew install postgresql@17 >/dev/null
+          PG="$(brew --prefix postgresql@17)/bin"
+          "$PG/initdb" -D "$PGDATA" -U forkbell_admin --auth=trust >/dev/null
+          "$PG/pg_ctl" -D "$PGDATA" -l "$RUNNER_TEMP/pg.log" -w start
+          "$PG/createdb" -U forkbell_admin forkbell
+          pnpm migrate
+      - name: Server, with sample data
+        working-directory: apps/server
+        env:
+          PORT: 3999
+          PUBLIC_URL: http://localhost:3999
+          SESSION_SECRET: screenshots-session-secret-0123456789abcdef
+          PASSWORD_LOGIN: 'on'
+          PASSWORD_SIGNUP: open
+          PREFETCH_PICTURES: 'off'
+        run: |
+          nohup node src/index.ts > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf "$SERVER/healthz" >/dev/null && break; sleep 1; done
+          curl -sf "$SERVER/healthz" >/dev/null || { cat "$RUNNER_TEMP/server.log"; exit 1; }
+          BASE_URL="$SERVER" node ../../e2e/screenshots/seed.mjs
+
+      # The same native project the iOS workflow builds, but for the Simulator.
+      - name: Use the newest Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$X" ]; then sudo xcode-select -s "$X"; fi
+          xcodebuild -version
+      - name: Generate the native iOS project
+        working-directory: apps/app
+        run: |
+          CI=1 npx expo prebuild --platform ios --clean
+          # This build talks to the throwaway server over plain http on this Mac.
+          plutil -replace NSAppTransportSecurity -json '{"NSAllowsArbitraryLoads":true,"NSAllowsLocalNetworking":true}' ios/Forkbell/Info.plist
+      - name: Build for the Simulator
+        working-directory: apps/app/ios
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Forkbell.xcworkspace -scheme Forkbell -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/build" CODE_SIGNING_ALLOWED=NO build | tail -20
+
+      - name: Start the Simulator
+        id: sim
+        run: |
+          NAME="${{ inputs.device }}"
+          if [ -z "$NAME" ]; then
+            NAME=$(xcrun simctl list devices available -j | node -e '
+              const d = JSON.parse(require("fs").readFileSync(0, "utf8")).devices;
+              const ios = Object.keys(d).filter((k) => k.includes("iOS")).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+              const list = d[ios.at(-1)] ?? [];
+              const pick = list.filter((x) => /^iPhone \d+ Pro$/.test(x.name)).at(-1) ?? list.find((x) => x.name.startsWith("iPhone"));
+              console.log(pick.name);')
+          fi
+          UDID=$(xcrun simctl list devices available -j | node -e "
+            const d = JSON.parse(require('fs').readFileSync(0, 'utf8')).devices;
+            const all = Object.entries(d).filter(([k]) => k.includes('iOS')).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).flatMap(([, v]) => v);
+            console.log(all.filter((x) => x.name === process.argv[1]).at(-1).udid);" "$NAME")
+          echo "Using $NAME ($UDID)"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          # A clean status bar: 9:41, full battery, full signal.
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          xcrun simctl install "$UDID" "$RUNNER_TEMP/build/Build/Products/Release-iphonesimulator/Forkbell.app"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Photograph every tab
+        env:
+          UDID: ${{ steps.sim.outputs.udid }}
+          MAESTRO_CLI_NO_ANALYTICS: '1'
+        run: |
+          mkdir -p "$OUT"
+          shoot() {
+            maestro --device "$UDID" test -e OUT="$OUT" -e MODE="$1" e2e/screenshots/capture.yaml || echo "::warning::some $1 screens were missed"
+          }
+          xcrun simctl ui "$UDID" appearance light
+          maestro --device "$UDID" test -e SERVER="$SERVER" -e USERNAME="$SEED_USERNAME" -e PASSWORD="$SEED_PASSWORD" e2e/screenshots/signin.yaml
+          shoot light
+          xcrun simctl ui "$UDID" appearance dark
+          shoot dark
+          xcrun simctl ui "$UDID" appearance light
+          xcrun simctl ui "$UDID" content_size accessibility-large
+          shoot large-text
+          xcrun simctl ui "$UDID" content_size large
+          ls "$OUT"
+
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-screenshots
+          path: |
+            ${{ runner.temp }}/screenshots
+            ${{ runner.temp }}/server.log
+            ~/.maestro/tests
+          if-no-files-found: warn

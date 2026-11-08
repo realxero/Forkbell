@@ -1,0 +1,31 @@
+# Sign in the way a person would: server address, then username and password.
+# The account comes from seed.mjs.
+appId: com.realxero.forkbell
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "forkbell.example.com"
+    timeout: 60000
+- tapOn: "forkbell.example.com"
+- inputText: ${SERVER}
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Username"
+    timeout: 30000
+- tapOn: "Username"
+- inputText: ${USERNAME}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Train"
+    timeout: 60000
+# Anything iOS asks on first open (notifications, Health): say no and carry on.
+- tapOn:
+    text: "Don.t Allow"
+    optional: true
+- tapOn:
+    text: "Not Now"
+    optional: true

@@ -1,0 +1,62 @@
+# Every tab, plus the states that only show when you do something (the goal
+# sheet, with and without the keyboard). Run once per look: MODE names the
+# files (light, dark, large-text) and OUT is the folder they go in.
+appId: com.realxero.forkbell
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Train"
+    timeout: 60000
+- tapOn:
+    text: "Don.t Allow"
+    optional: true
+- waitForAnimationToEnd
+
+# Food
+- takeScreenshot: ${OUT}/${MODE}-01-food
+- scroll
+- takeScreenshot: ${OUT}/${MODE}-02-food-lower
+
+# Train
+- tapOn: "Train"
+- waitForAnimationToEnd
+- takeScreenshot: ${OUT}/${MODE}-03-train
+- scroll
+- takeScreenshot: ${OUT}/${MODE}-04-train-lower
+
+# Progress, top to bottom, with the goal sheet on the way
+- tapOn: "Progress"
+- waitForAnimationToEnd
+- takeScreenshot: ${OUT}/${MODE}-05-progress
+- scrollUntilVisible:
+    element: "Edit goal"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: ${OUT}/${MODE}-06-progress-goal
+- tapOn: "Edit goal"
+- waitForAnimationToEnd
+- takeScreenshot: ${OUT}/${MODE}-07-goal-sheet
+- tapOn:
+    text: "Goal weight in.*"
+- waitForAnimationToEnd
+- takeScreenshot: ${OUT}/${MODE}-08-goal-sheet-keyboard
+- tapOn: "Cancel"
+- waitForAnimationToEnd
+- scroll
+- takeScreenshot: ${OUT}/${MODE}-09-progress-lower
+- scroll
+- takeScreenshot: ${OUT}/${MODE}-10-progress-lower-2
+- scroll
+- takeScreenshot: ${OUT}/${MODE}-11-progress-lower-3
+
+# Bell (off on this server: no AI key)
+- tapOn: "Bell"
+- waitForAnimationToEnd
+- takeScreenshot: ${OUT}/${MODE}-12-bell
+
+# Settings
+- tapOn: "Settings"
+- waitForAnimationToEnd
+- takeScreenshot: ${OUT}/${MODE}-13-settings
+- scroll
+- takeScreenshot: ${OUT}/${MODE}-14-settings-lower
