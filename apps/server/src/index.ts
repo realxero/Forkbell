@@ -1,4 +1,5 @@
 import { Hono, type Context } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { serve } from '@hono/node-server';
@@ -43,6 +44,14 @@ app.use('*', async (c, next) => {
   await next();
   c.header('x-forkbell-version', BUILD.version + (BUILD.commit ? `+${BUILD.commit.slice(0, 7)}` : ''));
 });
+// Bodies are read whole before they're checked, so cap their size first: sign-in
+// takes a few fields; the API's biggest is a food-history import (up to 20,000
+// lines) or a photo of about 4 MB sent as text.
+const tooBig = (c: Context) => c.json({ error: 'That’s more than the server takes in one go.' }, 413);
+app.use('/auth/*', bodyLimit({ maxSize: 64 * 1024, onError: tooBig }));
+app.use('/api/*', bodyLimit({ maxSize: 16 * 1024 * 1024, onError: tooBig }));
+app.use('/mcp/*', bodyLimit({ maxSize: 16 * 1024 * 1024, onError: tooBig }));
+app.use('/mcp', bodyLimit({ maxSize: 16 * 1024 * 1024, onError: tooBig }));
 // Only needed in development, when Expo's web server runs on another port.
 if (env.appUrl !== env.publicUrl) {
   app.use('/api/*', cors({ origin: env.appUrl, credentials: true }));

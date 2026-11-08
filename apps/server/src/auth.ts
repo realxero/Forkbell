@@ -7,12 +7,16 @@ import type { Database } from '@forkbell/db';
 import { BUILD } from '@forkbell/shared';
 import { z } from 'zod';
 import { env } from './env.ts';
+import { perWindow } from './limit.ts';
 import { USERNAME, decoyHash, hashPassword, lockedFor, noteFailure, noteSuccess, passwordProblem, verifyPassword } from './password.ts';
 
 /** userId: who is signed in. profileId: whose data this request is about (theirs, or someone who shared with them). */
 export type AppEnv = { Variables: { userId: string; profileId: string; tokenHash: string } };
 
 const COOKIE = 'fb_session';
+const SSO_COOKIE = 'fb_sso';
+// Each new account costs a password hash and a row: 10 per address per hour.
+const signups = perWindow(10, 60 * 60_000);
 const NATIVE_REDIRECT = 'forkbell://auth';
 /** Shortcut keys start with this, and only work on /api/shortcuts. */
 export const SHORTCUT_PREFIX = 'fbk_';
@@ -189,6 +193,7 @@ export function authRoutes(db: Database) {
     if (!USERNAME.test(username)) return c.json({ error: 'Usernames are 3 to 32 letters, numbers, dots, dashes or underscores.' }, 400);
     const problem = passwordProblem(password, username);
     if (problem) return c.json({ error: problem }, 400);
+    if (!signups.take(ip)) return c.json({ error: 'Too many new accounts from here. Try again in an hour.' }, 429);
     const [row] = await db.execute<{ id: string | null }>(sql`select auth_password_signup(${username}, ${await hashPassword(password)}, ${name || username}) as id`);
     if (!row?.id) return c.json({ error: 'That username is taken. Pick another.' }, 409);
     return finish(c, platform, await startSession(db, row.id, 'password', describeDevice(c.req.header('user-agent'), platform)));
@@ -202,6 +207,9 @@ export function authRoutes(db: Database) {
     const state = oidc.randomState();
     const platform = c.req.query('platform') === 'native' ? 'native' : 'web';
     pending.set(state, { verifier, platform, returnTo: nativeReturn(c.req.query('redirect')), expires: Date.now() + 10 * 60_000 });
+    // The browser that starts signing in has to be the one that finishes it, so a
+    // finished sign-in link someone else sends you can't sign you in as them.
+    setCookie(c, SSO_COOKIE, state, { httpOnly: true, secure: env.secureCookies, sameSite: 'Lax', path: '/auth', maxAge: 10 * 60 });
     const url = oidc.buildAuthorizationUrl(config, {
       redirect_uri: callbackUrl,
       scope: 'openid profile email',
@@ -218,6 +226,9 @@ export function authRoutes(db: Database) {
     const login = pending.get(state);
     pending.delete(state);
     if (!login || login.expires < Date.now()) return c.text('This sign-in link expired. Go back to Forkbell and sign in again.', 400);
+    const started = getCookie(c, SSO_COOKIE) ?? '';
+    deleteCookie(c, SSO_COOKIE, { path: '/auth' });
+    if (!sameSecret(started, state)) return c.text('This sign-in was started somewhere else. Go back to Forkbell and sign in again.', 400);
 
     const config = await oidcConfig();
     // Rebuild the URL from PUBLIC_URL: behind a reverse proxy the request's own host is internal.
