@@ -69,7 +69,7 @@ export default function Sharing() {
                 <Text style={[type.body, { fontWeight: '700' }]}>{p.name}</Text>
                 <Text style={type.small}>Can {describe(p.permissions)}.</Text>
                 <View style={s.row}>
-                  <Pressable onPress={() => { setViewing({ id: p.personId, name: p.name }); router.replace('/'); }}><Text style={s.link}>View {p.name}’s data</Text></Pressable>
+                  <Pressable onPress={() => { setViewing({ id: p.personId, name: p.name, permissions: p.permissions }); router.replace('/'); }}><Text style={s.link}>View {p.name}’s data</Text></Pressable>
                   <Pressable onPress={async () => (await confirm(`Stop seeing ${p.name}’s data?`, 'They can invite you again later.', 'Stop')) && run(() => del(`/api/shares/${p.shareId}`))}>
                     <Text style={[s.link, { color: color.over }]}>Stop seeing</Text>
                   </Pressable>

@@ -1,6 +1,12 @@
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { color, type, textSize } from '../lib/theme';
+
+/**
+ * How much rings grow with the phone's text size, so the numbers inside them
+ * still fit at large sizes (up to half as big again).
+ */
+export const ringScale = (fontScale: number) => Math.min(Math.max(fontScale, 1), 1.5);
 
 /** A progress ring. Past 100% it turns red and keeps the full circle. */
 export function Ring({
@@ -9,6 +15,7 @@ export function Ring({
   size,
   stroke,
   tint,
+  label,
   children,
 }: {
   value: number;
@@ -16,6 +23,8 @@ export function Ring({
   size: number;
   stroke: number;
   tint: string;
+  /** What VoiceOver reads for the whole ring, e.g. "1,240 calories left of 2,000". */
+  label?: string;
   children?: React.ReactNode;
 }) {
   const r = (size - stroke) / 2;
@@ -23,7 +32,7 @@ export function Ring({
   const share = goal ? Math.min(value / goal, 1) : 0;
   const over = goal !== null && value > goal * 1.02;
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }} accessible={Boolean(label)} accessibilityLabel={label}>
       <Svg width={size} height={size} style={{ position: 'absolute' }}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={color.track} strokeWidth={stroke} fill="none" />
         {goal ? (
@@ -49,14 +58,17 @@ export function Ring({
 /** A small ring for one macro, with grams inside and the goal under it. */
 export function MacroRing({ label, value, goal, tint }: { label: string; value: number; goal: number | null; tint: string }) {
   const over = goal !== null && value > goal * 1.02;
+  const k = ringScale(useWindowDimensions().fontScale);
+  const grams = Math.round(value);
+  const status = goal ? (goal > value ? `${Math.round(goal - value)} left` : over ? `${Math.round(value - goal)} over` : 'done') : 'no goal';
   return (
-    <View style={{ alignItems: 'center', gap: 4, flex: 1 }}>
-      <Ring value={value} goal={goal} size={72} stroke={8} tint={tint}>
-        <Text style={[type.body, type.number, { fontWeight: '800', color: over ? color.over : color.iron }]}>{Math.round(value)}</Text>
+    <View style={{ alignItems: 'center', gap: 4, flex: 1 }} accessible accessibilityLabel={`${label}: ${grams} grams, ${goal ? `${status} of ${goal}` : 'no goal'}`}>
+      <Ring value={value} goal={goal} size={72 * k} stroke={8 * k} tint={tint}>
+        <Text style={[type.body, type.number, { fontWeight: '800', color: over ? color.over : color.iron }]}>{grams}</Text>
         <Text style={[type.small, { fontSize: textSize.caption, marginTop: -2 }]}>g</Text>
       </Ring>
       <Text style={[type.small, { fontWeight: '700', color: color.iron }]}>{label}</Text>
-      <Text style={[type.small, { fontSize: textSize.caption }]}>{goal ? `${goal > value ? `${Math.round(goal - value)} left` : over ? `${Math.round(value - goal)} over` : 'done'}` : 'no goal'}</Text>
+      <Text style={[type.small, { fontSize: textSize.caption }]}>{status}</Text>
     </View>
   );
 }

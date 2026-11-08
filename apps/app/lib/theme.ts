@@ -215,7 +215,8 @@ export function setWebAccent(name: AccentName) {
 
 export const space = (n: number) => n * 4;
 
-export const radius = { card: 18, row: 12, pill: 999 };
+/** Corners: cards and sheets, buttons and rows, text fields and inner items, and round things. */
+export const radius = { card: 18, row: 12, input: 10, pill: 999 };
 
 /**
  * Every text size in the app, smallest to largest. Screens use these (or the
