@@ -1,0 +1,651 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-08T16:10:59+00:00",
+  "title": "Design System: Forkbell",
+  "extensions": {
+    "colorMeta": {
+      "chalk": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "#F4F5F2",
+        "dark": "#0E1215",
+        "tonalRamp": [
+          "#272923",
+          "#42463A",
+          "#5F6652",
+          "#808A6B",
+          "#9DA58D",
+          "#BABEB1",
+          "#D7D9D3",
+          "#F3F3F1"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#FFFFFF",
+        "dark": "#171C20",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#5C5C5C",
+          "#7A7A7A",
+          "#999999",
+          "#B8B8B8",
+          "#D6D6D6",
+          "#F2F2F2"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Chalk",
+        "canonical": "#EEF0EC",
+        "dark": "#1F252A",
+        "tonalRamp": [
+          "#262924",
+          "#40453B",
+          "#5C6553",
+          "#7A886C",
+          "#99A48E",
+          "#B8BEB1",
+          "#D6D9D3",
+          "#F2F3F2"
+        ]
+      },
+      "iron": {
+        "role": "primary",
+        "displayName": "Iron",
+        "canonical": "#1C252B",
+        "dark": "#E9EDEF",
+        "tonalRamp": [
+          "#22272B",
+          "#364249",
+          "#4C5F6C",
+          "#617F94",
+          "#869DAC",
+          "#ACBAC3",
+          "#D1D7DB",
+          "#F1F2F3"
+        ]
+      },
+      "iron-soft": {
+        "role": "neutral",
+        "displayName": "Soft Iron",
+        "canonical": "#5F6B73",
+        "dark": "#9BA7AE",
+        "tonalRamp": [
+          "#242728",
+          "#3C4144",
+          "#555D63",
+          "#6F7D86",
+          "#909BA2",
+          "#B3B9BD",
+          "#D4D7D9",
+          "#F2F2F3"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Chalk Line",
+        "canonical": "#DDE2E4",
+        "dark": "#283036",
+        "tonalRamp": [
+          "#242729",
+          "#3B4245",
+          "#536065",
+          "#6D8088",
+          "#8F9DA3",
+          "#B2BABE",
+          "#D3D7D9",
+          "#F2F3F3"
+        ]
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Empty Track",
+        "canonical": "#E6E9EA",
+        "dark": "#262D32",
+        "tonalRamp": [
+          "#242728",
+          "#3C4244",
+          "#555F62",
+          "#708085",
+          "#919DA1",
+          "#B3BABC",
+          "#D4D7D8",
+          "#F2F3F3"
+        ]
+      },
+      "placeholder": {
+        "role": "neutral",
+        "displayName": "Placeholder",
+        "canonical": "#7C868C",
+        "dark": "#76828A",
+        "tonalRamp": [
+          "#252728",
+          "#3D4043",
+          "#575D61",
+          "#737C82",
+          "#939A9F",
+          "#B4B8BB",
+          "#D5D7D8",
+          "#F2F2F3"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Bell Blue (accent)",
+        "canonical": "#2B6BD6",
+        "dark": "#5C9BFF",
+        "tonalRamp": [
+          "#172235",
+          "#22385E",
+          "#284F8F",
+          "#2A66CB",
+          "#5C8AD6",
+          "#94AFDB",
+          "#C6D2E7",
+          "#EEF1F6"
+        ]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "On Accent",
+        "canonical": "#FFFFFF",
+        "dark": "#0E1215",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#5C5C5C",
+          "#7A7A7A",
+          "#999999",
+          "#B8B8B8",
+          "#D6D6D6",
+          "#F2F2F2"
+        ]
+      },
+      "protein": {
+        "role": "tertiary",
+        "displayName": "20 kg Blue",
+        "canonical": "#2B6BD6",
+        "dark": "#5C9BFF",
+        "tonalRamp": [
+          "#172235",
+          "#22385E",
+          "#284F8F",
+          "#2A66CB",
+          "#5C8AD6",
+          "#94AFDB",
+          "#C6D2E7",
+          "#EEF1F6"
+        ]
+      },
+      "carbs": {
+        "role": "tertiary",
+        "displayName": "15 kg Yellow",
+        "canonical": "#D99A00",
+        "dark": "#F2C14E",
+        "tonalRamp": [
+          "#3C3010",
+          "#6C5213",
+          "#A87C0F",
+          "#F2AC03",
+          "#F3BF3F",
+          "#ECCE83",
+          "#EEE0BE",
+          "#F8F5EC"
+        ]
+      },
+      "carbs-text": {
+        "role": "neutral",
+        "displayName": "Carb Text",
+        "canonical": "#8A5A00",
+        "dark": "#F2C14E",
+        "tonalRamp": [
+          "#3C2D10",
+          "#6C4D13",
+          "#A8730F",
+          "#F29F03",
+          "#F3B43F",
+          "#ECC883",
+          "#EEDEBE",
+          "#F8F4EC"
+        ]
+      },
+      "fat": {
+        "role": "tertiary",
+        "displayName": "10 kg Green",
+        "canonical": "#2E9E62",
+        "dark": "#4CC38A",
+        "tonalRamp": [
+          "#1A3225",
+          "#27583E",
+          "#328659",
+          "#39BC76",
+          "#68CA95",
+          "#9BD4B6",
+          "#C9E3D5",
+          "#EFF5F2"
+        ]
+      },
+      "fat-text": {
+        "role": "neutral",
+        "displayName": "Fat Text",
+        "canonical": "#1F7A4A",
+        "dark": "#4CC38A",
+        "tonalRamp": [
+          "#193326",
+          "#255A3E",
+          "#2E8959",
+          "#33C176",
+          "#64CE96",
+          "#98D7B6",
+          "#C8E5D5",
+          "#EFF6F2"
+        ]
+      },
+      "water": {
+        "role": "tertiary",
+        "displayName": "Water Blue",
+        "canonical": "#1E88C8",
+        "dark": "#4FB3F0",
+        "tonalRamp": [
+          "#162A37",
+          "#1F4861",
+          "#236A94",
+          "#2290D3",
+          "#57A9DB",
+          "#91C1DE",
+          "#C4DBE8",
+          "#EEF3F7"
+        ]
+      },
+      "water-text": {
+        "role": "neutral",
+        "displayName": "Water Text",
+        "canonical": "#13689C",
+        "dark": "#4FB3F0",
+        "tonalRamp": [
+          "#152A38",
+          "#1D4863",
+          "#206A98",
+          "#1D91D8",
+          "#53AADF",
+          "#8EC2E1",
+          "#C3DBE9",
+          "#EEF3F7"
+        ]
+      },
+      "over": {
+        "role": "tertiary",
+        "displayName": "25 kg Red",
+        "canonical": "#D2423A",
+        "dark": "#FF6B61",
+        "tonalRamp": [
+          "#341A18",
+          "#5C2724",
+          "#8C312C",
+          "#C5372F",
+          "#D16761",
+          "#D99A97",
+          "#E5C9C7",
+          "#F6EFEF"
+        ]
+      },
+      "rest-fill": {
+        "role": "neutral",
+        "displayName": "Rest Slate",
+        "canonical": "#2F4350",
+        "dark": "#33505F",
+        "tonalRamp": [
+          "#20272C",
+          "#34424B",
+          "#486070",
+          "#5B8199",
+          "#829EB0",
+          "#AABAC5",
+          "#D0D8DC",
+          "#F1F3F4"
+        ]
+      },
+      "success-bg": {
+        "role": "neutral",
+        "displayName": "Success Tint",
+        "canonical": "#E5F4EC",
+        "dark": "#13281D",
+        "tonalRamp": [
+          "#1D2F26",
+          "#2E523F",
+          "#3D7B5A",
+          "#4AAB77",
+          "#75BD97",
+          "#A2CDB6",
+          "#CCE0D6",
+          "#F0F5F2"
+        ]
+      },
+      "info-bg": {
+        "role": "neutral",
+        "displayName": "Info Tint",
+        "canonical": "#EAF1FC",
+        "dark": "#152238",
+        "tonalRamp": [
+          "#162337",
+          "#1E3861",
+          "#234F95",
+          "#2166D4",
+          "#568ADC",
+          "#90AFDF",
+          "#C4D2E8",
+          "#EEF1F7"
+        ]
+      },
+      "warn-bg": {
+        "role": "neutral",
+        "displayName": "Warn Tint",
+        "canonical": "#FFF4D6",
+        "dark": "#30260C",
+        "tonalRamp": [
+          "#3C3110",
+          "#6C5413",
+          "#A87F0F",
+          "#F2B203",
+          "#F3C33F",
+          "#ECD083",
+          "#EEE1BE",
+          "#F8F5EC"
+        ]
+      },
+      "warn-text": {
+        "role": "neutral",
+        "displayName": "Warn Text",
+        "canonical": "#8A5A00",
+        "dark": "#F2C14E",
+        "tonalRamp": [
+          "#3C2D10",
+          "#6C4D13",
+          "#A8730F",
+          "#F29F03",
+          "#F3B43F",
+          "#ECC883",
+          "#EEDEBE",
+          "#F8F4EC"
+        ]
+      },
+      "danger-bg": {
+        "role": "neutral",
+        "displayName": "Danger Tint",
+        "canonical": "#FDECEA",
+        "dark": "#3A1A18",
+        "tonalRamp": [
+          "#391814",
+          "#65231B",
+          "#9B2A1D",
+          "#DD2C18",
+          "#E35E4F",
+          "#E3958C",
+          "#EAC6C2",
+          "#F7EEED"
+        ]
+      }
+    },
+    "accentOptions": {
+      "blue": [
+        "#2B6BD6",
+        "#5C9BFF"
+      ],
+      "teal": [
+        "#0C7A7C",
+        "#3CC9C4"
+      ],
+      "green": [
+        "#277A4C",
+        "#4CC38A"
+      ],
+      "orange": [
+        "#B8520F",
+        "#FF9A52"
+      ],
+      "red": [
+        "#C8382E",
+        "#FF6B61"
+      ],
+      "pink": [
+        "#B03A72",
+        "#FF7AB6"
+      ],
+      "purple": [
+        "#6A4BD1",
+        "#A48BFF"
+      ]
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Timers and the plate calculator target."
+      },
+      "hero": {
+        "displayName": "Hero",
+        "purpose": "Onboarding and the day's main number."
+      },
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "Top of every page; big numbers."
+      },
+      "stat": {
+        "displayName": "Stat",
+        "purpose": "At-a-glance numbers in a card."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sheet and section titles."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "A card's own heading."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Reading text, rows, main buttons."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Small buttons, chips, links, toasts."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Secondary lines under a row."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase section labels, tags, badges."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Credits, units, tab labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 4px 12px rgba(0,0,0,0.25)",
+        "purpose": "Toasts, Ask Bell, voice button, selection bar."
+      },
+      {
+        "name": "bubble",
+        "value": "0 3px 8px rgba(0,0,0,0.2)",
+        "purpose": "Bell's speech bubble (with a Chalk Line border)."
+      },
+      {
+        "name": "backdrop",
+        "value": "rgba(0,0,0,0.45)",
+        "purpose": "Behind sheets and dialogs."
+      }
+    ],
+    "motion": [
+      {
+        "name": "reduce-motion",
+        "value": "AccessibilityInfo / prefers-reduced-motion",
+        "purpose": "Stops Bell's bob and blink and skips confetti."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sheet-max",
+        "value": "640px"
+      },
+      {
+        "name": "dialog-max",
+        "value": "440px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Filled Button",
+      "kind": "button",
+      "refersTo": "button-filled",
+      "description": "The main action on a screen or sheet, usually full width.",
+      "html": "<button class=\"ds-btn-filled\">Add to breakfast</button>",
+      "css": ".ds-btn-filled{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;background:#1C252B;color:#F4F5F2;font-size:16px;font-weight:700;padding:14px 16px;border:none;border-radius:12px;min-height:44px;min-width:240px;cursor:pointer;transition:opacity .15s,transform .1s}.ds-btn-filled:hover{opacity:.92}.ds-btn-filled:active{transform:scale(.98)}.ds-btn-filled:focus-visible{outline:2px solid #2B6BD6;outline-offset:2px}"
+    },
+    {
+      "name": "Small Button",
+      "kind": "button",
+      "refersTo": "button-small",
+      "description": "An action inside a card (Save, Use as my calorie goal).",
+      "html": "<button class=\"ds-btn-small\">Save</button>",
+      "css": ".ds-btn-small{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;background:#1C252B;color:#F4F5F2;font-size:15px;font-weight:700;padding:12px 16px;border:none;border-radius:12px;cursor:pointer;transition:opacity .15s}.ds-btn-small:hover{opacity:.92}.ds-btn-small:focus-visible{outline:2px solid #2B6BD6;outline-offset:2px}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "The second choice next to a filled button.",
+      "html": "<button class=\"ds-btn-quiet\">Not now</button>",
+      "css": ".ds-btn-quiet{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;background:#FFFFFF;color:#1C252B;font-size:16px;font-weight:700;padding:14px 16px;border:1px solid #DDE2E4;border-radius:12px;cursor:pointer;transition:background .15s}.ds-btn-quiet:hover{background:#EEF0EC}.ds-btn-quiet:focus-visible{outline:2px solid #2B6BD6;outline-offset:2px}"
+    },
+    {
+      "name": "Water Action",
+      "kind": "button",
+      "refersTo": "button-accent",
+      "description": "A plate colour marking an action about its own subject.",
+      "html": "<button class=\"ds-btn-water\">+ 250 ml</button>",
+      "css": ".ds-btn-water{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;background:#1E88C8;color:#FFFFFF;font-size:15px;font-weight:700;padding:12px 16px;border:none;border-radius:12px;cursor:pointer}.ds-btn-water:hover{background:#13689C}.ds-btn-water:focus-visible{outline:2px solid #1C252B;outline-offset:2px}"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Portion and filter chips; selected fills with iron.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip-on\">1 serving</button><button class=\"ds-chip\">100 g</button><button class=\"ds-chip\">1 cup</button></div>",
+      "css": ".ds-chips{display:flex;gap:8px;flex-wrap:wrap}.ds-chip{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;background:#FFFFFF;color:#1C252B;font-size:15px;font-weight:700;padding:8px 12px;border:1px solid #DDE2E4;border-radius:999px;cursor:pointer}.ds-chip:hover{background:#EEF0EC}.ds-chip-on,.ds-chip-on:hover{background:#1C252B;border-color:#1C252B;color:#F4F5F2}.ds-chip:focus-visible{outline:2px solid #2B6BD6;outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Inputs inside a card: chalk fill, chalk-line border, 10 pt corners.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search foods\" />",
+      "css": ".ds-input{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;background:#F4F5F2;color:#1C252B;font-size:16px;padding:12px;border:1px solid #DDE2E4;border-radius:10px;width:260px;outline:none}.ds-input::placeholder{color:#7C868C}.ds-input:focus-visible{border-color:#2B6BD6;box-shadow:0 0 0 3px #EAF1FC}"
+    },
+    {
+      "name": "Meal Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "One card per subject on the chalk page.",
+      "html": "<div class=\"ds-page\"><div class=\"ds-card\"><div class=\"ds-card-h\">Breakfast</div><div class=\"ds-row\"><span>Greek yogurt</span><span class=\"ds-num\">146 kcal</span></div><div class=\"ds-row\"><span>Oats, 40 g</span><span class=\"ds-num\">150 kcal</span></div></div></div>",
+      "css": ".ds-page{background:#F4F5F2;padding:16px}.ds-card{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;background:#FFFFFF;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:8px;width:300px}.ds-card-h{font-size:18px;font-weight:700;color:#1C252B}.ds-row{display:flex;justify-content:space-between;font-size:16px;color:#1C252B}.ds-num{font-variant-numeric:tabular-nums;color:#5F6B73;font-size:13px}"
+    },
+    {
+      "name": "Macro Rings",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Signature progress rings in plate colours; the over ring turns red.",
+      "html": "<div class=\"ds-rings\"><svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\"><circle cx=\"36\" cy=\"36\" r=\"31\" fill=\"none\" stroke=\"#E6E9EA\" stroke-width=\"8\"/><circle cx=\"36\" cy=\"36\" r=\"31\" fill=\"none\" stroke=\"#2B6BD6\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-dasharray=\"136 195\" transform=\"rotate(-90 36 36)\"/><text x=\"36\" y=\"41\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"800\" fill=\"#1C252B\">112g</text></svg><svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\"><circle cx=\"36\" cy=\"36\" r=\"31\" fill=\"none\" stroke=\"#E6E9EA\" stroke-width=\"8\"/><circle cx=\"36\" cy=\"36\" r=\"31\" fill=\"none\" stroke=\"#D99A00\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-dasharray=\"90 195\" transform=\"rotate(-90 36 36)\"/><text x=\"36\" y=\"41\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"800\" fill=\"#1C252B\">140g</text></svg><svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\"><circle cx=\"36\" cy=\"36\" r=\"31\" fill=\"none\" stroke=\"#D2423A\" stroke-width=\"8\"/><text x=\"36\" y=\"41\" text-anchor=\"middle\" font-size=\"15\" font-weight=\"800\" fill=\"#1C252B\">74g</text></svg></div>",
+      "css": ".ds-rings{display:flex;gap:12px;font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;font-variant-numeric:tabular-nums;background:#FFFFFF;padding:16px;border-radius:18px}"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-bar",
+      "description": "Five tabs, accent tint when active.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab ds-tab-on\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path fill=\"currentColor\" d=\"M8 2v8a2 2 0 0 1-2 2v10H4V12a2 2 0 0 1-2-2V2h1v6h1V2h1v6h1V2h2zm9 0c2 0 3 3 3 7 0 2-1 3-2 3v10h-2V2h1z\"/></svg>Food</a><a class=\"ds-tab\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" d=\"M2 9v6M5 7v10M8 11h8M19 7v10M22 9v6\"/></svg>Train</a><a class=\"ds-tab\" href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/></svg>Progress</a></nav>",
+      "css": ".ds-tabs{display:flex;justify-content:space-around;background:#FFFFFF;border-top:1px solid #DDE2E4;padding:6px 0 12px;width:320px;font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif}.ds-tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:700;color:#5F6B73;text-decoration:none;min-width:44px}.ds-tab:hover{color:#1C252B}.ds-tab-on,.ds-tab-on:hover{color:#2B6BD6}.ds-tab:focus-visible{outline:2px solid #2B6BD6;outline-offset:2px;border-radius:8px}"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "button-filled",
+      "description": "Iron toast floating with the Float shadow.",
+      "html": "<div class=\"ds-toast\"><span>Added to lunch</span><button class=\"ds-toast-undo\">Undo</button></div>",
+      "css": ".ds-toast{font-family:system-ui,-apple-system,'SF Pro Text',Roboto,sans-serif;display:inline-flex;align-items:center;gap:16px;background:#1C252B;color:#F4F5F2;font-size:15px;font-weight:700;border-radius:14px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,.25)}.ds-toast-undo{background:none;border:none;color:#5C9BFF;font:inherit;cursor:pointer}.ds-toast-undo:focus-visible{outline:2px solid #5C9BFF;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Chalked Bar",
+    "overview": "A weight room is mostly chalk and iron. The bar, the floor and the racks are pale, worn and neutral, and the only colour comes from the plates. Forkbell works the same way. Screens are pale chalk with white cards, words and main buttons are dark iron, and colour shows up only where it carries meaning. Protein is a 20 kg blue plate, carbs a 15 kg yellow, fat a 10 kg green, and \"over\" a 25 kg red. Water is its own clear blue, and one chosen accent belongs to Bell and the app's links.\n\nThe feel is soft and friendly rather than hard-edged. Cards have generous 18 pt corners. Buttons are heavy and easy to hit, but rounded. Bell, a little kettlebell with a face, sets the warmth: it blinks, bobs and reacts. The app is a tool you use several times a day, often one-handed and mid-set, so it stays calm and dense where numbers live and saves expression for Bell, celebrations and goal moments. It follows iPhone conventions first (system font, tab bar, bottom sheets, 44 pt targets), and Android and web keep the same look.\n\nIt must never look clinical. Forkbell holds health data, but it is not a lab report: no cold hospital blues, no grey forms, no sterile tables. Numbers are reported warmly and without judgement.",
+    "keyCharacteristics": [
+      "Chalk background, white cards, iron type and iron main buttons.",
+      "Colour is meaning: macro \"plates\", water, the accent and the red \"over\" state.",
+      "Rounded and friendly: 18 pt cards, 12 pt buttons, pill chips.",
+      "Flat at rest; only floating things cast shadows.",
+      "System font with heavy weights for numbers and tabular figures throughout.",
+      "Full light and dark versions, plus a user-chosen accent (seven options)."
+    ],
+    "rules": [
+      {
+        "name": "The Plates Carry Meaning Rule",
+        "body": "A plate colour always means its subject: blue is protein, yellow carbs, green fat, red over, water blue water. A plate colour may mark an action about its own subject (an \"Add water\" button in water blue), but never decorates something unrelated.",
+        "section": "colors"
+      },
+      {
+        "name": "The Text Twin Rule",
+        "body": "Bright plate colours are for rings, bars, fills and icons. Words in those colours use the `*-text` twin, never the bright fill colour on white.",
+        "section": "colors"
+      },
+      {
+        "name": "The Iron Main Action Rule",
+        "body": "A screen's main action is iron with chalk words, not the accent. The accent belongs to Bell, links and the active tab.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Scale Rule",
+        "body": "Every size comes from `textSize` / `type` in `lib/theme.ts`. The only exceptions are the rotated plate labels and weekday cells (9 and 10, to fit fixed shapes) and the sign-in wordmark.",
+        "section": "typography"
+      },
+      {
+        "name": "The Steady Numbers Rule",
+        "body": "Any number that changes or sits in a column uses tabular figures so it doesn't jitter.",
+        "section": "typography"
+      },
+      {
+        "name": "The Only Floaters Cast Shadows Rule",
+        "body": "Cards, rows and buttons never carry a shadow. If it doesn't float over the page, it's flat.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Four Corners Rule",
+        "body": "Use only 18, 12, 10 or pill. The 14, 16 and 8 pt corners found in some screens are drift to bring back to these steps when those screens are next touched.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do keep the page Chalk and cards Card White; let colour come only from plates, water, the accent and the over state.",
+      "Do use iron filled buttons for the main action and the quiet outlined button for the second choice.",
+      "Do use the `*-text` twin whenever words take a plate colour.",
+      "Do use tabular figures and 800 weight for headline numbers.",
+      "Do keep corners to 18 / 12 / 10 / pill, and touch targets at 44 pt or more.",
+      "Do define every new colour in both the light and dark palettes in `lib/theme.ts`.",
+      "Do stop Bell's motion and the confetti when Reduce Motion is on."
+    ],
+    "donts": [
+      "Don't make it look clinical or medical: no cold hospital blues, grey form-heavy screens or lab-report tables.",
+      "Don't put shadows on cards, rows or buttons.",
+      "Don't use a plate colour for something outside its subject (no yellow for a non-carb warning, no green for \"good food\").",
+      "Don't colour food as good or bad; red means over a goal, not a bad choice.",
+      "Don't introduce a second typeface or one-off text sizes outside the scale.",
+      "Don't hard-code hex values in screens; go through `color` so dark mode and the accent keep working."
+    ]
+  }
+}
