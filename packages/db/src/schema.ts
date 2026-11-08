@@ -19,6 +19,7 @@ export const users = pgTable('users', {
   weeklyWorkoutGoal: integer('weekly_workout_goal').notNull(),
   preferences: jsonb('preferences').$type<Record<string, unknown>>().notNull(),
   weekdayGoals: jsonb('weekday_goals').$type<Record<string, unknown>>().notNull(),
+  timeZone: text('time_zone'),
 });
 
 export const foods = pgTable('foods', {
