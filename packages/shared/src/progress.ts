@@ -30,7 +30,10 @@ export const daysBetween = (a: string, b: string) => dayNumber(b) - dayNumber(a)
  * moves it; a real change shows up within a couple of weeks.
  */
 export function weightTrend(weighIns: WeighIn[]): TrendPoint[] {
-  const sorted = [...weighIns].sort((a, b) => (a.date < b.date ? -1 : 1));
+  // Several weigh-ins on one day count once, as their average (two a day shouldn't move the trend twice).
+  const byDay = new Map<string, number[]>();
+  for (const w of weighIns) byDay.set(w.date, [...(byDay.get(w.date) ?? []), w.weightKg]);
+  const sorted = [...byDay].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([date, ws]) => ({ date, weightKg: ws.reduce((s, x) => s + x, 0) / ws.length }));
   const out: TrendPoint[] = [];
   let trend: number | null = null;
   let last: string | null = null;

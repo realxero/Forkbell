@@ -26,3 +26,9 @@ test('a streak of fasts that reached their goal', () => {
   assert.equal(fastStreak([...list, fast('d', '2026-10-21T20:00:00Z', '2026-10-22T05:00:00Z')], '2026-10-25', 0), 2, 'a short one does not add');
   assert.equal(fastStreak(list, '2026-10-27', 0), 0, 'a missed day ends it');
 });
+
+test('minutes are never lost to floating point', () => {
+  for (let m = 0; m < 48 * 60; m++) {
+    assert.equal(hoursText(m / 60), `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`, `${m} minutes`);
+  }
+});

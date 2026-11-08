@@ -31,3 +31,16 @@ test('dates and meals', () => {
   assert.equal(readMeal('Frühstück'), 'breakfast');
   assert.equal(readMeal('Snack 2'), 'snacks');
 });
+
+test('numbers with thousands separators, and dates that must exist', () => {
+  const lines = 'Date,Meal,Calories,Fat (g),Saturated Fat,Sodium (mg),Carbohydrates (g),Fiber,Sugar,Protein (g),Note\n2026-03-15,Dinner,"2,150",80,20,"2,345",200,6,10,"1,234.5",';
+  const { lines: got } = parseFoodExport(lines);
+  assert.equal(got[0]?.kcal, 2150);
+  assert.equal(got[0]?.protein, 1234.5);
+  assert.equal(got[0]?.sodium, 2345);
+  assert.equal(readDate('15/03/2026'), '2026-03-15', 'day first when the first number cannot be a month');
+  assert.equal(readDate('03/15/2026'), '2026-03-15');
+  assert.equal(readDate('2026-02-31'), null);
+  assert.equal(readDate('2026-15-03'), null);
+  assert.equal(readDate('29.02.2028'), '2028-02-29');
+});

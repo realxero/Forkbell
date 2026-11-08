@@ -130,3 +130,13 @@ test('training streaks cheer at 2, 4 and 8 weeks', async () => {
   assert.equal(s.workoutWeeks, 4);
   assert.equal(streakCheer(s, [])?.title, '4 weeks of training in a row!');
 });
+
+test('two weigh-ins on one day move the trend once, as their average', () => {
+  const t = weightTrend([
+    { date: '2026-03-01', weightKg: 80 },
+    { date: '2026-03-02', weightKg: 80 },
+    { date: '2026-03-02', weightKg: 82 },
+  ] as WeighIn[]);
+  assert.equal(t.length, 2);
+  assert.ok(Math.abs(t[1]!.trendKg - 80.1) < 1e-9, `trend ${t[1]!.trendKg}`);
+});

@@ -45,3 +45,10 @@ test('saying an amount', () => {
   assert.equal(entryAmountText({ grams: 48, amount: 2, unit: 'serving', food: bar }), '2 bars (48 g)');
   assert.equal(entryAmountText({ grams: 50, food: bar }), '50 g');
 });
+
+test('a serving word keeps an s that belongs to it', () => {
+  assert.equal(servingWord('1 glass (240 ml)'), 'glass');
+  assert.equal(servingWord('1 bass fillet'), 'bass fillet');
+  assert.equal(servingWord('1 cookies (30 g)'), 'cookie');
+  assert.equal(servingWord('1 slice'), 'slice');
+});

@@ -3,7 +3,7 @@
 // line becomes one diary entry with that line's numbers. MyFitnessPal only
 // exports each meal's totals, so those come in as one line per meal.
 import { z } from 'zod';
-import { parseCsv } from './workout-import.ts';
+import { decimalText, parseCsv } from './workout-import.ts';
 import type { Meal } from './types.ts';
 
 export type FoodImportFormat = 'myfitnesspal' | 'loseit' | 'cronometer' | 'yazio' | 'generic';
@@ -41,19 +41,31 @@ export interface FoodImportResult {
 
 const norm = (h: string) => h.trim().toLowerCase().replace(/\s+/g, ' ');
 const num = (v: string | undefined) => {
-  const t = (v ?? '').replace(/[^\d.,-]/g, '').replace(',', '.');
+  const t = decimalText((v ?? '').replace(/[^\d.,-]/g, ''));
   const n = Number(t);
   return t && Number.isFinite(n) ? n : null;
 };
-/** "2026-03-15", "03/15/2026", "15.03.2026", "2026-03-15 08:30" → "2026-03-15". */
+/**
+ * "2026-03-15", "03/15/2026", "15/03/2026", "15.03.2026", "2026-03-15 08:30" → "2026-03-15".
+ * Slash dates are month first unless that can't be (15/03/2026). A date that
+ * doesn't exist (2026-02-31, 2026-15-03) is null, never passed on.
+ */
 export function readDate(v: string | undefined): string | null {
   const t = (v ?? '').trim();
+  const day = (y: string, mo: string, d: string) => {
+    const [Y, M, D] = [Number(y), Number(mo), Number(d)];
+    if (M < 1 || M > 12 || D < 1 || D > new Date(Date.UTC(Y, M, 0)).getUTCDate()) return null;
+    return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  };
   let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
-  if (m) return `${m[1]}-${m[2]!.padStart(2, '0')}-${m[3]!.padStart(2, '0')}`;
-  m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(t); // US: month first
-  if (m) return `${m[3]!.length === 2 ? `20${m[3]}` : m[3]}-${m[1]!.padStart(2, '0')}-${m[2]!.padStart(2, '0')}`;
+  if (m) return day(m[1]!, m[2]!, m[3]!);
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(t); // US: month first, unless the first can't be a month
+  if (m) {
+    const y = m[3]!.length === 2 ? `20${m[3]}` : m[3]!;
+    return Number(m[1]) > 12 ? day(y, m[2]!, m[1]!) : day(y, m[1]!, m[2]!);
+  }
   m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(t); // Europe: day first
-  if (m) return `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`;
+  if (m) return day(m[3]!, m[2]!, m[1]!);
   return null;
 }
 /** "Breakfast", "Snack", "Dinner", "Frühstück"... → a meal key; anything else is a snack. */

@@ -74,9 +74,10 @@ export function densityOf(food: AmountFood): number {
  * gives one.
  */
 export function servingWord(label: string | null | undefined): string {
-  const m = /^\s*1\s+([a-z][a-z \-]{1,20}?)s?\s*(\(.*\))?\s*$/i.exec(label ?? '');
+  const m = /^\s*1\s+([a-z][a-z \-]{1,21})\s*(\(.*\))?\s*$/i.exec(label ?? '');
   if (!m) return 'serving';
-  const word = m[1]!.trim().toLowerCase();
+  // "1 cookies" → cookie, but "1 glass" and "1 bass fillet" keep their s.
+  const word = m[1]!.trim().toLowerCase().replace(/([^su])s$/, '$1');
   if (/^(g|grams?|oz|ounces?|ml|cups?|tbsp|tsp|fl oz|serving|portion|lb|kg|l)$/.test(word)) return 'serving';
   return word;
 }

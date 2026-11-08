@@ -35,7 +35,11 @@ export function fastProgress(f: Pick<Fast, 'startedAt' | 'endedAt' | 'targetHour
 }
 
 /** "16h 05m". */
-export const hoursText = (hours: number) => `${Math.floor(hours)}h ${String(Math.floor((hours % 1) * 60)).padStart(2, '0')}m`;
+export const hoursText = (hours: number) => {
+  // Whole minutes first: 61 minutes as hours (1.01666…) % 1 * 60 is 0.999…, which floors to 0.
+  const minutes = Math.floor(hours * 60 + 1e-6);
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+};
 
 /** The local day an instant falls on, in this device's (or server's) time zone. */
 const localDay = (iso: string, offsetMinutes?: number) => {
