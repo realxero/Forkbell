@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { trainingSetupSchema } from './training-coach.ts';
 
 export const ALLERGENS = ['milk', 'egg', 'peanut', 'tree nuts', 'soy', 'wheat/gluten', 'fish', 'shellfish', 'sesame'] as const;
-export type Allergen = (typeof ALLERGENS)[number];
+type Allergen = (typeof ALLERGENS)[number];
 export const DIETS = ['none', 'pescatarian', 'vegetarian', 'vegan'] as const;
 export type Diet = (typeof DIETS)[number];
 
@@ -158,7 +158,7 @@ function strip(name: string, phrases: string[] = []) {
   return n;
 }
 
-export interface SafetyCheck {
+interface SafetyCheck {
   /** never suggest or plan this (allergy, avoid list, diet) */
   blocked: boolean;
   /** a dislike or never-suggest: fine to log, just not suggested */

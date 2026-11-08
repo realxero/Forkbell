@@ -81,7 +81,7 @@ function oidcConfig() {
 const callbackUrl = `${env.publicUrl}/auth/callback`;
 
 /** A short description of where a sign-in came from, for the list of your devices. */
-export function describeDevice(userAgent: string | undefined, platform: 'web' | 'native') {
+function describeDevice(userAgent: string | undefined, platform: 'web' | 'native') {
   const ua = userAgent ?? '';
   const os = /iPad/.test(ua) ? 'iPad' : /iPhone|iOS|Darwin/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux|CrOS/.test(ua) ? 'Linux' : null;
   if (platform === 'native') return `Forkbell app${os ? ` on ${os}` : ''}`;
@@ -110,7 +110,7 @@ async function startSession(db: Database, userId: string, method: 'sso' | 'passw
  * Only set it when the server can't be reached except through that tunnel, or
  * anyone could send the header and pick their own address.
  */
-export function clientIp(header: (name: string) => string | undefined, trusted = env.trustedIpHeader) {
+function clientIp(header: (name: string) => string | undefined, trusted = env.trustedIpHeader) {
   if (trusted) {
     const real = header(trusted)?.split(',')[0]?.trim();
     if (real) return real;

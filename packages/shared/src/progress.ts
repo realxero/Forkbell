@@ -251,7 +251,7 @@ export function computeStreaks(loggedDates: string[], workoutDates: string[], we
 }
 
 /** Logging streaks (days) and training streaks (weeks) that Bell celebrates on Today. */
-export const STREAK_CHEERS = { food: [3, 7, 14, 21, 30], workout: [2, 4, 8] } as const;
+const STREAK_CHEERS = { food: [3, 7, 14, 21, 30], workout: [2, 4, 8] } as const;
 
 export interface StreakCheer {
   kind: 'food' | 'workout';
@@ -405,7 +405,7 @@ export interface Activity {
 }
 
 // Goal presets ------------------------------------------------------------------------
-export type GoalPreset = 'lose' | 'maintain' | 'gain';
+type GoalPreset = 'lose' | 'maintain' | 'gain';
 /**
  * Starting goals from your measured burn and trend weight: lose about 0.5% of
  * body weight a week, maintain, or gain about 0.25%. Protein 1.6 g per kg,

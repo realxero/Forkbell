@@ -49,7 +49,7 @@ jobs:
           OIDC_CLIENT_SECRET: ci
           PREFETCH_PICTURES: 'off'
         run: |
-          nohup node --import tsx src/index.ts > "$RUNNER_TEMP/server.log" 2>&1 &
+          nohup node src/index.ts > "$RUNNER_TEMP/server.log" 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:3999/healthz && exit 0; sleep 1; done
           cat "$RUNNER_TEMP/server.log"; exit 1
       # A phone-sized browser taps, types and scrolls at random on every screen (e2e/monkey.mjs).

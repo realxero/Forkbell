@@ -5,7 +5,7 @@ import { connectHeartSensor, disconnectHeartSensor, heartSensorSupported, onHear
 import { readCache, writeCache } from './sync';
 
 const KEY = 'device:heart-sensor';
-export type SavedSensor = { id: string; name: string };
+type SavedSensor = { id: string; name: string };
 
 export const savedHeartSensor = (): SavedSensor | null => (heartSensorSupported ? readCache<SavedSensor>(KEY) ?? null : null);
 export const saveHeartSensor = (s: SavedSensor | null) => writeCache(KEY, s);

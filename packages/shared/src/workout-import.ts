@@ -12,7 +12,7 @@ export const IMPORT_APPS: Record<ImportFormat, string> = { strong: 'Strong', hev
 const LB = 0.45359237;
 const MILE = 1609.344;
 
-export const importedSetSchema = z.object({
+const importedSetSchema = z.object({
   weightKg: z.number().min(0).max(2000).nullable(),
   reps: z.number().int().min(0).max(1000).nullable(),
   seconds: z.number().int().min(0).max(86400).nullable(),
@@ -21,7 +21,7 @@ export const importedSetSchema = z.object({
   warmup: z.boolean(),
   drop: z.boolean(),
 });
-export const importedWorkoutSchema = z.object({
+const importedWorkoutSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startedAt: z.string().datetime({ offset: true }),
   finishedAt: z.string().datetime({ offset: true }),
@@ -48,7 +48,6 @@ export const workoutImportSchema = z.object({
 });
 export type ImportedSet = z.infer<typeof importedSetSchema>;
 export type ImportedWorkout = z.infer<typeof importedWorkoutSchema>;
-export type WorkoutImportInput = z.infer<typeof workoutImportSchema>;
 
 export interface WorkoutImportResult {
   workouts: number;
@@ -104,7 +103,7 @@ export function parseCsv(text: string): string[][] {
 const norm = (h: string) => h.trim().toLowerCase().replace(/\s+/g, ' ');
 
 /** Which app made the file, from its column names. */
-export function detectFormat(headers: string[]): ImportFormat | null {
+function detectFormat(headers: string[]): ImportFormat | null {
   const h = new Set(headers.map(norm));
   if (h.has('exercise_title') && h.has('start_time')) return 'hevy';
   if (h.has('exercise name') && h.has('set order')) return 'strong';

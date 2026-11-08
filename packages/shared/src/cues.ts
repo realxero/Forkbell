@@ -2,7 +2,7 @@
 // General coaching cues by movement pattern (from the name) and by muscle,
 // so every exercise in the library gets sensible ones. Not medical advice:
 // sharp or joint pain always means stop.
-export interface Cues {
+interface Cues {
   feel: string;
   tooHeavy: string[];
 }

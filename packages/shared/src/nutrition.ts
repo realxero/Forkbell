@@ -2,7 +2,7 @@ import type { Per100, Totals, DiaryEntry } from './types.ts';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-export const emptyTotals = (): Totals => ({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, satFat: 0 });
+const emptyTotals = (): Totals => ({ kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, satFat: 0 });
 
 /** Nutrition for an amount in grams, from per-100 g values. */
 export function forAmount(per100: Per100, grams: number): Totals {

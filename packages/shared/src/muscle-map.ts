@@ -2,7 +2,7 @@
 // you can see at a glance what to train next and what to let recover.
 import { daysBetween } from './progress.ts';
 
-export const MAP_MUSCLES = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'core', 'quads', 'hamstrings', 'glutes', 'calves'] as const;
+const MAP_MUSCLES = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'core', 'quads', 'hamstrings', 'glutes', 'calves'] as const;
 export type MapMuscle = (typeof MAP_MUSCLES)[number];
 export type MuscleState = 'due' | 'some' | 'good' | 'recovering' | 'plenty';
 export interface MuscleStat {

@@ -5,7 +5,7 @@ import { findPatterns, foodCheckIn, addDays, computeStreaks, dateSchema, estimat
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
-export const MEASUREMENT_KINDS = ['waist', 'hips', 'chest', 'neck', 'arm', 'thigh', 'calf'] as const;
+const MEASUREMENT_KINDS = ['waist', 'hips', 'chest', 'neck', 'arm', 'thigh', 'calf'] as const;
 
 const weighInSchema = z.object({ date: dateSchema, weightKg: z.number().min(20).max(400), bodyFat: z.number().min(2).max(70).nullish() });
 /** Body measurements (cm) or anything you want to track with your own unit. */

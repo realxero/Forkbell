@@ -12,7 +12,7 @@ export interface ToolCall {
   name: string;
   args: unknown;
 }
-export interface ChatTurn {
+interface ChatTurn {
   role: 'user' | 'assistant';
   text: string;
   /** data: URL of a JPEG/PNG, only on the latest user turn */

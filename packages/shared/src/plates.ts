@@ -44,7 +44,7 @@ export const DEFAULT_PLATES: Record<WeightUnit, number[]> = {
   kg: [25, 20, 15, 10, 5, 2.5, 1.25],
 };
 
-export interface PlateLoad {
+interface PlateLoad {
   /** plates on ONE side, heaviest first (for sides: 1, the only side) */
   perSide: number[];
   /** the weight this loads */
@@ -89,7 +89,7 @@ export function loadable(weight: number, bar: Pick<Bar, 'weight' | 'sides'>, pla
   return Math.max(bar.weight, r2(bar.weight + Math.round((weight - bar.weight) / step) * step));
 }
 
-export interface WarmupSet {
+interface WarmupSet {
   weight: number;
   reps: number;
 }

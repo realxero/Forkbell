@@ -5,7 +5,7 @@
 // not everything a coach would (like a rounding back or knees caving).
 export type Point = { x: number; y: number; z?: number; visibility?: number };
 export type Frame = { t: number; lm: Point[] };
-export type FormPattern = 'squat' | 'hinge' | 'bench' | 'press' | 'curl' | 'pull' | 'generic';
+type FormPattern = 'squat' | 'hinge' | 'bench' | 'press' | 'curl' | 'pull' | 'generic';
 
 export function formPattern(name: string): FormPattern {
   const n = name.toLowerCase();
@@ -38,12 +38,12 @@ const pct = (xs: number[], p: number) => {
   return s[Math.min(s.length - 1, Math.max(0, Math.round((p / 100) * (s.length - 1))))] ?? 0;
 };
 
-export interface RepResult {
+interface RepResult {
   index: number;
   seconds: number;
   issues: string[];
 }
-export interface FormResult {
+interface FormResult {
   pattern: FormPattern;
   reps: number;
   repDetails: RepResult[];

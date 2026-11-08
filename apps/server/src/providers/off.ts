@@ -17,7 +17,7 @@ type OffProduct = {
 
 const n = (v: unknown) => (v === undefined || v === null || v === '' ? null : Number(v));
 
-export function fromOff(p: OffProduct): FoodCandidate | null {
+function fromOff(p: OffProduct): FoodCandidate | null {
   const nm = p.nutriments ?? {};
   const kcal = n(nm['energy-kcal_100g']) ?? (n(nm['energy_100g']) !== null ? n(nm['energy_100g'])! / 4.184 : null);
   const protein = n(nm['proteins_100g']);

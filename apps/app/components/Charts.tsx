@@ -242,29 +242,6 @@ export function MacroDonut({ days }: { days: DayTotals[] }) {
   );
 }
 
-/** Four weeks of squares: filled on days you logged food. */
-export function LogCalendar({ days, today }: { days: DayTotals[]; today: string }) {
-  return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-      {days.map((d) => (
-        <View
-          key={d.date}
-          accessibilityLabel={`${shortDate(d.date)}: ${d.kcal ? 'logged' : 'not logged'}`}
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            backgroundColor: d.kcal > 0 ? (d.goal && d.kcal > d.goal * 1.05 ? color.over : color.fat) : color.track,
-            opacity: d.kcal > 0 ? 0.9 : 1,
-            borderWidth: d.date === today ? 2 : 0,
-            borderColor: color.iron,
-          }}
-        />
-      ))}
-    </View>
-  );
-}
-
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const pad = (n: number) => String(n).padStart(2, '0');
 

@@ -14,7 +14,7 @@ export interface HowTo {
   images: number;
 }
 
-export interface LibraryExercise extends HowTo {
+interface LibraryExercise extends HowTo {
   key: string;
   name: string;
   muscle: Muscle;
@@ -25,7 +25,7 @@ export interface LibraryExercise extends HowTo {
 }
 
 /** Warm-up moves, stretches and foam rolling. Not logged; followed with a timer. */
-export interface LibraryStretch extends HowTo {
+interface LibraryStretch extends HowTo {
   key: string;
   name: string;
   kind: 'dynamic' | 'static' | 'roll';

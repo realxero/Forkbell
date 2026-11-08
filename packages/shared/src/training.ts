@@ -123,7 +123,7 @@ export interface Program {
   nextRoutineId: string | null;
 }
 
-export type RecordKind = 'weight' | 'e1rm' | 'reps' | 'volume' | 'time';
+type RecordKind = 'weight' | 'e1rm' | 'reps' | 'volume' | 'time';
 
 export interface PersonalRecord {
   exerciseId: string;
@@ -173,7 +173,7 @@ export function setVolumeKg(s: SetEntry): number {
   return s.done && !s.warmup && s.weightKg && s.reps ? s.weightKg * s.reps : 0;
 }
 
-export interface NextTarget {
+interface NextTarget {
   weightKg: number | null;
   reps: number;
   /** why, in plain words */
@@ -252,7 +252,7 @@ export function findRecords(
 }
 
 // Starter programs ---------------------------------------------------------------
-export interface StarterProgram {
+interface StarterProgram {
   key: string;
   name: string;
   daysPerWeek: string;
@@ -373,5 +373,3 @@ export const saveRoutineSchema = z.object({
 });
 
 export type SaveWorkoutInput = z.infer<typeof saveWorkoutSchema>;
-export type SaveRoutineInput = z.infer<typeof saveRoutineSchema>;
-export type ExerciseInput = z.infer<typeof exerciseInputSchema>;

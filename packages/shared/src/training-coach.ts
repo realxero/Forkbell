@@ -10,7 +10,7 @@ import { daysBetween, weekStart } from './progress.ts';
 // Your training setup
 
 export const BODY_AREAS = ['shoulders', 'elbows', 'wrists', 'lower back', 'knees'] as const;
-export type BodyArea = (typeof BODY_AREAS)[number];
+type BodyArea = (typeof BODY_AREAS)[number];
 export const EQUIPMENT_KINDS = ['barbell', 'dumbbell', 'machine', 'cable', 'kettlebell', 'band'] as const;
 
 export const trainingSetupSchema = z
@@ -121,7 +121,7 @@ export function rankSwaps(target: Exercise, library: (Exercise & { uses?: number
 // Stalled lifts
 
 /** The best effort in a session: estimated one-rep max, or most reps for bodyweight work. */
-export function sessionBest(sets: SetEntry[]): number | null {
+function sessionBest(sets: SetEntry[]): number | null {
   let best: number | null = null;
   for (const s of sets) {
     if (!s.done || s.warmup || !s.reps) continue;
@@ -171,14 +171,14 @@ export function weeklyGaps(setsByMuscle: Record<string, number>, workoutsThisWee
 // ---------------------------------------------------------------------------
 // Strength goals
 
-export type GoalProjection =
+type GoalProjection =
   | { status: 'reached'; currentKg: number }
   | { status: 'projected'; currentKg: number; perWeekKg: number; date: string; capped: boolean }
   | { status: 'flat'; currentKg: number }
   | { status: 'not-enough'; currentKg: number | null };
 
 /** Fastest pace a projection will assume: 1.5% of your current strength a week. */
-export const MAX_WEEKLY_GAIN = 0.015;
+const MAX_WEEKLY_GAIN = 0.015;
 
 /**
  * When you'd reach a target one-rep max at your recent pace: a straight-line

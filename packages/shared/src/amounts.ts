@@ -6,7 +6,7 @@ import type { WeightUnit } from './training.ts';
 
 type AmountFood = Pick<Food | FoodCandidate, 'name' | 'servingGrams' | 'servingLabel' | 'portions'>;
 
-export interface AmountUnit {
+interface AmountUnit {
   /** stored with the entry: 'serving', 'g', 'oz', 'floz', a portion's name... */
   key: string;
   /** "serving", "bar", "slice", "oz", "fl oz", "cup" */
@@ -17,14 +17,14 @@ export interface AmountUnit {
   count: boolean;
 }
 
-export const WEIGHTS: Record<string, { label: string; grams: number }> = {
+const WEIGHTS: Record<string, { label: string; grams: number }> = {
   g: { label: 'g', grams: 1 },
   oz: { label: 'oz', grams: 28.349523 },
   lb: { label: 'lb', grams: 453.59237 },
   kg: { label: 'kg', grams: 1000 },
 };
 /** millilitres in each */
-export const VOLUMES: Record<string, { label: string; ml: number }> = {
+const VOLUMES: Record<string, { label: string; ml: number }> = {
   ml: { label: 'ml', ml: 1 },
   floz: { label: 'fl oz', ml: 29.5735 },
   cup: { label: 'cup', ml: 236.588 },
@@ -44,7 +44,7 @@ const VOLUME_WORDS: [RegExp, string][] = [
 const LIQUID = /\b(shake|milk|juice|soda|cola|coffee|latte|cappuccino|tea|water|smoothie|kombucha|beer|wine|drink|lemonade|broth|soup|creamer|oil|syrup|sauce|dressing|yogurt drink|kefir|horchata|energy drink|sports drink|seltzer|spritz)\b/i;
 
 /** A serving label that's a volume ("11 fl oz", "1 cup (240 ml)"): its millilitres. */
-export function servingMl(label: string | null | undefined): number | null {
+function servingMl(label: string | null | undefined): number | null {
   if (!label) return null;
   for (const [re, unit] of VOLUME_WORDS) {
     const m = re.exec(label);

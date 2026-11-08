@@ -2,12 +2,12 @@
 // in ml or litres to people who use kilograms.
 import type { WeightUnit } from './training.ts';
 
-export const ML_PER_OZ = 29.5735;
+const ML_PER_OZ = 29.5735;
 export const DEFAULT_WATER_GOAL_ML = 2000;
 /** One drink can't be more than this (a typo guard: "500 oz"). */
 export const MAX_WATER_ML = 5000;
 
-export interface WaterEntry {
+interface WaterEntry {
   id: string;
   ml: number;
   /** when it was logged */

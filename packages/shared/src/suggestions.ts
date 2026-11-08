@@ -6,12 +6,12 @@ import { forAmount } from './nutrition.ts';
 import { lighterFor, type Watched } from './better.ts';
 import type { DiaryDay, DiaryEntry, Food, RecentFood } from './types.ts';
 
-export const SODIUM_LIMIT_MG = 2300;
-export const FIBER_TARGET_G = 28;
+const SODIUM_LIMIT_MG = 2300;
+const FIBER_TARGET_G = 28;
 /** daily value for saturated fat */
-export const SAT_FAT_LIMIT_G = 20;
+const SAT_FAT_LIMIT_G = 20;
 
-export interface SuggestedItem {
+interface SuggestedItem {
   food: Food;
   grams: number;
 }

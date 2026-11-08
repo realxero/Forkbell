@@ -21,8 +21,6 @@ if (Platform.OS === 'web') {
   AccessibilityInfo.addEventListener('reduceMotionChanged', set);
 }
 
-export const reduceMotion = () => current;
-
 export function useReduceMotion() {
   const [still, setStill] = useState(current);
   useEffect(() => {

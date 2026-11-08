@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 import { env } from '../env.ts';
 
-export const PERMISSIONS = ['food_read', 'food_write', 'training_read', 'progress_read', 'wellbeing_read'] as const;
+const PERMISSIONS = ['food_read', 'food_write', 'training_read', 'progress_read', 'wellbeing_read'] as const;
 const permsSchema = z
   .array(z.enum(PERMISSIONS))
   .min(1, 'Pick at least one thing to share.')

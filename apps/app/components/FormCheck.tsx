@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { getServerUrl } from '../lib/api';
 import { color, nativeScheme, space, type, textSize } from '../lib/theme';
 
-export type FormCheckResult = { exercise: string; reps: number; goodReps: number; summary: string[]; pattern: string };
+type FormCheckResult = { exercise: string; reps: number; goodReps: number; summary: string[]; pattern: string };
 
 /**
  * Form check: the camera page from your server (/form/), shown full screen.

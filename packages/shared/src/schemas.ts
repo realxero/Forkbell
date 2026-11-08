@@ -93,5 +93,3 @@ export const goalsSchema = z.object({
 });
 
 export type FoodInput = z.infer<typeof foodInputSchema>;
-export type AddEntryInput = z.infer<typeof addEntrySchema>;
-export type CopyMealInput = z.infer<typeof copyMealSchema>;

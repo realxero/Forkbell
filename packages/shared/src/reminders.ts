@@ -5,9 +5,9 @@ import { addDays } from './dates.ts';
 import type { Meal } from './types.ts';
 
 /** A meal counts as a habit when you logged it on at least this many of the last 28 days. */
-export const HABIT_DAYS = 8;
+const HABIT_DAYS = 8;
 /** Nudge this long after your usual time. */
-export const NUDGE_AFTER_MIN = 60;
+const NUDGE_AFTER_MIN = 60;
 const QUIET_START = 6 * 60; // nothing before 6:00
 const QUIET_END = 23 * 60; // or after 23:00
 const DEFAULT_FINISH = 21 * 60 + 30;
@@ -44,7 +44,7 @@ export function usualFinishTime(minutes: number[]): number {
   return minutes.length >= 3 ? median(minutes) : DEFAULT_FINISH;
 }
 
-export interface PlannedReminder {
+interface PlannedReminder {
   /** stable, so rescheduling replaces rather than duplicates */
   id: string;
   date: string;
@@ -148,7 +148,7 @@ export interface MedForReminders {
   today: ('taken' | 'skipped' | null)[];
 }
 
-export interface PlannedDose {
+interface PlannedDose {
   id: string;
   date: string;
   minutes: number;

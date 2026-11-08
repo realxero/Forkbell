@@ -18,7 +18,7 @@ export const MICROS = [
   { key: 'zinc', name: 'Zinc', unit: 'mg', dv: 11, usda: '309', off: 'zinc_100g', offScale: 1e3 },
 ] as const;
 
-export type MicroKey = (typeof MICROS)[number]['key'];
+type MicroKey = (typeof MICROS)[number]['key'];
 /** mg or µg per 100 g (or per serving on a label); missing or null when not listed */
 export type Micros = Partial<Record<MicroKey, number | null>>;
 
@@ -57,7 +57,7 @@ export function microsFromUsda(get: (num: string) => number | null): Micros | nu
 export const microsPer100 = (perServing: Micros | null | undefined, servingGrams: number) =>
   cleanMicros(perServing ? Object.fromEntries(Object.entries(perServing).map(([k, v]) => [k, v === null || v === undefined ? null : (v * 100) / servingGrams])) : null);
 
-export interface DayMicros {
+interface DayMicros {
   /** totals from the foods that list them */
   totals: Micros;
   /** how many of the day's entries list any */

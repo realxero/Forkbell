@@ -25,7 +25,7 @@ export interface Per100 {
 export type FoodSource = 'custom' | 'off' | 'usda' | 'builtin' | 'recipe' | 'import';
 
 /** A named amount, like "1 large" = 50 g. */
-export interface Portion {
+interface Portion {
   label: string;
   grams: number;
 }
