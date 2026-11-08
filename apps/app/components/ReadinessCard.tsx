@@ -9,8 +9,9 @@ import { Info } from './Info';
 import { color, radius, space, type, textSize } from '../lib/theme';
 
 export function ReadinessCard({ r, compact }: { r: Readiness; compact?: boolean }) {
-  const tint = r.label === 'Ready to push' ? color.fat : r.label === 'Normal' ? color.accent : color.carbs;
-  const words = r.label === 'Ready to push' ? color.fatText : r.label === 'Normal' ? color.accent : color.carbsText;
+  // Green is a success mark; "take it easier" uses the rest colour, not carbs yellow.
+  const tint = r.label === 'Ready to push' ? color.fat : r.label === 'Normal' ? color.accent : color.restFill;
+  const words = r.label === 'Ready to push' ? color.fatText : r.label === 'Normal' ? color.accent : color.iron;
   const hours = (m: number) => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} m`;
   return (
     <View style={[s.card, compact && { padding: space(3) }]} accessibilityLabel={`Readiness ${r.score}, ${r.label}`}>

@@ -8,7 +8,8 @@ import { useAuth } from '../lib/auth';
 import { readCache, writeCache } from '../lib/sync';
 import { useViewing } from '../lib/profile';
 import { showToast } from '../lib/toast';
-import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
+import { color, radius, space, type } from '../lib/theme';
 
 const gotIt = (key: string) => readCache<boolean>(key) === true;
 
@@ -74,7 +75,9 @@ export function TrainingCheckInCard() {
   }, [hidden, lastWeek]);
   if (hidden || !w || viewing) return null;
   const c = trainingCheckIn(w);
-  const tint = c.tone === 'good' ? color.fat : c.tone === 'hold' ? color.over : color.accent;
+  // Green marks a good week (a success mark); a week to hold steady stays neutral,
+  // because red means over a goal, not a quiet week.
+  const tint = c.tone === 'good' ? color.fat : c.tone === 'hold' ? color.ironSoft : color.accent;
   return (
     <View style={s.card}>
       <View style={s.head}>
@@ -100,13 +103,13 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   stats: { flexDirection: 'row', gap: space(2) },
-  stat: { flex: 1, backgroundColor: color.raised, borderRadius: 12, padding: space(2) + 2, gap: 2 },
+  stat: { flex: 1, backgroundColor: color.raised, borderRadius: radius.input, padding: space(2) + 2, gap: 2 },
   actions: { flexDirection: 'row', gap: space(3), alignItems: 'center' },
-  primary: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(2) + 2, paddingHorizontal: space(4) },
-  primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },
-  secondary: { borderRadius: 10, paddingVertical: space(2) + 2, paddingHorizontal: space(4), borderWidth: 1, borderColor: color.line },
-  secondaryText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
+  primary: { ...buttons.small, minHeight: 44 },
+  primaryText: buttons.smallText,
+  secondary: { ...buttons.quiet, paddingVertical: space(3), minHeight: 44 },
+  secondaryText: { ...buttons.quietText, fontSize: buttons.smallText.fontSize },
 });

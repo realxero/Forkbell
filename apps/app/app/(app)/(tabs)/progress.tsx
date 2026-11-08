@@ -1,4 +1,5 @@
 import { ReadinessCard } from '../../../components/ReadinessCard';
+import { BodyMap } from '../../../components/BodyMap';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, Modal } from 'react-native';
@@ -222,6 +223,9 @@ export default function ProgressScreen() {
                 </View>
               </>
             )}
+
+            <Text style={s.heading} accessibilityRole="header">Training</Text>
+            <BodyMap />
 
             <Text style={s.heading} accessibilityRole="header">Recovery and wellbeing</Text>
             {/* Everything from Apple Health / Health Connect */}
