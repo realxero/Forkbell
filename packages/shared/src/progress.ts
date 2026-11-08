@@ -91,10 +91,14 @@ export function estimateEnergy(intake: Record<string, number>, series: TrendPoin
   if (first && first.date > start) start = first.date;
   const empty = (needs: string, loggedDays = 0, spanDays = 0): EnergyEstimate => ({ kcal: null, rateKgPerWeek: null, loggedDays, spanDays, confidence: null, needs });
 
-  const startPoint = trendOn(series, start);
+  // The weight change and the food it's set against cover the same days: from
+  // the first weigh-in in the window to the last, and only the food in between.
+  const startPoint = series.find((p) => p.date >= start && p.date <= end) ?? null;
   const endPoint = trendOn(series, end);
   const spanDays = startPoint && endPoint ? daysBetween(startPoint.date, endPoint.date) : 0;
-  const allLogged = Object.entries(intake).filter(([d, kcal]) => d >= start && d <= end && kcal > 0);
+  const from = startPoint?.date ?? start;
+  const to = endPoint?.date ?? end;
+  const allLogged = Object.entries(intake).filter(([d, kcal]) => d >= from && d <= to && kcal > 0);
   const finishedLogged = finished ? allLogged.filter(([d]) => finished.has(d)) : [];
   const usesFinishedDays = finishedLogged.length >= 10;
   const logged = usesFinishedDays ? finishedLogged : allLogged;

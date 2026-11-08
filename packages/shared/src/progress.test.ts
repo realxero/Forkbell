@@ -140,3 +140,14 @@ test('two weigh-ins on one day move the trend once, as their average', () => {
   assert.equal(t.length, 2);
   assert.ok(Math.abs(t[1]!.trendKg - 80.1) < 1e-9, `trend ${t[1]!.trendKg}`);
 });
+
+test('the burn estimate sets the weight change against the food from the same days', () => {
+  // A weigh-in long before the window, then steady weigh-ins inside it at 80 kg.
+  const series = weightTrend([{ date: '2026-01-01', weightKg: 90 }, ...Array.from({ length: 20 }, (_, i) => ({ date: addDays('2026-03-05', i), weightKg: 80 }))] as WeighIn[]);
+  const intake: Record<string, number> = {};
+  for (let i = 0; i < 28; i++) intake[addDays('2026-03-01', i)] = 2500;
+  const e = estimateEnergy(intake, series, '2026-03-29');
+  // Before: the January point made it look like weight was coming off (a burn well above intake).
+  assert.equal(e.spanDays, 19);
+  assert.ok(e.kcal !== null && Math.abs(e.kcal - 2500) < 400, `kcal ${e.kcal}`);
+});

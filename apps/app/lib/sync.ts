@@ -18,6 +18,8 @@ type State = { cache: Record<string, Entry>; outbox: OutboxItem[]; held: OutboxI
 const MAX_CACHE = 120;
 let state: State = { cache: {}, outbox: [], held: [], problems: [] };
 let online = true;
+/** Offline because Forkbell itself answered with an error (not a lost connection): the copy shown may be out of date. */
+let serverError = false;
 /** Who's signed in. Changes are stamped with this and only sent while that person is signed in. */
 let owner: string | null = null;
 let syncing = false;
@@ -73,9 +75,11 @@ function persistNow() {
   return save();
 }
 const notify = () => listeners.forEach((l) => l());
-function setOnline(v: boolean) {
-  if (online !== v) {
+function setOnline(v: boolean, fromServerError = false) {
+  const trouble = !v && fromServerError;
+  if (online !== v || serverError !== trouble) {
     online = v;
+    serverError = trouble;
     notify();
   }
 }
@@ -127,7 +131,9 @@ export async function cachedGet<T>(path: string): Promise<T> {
     return data;
   } catch (e) {
     if (!isOffline(e)) throw e;
-    setOnline(false);
+    const fromServer = e instanceof ApiError && e.fromForkbell && e.status >= 500;
+    if (fromServer) console.warn(`Forkbell answered ${path} with ${(e as ApiError).status}; showing the saved copy.`, e);
+    setOnline(false, fromServer);
     const copy = readCache<T>(path);
     if (copy !== undefined) return copy;
     // A login or proxy page says more than "offline" about what to fix.
@@ -253,7 +259,7 @@ export async function flush(): Promise<void> {
           persist();
           continue;
         }
-        setOnline(status !== 0 ? online : false);
+        if (status === 0) setOnline(false);
         persist();
         break;
       }
@@ -303,7 +309,7 @@ export function useSync() {
     return () => void listeners.delete(l);
   }, []);
   const mine = state.outbox.filter((o) => !o.userId || o.userId === owner);
-  return { online, syncing, pending: mine.length, labels: mine.map((o) => o.label), problems: state.problems, held: state.held.map((h) => h.label) };
+  return { online, serverError, syncing, pending: mine.length, labels: mine.map((o) => o.label), problems: state.problems, held: state.held.map((h) => h.label) };
 }
 
 /**
