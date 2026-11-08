@@ -85,7 +85,9 @@ jobs:
           set -o pipefail
           xcodebuild -workspace Forkbell.xcworkspace -scheme Forkbell -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/build" CODE_SIGNING_ALLOWED=NO build | tail -20
+            -derivedDataPath "$RUNNER_TEMP/build" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO build | tail -20
+          # "Sign to run locally" gives the app an identity, which the keychain needs
+          # (sign-in is kept there); an unsigned build just spins on its first screen.
 
       - name: Start the Simulator
         id: sim
@@ -136,13 +138,18 @@ jobs:
           xcrun simctl ui "$UDID" content_size large
           ls "$OUT"
 
+      # One folder, so `gh run download` can unpack it: the pictures, plus Maestro's
+      # own screenshots and logs from any step that failed, and the server's log.
+      - name: Gather
+        if: always()
+        run: |
+          mkdir -p "$OUT/debug"
+          cp "$RUNNER_TEMP/server.log" "$OUT/debug/" 2>/dev/null || true
+          cp -R "$HOME/.maestro/tests" "$OUT/debug/maestro" 2>/dev/null || true
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ios-screenshots
-          path: |
-            ${{ runner.temp }}/screenshots
-            ${{ runner.temp }}/server.log
-            ~/.maestro/tests
+          path: ${{ runner.temp }}/screenshots
           if-no-files-found: warn

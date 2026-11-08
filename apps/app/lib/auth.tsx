@@ -74,7 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    loadConnection().then(({ needsServer }) => (needsServer ? setStatus('signedOut') : refreshMe()));
+    // If the keychain can't be read (a phone woken before its first unlock, a broken
+    // keychain), show sign-in rather than spinning forever.
+    loadConnection().then(
+      ({ needsServer }) => (needsServer ? setStatus('signedOut') : refreshMe()),
+      () => setStatus('signedOut'),
+    );
   }, [refreshMe]);
 
   const signIn = useCallback(
