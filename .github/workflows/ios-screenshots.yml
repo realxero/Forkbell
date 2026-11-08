@@ -81,14 +81,32 @@ jobs:
           plutil -replace NSAppTransportSecurity -json '{"NSAllowsArbitraryLoads":true,"NSAllowsLocalNetworking":true}' ios/Forkbell/Info.plist
       - name: Build for the Simulator
         working-directory: apps/app/ios
+        timeout-minutes: 35
         run: |
           set -o pipefail
           xcodebuild -workspace Forkbell.xcworkspace -scheme Forkbell -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/build" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO build | tail -20
-          # "Sign to run locally" gives the app an identity, which the keychain needs
-          # (sign-in is kept there); an unsigned build just spins on its first screen.
-
+            -derivedDataPath "$RUNNER_TEMP/build" CODE_SIGNING_ALLOWED=NO build \
+            | tee "$RUNNER_TEMP/xcodebuild.log" \
+            | grep --line-buffered -E '^(\*\* |=== BUILD TARGET)|error:' || true
+          grep -q '\*\* BUILD SUCCEEDED \*\*' "$RUNNER_TEMP/xcodebuild.log"
+      # Built unsigned (quick and reliable), then signed to run locally with an app
+      # identity: the keychain, where sign-in is kept, refuses an app without one,
+      # and the app would sit on its loading screen.
+      - name: Give the app an identity
+        run: |
+          APP="$RUNNER_TEMP/build/Build/Products/Release-iphonesimulator/Forkbell.app"
+          cat > "$RUNNER_TEMP/sim.entitlements" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>application-identifier</key><string>SIMULATOR.com.realxero.forkbell</string>
+            <key>keychain-access-groups</key><array><string>SIMULATOR.com.realxero.forkbell</string></array>
+          </dict></plist>
+          PLIST
+          sed -i '' 's/^          //' "$RUNNER_TEMP/sim.entitlements"
+          codesign --force --sign - --entitlements "$RUNNER_TEMP/sim.entitlements" --timestamp=none "$APP"
+          codesign -d --entitlements - "$APP" 2>/dev/null | grep -q application-identifier
       - name: Start the Simulator
         id: sim
         run: |
@@ -145,6 +163,7 @@ jobs:
         run: |
           mkdir -p "$OUT/debug"
           cp "$RUNNER_TEMP/server.log" "$OUT/debug/" 2>/dev/null || true
+          cp "$RUNNER_TEMP/xcodebuild.log" "$OUT/debug/" 2>/dev/null || true
           cp -R "$HOME/.maestro/tests" "$OUT/debug/maestro" 2>/dev/null || true
       - name: Keep the screenshots
         if: always()
