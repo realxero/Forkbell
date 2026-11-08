@@ -82,7 +82,7 @@ export default function WorkoutScreen() {
   const voice = me?.preferences.workoutVoice ?? 'off';
   /** the rest coach: what's been said this rest, and the rest's plan */
   const told = useRef(new Set<string>());
-  const restPlan = useRef({ planned: 0, startedAt: 0, extended: false });
+  const restPlan = useRef({ planned: 0, startedAt: 0 });
   const [hr, setHr] = useState<{ bpm: number; at: number } | null>(null);
   const [recoveredBpm, setRecoveredBpm] = useState(recoveredAt(null, null));
   const [w, setW] = useState<Workout | null>(null);
@@ -228,15 +228,14 @@ export default function WorkoutScreen() {
       told.current.add(key);
       void speak(text);
     };
-    // Not recovered with a few seconds to go: 30 more seconds, once.
-    if (hrFresh && left <= 3 && left > 0 && !plan.extended && hrFresh.bpm > recoveredBpm + 8) {
-      plan.extended = true;
-      setRestEnd((t) => (t ? t + 30_000 : t));
-      setRestTotal((t) => t + 30);
-      say('too-soon', `Heart rate's still ${Math.round(hrFresh.bpm)}. Give it about 30 more seconds.`);
+    const advice = restAdvice({ plannedSeconds: plan.planned, elapsedSeconds: Math.round((now - plan.startedAt) / 1000), secondsLeft: left, hr: hrFresh?.bpm ?? null, hrAgeSeconds: hrFresh ? Math.round((now - hrFresh.at) / 1000) : null, recoveredBpm, told: told.current });
+    if (advice.extendSeconds) {
+      const extra = advice.extendSeconds;
+      setRestEnd((t) => (t ? t + extra * 1000 : t));
+      setRestTotal((t) => t + extra);
+      say('too-soon', advice.say!);
       return;
     }
-    const advice = restAdvice({ plannedSeconds: plan.planned, elapsedSeconds: Math.round((now - plan.startedAt) / 1000), hr: hrFresh?.bpm ?? null, hrAgeSeconds: hrFresh ? Math.round((now - hrFresh.at) / 1000) : null, recoveredBpm, told: told.current });
     if (advice.say && advice.state === 'ready') say('ready-early', advice.say);
     const cue = restCue(left, plan.planned, restNext.current);
     if (cue) say(cue.key, cue.say);
@@ -344,7 +343,7 @@ export default function WorkoutScreen() {
       // For the notification and the coach: another set of this, or the next exercise.
       restNext.current = nextLabel(list, then.next, units.unit, units.show) ?? nextName;
       told.current = new Set();
-      restPlan.current = { planned: then.rest, startedAt: Date.now(), extended: false };
+      restPlan.current = { planned: then.rest, startedAt: Date.now() };
       setRestTotal(then.rest);
       setRestEnd(Date.now() + then.rest * 1000);
     }
