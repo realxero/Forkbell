@@ -273,7 +273,7 @@ export const STARTER_PROGRAMS: StarterProgram[] = [
   },
   {
     key: 'upper-lower-4',
-    name: 'Upper / lower, 4 days',
+    name: 'Upper / Lower, 4 days',
     daysPerWeek: '4 days a week',
     description: 'Upper and lower body days, twice each a week.',
     routines: [
@@ -285,7 +285,7 @@ export const STARTER_PROGRAMS: StarterProgram[] = [
   },
   {
     key: 'ppl-6',
-    name: 'Push / pull / legs',
+    name: 'Push / Pull / Legs',
     daysPerWeek: '3 to 6 days a week',
     description: 'Push, pull and legs days in turn. Run it once or twice a week.',
     routines: [

@@ -6,7 +6,7 @@ import { todayLocal } from '@forkbell/shared';
 import { cachedGet, send } from '../lib/sync';
 import { useViewing } from '../lib/profile';
 import { Chip } from './AmountPicker';
-import { color, space, type, textSize } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 import { Check } from './Check';
 import { haptic } from '../lib/haptics';
 import { buttons } from '../lib/buttons';
@@ -125,10 +125,10 @@ export function WellbeingCard({ healthSleepMin = null }: { healthSleepMin?: numb
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(3) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
-  input: { ...type.body, width: 80, textAlign: 'center', backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(2) },
+  input: { ...type.body, width: 80, textAlign: 'center', backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(2) },
   small: { ...buttons.small, alignSelf: 'flex-start' },
   smallText: { ...buttons.smallText },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },

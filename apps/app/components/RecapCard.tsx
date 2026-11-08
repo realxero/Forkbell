@@ -30,7 +30,7 @@ export function RecapCard({ unit }: { unit: 'lb' | 'kg' }) {
     ['barbell-outline', 'Workouts', String(r.thisMonth.workouts), String(r.lastMonth.workouts)],
   ];
   return (
-    <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line }}>
+    <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) }}>
       <Text style={type.title}>Monthly recap</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
         <View style={{ flex: 1 }} />
