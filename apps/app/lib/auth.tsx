@@ -5,7 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { deviceTimeZone, type Me, type SignInMethods } from '@forkbell/shared';
 import { ApiError, api, loadConnection, getServerUrl, setServerUrl, setToken, post, put } from './api';
-import { cachedGet, updateCache } from './sync';
+import { cachedGet, flush, forgetAccount, setSyncOwner, updateCache } from './sync';
 
 type Status = 'loading' | 'signedOut' | 'signedIn';
 type Auth = {
@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('The server’s answer didn’t look like a Forkbell account. Check the server address, then sign in again.');
       }
       applyMealPrefs(me.preferences.meals); // your meal names, before anything shows them
+      setSyncOwner(me.id);
       setMe(me);
       setStatus('signedIn');
       // The server works out "today" for AI apps and Shortcuts in your time zone, so keep it current
@@ -160,8 +161,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    // Last chance for waiting changes to go up while this account is still signed in.
+    await flush().catch(() => {});
     await post('/auth/logout', {}).catch(() => {});
-    updateCache('/api/me', () => undefined);
+    await forgetAccount();
     await setToken(null);
     setMe(null);
     setStatus('signedOut');

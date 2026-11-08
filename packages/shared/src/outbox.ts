@@ -16,6 +16,8 @@ export interface OutboxItem {
   attempts: number;
   /** whose data, when logging for someone who shared with you */
   profileId?: string | null;
+  /** who was signed in when it was made; it's only ever sent while they are */
+  userId?: string | null;
   /** how many times in a row the server answered with an error (5xx) */
   serverErrors?: number;
 }

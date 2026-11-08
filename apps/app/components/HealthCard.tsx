@@ -9,20 +9,20 @@ import { color, radius, space, type, textSize } from '../lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 const ORDER: [HealthKind, IconName, string][] = [
-  ['steps', 'footsteps-outline', color.hueGreen],
-  ['active_kcal', 'flame-outline', color.hueOrange],
-  ['exercise_min', 'stopwatch-outline', color.hueGreen],
-  ['sleep_min', 'bed-outline', color.huePurple],
-  ['distance_m', 'walk-outline', color.hueTeal],
-  ['flights', 'trending-up-outline', color.hueYellow],
-  ['resting_hr', 'heart-outline', color.hueRed],
-  ['hr_avg', 'pulse-outline', color.hueRed],
-  ['hrv_ms', 'analytics-outline', color.huePink],
-  ['spo2_pct', 'water-outline', color.hueBlue],
-  ['resp_rate', 'cloud-outline', color.hueTeal],
-  ['vo2max', 'speedometer-outline', color.hueGreen],
-  ['lean_kg', 'body-outline', color.huePurple],
-  ['resting_kcal', 'battery-half-outline', color.hueGrey],
+  ['steps', 'footsteps-outline', color.tileTeal],
+  ['active_kcal', 'flame-outline', color.tileCopper],
+  ['exercise_min', 'stopwatch-outline', color.tileTeal],
+  ['sleep_min', 'bed-outline', color.tilePurple],
+  ['distance_m', 'walk-outline', color.tileTeal],
+  ['flights', 'trending-up-outline', color.tileCopper],
+  ['resting_hr', 'heart-outline', color.tileMagenta],
+  ['hr_avg', 'pulse-outline', color.tileMagenta],
+  ['hrv_ms', 'analytics-outline', color.tileMagenta],
+  ['spo2_pct', 'water-outline', color.tileSlate],
+  ['resp_rate', 'cloud-outline', color.tileTeal],
+  ['vo2max', 'speedometer-outline', color.tileTeal],
+  ['lean_kg', 'body-outline', color.tilePurple],
+  ['resting_kcal', 'battery-half-outline', color.tileGrey],
 ];
 
 /** Show a value in its everyday unit: sleep in hours, distance in km (or mi), lean mass in your unit. */
