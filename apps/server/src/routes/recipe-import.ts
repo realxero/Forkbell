@@ -17,7 +17,7 @@ import { aiConfigFor } from '../bell/config.ts';
 import { anthropic, openai } from '../bell/providers.ts';
 import { toFood } from '../serialize.ts';
 
-export interface ImportedIngredient {
+interface ImportedIngredient {
   line: string;
   name: string;
   grams: number;
@@ -25,7 +25,7 @@ export interface ImportedIngredient {
   /** a food you already have (or a built-in one) with this name */
   match: Food | null;
 }
-export interface RecipePreview {
+interface RecipePreview {
   name: string;
   servings: number;
   source: 'web' | 'mealie' | 'text';

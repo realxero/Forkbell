@@ -20,17 +20,17 @@ export interface DepthScan {
 }
 
 /** A food's box in the photo, as fractions of its width and height from the top-left. */
-export interface FoodBox {
+interface FoodBox {
   box: [left: number, top: number, right: number, bottom: number];
 }
 
-export interface FoodVolume {
+interface FoodVolume {
   ml: number;
   /** how much of the box had a usable depth reading, 0 to 1 */
   coverage: number;
 }
 
-export type VolumeResult = { ok: true; volumes: FoodVolume[]; tableTilt: number } | { ok: false; error: string };
+type VolumeResult = { ok: true; volumes: FoodVolume[]; tableTilt: number } | { ok: false; error: string };
 
 type V3 = [number, number, number];
 const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];

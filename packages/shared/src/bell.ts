@@ -47,7 +47,6 @@ export const bellChatSchema = z.object({
   /** asked from inside a workout: Bell sees that session */
   workoutId: z.string().uuid().optional(),
 });
-export type BellChatInput = z.infer<typeof bellChatSchema>;
 
 /** A question Bell asks instead of guessing, with answers you can tap. */
 export interface BellQuestion {
@@ -149,7 +148,7 @@ export const labelReadSchema = z.object({
   per_serving: labelNumbers,
   note: z.string().trim().max(300).nullish(),
 });
-export type LabelRead = z.infer<typeof labelReadSchema>;
+type LabelRead = z.infer<typeof labelReadSchema>;
 
 export interface LabelFood {
   name: string | null;

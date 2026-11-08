@@ -6,7 +6,7 @@
 // Columns: key, name, kcal, protein, carbs, fat, fiber, sugar, sodium (mg),
 // then named portions in grams.
 
-export interface BuiltinFood {
+interface BuiltinFood {
   key: string;
   name: string;
   per100: { kcal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sodium: number };

@@ -11,7 +11,7 @@ import { Check } from './Check';
 import { haptic } from '../lib/haptics';
 import { buttons } from '../lib/buttons';
 
-export type CheckIn = { date: string; sleepHours: number | null; sleepQuality: number | null; mood: number | null; energy: number | null; note: string | null };
+type CheckIn = { date: string; sleepHours: number | null; sleepQuality: number | null; mood: number | null; energy: number | null; note: string | null };
 export type Med = { id: string; name: string; dose: string | null; timesPerDay: number; notes: string | null; active: boolean; reminderTimes?: (string | null)[]; today: ('taken' | 'skipped' | null)[]; lastWeek: { taken: number; planned: number } };
 export type Wellbeing = { today: string; checkIns: CheckIn[]; medications: Med[] };
 

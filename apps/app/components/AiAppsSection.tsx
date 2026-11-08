@@ -15,7 +15,7 @@ import { buttons } from '../lib/buttons';
 type Key = { id: string; label: string; hint: string; createdAt: string; lastUsedAt: string | null; kind: string; canWrite: boolean };
 
 /** Claude Desktop's config for this server and key (through mcp-remote, which passes the key along). */
-export const claudeConfig = (server: string, token: string) =>
+const claudeConfig = (server: string, token: string) =>
   JSON.stringify({ mcpServers: { forkbell: { command: 'npx', args: ['-y', 'mcp-remote', `${server.replace(/\/$/, '')}/mcp`, '--header', 'Authorization:${FORKBELL_KEY}'], env: { FORKBELL_KEY: `Bearer ${token}` } } } }, null, 2);
 
 export function AiAppsSection() {

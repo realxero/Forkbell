@@ -30,7 +30,7 @@ function portionsOf(f: UsdaFood) {
 // USDA nutrient numbers. Search results report these per 100 g for every data type.
 const NUM = { kcal: '208', protein: '203', carbs: '205', fat: '204', fiber: '291', sugar: '269', sodium: '307', satFat: '606' } as const;
 
-export function fromUsda(f: UsdaFood): FoodCandidate | null {
+function fromUsda(f: UsdaFood): FoodCandidate | null {
   const get = (num: string) => f.foodNutrients?.find((x) => x.nutrientNumber === num)?.value ?? null;
   const kcal = get(NUM.kcal);
   const protein = get(NUM.protein);

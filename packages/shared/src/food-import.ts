@@ -9,7 +9,7 @@ import type { Meal } from './types.ts';
 export type FoodImportFormat = 'myfitnesspal' | 'loseit' | 'cronometer' | 'yazio' | 'generic';
 export const FOOD_IMPORT_APPS: Record<FoodImportFormat, string> = { myfitnesspal: 'MyFitnessPal', loseit: 'Lose It', cronometer: 'Cronometer', yazio: 'Yazio', generic: 'a spreadsheet' };
 
-export const importedFoodLineSchema = z.object({
+const importedFoodLineSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   meal: z.enum(['breakfast', 'lunch', 'dinner', 'snacks', 'meal5', 'meal6']),
   name: z.string().trim().min(1).max(200),
@@ -90,7 +90,7 @@ function columns(headers: string[]) {
   };
 }
 
-export function detectFoodFormat(headers: string[]): FoodImportFormat | null {
+function detectFoodFormat(headers: string[]): FoodImportFormat | null {
   const h = headers.map(norm);
   const has = (re: RegExp) => h.some((x) => re.test(x));
   if (has(/^food name$/) && has(/^energy \(kcal\)$/)) return 'cronometer';

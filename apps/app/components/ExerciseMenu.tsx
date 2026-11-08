@@ -11,7 +11,7 @@ import { haptic } from '../lib/haptics';
 import { color, radius, space, type, textSize } from '../lib/theme';
 
 type Icon = ComponentProps<typeof Ionicons>['name'];
-export interface ExerciseMenuProps {
+interface ExerciseMenuProps {
   visible: boolean;
   name: string;
   restSeconds: number;

@@ -49,7 +49,7 @@ export function onPictureProgress(l: (p: { done: number; total: number }) => voi
 export const pictureDownloadRunning = () => running !== null;
 
 /** Save the pictures that aren't on this phone yet, a few at a time. One download runs at once. */
-export function downloadPictures(paths: string[]): Promise<{ saved: number; failed: number }> {
+function downloadPictures(paths: string[]): Promise<{ saved: number; failed: number }> {
   if (!pictureCacheSupported) return Promise.resolve({ saved: 0, failed: 0 });
   running ??= (async () => {
     const dir = folder();

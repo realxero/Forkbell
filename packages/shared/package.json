@@ -1,6 +1,5 @@
 {
   "name": "@forkbell/shared",
-  "version": "0.22.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",

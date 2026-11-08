@@ -21,7 +21,7 @@ export const getVoiceChoice = (): VoiceChoice => readCache<VoiceChoice>(KEY) ?? 
 export const setVoiceChoice = (c: VoiceChoice) => writeCache(KEY, c);
 
 /** Plain words for speaking: no markdown, links or emoji. */
-export function speakable(text: string) {
+function speakable(text: string) {
   return text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/[*_`#>]/g, '')

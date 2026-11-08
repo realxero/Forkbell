@@ -95,7 +95,7 @@ export const TOOLS: ToolSpec[] = [
 ];
 
 /** Only offered when "Ask me when unsure" is on. */
-export const ASK_TOOL: ToolSpec = {
+const ASK_TOOL: ToolSpec = {
   name: 'ask_question',
   description:
     'Ask the person ONE short question when a detail you cannot see or infer would change calories by roughly a quarter or more (portion size, how it was cooked, a sauce or dressing, which brand or size). Give 2 to 4 short answers they can tap. A "just estimate it" answer is added for them, so a question never blocks logging. After asking, stop and wait; do not propose foods for the unclear item in the same turn.',
@@ -110,7 +110,7 @@ export const ASK_TOOL: ToolSpec = {
 };
 
 /** Searching the web, when the server has a SearXNG instance to search with (SEARCH_URL). */
-export const SEARCH_TOOL: ToolSpec = {
+const SEARCH_TOOL: ToolSpec = {
   name: 'search_web',
   description:
     "Search the web. Use it for a restaurant, café or chain item before estimating (\"Peet's croissant grilled cheese calories\"), and for packaged foods not in search_foods. Results are titles, links and short snippets; use numbers only when a snippet states them for that exact item, and say where they came from.",

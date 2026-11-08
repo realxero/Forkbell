@@ -1,9 +1,9 @@
 import { BUILD_INFO } from './build-info.ts';
 
-export type BuildInfo = { version: string; commit: string | null; buildNumber: string | null; builtAt: string | null };
+type BuildInfo = typeof BUILD_INFO;
 
 /** This copy of Forkbell: the app or the server, whichever imports it. */
-export const BUILD: BuildInfo = BUILD_INFO;
+export { BUILD_INFO as BUILD };
 
 /** "0.11.0 (build 42, a1b2c3d)", or "0.11.0 (dev)" for a build from a working copy. */
 export function versionLabel(b: BuildInfo) {

@@ -2,7 +2,7 @@
 // Calories use METs (the Compendium of Physical Activities), which are rough,
 // so they're shown as an estimate. A watch's own number is better when you have one.
 
-export interface CardioActivity {
+interface CardioActivity {
   key: string;
   name: string;
   /** effort when the pace isn't known */
@@ -11,7 +11,7 @@ export interface CardioActivity {
   distance: boolean;
 }
 
-export const CARDIO_ACTIVITIES: CardioActivity[] = [
+const CARDIO_ACTIVITIES: CardioActivity[] = [
   { key: 'run', name: 'Run', met: 9.8, distance: true },
   { key: 'treadmill', name: 'Treadmill', met: 8.3, distance: true },
   { key: 'walk', name: 'Walk', met: 3.5, distance: true },

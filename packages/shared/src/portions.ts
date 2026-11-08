@@ -1,6 +1,6 @@
 import type { Food, FoodCandidate } from './types.ts';
 
-export interface AmountChip {
+interface AmountChip {
   label: string;
   grams: number;
 }

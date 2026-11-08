@@ -7,7 +7,7 @@ import { forAmount, sumEntries } from './nutrition.ts';
 import { addDays } from './dates.ts';
 import { MEALS, type DiaryDay, type Food, type Meal, type RecentFood } from './types.ts';
 
-export type Role = 'protein' | 'starch' | 'veg' | 'fruit' | 'dairy' | 'fat' | 'other';
+type Role = 'protein' | 'starch' | 'veg' | 'fruit' | 'dairy' | 'fat' | 'other';
 
 const ROLE_WORDS: [Role, RegExp][] = [
   ['protein', /\b(chicken|beef|turkey|pork|steak|salmon|tuna|shrimp|tilapia|cod|fish|tofu|tempeh|egg white|eggs?|lentils?|beans?|chickpeas?|edamame|cottage cheese|greek yogurt|jerky|protein)\b/i],
@@ -22,7 +22,7 @@ const ROLE_WORDS: [Role, RegExp][] = [
 const NOT_A_PART = /\b(oil|butter|cream|juice|drink|cola|soda|tea|coffee|sauce|ketchup|mayonnaise|syrup|sugar|honey|salt|chocolate|ice cream|popcorn|dressing|candy)\b/i;
 const FAT = /\b(peanut butter|almonds?|walnuts?|cashews?|peanuts?|avocado|nuts?)\b/i;
 
-export function roleOf(food: Food): Role {
+function roleOf(food: Food): Role {
   if (/\b(peanut|almond|cashew) butter\b/i.test(food.name)) return 'fat';
   if (NOT_A_PART.test(food.name)) return 'other';
   if (FAT.test(food.name)) return 'fat';
@@ -38,7 +38,7 @@ const BREAKFAST = /\b(eggs?|egg white|greek yogurt|cottage cheese|oats?|bagel|br
 // Concentrated foods (powders, nuts) make poor main dishes.
 const MAX_GRAMS: Record<Role, number> = { protein: 250, starch: 300, veg: 200, fruit: 200, dairy: 250, fat: 30, other: 200 };
 
-export interface PlannedItem {
+interface PlannedItem {
   food: Food;
   grams: number;
   meal: Meal;
@@ -147,7 +147,7 @@ export function planDays(days: DiaryDay[], opts: Omit<Parameters<typeof planDay>
 }
 
 // Shopping list -------------------------------------------------------------------------
-export type Aisle = 'Produce' | 'Meat and fish' | 'Dairy and eggs' | 'Bread and grains' | 'Pantry' | 'Drinks' | 'Other';
+type Aisle = 'Produce' | 'Meat and fish' | 'Dairy and eggs' | 'Bread and grains' | 'Pantry' | 'Drinks' | 'Other';
 const AISLES: [Aisle, RegExp][] = [
   ['Dairy and eggs', /\b(milk|yogurt|cheese|butter|cream|eggs?|egg white)\b/i],
   ['Meat and fish', /\b(chicken|beef|turkey|pork|steak|salmon|tuna|shrimp|tilapia|cod|fish|bacon|ham|sausage)\b/i],

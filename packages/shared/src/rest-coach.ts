@@ -10,9 +10,9 @@ export function recoveredAt(restingHr: number | null, age: number | null = null)
   return Math.round(resting + 0.4 * (max - resting));
 }
 
-export type RestState = 'too-soon' | 'recovering' | 'ready';
+type RestState = 'too-soon' | 'recovering' | 'ready';
 
-export interface RestAdvice {
+interface RestAdvice {
   state: RestState;
   /** something to say now, or null to stay quiet */
   say: string | null;

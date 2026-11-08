@@ -19,7 +19,7 @@ const log: string[] = [];
 export async function startServer(extraEnv: Record<string, string> = {}) {
   if (!process.env.DATABASE_ADMIN_URL || !process.env.DATABASE_URL) throw new Error('Set DATABASE_ADMIN_URL and DATABASE_URL (and run the migrations first).');
   admin = postgres(process.env.DATABASE_ADMIN_URL, { max: 2, onnotice: () => {} });
-  server = spawn(process.execPath, ['--import', 'tsx', 'src/index.ts'], {
+  server = spawn(process.execPath, ['src/index.ts'], {
     cwd: path.join(here, '..'),
     env: {
       ...process.env,

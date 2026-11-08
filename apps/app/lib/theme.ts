@@ -91,7 +91,7 @@ const dark: Record<keyof typeof light, string> = {
   hueGrey: '#9BA7AE',
 };
 
-export type ColorName = keyof typeof light;
+type ColorName = keyof typeof light;
 export type SchemeChoice = 'system' | 'light' | 'dark';
 const isWeb = Platform.OS === 'web';
 
@@ -103,8 +103,6 @@ export const nativeChoice: SchemeChoice = savedNative<SchemeChoice>('fb.theme') 
 const nativeAccent = savedNative<string>('fb.accent');
 /** The scheme the phone's colours were built with, at start-up. */
 export const nativeScheme: 'light' | 'dark' = nativeChoice === 'system' ? systemScheme() : nativeChoice;
-/** Kept for older callers: phones now read their choice at start-up by themselves. */
-export function applyNativeScheme(_choice: SchemeChoice) {}
 
 export const color = Object.fromEntries(
   (Object.keys(light) as ColorName[]).map((k) => [k, isWeb ? `var(--fb-${k})` : (nativeScheme === 'dark' ? dark : light)[k]]),
@@ -185,7 +183,7 @@ export async function setNativeTheme(next: { scheme?: SchemeChoice; accent?: Acc
 }
 
 /** True when the system switched light/dark since start-up and the phone follows the system. */
-export function nativeSchemeOutdated() {
+function nativeSchemeOutdated() {
   return !isWeb && nativeChoice === 'system' && systemScheme() !== nativeScheme;
 }
 

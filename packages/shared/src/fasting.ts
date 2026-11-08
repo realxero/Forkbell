@@ -20,7 +20,7 @@ export interface Fasts {
   streak: number;
 }
 
-export interface FastProgress {
+interface FastProgress {
   hours: number;
   /** 0 to 1 */
   fraction: number;

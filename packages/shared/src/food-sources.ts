@@ -1,7 +1,7 @@
 // Where food data comes from, and checking one source against another.
 import type { DataKind, FoodCandidate, FoodSource } from './types.ts';
 
-export const SOURCE_NAMES: Record<FoodSource, string> = {
+const SOURCE_NAMES: Record<FoodSource, string> = {
   usda: 'USDA',
   off: 'Open Food Facts',
   builtin: 'Forkbell',

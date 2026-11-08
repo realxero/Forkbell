@@ -422,7 +422,7 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
 }
 
 /** The workout in progress, in plain lines, for Bell's instructions. Weights in their unit. */
-export function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string): string {
+function workoutContext(w: Workout, unit: 'lb' | 'kg', localTime?: string): string {
   const show = (kg: number | null) => (kg === null ? 'bodyweight' : `${Math.round((unit === 'lb' ? kg * 2.20462 : kg) * 2) / 2} ${unit}`);
   const set = (x: Workout['exercises'][number]['sets'][number]) =>
     `${x.warmup ? 'warm-up ' : x.drop ? 'drop set ' : ''}${x.seconds ? `${x.seconds} s${x.distanceM ? ` over ${Math.round(x.distanceM)} m` : ''}` : `${show(x.weightKg)} × ${x.reps ?? '?'}`}${x.rpe ? ` @ RPE ${x.rpe}` : ''}`;

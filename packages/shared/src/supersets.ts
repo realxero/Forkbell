@@ -56,7 +56,7 @@ export function leaveSuperset(groups: Group[], i: number): (number | null)[] {
 /** "A", "B", "C"... for showing a superset. */
 export const supersetLetter = (n: number) => String.fromCharCode(64 + Math.min(26, Math.max(1, n)));
 
-export interface AfterSet {
+interface AfterSet {
   /** seconds to rest now (0: go straight on) */
   rest: number;
   /** the exercise to do next, or null when everything is ticked */

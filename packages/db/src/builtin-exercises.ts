@@ -7,7 +7,7 @@
 
 import type { Muscle } from '@forkbell/shared';
 
-export interface BuiltinExercise {
+interface BuiltinExercise {
   key: string;
   name: string;
   muscle: Muscle;

@@ -1,8 +1,8 @@
 // Password hashing and guessing limits for username + password sign-in.
 import { randomBytes, scrypt as scryptCb, timingSafeEqual, type ScryptOptions } from 'node:crypto';
+import { promisify } from 'node:util';
 
-const scrypt = (pw: string, salt: Buffer, len: number, opts: ScryptOptions) =>
-  new Promise<Buffer>((resolve, reject) => scryptCb(pw, salt, len, opts, (err, key) => (err ? reject(err) : resolve(key))));
+const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number, opts: ScryptOptions) => Promise<Buffer>;
 
 // scrypt with N=2^15, r=8: about 32 MB and ~100 ms per check. The settings are
 // stored with each hash, so they can be raised later without breaking old ones.

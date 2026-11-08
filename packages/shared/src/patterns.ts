@@ -24,7 +24,7 @@ const variance = (xs: number[]) => {
   return xs.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, xs.length - 1);
 };
 /** Welch's t: how many "standard errors" apart two groups' means are. */
-export function welchT(a: number[], b: number[]) {
+function welchT(a: number[], b: number[]) {
   const se = Math.sqrt(variance(a) / a.length + variance(b) / b.length);
   return se === 0 ? (mean(a) === mean(b) ? 0 : Infinity) : (mean(a) - mean(b)) / se;
 }

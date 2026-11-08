@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 
-export const MAX_IMAGE_CHARS = 3_900_000;
+const MAX_IMAGE_CHARS = 3_900_000;
 const TYPES = /^data:image\/(jpeg|png|webp|gif);base64,/;
 
 export type ImageResult = { image: string } | { error: string } | null;

@@ -16,7 +16,7 @@ export type ProviderName = keyof typeof PROVIDERS;
 /** A custom server URL lets the server fetch any address, so it's only allowed when the stack says so. */
 export const customAllowed = () => process.env.AI_ALLOW_CUSTOM_URL === 'true';
 
-export interface AiConfig {
+interface AiConfig {
   format: 'anthropic' | 'openai';
   apiKey: string;
   model: string;

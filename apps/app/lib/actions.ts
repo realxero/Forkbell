@@ -1,7 +1,6 @@
 // Changes that work offline: each updates the copy on the device first, so the
 // screen shows it straight away, then sends it (now or when back online).
 import {
-  addDays,
   barcodeVariants,
   setVolumeKg,
   sumEntries,
@@ -250,8 +249,6 @@ export async function saveWeighIn(date: string, weightKg: number) {
   });
   return send('PUT', '/api/progress/weigh-ins', { date, weightKg }, { label: 'Weigh-in', coalesceKey: `weigh:${date}` });
 }
-
-export const yesterdayOf = (date: string) => addDays(date, -1);
 
 /**
  * Mark a day finished (everything eaten is logged) or reopen it. Works offline:

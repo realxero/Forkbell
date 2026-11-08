@@ -115,7 +115,7 @@ export interface TrainingWeek {
   hardTopSets: number;
 }
 
-export interface TrainingCheckIn {
+interface TrainingCheckIn {
   headline: string;
   advice: string;
   tone: 'good' | 'hold' | 'nudge';
@@ -140,7 +140,7 @@ export function trainingCheckIn(w: TrainingWeek): TrainingCheckIn {
 
 // Your week ---------------------------------------------------------------------------
 
-export interface PlannedDay {
+interface PlannedDay {
   date: string;
   /** 0 = Sunday */
   weekday: number;

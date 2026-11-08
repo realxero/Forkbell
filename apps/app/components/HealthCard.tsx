@@ -26,7 +26,7 @@ const ORDER: [HealthKind, IconName, string][] = [
 ];
 
 /** Show a value in its everyday unit: sleep in hours, distance in km (or mi), lean mass in your unit. */
-export function formatHealth(kind: HealthKind, v: number, unit: 'lb' | 'kg') {
+function formatHealth(kind: HealthKind, v: number, unit: 'lb' | 'kg') {
   const info = HEALTH_INFO[kind];
   if (kind === 'sleep_min') return { value: `${Math.floor(v / 60)}h ${Math.round(v % 60)}m`, unit: '' };
   if (kind === 'distance_m') return unit === 'lb' ? { value: (v / 1609.34).toFixed(1), unit: 'mi' } : { value: (v / 1000).toFixed(1), unit: 'km' };

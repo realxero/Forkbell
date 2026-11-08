@@ -2,7 +2,7 @@
 // burn (Progress) already includes how active you usually are, so only the
 // activity above your usual day is added: a long run adds, an ordinary day
 // doesn't, and nothing is counted twice.
-export type ExerciseAdds = 'off' | 'half' | 'all';
+type ExerciseAdds = 'off' | 'half' | 'all';
 
 export interface ExerciseBonus {
   /** added to the goal */
@@ -13,7 +13,7 @@ export interface ExerciseBonus {
 }
 
 /** Days of activity needed before "usual" means anything. */
-export const BONUS_MIN_DAYS = 7;
+const BONUS_MIN_DAYS = 7;
 
 export function exerciseBonus(mode: ExerciseAdds, activeToday: number | null, earlier: number[]): ExerciseBonus | null {
   if (mode === 'off' || activeToday === null || earlier.length < BONUS_MIN_DAYS) return null;

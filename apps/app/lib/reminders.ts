@@ -19,7 +19,7 @@ export const remindersSupported = Platform.OS !== 'web';
 export const reminderSettings = (): ReminderSettings => ({ meals: false, finish: false, meds: true, rest: true, ...readCache<Partial<ReminderSettings>>(KEY) });
 
 /** The rest timer's alert; it has its own id so replanning the reminders never cancels it. */
-export const REST_ID = 'rest-timer';
+const REST_ID = 'rest-timer';
 const MED_CATEGORY = 'forkbell-med';
 
 if (remindersSupported) {

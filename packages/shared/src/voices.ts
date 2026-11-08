@@ -14,7 +14,7 @@ export interface VoiceInfo {
 const ROBOTIC = /\b(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|pipe organ|superstar|trinoids|whisper|wobble|zarvox|fred|junior|ralph|kathy|princess|eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley)\b/i;
 
 /** Higher is better. Below zero: don't pick it automatically. */
-export function voiceScore(v: VoiceInfo, lang = 'en-US'): number {
+function voiceScore(v: VoiceInfo, lang = 'en-US'): number {
   const id = v.id.toLowerCase();
   const name = v.name.toLowerCase();
   if (ROBOTIC.test(v.name) || id.includes('eloquence') || id.includes('speech.synthesis.voice') || id.includes('novelty')) return -10;
@@ -69,5 +69,4 @@ export function kokoroLabel(id: string) {
 }
 /** Shown when the server can't list its voices; these come with Kokoro. */
 export const KOKORO_VOICES = ['af_heart', 'af_bella', 'af_nicole', 'af_sarah', 'am_michael', 'am_adam', 'am_fenrir', 'bf_emma', 'bf_isabella', 'bm_george', 'bm_lewis'];
-export const KOKORO_DEFAULT = 'af_heart';
 export const TTS_VOICE = /^[a-z0-9_.+()-]{1,60}$/i;

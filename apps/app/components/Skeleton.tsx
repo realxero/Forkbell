@@ -50,7 +50,7 @@ function usePulse(still: boolean) {
 }
 
 /** One grey block. Sizes are numbers or percentages. */
-export function Bone({ w = '100%', h = 12, r = 6, style }: { w?: DimensionValue; h?: number; r?: number; style?: StyleProp<ViewStyle> }) {
+function Bone({ w = '100%', h = 12, r = 6, style }: { w?: DimensionValue; h?: number; r?: number; style?: StyleProp<ViewStyle> }) {
   return <View style={[{ width: w, height: h, borderRadius: r, backgroundColor: color.line }, style]} />;
 }
 

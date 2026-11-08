@@ -8,7 +8,7 @@ export type BodyGoal = 'lose' | 'recomp' | 'maintain' | 'gain';
 export type TrainingFocus = 'none' | 'health' | 'size' | 'strength' | 'both';
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'very';
 
-export const ACTIVITY_FACTOR: Record<ActivityLevel, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725 };
+const ACTIVITY_FACTOR: Record<ActivityLevel, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725 };
 
 /** Mifflin–St Jeor resting burn times activity: a starting estimate until your own numbers take over. */
 export function estimateBurn(o: { sex: 'male' | 'female'; age: number; heightCm: number; weightKg: number; activity: ActivityLevel }) {

@@ -12,7 +12,7 @@ export { schema };
 export * from './schema.ts';
 
 /** "2026-10-21 00:10:00.123456+00" → "2026-10-21T00:10:00.123+00:00" (milliseconds, like JavaScript). */
-export const isoTimestamp = (v: string) => v.replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1').replace(/([+-]\d\d)$/, '$1:00');
+const isoTimestamp = (v: string) => v.replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1').replace(/([+-]\d\d)$/, '$1:00');
 
 export function connect(url: string) {
   const client = postgres(url, { max: 10 });
