@@ -68,6 +68,7 @@ export default function Login() {
                   setChecked(false);
                 }}
                 onSubmitEditing={check}
+                placeholderTextColor={color.placeholder}
                 placeholder="forkbell.example.com"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -113,11 +114,12 @@ export default function Login() {
                   {mode === 'signUp' && (
                     <>
                       <Text style={[type.body, { fontWeight: '800' }]}>Create your account</Text>
-                      <TextInput value={form.name} onChangeText={(name) => setForm({ ...form, name })} placeholder="Your name (optional)" textContentType="name" autoComplete="name" style={s.input} />
+                      <TextInput value={form.name} onChangeText={(name) => setForm({ ...form, name })} placeholder="Your name (optional)" placeholderTextColor={color.placeholder} textContentType="name" autoComplete="name" style={s.input} />
                       {pw.signup === 'code' && (
                         <TextInput
                           value={form.code}
                           onChangeText={(code) => setForm({ ...form, code })}
+                          placeholderTextColor={color.placeholder}
                           placeholder="Sign-up code (from whoever runs this server)"
                           autoCapitalize="none"
                           autoCorrect={false}
@@ -130,6 +132,7 @@ export default function Login() {
                     value={form.username}
                     onChangeText={(username) => setForm({ ...form, username })}
                     onSubmitEditing={() => passwordRef.current?.focus()}
+                    placeholderTextColor={color.placeholder}
                     placeholder="Username"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -143,6 +146,7 @@ export default function Login() {
                     value={form.password}
                     onChangeText={(password) => setForm({ ...form, password })}
                     onSubmitEditing={submit}
+                    placeholderTextColor={color.placeholder}
                     placeholder={mode === 'signUp' ? 'Password (10 characters or more)' : 'Password'}
                     secureTextEntry
                     textContentType={mode === 'signUp' ? 'newPassword' : 'password'}

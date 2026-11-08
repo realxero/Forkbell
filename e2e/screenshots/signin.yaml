@@ -1,5 +1,7 @@
 # Sign in the way a person would: server address, then username and password.
-# The account comes from seed.mjs.
+# The account comes from seed.mjs. Return moves from Username to Password and
+# Return in Password signs in (the app wires both up), which avoids tapping
+# iOS's secure password field and its Passwords bar, which automation trips on.
 appId: com.realxero.forkbell
 ---
 - launchApp:
@@ -15,10 +17,9 @@ appId: com.realxero.forkbell
     timeout: 30000
 - tapOn: "Username"
 - inputText: ${USERNAME}
-- tapOn: "Password"
+- pressKey: Enter
 - inputText: ${PASSWORD}
-- hideKeyboard
-- tapOn: "Sign in"
+- pressKey: Enter
 - extendedWaitUntil:
     visible: "Train"
     timeout: 60000
