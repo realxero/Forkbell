@@ -140,13 +140,17 @@ jobs:
         env:
           UDID: ${{ steps.sim.outputs.udid }}
           MAESTRO_CLI_NO_ANALYTICS: '1'
+          # Maestro's helper app on the Simulator can take minutes to answer on a busy
+          # runner (two minutes is its default, and wasn't always enough).
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
         run: |
           mkdir -p "$OUT"
           shoot() {
             maestro --device "$UDID" test -e OUT="$OUT" -e MODE="$1" e2e/screenshots/capture.yaml || echo "::warning::some $1 screens were missed"
           }
           xcrun simctl ui "$UDID" appearance light
-          maestro --device "$UDID" test -e SERVER="$SERVER" -e USERNAME="$SEED_USERNAME" -e PASSWORD="$SEED_PASSWORD" e2e/screenshots/signin.yaml
+          signin() { maestro --device "$UDID" test -e SERVER="$SERVER" -e USERNAME="$SEED_USERNAME" -e PASSWORD="$SEED_PASSWORD" e2e/screenshots/signin.yaml; }
+          signin || { echo "::warning::sign-in flow failed once; trying again"; signin; }
           shoot light
           xcrun simctl ui "$UDID" appearance dark
           shoot dark
