@@ -20,7 +20,7 @@ export function PatternsCard() {
   }, [viewing]);
   if (!data || me?.preferences.patterns === false) return null;
   return (
-    <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line }}>
+    <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
         <Ionicons name="analytics-outline" size={20} color={color.accent} />
         <Text style={type.title}>Patterns</Text>

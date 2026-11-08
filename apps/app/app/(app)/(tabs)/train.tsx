@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, todayLocal, type Program, type Workout, type WorkoutSummary, instant } from '@forkbell/shared';
 import { ApiError } from '../../../lib/api';
 import { cachedGet } from '../../../lib/sync';
+import { problem } from '../../../lib/problem';
 import { startWorkout } from '../../../lib/actions';
 import { LogPastWorkout } from '../../../components/LogPastWorkout';
 import { formatDuration, useUnit } from '../../../lib/units';
@@ -30,12 +31,6 @@ function dayName(date: string) {
   const [y, m, d] = date.split('-').map(Number) as [number, number, number];
   const sameYear = y === Number(today.slice(0, 4));
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
-}
-
-/** Plain words for a failed request: what went wrong and what to do. */
-function problem(e: unknown) {
-  if (e instanceof ApiError) return e.status >= 500 ? 'Your server ran into a problem. Try again in a moment.' : 'Your server turned the request down. Pull to refresh, then try again.';
-  return 'Couldn’t reach your server. Check your connection, then try again.';
 }
 
 type Starting = 'routine' | 'empty' | null;
@@ -272,7 +267,8 @@ const s = StyleSheet.create({
   buttonText: { ...buttons.filledText },
   tools: { flexDirection: 'row', gap: space(2) },
   tool: { ...buttons.quiet, flex: 1, gap: space(1), paddingVertical: space(3), paddingHorizontal: space(2) },
-  toolText: { ...buttons.quietText, fontSize: textSize.control },
+  // Centred line by line: "Empty workout" wraps onto two lines on a phone.
+  toolText: { ...buttons.quietText, fontSize: textSize.control, textAlign: 'center' },
   section: { ...type.label, marginTop: space(3) },
   item: { flexDirection: 'row', alignItems: 'center', backgroundColor: color.card, borderRadius: radius.row, padding: space(3), gap: space(2), minHeight: 44 },
   more: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: space(3) },

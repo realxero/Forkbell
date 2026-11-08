@@ -54,7 +54,7 @@ export function HealthCard({ metrics, source, unit, today }: { metrics: HealthMe
   const shown = ORDER.filter(([k]) => metrics.some((m) => m.kind === k));
   const list = all ? shown : shown.slice(0, 6);
   return (
-    <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), borderWidth: 1, borderColor: color.line }}>
+    <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={type.title}>Health</Text>
         <Text style={type.small}>from {source === 'apple_health' ? 'Apple Health' : 'Health Connect'}</Text>
@@ -66,7 +66,7 @@ export function HealthCard({ metrics, source, unit, today }: { metrics: HealthMe
           const avg = m.avg7 !== null ? formatHealth(kind, m.avg7, unit) : null;
           const stale = m.latestDate && m.latestDate !== today;
           return (
-            <View key={kind} style={{ width: '47%', flexGrow: 1, backgroundColor: color.raised, borderRadius: 14, padding: space(3), gap: 4 }}>
+            <View key={kind} style={{ width: '47%', flexGrow: 1, backgroundColor: color.raised, borderRadius: radius.input, padding: space(3), gap: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name={icon} size={16} color={tint} />
                 <Text style={[type.small, { fontWeight: '700', color: color.iron, flexShrink: 1 }]} numberOfLines={1}>{HEALTH_INFO[kind].label}</Text>
