@@ -7,7 +7,7 @@
 // whether they're online.
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
-import { afterRetry, classify, enqueue, newId, type OutboxItem } from '@forkbell/shared';
+import { afterRejected, afterRetry, classify, enqueue, newId, type OutboxItem } from '@forkbell/shared';
 import { api, ApiError } from './api';
 import { loadStore, saveStore } from './store';
 import { getViewing, isShareable } from './profile';
@@ -29,7 +29,9 @@ export { newId };
 /** Load what's on the device. Safe to call many times. */
 export function initSync() {
   loaded ??= (async () => {
-    const saved = (await loadStore()) as Partial<State> | null;
+    const { data, problem } = await loadStore();
+    const saved = data as Partial<State> | null;
+    if (problem) state.problems = [problem];
     if (saved) state = { cache: saved.cache ?? {}, outbox: saved.outbox ?? [], held: saved.held ?? [], problems: saved.problems ?? [] };
     if (Platform.OS === 'web') {
       window.addEventListener('online', () => void flush());
@@ -43,17 +45,32 @@ export function initSync() {
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const SAVE_FAILED = 'Changes made offline couldn’t be kept on this device (storage full or unavailable). Stay in the app until they’ve gone up.';
+async function save() {
+  // Keep the most recently used screens; drop the oldest.
+  const keys = Object.keys(state.cache)
+    .filter((k) => !k.startsWith('device:')) // settings for this phone are never dropped
+    .sort((a, b) => state.cache[b]!.t - state.cache[a]!.t);
+  for (const k of keys.slice(MAX_CACHE)) delete state.cache[k];
+  const ok = await saveStore(state);
+  const waiting = state.outbox.length + state.held.length > 0;
+  if (!ok && waiting && !state.problems.includes(SAVE_FAILED)) {
+    state.problems = [...state.problems, SAVE_FAILED].slice(-5);
+    notify();
+  }
+}
+/** Save soon (many quick changes become one write). */
 function persist() {
   notify();
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    // Keep the most recently used screens; drop the oldest.
-    const keys = Object.keys(state.cache)
-      .filter((k) => !k.startsWith('device:')) // settings for this phone are never dropped
-      .sort((a, b) => state.cache[b]!.t - state.cache[a]!.t);
-    for (const k of keys.slice(MAX_CACHE)) delete state.cache[k];
-    void saveStore(state);
-  }, 300);
+  saveTimer = setTimeout(() => void save(), 300);
+}
+/** Save now: a change was just queued, and it must survive the app being closed. */
+function persistNow() {
+  notify();
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  return save();
 }
 const notify = () => listeners.forEach((l) => l());
 function setOnline(v: boolean) {
@@ -88,7 +105,8 @@ export function cachedPaths(prefix: string) {
   return Object.keys(state.cache).filter((k) => k.startsWith(prefix));
 }
 
-const isOffline = (e: unknown) => e instanceof ApiError && (e.status === 0 || e.status >= 500);
+/** No connection, the server failing, or something in front of it answering instead. */
+const isOffline = (e: unknown) => e instanceof ApiError && (e.status === 0 || e.status >= 500 || !e.fromForkbell);
 
 /**
  * Read from the server, keep a copy, and fall back to the copy when there's
@@ -112,6 +130,8 @@ export async function cachedGet<T>(path: string): Promise<T> {
     setOnline(false);
     const copy = readCache<T>(path);
     if (copy !== undefined) return copy;
+    // A login or proxy page says more than "offline" about what to fix.
+    if (e instanceof ApiError && !e.fromForkbell) throw e;
     throw new ApiError('You’re offline, and this hasn’t been opened on this device before.', 0);
   }
 }
@@ -148,7 +168,7 @@ export async function send<T = unknown>(method: OutboxItem['method'], path: stri
     profileId: isShareable(path) ? (getViewing()?.id ?? null) : null,
     userId: owner,
   });
-  persist();
+  await persistNow();
   void flush();
   return { queued: true };
 }
@@ -208,7 +228,14 @@ export async function flush(): Promise<void> {
         });
         status = 200;
       } catch (e) {
-        status = e instanceof ApiError ? e.status : 0;
+        // Only Forkbell's own answer can refuse a change; anything else in front of it counts as no connection.
+        status = e instanceof ApiError && e.fromForkbell ? e.status : 0;
+        if (classify(status, item.method) === 'rejected' && afterRejected(status, item.method, state.held.filter(belongs).length) === 'hold') {
+          drop();
+          state.held = [...state.held, item];
+          persist();
+          continue;
+        }
         if (classify(status, item.method) === 'rejected') {
           state.problems = [...state.problems, `“${item.label}” couldn’t be saved: ${e instanceof Error ? e.message : 'refused'}`].slice(-5);
         }

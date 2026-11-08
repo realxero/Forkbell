@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterRetry, classify, enqueue, MAX_SERVER_ERRORS, newId, type OutboxItem } from './outbox.ts';
+import { afterRejected, afterRetry, classify, enqueue, MAX_SERVER_ERRORS, newId, type OutboxItem } from './outbox.ts';
 
 let n = 0;
 const item = (path: string, coalesceKey: string | null = null, method: OutboxItem['method'] = 'PUT'): OutboxItem => ({
@@ -64,4 +64,14 @@ test('no connection, being signed out or slowed down never sets a change aside',
     assert.equal(r.next, 'retry', `status ${status}`);
     assert.equal(r.serverErrors, tired.serverErrors, 'and they do not count as server errors');
   }
+});
+
+test('a change to a record that is waiting in a set-aside change waits with it', () => {
+  // A workout start was set aside; its sets then 404: keep them for "send again".
+  assert.equal(afterRejected(404, 'PUT', 1), 'hold');
+  assert.equal(afterRejected(404, 'PATCH', 2), 'hold');
+  // Nothing set aside, a delete, or the server refusing the data itself: drop.
+  assert.equal(afterRejected(404, 'PUT', 0), 'drop');
+  assert.equal(afterRejected(404, 'DELETE', 1), 'drop');
+  assert.equal(afterRejected(400, 'PUT', 1), 'drop');
 });
