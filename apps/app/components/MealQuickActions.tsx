@@ -14,16 +14,20 @@ import { showToast } from '../lib/toast';
 import { Proposals } from '../app/(app)/(tabs)/bell';
 import { MEAL_NAMES } from './AmountPicker';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-/** The small buttons on each meal card: scan, quick add, photo, weigh. */
-export function MealQuickActions({ date, meal, onChanged }: { date: string; meal: Meal; onChanged: () => void }) {
+/**
+ * The quick ways to add to a meal: scan, quick add, photo, weigh. Photo goes
+ * through Bell, so it only shows when Bell is set up (`bell`).
+ */
+export function MealQuickActions({ date, meal, bell, onChanged }: { date: string; meal: Meal; bell: boolean; onChanged: () => void }) {
   const [quick, setQuick] = useState(false);
   const [photo, setPhoto] = useState(false);
   const chip = (icon: IconName, label: string, run: () => void) => (
     <Pressable onPress={run} style={s.chip} accessibilityRole="button" accessibilityLabel={`${label} for ${MEAL_NAMES[meal]}`}>
-      <Ionicons name={icon} size={16} color={color.accent} />
+      <Ionicons name={icon} size={16} color={color.iron} />
       <Text style={s.chipText}>{label}</Text>
     </Pressable>
   );
@@ -31,7 +35,7 @@ export function MealQuickActions({ date, meal, onChanged }: { date: string; meal
     <View style={s.row}>
       {chip('barcode-outline', 'Scan', () => router.push({ pathname: '/add', params: { meal, date, scan: '1' } }))}
       {chip('flash-outline', 'Quick add', () => setQuick(true))}
-      {chip('camera-outline', 'Photo', () => setPhoto(true))}
+      {bell && chip('camera-outline', 'Photo', () => setPhoto(true))}
       {chip('scale-outline', 'Weigh', () => router.push({ pathname: '/weigh', params: { meal, date } }))}
       <QuickAdd visible={quick} date={date} meal={meal} onClose={() => setQuick(false)} onAdded={onChanged} />
       {photo && <PhotoLog date={date} meal={meal} onClose={() => setPhoto(false)} onAdded={onChanged} />}
@@ -158,7 +162,7 @@ function PhotoLog({ date, meal, onClose, onAdded }: { date: string; meal: Meal; 
                 <>
                   <TextInput value={note} onChangeText={setNote} placeholder="Anything to add? e.g. “half of it”, “cooked in butter”" style={s.input} />
                   <Pressable disabled={busy} onPress={ask} style={[s.primary, busy && { opacity: 0.6 }]}>
-                    {busy ? <ActivityIndicator color={color.onAccent} /> : <Text style={s.primaryText}>Estimate this meal</Text>}
+                    {busy ? <ActivityIndicator color={color.chalk} /> : <Text style={s.primaryText}>Estimate this meal</Text>}
                   </Pressable>
                 </>
               )}
@@ -186,13 +190,13 @@ function PhotoLog({ date, meal, onClose, onAdded }: { date: string; meal: Meal; 
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginTop: space(1) },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: space(2), paddingHorizontal: space(3), borderRadius: 999, borderWidth: 1, borderColor: color.line },
-  chipText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: space(3), borderRadius: radius.pill, borderWidth: 1, borderColor: color.line, backgroundColor: color.card },
+  chipText: { color: color.iron, fontWeight: '700', fontSize: textSize.control },
   page: { flex: 1, padding: space(4), gap: space(3) },
-  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '700' },
-  secondary: { borderWidth: 1, borderColor: color.line, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
-  secondaryText: { color: color.accent, fontSize: textSize.body, fontWeight: '700' },
+  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
+  primary: buttons.filled,
+  primaryText: buttons.filledText,
+  secondary: buttons.quiet,
+  secondaryText: buttons.quietText,
 });
 

@@ -21,6 +21,6 @@ export function ProfileBar() {
 }
 
 const s = StyleSheet.create({
-  bar: { backgroundColor: color.protein, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingBottom: space(2), gap: space(3) },
-  text: { color: '#fff', fontWeight: '700', fontSize: textSize.control },
+  bar: { backgroundColor: color.iron, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingBottom: space(2), gap: space(3) },
+  text: { color: color.chalk, fontWeight: '700', fontSize: textSize.control },
 });
