@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { dismissToast, useToast } from '../lib/toast';
 import { color, space, textSize } from '../lib/theme';
@@ -6,10 +7,14 @@ import { color, space, textSize } from '../lib/theme';
 /** Shows the current toast above the tab bar. */
 export function ToastHost() {
   const t = useToast();
+  // VoiceOver doesn't follow live regions (Android only): say it.
+  useEffect(() => {
+    if (t?.text) AccessibilityInfo.announceForAccessibility(t.action ? `${t.text}. ${t.action.label} is available.` : t.text);
+  }, [t?.text, t?.action]);
   if (!t) return null;
   return (
     <View pointerEvents="box-none" style={s.wrap}>
-      <View style={[s.toast, t.tone === 'celebrate' && { backgroundColor: color.fat }]} accessibilityLiveRegion="polite">
+      <View style={[s.toast, t.tone === 'celebrate' && { backgroundColor: color.fatText }]} accessibilityLiveRegion="polite">
         <Text style={s.text}>{t.text}</Text>
         {t.action && (
           <Pressable
@@ -18,6 +23,8 @@ export function ToastHost() {
               await t.action!.run();
             }}
             hitSlop={10}
+            style={{ minHeight: 44, justifyContent: 'center' }}
+            accessibilityLabel={t.action.label}
           >
             <Text style={s.action}>{t.action.label}</Text>
           </Pressable>

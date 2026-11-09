@@ -52,8 +52,12 @@ export function WeightChart({ points, goalKg, show }: { points: TrendPoint[]; go
   const area = `${line} L${x(points.at(-1)!.date).toFixed(1)},${6 + plotH} L${padL},${6 + plotH} Z`;
   const ticks = [hi - pad, (hi + lo) / 2, lo + pad];
 
+  // VoiceOver and TalkBack can't see the drawing: say what it shows.
+  const last = points.at(-1)!;
+  const summary = `Weight trend from ${shortDate(first)} to ${shortDate(last.date)}: ${show(points[0]!.trendKg)} to ${show(last.trendKg)}${goalKg !== null ? `, goal ${show(goalKg)}` : ''}. Last weigh-in ${show(last.weightKg)}.`;
+
   return (
-    <View onLayout={onLayout}>
+    <View onLayout={onLayout} accessible accessibilityRole="image" accessibilityLabel={summary}>
       {width > 0 && (
         <Svg width={width} height={height}>
           <Defs>
@@ -129,7 +133,12 @@ export function CalorieBars({ days, today }: { days: DayTotals[]; today: string 
           <Text style={[type.title, type.number]}>{logged.length ? `${onTarget} of ${logged.length}` : '–'}<Text style={type.small}> days</Text></Text>
         </View>
       </View>
-      <View onLayout={onLayout}>
+      <View
+        onLayout={onLayout}
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={`Calories by day${goal ? `, goal ${goal.toLocaleString()}` : ''}: ${days.map((d) => `${shortDate(d.date)} ${d.kcal > 0 ? `${Math.round(d.kcal).toLocaleString()}${over(d) ? ', over' : ''}` : 'nothing logged'}`).join('; ')}.`}
+      >
         {width > 0 && (
           <Svg width={width} height={height}>
             <Line x1={padL} x2={width} y1={y(0)} y2={y(0)} stroke={color.line} strokeWidth={1} />
@@ -137,7 +146,7 @@ export function CalorieBars({ days, today }: { days: DayTotals[]; today: string 
             {goal && (
               <>
                 <Line x1={padL} x2={width} y1={y(goal)} y2={y(goal)} stroke={color.fat} strokeWidth={1.5} strokeDasharray="5 4" />
-                <SvgText {...font} x={padL - 6} y={y(goal) + 4} fontSize={10} fill={color.fat} textAnchor="end" fontWeight="700">{goal >= 1000 ? `${(goal / 1000).toFixed(1)}k` : goal}</SvgText>
+                <SvgText {...font} x={padL - 6} y={y(goal) + 4} fontSize={10} fill={color.fatText} textAnchor="end" fontWeight="700">{goal >= 1000 ? `${(goal / 1000).toFixed(1)}k` : goal}</SvgText>
               </>
             )}
             {days.map((d, i) => {

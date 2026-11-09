@@ -35,9 +35,14 @@ export function mealRoutes({ asUser }: ReturnType<typeof connect>) {
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check the meal.' }, 400);
     const userId = c.get('profileId');
     const id = await asUser(userId, async (tx) => {
+      if (parsed.data.id) {
+        // Sent before (the answer was lost on a bad connection): it's already saved.
+        const [prior] = await tx.select({ id: savedMeals.id }).from(savedMeals).where(eq(savedMeals.id, parsed.data.id)).limit(1);
+        if (prior) return prior.id;
+      }
       const known = await foodsById(tx, parsed.data.items.map((i) => i.foodId));
       if (parsed.data.items.some((i) => !known.has(i.foodId))) return null;
-      const [m] = await tx.insert(savedMeals).values({ userId, name: parsed.data.name }).returning({ id: savedMeals.id });
+      const [m] = await tx.insert(savedMeals).values({ ...(parsed.data.id ? { id: parsed.data.id } : {}), userId, name: parsed.data.name }).returning({ id: savedMeals.id });
       await tx.insert(savedMealItems).values(parsed.data.items.map((i, position) => ({ userId, mealId: m!.id, foodId: i.foodId, grams: i.grams, position }) as typeof savedMealItems.$inferInsert));
       return m!.id;
     });

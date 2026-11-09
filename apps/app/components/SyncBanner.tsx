@@ -1,4 +1,5 @@
-import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { AccessibilityInfo, Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearProblems, discardHeld, flush, retryHeld, useSync } from '../lib/sync';
@@ -11,6 +12,11 @@ import { color, space, textSize } from '../lib/theme';
 export function SyncBanner() {
   const { online, serverError, syncing, pending, problems, held } = useSync();
   const insets = useSafeAreaInsets();
+  // VoiceOver doesn't follow live regions (Android only): say what changed.
+  const said = held.length ? `${held.length} ${held.length === 1 ? 'change' : 'changes'} couldn’t be saved` : problems.at(-1) ?? (!online ? 'Offline' : null);
+  useEffect(() => {
+    if (said) AccessibilityInfo.announceForAccessibility(said);
+  }, [said]);
   if (held.length) {
     const what = held.length === 1 ? `“${held[0]}”` : `${held.length} changes`;
     return (
@@ -67,5 +73,5 @@ function chooseHeld(what: string) {
 const s = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 100 },
   pill: { borderRadius: 20, paddingHorizontal: space(4), paddingVertical: space(2), maxWidth: 360, opacity: 0.95 },
-  text: { color: '#fff', fontWeight: '700', fontSize: textSize.small, textAlign: 'center' },
+  text: { color: color.onAccent, fontWeight: '700', fontSize: textSize.small, textAlign: 'center' },
 });

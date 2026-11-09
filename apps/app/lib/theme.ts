@@ -29,7 +29,7 @@ const light = {
   over: '#D2423A',
   accent: '#2B6BD6',
   onAccent: '#FFFFFF',
-  placeholder: '#7C868C',
+  placeholder: '#6B757B', // 4.7:1 on white
   successBg: '#E5F4EC',
   infoBg: '#EAF1FC',
   warnBg: '#FFF4D6',
@@ -66,7 +66,7 @@ const dark: Record<keyof typeof light, string> = {
   over: '#FF6B61',
   accent: '#5C9BFF',
   onAccent: '#0E1215',
-  placeholder: '#76828A',
+  placeholder: '#8A969D', // 5.4:1 on card
   successBg: '#13281D',
   infoBg: '#152238',
   warnBg: '#30260C',

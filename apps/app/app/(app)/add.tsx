@@ -183,6 +183,8 @@ export default function AddFood() {
                 value={q}
                 onChangeText={setQ}
                 placeholder="Search foods or brands"
+                placeholderTextColor={color.placeholder}
+                accessibilityLabel="Search foods or brands"
                 autoFocus={Platform.OS === 'web'}
                 style={[s.input, { flex: 1 }]}
                 returnKeyType="search"
@@ -339,7 +341,7 @@ function Scanner({ onCode, onCancel, error }: { onCode: (code: string) => Promis
 
       <Text style={[s.section, { marginTop: space(4) }]}>Or type the number</Text>
       <View style={s.searchRow}>
-        <TextInput value={typed} onChangeText={setTyped} keyboardType="number-pad" placeholder="e.g. 0012345678905" style={[s.input, { flex: 1 }]} />
+        <TextInput value={typed} onChangeText={setTyped} keyboardType="number-pad" placeholder="e.g. 0012345678905" placeholderTextColor={color.placeholder} accessibilityLabel="Barcode number" style={[s.input, { flex: 1 }]} />
         <Pressable disabled={digits.length < 6 || Boolean(looking)} onPress={() => lookUp(digits)} style={[s.scanButton, (digits.length < 6 || looking) && { opacity: 0.4 }]}>
           <Text style={s.scanText}>Look up</Text>
         </Pressable>
