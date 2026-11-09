@@ -38,7 +38,7 @@ export function smartTargets(o: { goal: BodyGoal; focus: TrainingFocus; weightKg
   if (o.goal === 'gain') weeklyKg = o.weightKg * (o.focus === 'size' || o.focus === 'both' ? 0.0035 : o.focus === 'strength' ? 0.002 : 0.0025);
   const raw = o.burnKcal + (weeklyKg * 7700) / 7;
   const kcal = Math.max(MIN_SUGGESTED_KCAL, Math.round(raw / 10) * 10);
-  if (kcal !== Math.round(raw / 10) * 10) why.push('Calories are held at the 1,200 kcal floor; going lower isn’t safe without medical supervision.');
+  if (kcal !== Math.round(raw / 10) * 10) why.push('Calories are held at the 1,200 kcal floor: below that it’s hard to get enough nutrients from food, and very low-calorie diets need medical supervision.');
   const burnNote = o.measured ? 'your measured daily burn' : 'an estimate of your daily burn (it updates once you’ve logged and weighed in for about two weeks)';
   why.push(
     o.goal === 'lose'

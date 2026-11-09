@@ -7,7 +7,7 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
-import { bmi, estimateBurn, estimatedOneRepMax, ffmi, fromKg, KCAL_PER_KG, MIN_SUGGESTED_KCAL, navyBodyFat, phaseTimeline, todayLocal, weightForReps, type ActivityLevel, type EnergyEstimate, type Sex } from '@forkbell/shared';
+import { bmi, estimateBurn, estimatedOneRepMax, ffmi, fromKg, KCAL_PER_KG, MAX_E1RM_REPS, MIN_SUGGESTED_KCAL, navyBodyFat, phaseTimeline, todayLocal, weightForReps, type ActivityLevel, type EnergyEstimate, type Sex } from '@forkbell/shared';
 import { Pressable } from '../../../components/Tap';
 import { Chip } from '../../../components/AmountPicker';
 import { PlateCalculator } from '../../../components/PlateCalculator';
@@ -84,7 +84,7 @@ export default function Tools() {
   );
 }
 
-/** Weight × reps → estimated max, then the weight for every rep count from 1 to 12. */
+/** Weight × reps → estimated max, then the weight for every rep count up to 10. */
 function OneRepMax({ advanced }: { advanced: boolean }) {
   const units = useUnit();
   const [weight, setWeight] = useState('');
@@ -105,7 +105,8 @@ function OneRepMax({ advanced }: { advanced: boolean }) {
           <TextInput value={reps} onChangeText={setReps} keyboardType="number-pad" placeholder="5" placeholderTextColor={color.placeholder} style={s.input} accessibilityLabel="Reps done" />
         </View>
       </View>
-      {kg && n > 12 && <Text style={type.small}>Up to 12 reps: past that the estimate drifts too far to trust.</Text>}
+      {kg && n > MAX_E1RM_REPS && <Text style={type.small}>Use a set of {MAX_E1RM_REPS} reps or fewer: past that the estimate drifts too far to trust.</Text>}
+      <Text style={type.small}>Most accurate from a heavy set of about 2 to 6 reps.</Text>
       {max !== null && (
         <>
           <View accessible accessibilityLabel={`Estimated one-rep max ${units.roundLabel(max)}`}>
@@ -114,11 +115,11 @@ function OneRepMax({ advanced }: { advanced: boolean }) {
           </View>
           {advanced && (
             <Text style={type.small}>
-              Epley’s formula: weight × (1 + reps ÷ 30), so {units.label(kg!)} × (1 + {n} ÷ 30). Each row below runs it backwards.
+              Epley’s formula: weight × (1 + reps ÷ 30), so {units.label(kg!)} × (1 + {n} ÷ 30). Each row below runs it backwards. Prediction equations are used only up to 10 reps, and heavier sets predict best (Reynolds, Gordon and Robergs, J Strength Cond Res 2006).
             </Text>
           )}
           <View style={s.table}>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((r) => (
+            {Array.from({ length: MAX_E1RM_REPS }, (_, i) => i + 1).map((r) => (
               <View key={r} style={[s.row, r === n && s.rowOn]} accessible accessibilityLabel={`${r} ${r === 1 ? 'rep' : 'reps'}: ${units.roundLabel(weightForReps(max, r))}`}>
                 <Text style={[type.body, type.number, { width: 72 }]}>{r} {r === 1 ? 'rep' : 'reps'}</Text>
                 <Text style={[type.body, type.number, { flex: 1, fontWeight: '700' }]}>{units.roundLabel(weightForReps(max, r))}</Text>
@@ -231,13 +232,14 @@ function DailyBurn({ advanced, mine }: { advanced: boolean; mine: Mine | null })
       </View>
       {formula && e?.kcal ? (
         <Text style={type.body}>
-          Your logs say you burn {Math.abs(e.kcal - formula).toLocaleString()} kcal a day {e.kcal >= formula ? 'more' : 'less'} than the formula guesses. Your own number is the one to trust: it already includes your real activity.
+          Your logs say you burn {Math.abs(e.kcal - formula).toLocaleString()} kcal a day {e.kcal >= formula ? 'more' : 'less'} than the formula guesses. If you’ve logged every day, your own number is the one to trust: it already includes your real activity.
         </Text>
       ) : null}
+      <Text style={type.small}>Formulas land within about 10% for most people and can miss by more, especially for very muscular people. Your logged burn replaces it once there’s enough data.</Text>
       {advanced && (
         <View style={{ gap: space(2) }}>
-          <Text style={type.small}>Formula: Mifflin–St Jeor resting burn, 10 × weight (kg) + 6.25 × height (cm) − 5 × age {about.sex === 'female' ? '− 161' : '+ 5'}, times {({ sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725 } as const)[about.activity]} for activity.</Text>
-          <Text style={type.small}>Measured: your average intake on logged days, minus the change in your trend weight × 7,700 kcal per kg, spread over the days between weigh-ins.</Text>
+          <Text style={type.small}>Formula: Mifflin–St Jeor resting burn, 10 × weight (kg) + 6.25 × height (cm) − 5 × age {about.sex === 'female' ? '− 161' : '+ 5'}, times {({ sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725 } as const)[about.activity]} for activity. The most accurate of the common formulas in a systematic review (Frankenfield et al., J Am Diet Assoc 2005).</Text>
+          <Text style={type.small}>Measured: your average intake on logged days, minus the change in your trend weight × 7,700 kcal per kg, spread over the days between weigh-ins. 7,700 kcal per kg is an average: it fits leaner people and the first weeks of a diet (water, glycogen) less well (Hall, Int J Obes 2008).</Text>
         </View>
       )}
     </View>
@@ -249,6 +251,9 @@ const PACES = { cut: [0.25, 0.5, 0.75, 1], bulk: [0.1, 0.25, 0.5] } as const;
 /** A cut or bulk at a steady % of body weight a week: when you'd get there, and what to eat. */
 function Phase({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
   const units = useUnit();
+  // The 2013 AHA/ACC/TOS guideline's lowest weight-loss intakes: 1,200 for women, 1,500 for men.
+  const [about] = useAbout();
+  const floor = about.sex === 'male' ? 1500 : MIN_SUGGESTED_KCAL;
   const startKg = trendKg(mine);
   const [target, setTarget] = useState<string | null>(null);
   const targetText = target ?? (mine?.goal.weightKg ? String(Math.round(fromKg(mine.goal.weightKg, units.unit))) : '');
@@ -260,7 +265,7 @@ function Phase({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
   const plan = startKg && targetKg ? phaseTimeline({ startKg, targetKg, pctPerWeek: pace, start: todayLocal() }) : null;
   const burn = mine?.energy.kcal ?? null;
   const weeklyKg = startKg ? (bulking ? 1 : -1) * startKg * (pace / 100) : 0;
-  const eat = burn ? Math.max(MIN_SUGGESTED_KCAL, Math.round((burn + (weeklyKg * KCAL_PER_KG) / 7) / 10) * 10) : null;
+  const eat = burn ? Math.max(floor, Math.round((burn + (weeklyKg * KCAL_PER_KG) / 7) / 10) * 10) : null;
   const shown = plan ? (advanced ? plan.checkpoints : plan.checkpoints.filter((_, i, all) => (i + 1) % 4 === 0 || i === all.length - 1)) : [];
   const date = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   return (
@@ -280,7 +285,9 @@ function Phase({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
             <Result label="You'd get there" value={date(plan.end)} note={`${plan.weeks} weeks from ${units.label(startKg)}`} />
             <Result label="Eat about" value={eat ? `${eat.toLocaleString()} kcal` : '–'} note={eat ? `a day at first, ${Math.abs(eat - burn!).toLocaleString()} ${bulking ? 'over' : 'under'} your burn` : 'Once your burn is measured (see Daily burn)'} />
           </View>
-          {eat === MIN_SUGGESTED_KCAL && <Text style={type.small}>That pace would go under {MIN_SUGGESTED_KCAL.toLocaleString()} kcal a day, so this is held at {MIN_SUGGESTED_KCAL.toLocaleString()}. Try a slower pace.</Text>}
+          {eat === floor && <Text style={type.small}>That pace would go under {floor.toLocaleString()} kcal a day, so this is held at {floor.toLocaleString()}: below that it’s hard to get enough nutrients from food. Try a slower pace.</Text>}
+          {!bulking && pace >= 1 && <Text style={type.small}>1% a week is the upper limit. Leaner people keep more muscle at around 0.5%.</Text>}
+          <Text style={type.small}>A plan, not a promise: your burn drops a little as you lose, and the first weeks move with water, so check in and adjust.</Text>
           <View style={s.table}>
             {shown.map((c) => (
               <View key={c.date} style={s.row} accessible accessibilityLabel={`${date(c.date)}: ${units.label(c.kg)}`}>
@@ -289,7 +296,7 @@ function Phase({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
               </View>
             ))}
           </View>
-          {advanced && <Text style={type.small}>Each week changes by {pace}% of the weight you're at then, so it slows a little as you go. Calories: your measured burn {bulking ? '+' : '−'} {Math.abs(Math.round((weeklyKg * KCAL_PER_KG) / 7))} kcal a day (the first week's change × 7,700 kcal per kg ÷ 7). Never under {MIN_SUGGESTED_KCAL.toLocaleString()}.</Text>}
+          {advanced && <Text style={type.small}>Each week changes by {pace}% of the weight you're at then, so it slows a little as you go. Calories: your measured burn {bulking ? '+' : '−'} {Math.abs(Math.round((weeklyKg * KCAL_PER_KG) / 7))} kcal a day (the first week's change × 7,700 kcal per kg ÷ 7). Never under {floor.toLocaleString()} (Jensen et al., AHA/ACC/TOS guideline, Circulation 2014). Paces: 0.5–1% a week keeps muscle on a cut (Helms et al., JISSN 2014; Garthe et al., IJSNEM 2011); about 0.25–0.5% a week for a lean bulk, slower for experienced lifters (Iraki et al., Sports 2019).</Text>}
         </>
       )}
       {startKg && targetKg && !plan && <Text style={type.small}>{Math.abs(targetKg - startKg) < 0.1 ? 'That’s where you are now.' : 'At this pace it would take more than three years. Pick a faster pace or a nearer target.'}</Text>}
@@ -331,11 +338,11 @@ function Body({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
         <Result label="BMI" value={b ? b.toFixed(1) : '–'} note={kg ? `At ${units.label(kg)}` : 'Weigh in on Progress'} />
         {f !== null && <Result label="Fat-free mass index" value={f.toFixed(1)} />}
       </View>
-      <Text style={type.small}>Tape and BMI are rough guides. BMI can't tell muscle from fat, so it reads high for people who lift.</Text>
+      <Text style={type.small}>The tape method is usually within about 3–4 percentage points of a lab scan and can miss small changes over a few weeks. BMI can't tell muscle from fat, so it reads high for people who lift.</Text>
       {advanced && (
         <View style={{ gap: space(2) }}>
-          <Text style={type.small}>US Navy method (centimetres): {about.sex === 'female' ? '495 ÷ (1.29579 − 0.35004 × log10(waist + hips − neck) + 0.221 × log10(height)) − 450' : '495 ÷ (1.0324 − 0.19077 × log10(waist − neck) + 0.15456 × log10(height)) − 450'}.</Text>
-          <Text style={type.small}>BMI: weight (kg) ÷ height (m)². FFMI: lean mass (kg) ÷ height (m)², plus 6.1 × (1.8 − height in m) so heights compare.</Text>
+          <Text style={type.small}>US Navy method (centimetres): {about.sex === 'female' ? '495 ÷ (1.29579 − 0.35004 × log10(waist + hips − neck) + 0.221 × log10(height)) − 450' : '495 ÷ (1.0324 − 0.19077 × log10(waist − neck) + 0.15456 × log10(height)) − 450'} (Hodgdon and Beckett, Naval Health Research Center 1984; compared with DXA in Foulis et al., Front Physiol 2023).</Text>
+          <Text style={type.small}>BMI: weight (kg) ÷ height (m)². FFMI: lean mass (kg) ÷ height (m)², plus 6.1 × (1.8 − height in m) so heights compare (Kouri et al., Clin J Sport Med 1995). BMI misreads muscular athletes (Ode et al., Med Sci Sports Exerc 2007).</Text>
         </View>
       )}
     </View>

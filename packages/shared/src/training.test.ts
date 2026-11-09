@@ -16,9 +16,11 @@ test('steps are 5 or 10 lb, 2.5 or 5 kg', () => {
   assert.equal(incrementKg('small', 'kg'), 2.5);
 });
 
-test('estimated 1RM is only trusted up to 12 reps', () => {
+test('estimated 1RM is only trusted up to 10 reps', () => {
   assert.equal(estimatedOneRepMax(100, 1), 100);
   assert.equal(Math.round(estimatedOneRepMax(100, 5)!), 117);
+  assert.ok(estimatedOneRepMax(100, 10));
+  assert.equal(estimatedOneRepMax(100, 11), null);
   assert.equal(estimatedOneRepMax(100, 15), null);
 });
 
@@ -57,6 +59,6 @@ test('records: a first session is a baseline, then only real improvements count'
 test('the rep table turns a one-rep max back into weights for each rep count', () => {
   assert.equal(weightForReps(100, 1), 100);
   // Round trip: the weight for 8 reps estimates the same max again.
-  for (const reps of [2, 5, 8, 12]) assert.ok(Math.abs(estimatedOneRepMax(weightForReps(100, reps), reps)! - 100) < 1e-9, `${reps} reps`);
+  for (const reps of [2, 5, 8, 10]) assert.ok(Math.abs(estimatedOneRepMax(weightForReps(100, reps), reps)! - 100) < 1e-9, `${reps} reps`);
   assert.ok(weightForReps(100, 10) < weightForReps(100, 5), 'more reps, less weight');
 });

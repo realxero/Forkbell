@@ -160,11 +160,13 @@ export function incrementKg(increment: 'small' | 'large', unit: WeightUnit): num
 
 // Strength math ---------------------------------------------------------------
 /**
- * Estimated one-rep max (Epley). Only trusted up to 12 reps; past that the
- * estimate drifts too far to call it a record.
+ * Estimated one-rep max (Epley). Only used up to 10 reps: prediction errors
+ * grow past that, and heavy sets of about 2 to 6 reps predict best
+ * (Reynolds, Gordon & Robergs, J Strength Cond Res 2006;20:584-592).
  */
+export const MAX_E1RM_REPS = 10;
 export function estimatedOneRepMax(weightKg: number, reps: number): number | null {
-  if (weightKg <= 0 || reps < 1 || reps > 12) return null;
+  if (weightKg <= 0 || reps < 1 || reps > MAX_E1RM_REPS) return null;
   return reps === 1 ? weightKg : weightKg * (1 + reps / 30);
 }
 
