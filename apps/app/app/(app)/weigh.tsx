@@ -21,6 +21,7 @@ import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { VoiceButton, voiceAvailable } from '../../components/VoiceButton';
 import { lidarStatus, lidarSupported } from '../../modules/forkbell-depth';
 import { color, radius, space, type, textSize } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 
 type Pick = Food | FoodCandidate;
 type Item = { key: number; food: Pick; value: string; leftover: string | null };
@@ -169,7 +170,7 @@ export default function Weigh() {
                   </Pressable>
                 ) : null}
                 {it.leftover === null ? (
-                  <Pressable onPress={() => update(it.key, { leftover: '' })} hitSlop={6}><Text style={s.small}>Didn’t finish it? Weigh what’s left</Text></Pressable>
+                  <Pressable onPress={() => update(it.key, { leftover: '' })} style={buttons.link}><Text style={s.small}>Didn’t finish it? Weigh what’s left</Text></Pressable>
                 ) : (
                   <View style={s.row}>
                     <Text style={[type.small, { flex: 1 }]}>{plate ? `Left over, with the ${plate.name.toLowerCase()} on the scale` : 'Grams left over'}</Text>

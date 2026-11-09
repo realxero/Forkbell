@@ -78,8 +78,8 @@ export function HeartSensorSettings() {
                 : 'Used during workouts'}
             </Text>
           </View>
-          <Pressable onPress={() => setTesting((t) => !t)} hitSlop={8}><Text style={s.link}>{testing ? 'Stop' : 'Test'}</Text></Pressable>
-          <Pressable onPress={() => { setTesting(false); saveHeartSensor(null); setSaved(null); }} hitSlop={8}><Text style={[s.link, { color: color.over }]}>Forget</Text></Pressable>
+          <Pressable onPress={() => setTesting((t) => !t)} style={buttons.link}><Text style={s.link}>{testing ? 'Stop' : 'Test'}</Text></Pressable>
+          <Pressable onPress={() => { setTesting(false); saveHeartSensor(null); setSaved(null); }} style={buttons.link}><Text style={[s.link, { color: color.over }]}>Forget</Text></Pressable>
         </View>
       ) : null}
       <Pressable onPress={() => void scan()} disabled={scanning} style={[s.button, scanning && { opacity: 0.6 }]} accessibilityRole="button">

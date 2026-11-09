@@ -11,6 +11,7 @@ import { showToast } from '../lib/toast';
 import { CalendarSheet } from './Calendar';
 import { Chip, MEAL_NAMES } from './AmountPicker';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const dayName = (date: string) => {
   const t = todayLocal();
@@ -77,7 +78,7 @@ export function SelectionBar({ entries, onDone, onChanged }: { entries: DiaryEnt
       <View style={s.bar}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={[type.body, { fontWeight: '800' }]}>{n} selected{n ? ` · ${kcal} kcal` : ''}</Text>
-          <Pressable onPress={onDone} hitSlop={10}><Text style={{ color: color.accent, fontWeight: '700' }}>Done</Text></Pressable>
+          <Pressable onPress={onDone} style={buttons.link}><Text style={{ color: color.accent, fontWeight: '700' }}>Done</Text></Pressable>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
           {btn('copy-outline', 'Copy', () => setCopying(true))}

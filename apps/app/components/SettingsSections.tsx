@@ -283,7 +283,7 @@ function Appearance() {
             accessibilityLabel={ACCENTS[k].label}
             style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENTS[k].light, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: accent === k ? color.iron : 'transparent' }}
           >
-            <Check on={accent === k} tint="#fff" />
+            <Check on={accent === k} tint={color.onAccent} />
           </Pressable>
         ))}
       </View>

@@ -7,6 +7,7 @@ import { Pressable } from './Tap';
 import { addDays, formatClock, instant, parseClock, todayLocal } from '@forkbell/shared';
 import { CalendarSheet } from './Calendar';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 /** "18:30" on a day, as an instant in this phone's time zone. */
 export const atLocal = (date: string, hhmm: string) => {
@@ -71,8 +72,8 @@ export function WhenCard({ date, startedAt, finishedAt, onChange }: { date: stri
       </View>
       {problem && <Text style={[type.small, { color: color.over }]}>{problem}</Text>}
       <View style={{ flexDirection: 'row', gap: space(4), justifyContent: 'flex-end' }}>
-        <Pressable onPress={() => setEditing(false)} hitSlop={8}><Text style={[s.link, { color: color.ironSoft }]}>Cancel</Text></Pressable>
-        <Pressable onPress={save} hitSlop={8}><Text style={s.link}>Save</Text></Pressable>
+        <Pressable onPress={() => setEditing(false)} style={buttons.link}><Text style={[s.link, { color: color.ironSoft }]}>Cancel</Text></Pressable>
+        <Pressable onPress={save} style={buttons.link}><Text style={s.link}>Save</Text></Pressable>
       </View>
       <CalendarSheet visible={calendar} selected={day} title="Which day?" onPick={(d) => { if (d <= todayLocal()) setDay(d); setCalendar(false); }} onClose={() => setCalendar(false)} />
     </View>

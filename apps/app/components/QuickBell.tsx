@@ -15,6 +15,7 @@ import { VoiceButton, voiceAvailable } from './VoiceButton';
 import { BellAvatar } from './BellAvatar';
 import { Proposals, Question } from '../app/(app)/(tabs)/bell';
 import { color, radius, space, type } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 /**
  * Ask Bell from anywhere: a floating button above the tabs. Hold it and talk,
@@ -191,11 +192,11 @@ export function QuickBell() {
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             {turns.length > 0 ? (
-              <Pressable onPress={startOver} hitSlop={8}><Text style={s.link}>New question</Text></Pressable>
+              <Pressable onPress={startOver} style={buttons.link}><Text style={s.link}>New question</Text></Pressable>
             ) : (
               <View />
             )}
-            <Pressable onPress={() => { setOpen(false); router.push('/bell'); }} hitSlop={8}><Text style={s.link}>Open the full chat ›</Text></Pressable>
+            <Pressable onPress={() => { setOpen(false); router.push('/bell'); }} style={buttons.link}><Text style={s.link}>Open the full chat ›</Text></Pressable>
           </View>
         </SheetFrame>
         </KeyboardLift>

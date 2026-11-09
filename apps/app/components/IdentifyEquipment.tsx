@@ -9,6 +9,7 @@ import { pickImage } from '../lib/images';
 import { HowToSheet } from './HowTo';
 import { Thumb } from './ExercisePicker';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 type Result = {
   recognized: boolean;
@@ -65,7 +66,7 @@ export function IdentifyEquipment({ onClose, onPick }: { onClose: () => void; on
       <View style={[s.page, { backgroundColor: color.chalk }]}>
         <View style={s.head}>
           <Text style={type.title}>What’s this machine?</Text>
-          <Pressable onPress={onClose} hitSlop={10}><Text style={s.link}>Close</Text></Pressable>
+          <Pressable onPress={onClose} style={buttons.link}><Text style={s.link}>Close</Text></Pressable>
         </View>
         <ScrollView contentContainerStyle={{ gap: space(3), paddingBottom: space(12) }}>
           {image ? (
