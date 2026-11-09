@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { AccessibilityInfo, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -139,6 +139,7 @@ export default function WorkoutScreen() {
       if (hapticsOn()) haptic.alert();
       else Vibration.vibrate(500);
       playSound('rest');
+      AccessibilityInfo.announceForAccessibility('Rest over. Next set.');
       if (flashOn) {
         flash.setValue(0);
         const pulse = [Animated.timing(flash, { toValue: 1, duration: 220, useNativeDriver: true }), Animated.timing(flash, { toValue: 0, duration: 380, useNativeDriver: true })];
@@ -148,6 +149,12 @@ export default function WorkoutScreen() {
       return () => clearTimeout(t);
     }
   }, [restEnd, restLeft]);
+  // Say when a rest starts (once, not every second), for someone not looking at the screen.
+  const resting = restEnd !== null && restLeft !== 0;
+  useEffect(() => {
+    if (resting && restLeft !== null) AccessibilityInfo.announceForAccessibility(`Resting ${formatDuration(restLeft)}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resting]);
 
   // The phone buzzes when the rest is up, even locked or with Forkbell in the background.
   // Leaving the screen keeps it; Skip, Finish and Discard cancel it.
@@ -590,7 +597,7 @@ export default function WorkoutScreen() {
         </ScrollView>
 
         {restLeft !== null && (
-          <View style={[s.rest, restLeft === 0 && { backgroundColor: color.fat }]}>
+          <View style={[s.rest, restLeft === 0 && { backgroundColor: color.fatText }]}>
             <View style={[s.restFill, { width: `${restTotal ? (100 * restLeft) / restTotal : 0}%` }]} />
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={[s.restText, { flex: 1 }]}>{restLeft === 0 ? 'Rest over. Next set!' : `Rest ${formatDuration(restLeft)}`}</Text>
@@ -602,9 +609,9 @@ export default function WorkoutScreen() {
             </View>
             {restLeft > 0 && (
               <View style={s.restButtons}>
-                <Pressable onPress={() => setRestEnd((t) => (t ? t - 15000 : t))} hitSlop={8} accessibilityLabel="15 seconds less rest"><Text style={s.restButton}>−15</Text></Pressable>
-                <Pressable onPress={() => { setRestEnd((t) => (t ? t + 15000 : t)); setRestTotal((t) => t + 15); }} hitSlop={8} accessibilityLabel="15 seconds more rest"><Text style={s.restButton}>+15</Text></Pressable>
-                <Pressable onPress={() => setRestEnd(null)} hitSlop={8}><Text style={s.restButton}>Skip</Text></Pressable>
+                <Pressable style={s.restTap} onPress={() => setRestEnd((t) => (t ? t - 15000 : t))} hitSlop={8} accessibilityLabel="15 seconds less rest"><Text style={s.restButton}>−15</Text></Pressable>
+                <Pressable style={s.restTap} onPress={() => { setRestEnd((t) => (t ? t + 15000 : t)); setRestTotal((t) => t + 15); }} hitSlop={8} accessibilityLabel="15 seconds more rest"><Text style={s.restButton}>+15</Text></Pressable>
+                <Pressable style={s.restTap} onPress={() => setRestEnd(null)} hitSlop={8} accessibilityLabel="Skip rest"><Text style={s.restButton}>Skip</Text></Pressable>
               </View>
             )}
           </View>
@@ -942,6 +949,8 @@ function PainNote({ value, onSave }: { value: string; onSave: (note: string) => 
       onChangeText={setText}
       onBlur={() => text.trim() !== value && onSave(text.trim())}
       placeholder="Where, and what it felt like (optional)"
+      placeholderTextColor={color.placeholder}
+      accessibilityLabel="Pain note"
       style={s.painInput}
       maxLength={300}
     />
@@ -997,10 +1006,11 @@ const s = StyleSheet.create({
   addExercise: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },
   rest: { position: 'absolute', left: space(3), right: space(3), bottom: space(3), backgroundColor: color.iron, borderRadius: 14, padding: space(3), overflow: 'hidden', maxWidth: 616, alignSelf: 'center' },
   restFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: color.restFill },
-  hr: { color: '#fff', fontWeight: '800', backgroundColor: color.over, borderRadius: 10, overflow: 'hidden', paddingHorizontal: space(2), paddingVertical: 2 },
+  hr: { color: color.onAccent, fontWeight: '800', backgroundColor: color.over, borderRadius: 10, overflow: 'hidden', paddingHorizontal: space(2), paddingVertical: 2 },
   restText: { color: color.chalk, fontWeight: '800', fontSize: textSize.heading, fontVariant: ['tabular-nums'] },
   restButtons: { flexDirection: 'row', gap: space(5), marginTop: space(2) },
   restButton: { color: color.chalk, fontWeight: '700', fontSize: textSize.control },
+  restTap: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
   stats: { flexDirection: 'row', backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },
