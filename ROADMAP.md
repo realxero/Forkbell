@@ -77,6 +77,15 @@ without logging twice, stays usable offline and can be stopped; signing out
 can't hand waiting changes to the next person. AI apps and Shortcuts log to
 your day in your own time zone.
 
+0.24: wide screens get a sidebar and Tools (daily burn, cut or bulk, body fat,
+BMI and FFMI, one-rep max, plates), with Simple and Advanced and a source for
+every formula; Progress in three columns; four ways to show macros; a calmer
+Today, with water and an idle fast on one line each; coaching, where someone
+can plan your training or your food (a weekly meal plan and suggested targets)
+and you choose what to start or apply; pounds by default; and server hardening
+(request size caps, sign-in tied to the device that started it, tighter rate
+limits, private addresses refused for recipe links).
+
 Possible next steps: medication reminders as phone notifications, sleep from
 Apple Health and Health Connect, an importer for NutriTrace and LiftTrace
 data, and per-user AI keys for Bell.

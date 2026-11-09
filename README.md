@@ -43,7 +43,9 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
   can't leak anyone else's data. `pnpm --filter @forkbell/db rls-check` proves
   it against a real database, and CI runs it on every push.
 - **Sign-in.** Single sign-on is OIDC with PKCE; Authelia handles two-factor
-  and passkeys. Password sign-in is optional (`PASSWORD_LOGIN`): passwords are
+  and passkeys. The browser that starts a sign-in has to be the one that
+  finishes it, and the phone app's sign-in only completes with a secret the app
+  keeps, so another app that catches the link can't use it. Password sign-in is optional (`PASSWORD_LOGIN`): passwords are
   hashed with scrypt on the server and kept in a table the app role can't
   read, a wrong username takes as long as a wrong password, and guessing is
   limited per username and per address. Changing a password signs out your
@@ -52,6 +54,11 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
 - **Sessions** are random tokens; only an HMAC of each is stored, in a table the
   app role can't read. The web app uses an httpOnly cookie; the phone app keeps
   its token in the iOS Keychain / Android Keystore via SecureStore.
+- **Limits.** Requests have a size cap (64 KB for sign-in, 16 MB for the API).
+  New accounts, invite codes, sign-in codes, Bell and recipe imports are rate
+  limited. Forwarding headers (`X-Forwarded-For`, `TRUSTED_IP_HEADER`) only
+  count when the connection comes from this machine or a private network.
+  Recipe links to private addresses are refused.
 - **Admin credentials** are only given to the one-shot `migrate` container.
 - **No borrowing ids.** Rows in a workout or program point at their parent by
   id and owner together, and a workout can only use built-in exercises or your
@@ -67,7 +74,7 @@ packages/db     Postgres schema, migrations (with RLS policies), migrator
 3. `docker compose build --pull && docker compose up -d`
 4. Point your reverse proxy at port 3000 and open `PUBLIC_URL`.
 
-Back up `./data/postgres` (or use `pg_dump`).
+For backups, see [docs/BACKUP.md](docs/BACKUP.md).
 
 Updating: pull, rebuild the image with `--pull` (so Docker fetches the newest
 Node 24 with its security fixes, instead of reusing the copy it has), and
@@ -96,17 +103,44 @@ The first sync after connecting (or after updating) also brings in up to two yea
 ## Family sharing
 
 Share with someone who has an account on the same server: pick what they can
-see (food diary, workouts, weight and progress, sleep/mood/medications) and
-whether they can log food for you, then send them a one-time code (7 days).
-Either of you can end it at any time.
+see (food diary, workouts, weight and progress, sleep/mood/medications),
+whether they can log food for you, and whether they can coach you: *Plan my
+training* or *Plan my food*. Then send them a one-time code (7 days). Either of
+you can end it at any time.
 
 This is enforced by Postgres, not just the app. Each request carries who is
 signed in and whose data it's about (`app.user_id` and `app.profile_id`);
 every policy shows one person's rows, and someone else's only when a share
-grants that kind of data. Logging food for someone is the only write allowed;
-everything else is read-only for them. Invite codes are stored as hashes. The
+grants that kind of data. They can write only three things: food for your
+diary (*Log food for me*), programs (*Plan my training*), and a weekly meal
+plan with suggested targets (*Plan my food*). Everything else is read-only for
+them. Invite codes are stored as hashes. The
 row-level security check covers all of it, including that a share can't be
 created except by accepting a real invite.
+
+### Coaching
+
+A coach builds programs for you, but only you start or stop one. They change
+or delete only programs they made, never one you're running, and your logged
+workouts stay yours alone. Programs they made say *From your coach*. A food
+coach keeps a weekly meal plan (a note and, if you like, one of your saved
+meals per day and meal) that shows under each meal on Today, ready to log, and
+can suggest calories and macros, which never change your goals until you tap
+*Use these*. *Plan my training* includes seeing workouts, and *Plan my food*
+includes seeing food. On a wide screen a coach switches between their own data
+and each person they coach from the bar across the top.
+
+## Tools and wide screens
+
+On a screen 1024 pt or wider, the tabs become a sidebar with a Tools page:
+daily burn (a formula beside the burn measured from your logs), cut or bulk
+(pace, dates and calories), body fat, BMI and fat-free mass index from a tape
+measure, one-rep max with a rep table (from sets of up to 10 reps), and plates.
+They fill in from your own numbers. *Simple* shows the answer; *Advanced*
+shows how each number is made, with the research behind it. Progress shows
+three columns there. Settings → Units and appearance also picks how Today shows
+protein, carbs and fat: rings, bars, compact or plates. Weights are in pounds
+unless you pick kilograms.
 
 ## Suggestions and planning
 
@@ -205,7 +239,9 @@ Records made offline get their id on the device, so sending one twice (when an
 answer is lost on a bad connection) never logs it twice. Food search offline
 covers your own foods and the built-in ones; Open Food Facts and USDA need a
 connection. Personal records for a workout finished offline are worked out
-when it syncs.
+when it syncs. Waiting changes survive a proxy's error or login page, an edit
+whose parent hasn't synced yet, and storage trouble on the device; anything
+the server refuses is set aside with a message, never dropped silently.
 
 ## Development
 
@@ -314,11 +350,12 @@ New ingredients are saved to your foods as estimates. Needs Bell (an AI key).
 
 For Mealie, set `MEALIE_URL` (how the server reaches it) and `MEALIE_TOKEN`
 (an API token from your Mealie profile) in the stack. Links to other private
-addresses are refused unless `AI_ALLOW_CUSTOM_URL=true`.
+addresses are refused unless `IMPORT_PRIVATE_LINKS=true`.
 
 ## Water
 
-A Water card on Today. Tap +8, +16.9 or +24 oz (+250, +500 or +750 ml if you
+A Water line on Today: how much, toward your goal, and your first cup size one
+tap away. The ⋯ button opens the rest: +8, +16.9 or +24 oz (+250, +500 or +750 ml if you
 use kilograms), or *Other amount* and type anything like "20 oz", "1.5 L" or
 "2 cups". *Undo* takes back the last one. The bar fills toward your daily goal
 (2 L to start); reaching it gets a small celebration. Change the goal, or hide
@@ -547,6 +584,10 @@ run by the Dockerfile and the iOS workflow). To check what's running:
 
 Actions, then *iOS IPA*, then *Run workflow*. It builds an unsigned IPA for
 SideStore or LiveContainer and attaches it to a release.
+
+*iOS screenshots* (also in Actions) runs the real app in the Simulator against
+a throwaway server with a month of sample data, and photographs every tab in
+light, dark and large text.
 
 ## Contributing
 
