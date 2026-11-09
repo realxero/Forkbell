@@ -10,6 +10,7 @@ import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
 import { color, radius, space, type, textSize } from '../../lib/theme';
+import { BackLink } from '../../components/BackLink';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { buttons } from '../../lib/buttons';
 import { SkeletonCards } from '../../components/Skeleton';
@@ -77,9 +78,7 @@ export default function ExerciseDetail() {
   return (
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={s.link}>‹ Back</Text>
-        </Pressable>
+        <BackLink />
         {error && <Text style={s.error}>{error}</Text>}
         {!d && !error && <SkeletonCards count={3} />}
         {d && (
@@ -231,6 +230,17 @@ function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { 
     }
   };
 
+  // No goal yet: one row, the label and the link side by side.
+  if (!goalKg && !editing)
+    return (
+      <View style={[s.card, { flexDirection: 'row', alignItems: 'center', paddingVertical: space(1) }]}>
+        <Text style={[type.small, { flex: 1 }]}>Strength goal (estimated 1-rep max)</Text>
+        <Pressable onPress={() => { setText(''); setEditing(true); }} style={buttons.link}>
+          <Text style={s.link}>Set a goal</Text>
+        </Pressable>
+      </View>
+    );
+
   return (
     <View style={s.card}>
       <Text style={type.small}>Strength goal (estimated 1-rep max)</Text>
@@ -259,11 +269,7 @@ function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { 
             <Pressable onPress={() => void store(null)} style={buttons.link}><Text style={[s.link, { color: color.ironSoft }]}>Remove</Text></Pressable>
           </View>
         </>
-      ) : (
-        <Pressable onPress={() => { setText(''); setEditing(true); }} style={{ minHeight: 44, justifyContent: 'center' }}>
-          <Text style={s.link}>Set a goal</Text>
-        </Pressable>
-      )}
+      ) : null}
       {error && <Text style={s.error}>{error}</Text>}
     </View>
   );

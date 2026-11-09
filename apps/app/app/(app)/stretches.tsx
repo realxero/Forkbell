@@ -17,7 +17,9 @@ import { ChipRow } from '../../components/ChipRow';
 import { buttons } from '../../lib/buttons';
 import { HowToCard } from '../../components/HowTo';
 import { StretchSession } from '../../components/StretchSession';
+import { wash } from '../../components/ExercisePicker';
 import { color, radius, space, type, textSize } from '../../lib/theme';
+import { BackLink } from '../../components/BackLink';
 import { SkeletonRows } from '../../components/Skeleton';
 
 const CREDIT = 'Steps and pictures: Free Exercise DB (public domain)';
@@ -63,7 +65,7 @@ export default function Stretches() {
   return (
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => router.back()} style={[buttons.link, { alignSelf: 'flex-start' }]}><Text style={s.link}>‹ Back</Text></Pressable>
+        <BackLink />
         <Text style={type.pageTitle}>Warm-up and stretches</Text>
         <View style={s.tabs} accessibilityRole="tablist">
           {STRETCH_KINDS.map((k) => (
@@ -105,7 +107,10 @@ export default function Stretches() {
         {all && <Text style={type.label}>{shown.length} {info.label.toLowerCase()} moves</Text>}
         {shown.map((x) => (
           <Pressable key={x.key} onPress={() => setOpen(x)} style={({ pressed }) => [s.item, pressed && { opacity: 0.7 }]} accessibilityHint="Opens the pictures and steps">
-            <Image source={pictureSource(picturePath(x.howToRef, 0))} style={s.thumb} accessibilityIgnoresInvertColors />
+            <View style={s.thumb}>
+              <Image source={pictureSource(picturePath(x.howToRef, 0))} style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
+              <View style={wash} pointerEvents="none" />
+            </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={[type.body, { fontWeight: '700' }]}>{x.name}</Text>
               <Text style={type.small}>{[x.muscles.slice(0, 3).map(cap).join(', '), ...differs(x)].join(' · ')}</Text>
@@ -151,7 +156,7 @@ const s = StyleSheet.create({
   start: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.iron, borderRadius: radius.card, padding: space(4) },
   startText: { color: color.chalk, fontWeight: '800', fontSize: textSize.body },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.row, padding: space(2) },
-  thumb: { width: 72, height: 48, borderRadius: radius.input, backgroundColor: color.raised },
+  thumb: { width: 72, height: 48, borderRadius: radius.input, overflow: 'hidden', backgroundColor: color.raised },
   sheet: { maxHeight: '88%' },
   secondary: { minHeight: 44, justifyContent: 'center' },
 });
