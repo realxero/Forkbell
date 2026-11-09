@@ -7,9 +7,9 @@ jobs:
     runs-on: macos-15
     permissions: { contents: write }
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with: { node-version-file: .nvmrc, check-latest: true, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       # Version from package.json, build number from this run: iOS shows "0.11.0 (42)",
@@ -50,7 +50,7 @@ jobs:
           # LiveContainer can see them when they re-sign the app with your account.
           codesign --force --deep --sign - --entitlements apps/app/ios/Forkbell/Forkbell.entitlements "$RUNNER_TEMP/Payload/Forkbell.app"
           cd "$RUNNER_TEMP" && zip -qr Forkbell.ipa Payload
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ios-${{ github.run_number }}
           name: Forkbell ${{ steps.version.outputs.version }} (iOS build ${{ github.run_number }})
