@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { Platform, type ColorValue } from 'react-native';
 import { color, textSize } from '../../../lib/theme';
-import { useWide } from '../../../lib/layout';
+import { useSidebar } from '../../../lib/layout';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 const icon = (on: IconName, off: IconName) =>
@@ -19,7 +19,7 @@ export default function TabsLayout() {
   // Ask Bell floats over Food, Train and Progress (Bell has its own chat; Settings stays clean).
   const quickBell = !path.startsWith('/bell') && !path.startsWith('/settings');
   // On a wide screen the tabs become a sidebar, with Tools added.
-  const wide = useWide();
+  const wide = useSidebar();
   return (
     <View style={{ flex: 1 }}>
     <Tabs

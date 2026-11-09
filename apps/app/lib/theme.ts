@@ -52,6 +52,11 @@ const light = {
   tileCopper: '#A4572A',
   tileSlate: '#1C252B',
   tileGrey: '#5B6B73',
+  // The plate calculator's drawing: the 5 kg white and 2.5 kg black plates
+  // and the bar's sleeve (the coloured plates use the macro plates above).
+  plateWhite: '#E9EDEF',
+  plateBlack: '#1C252B',
+  sleeve: '#9BA7AE',
 } as const;
 
 const dark: Record<keyof typeof light, string> = {
@@ -88,9 +93,12 @@ const dark: Record<keyof typeof light, string> = {
   tileCopper: '#E39A6B',
   tileSlate: '#C9D2D8',
   tileGrey: '#9BA7AE',
+  plateWhite: '#E9EDEF',
+  plateBlack: '#46525A', // lifted so it still shows on a dark card
+  sleeve: '#7D8A92',
 };
 
-type ColorName = keyof typeof light;
+export type ColorName = keyof typeof light;
 export type SchemeChoice = 'system' | 'light' | 'dark';
 const isWeb = Platform.OS === 'web';
 

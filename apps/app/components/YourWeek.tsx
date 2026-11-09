@@ -73,7 +73,7 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
                 ) : (
                   <View style={[s.dot, { backgroundColor: color.track }]} />
                 )}
-                <Text style={[s.name, !d.routine && !d.done && { color: color.ironSoft }]} numberOfLines={2}>
+                <Text style={[s.name, !d.routine && !d.done && { color: color.ironSoft }]} numberOfLines={2} maxFontSizeMultiplier={1.4}>
                   {d.done ?? d.routine?.name ?? 'Rest'}
                 </Text>
               </View>

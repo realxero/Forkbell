@@ -24,6 +24,7 @@ import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
 import { color, radius, space, type, textSize } from '../../lib/theme';
 import { Check } from '../../components/Check';
+import { useReduceMotion } from '../../lib/motion';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 import { haptic, hapticsOn } from '../../lib/haptics';
@@ -125,15 +126,22 @@ export default function WorkoutScreen() {
     );
   }, [id]);
 
-  // One clock for the elapsed time and the rest timer.
+  // The rest timer's clock. It only ticks while resting, so the whole screen
+  // isn't redrawn twice a second mid-set; the elapsed time keeps its own
+  // clock in <Elapsed>.
+  // ponytail: the screen still redraws every tick during a rest; move the rest bar and coach into their own component if that ever stutters.
+  const resting0 = restEnd !== null;
   useEffect(() => {
+    if (!resting0) return;
+    setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(t);
-  }, []);
+  }, [resting0]);
   const restLeft = restEnd ? Math.max(0, Math.ceil((restEnd - now) / 1000)) : null;
   // Rest over: a flash across the screen too (Settings → Training setup), for a gym too loud to hear it.
   const flash = useRef(new Animated.Value(0)).current;
   const flashOn = me?.preferences.restFlash !== false;
+  const still = useReduceMotion();
   useEffect(() => {
     if (restEnd && restLeft === 0) {
       if (hapticsOn()) haptic.alert();
@@ -142,8 +150,11 @@ export default function WorkoutScreen() {
       AccessibilityInfo.announceForAccessibility('Rest over. Next set.');
       if (flashOn) {
         flash.setValue(0);
-        const pulse = [Animated.timing(flash, { toValue: 1, duration: 220, useNativeDriver: true }), Animated.timing(flash, { toValue: 0, duration: 380, useNativeDriver: true })];
-        Animated.sequence([...pulse, Animated.timing(flash, { toValue: 1, duration: 220, useNativeDriver: true }), Animated.timing(flash, { toValue: 0, duration: 380, useNativeDriver: true })]).start();
+        // With Reduce Motion: one slow, soft fade instead of two quick flashes.
+        const pulse = still
+          ? [Animated.timing(flash, { toValue: 0.45, duration: 600, useNativeDriver: true }), Animated.timing(flash, { toValue: 0, duration: 900, useNativeDriver: true })]
+          : [Animated.timing(flash, { toValue: 1, duration: 220, useNativeDriver: true }), Animated.timing(flash, { toValue: 0, duration: 380, useNativeDriver: true })];
+        Animated.sequence(still ? pulse : [...pulse, ...pulse]).start();
       }
       const t = setTimeout(() => setRestEnd(null), 4000);
       return () => clearTimeout(t);
@@ -474,8 +485,6 @@ export default function WorkoutScreen() {
       </SafeAreaView>
     );
 
-  const elapsed = Math.max(0, Math.floor(((w.finishedAt ? instant(w.finishedAt) : now) - instant(w.startedAt)) / 1000)) || 0;
-
   return (
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -486,7 +495,7 @@ export default function WorkoutScreen() {
           <View style={{ alignItems: 'center' }}>
             <Text style={type.title} numberOfLines={1}>{w.name}</Text>
             <Text style={[type.small, type.number]}>
-              {w.finishedAt ? `Finished · ${formatDuration(elapsed)}` : formatDuration(elapsed)}
+              <Elapsed startedAt={w.startedAt} finishedAt={w.finishedAt} />
               {saveState === 'saving' ? ' · saving…' : saveState === 'error' ? ' · not saved' : ''}
             </Text>
           </View>
@@ -962,6 +971,18 @@ function PainNote({ value, onSave }: { value: string; onSave: (note: string) => 
 
 
 /** The muscles a workout works, main ones first. */
+/** The workout's running time, on its own one-second clock. */
+function Elapsed({ startedAt, finishedAt }: Pick<Workout, 'startedAt' | 'finishedAt'>) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (finishedAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [finishedAt]);
+  const secs = Math.max(0, Math.floor(((finishedAt ? instant(finishedAt) : now) - instant(startedAt)) / 1000)) || 0;
+  return <>{finishedAt ? `Finished · ${formatDuration(secs)}` : formatDuration(secs)}</>;
+}
+
 const trained = (w: Workout) => [...new Set(w.exercises.map((e) => e.exercise.muscle))].filter((m) => m !== 'full body').slice(0, 5);
 
 
