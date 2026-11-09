@@ -90,8 +90,12 @@ export function ExercisePicker({
 
   const body = (
       <SafeAreaView style={s.screen}>
+        {/* As a page it goes back like every other page; as a sheet over a workout it closes. */}
+        {inline && !creating && (
+          <Pressable onPress={onClose} style={[buttons.link, { alignSelf: 'flex-start', marginLeft: space(4) }]}><Text style={s.link}>‹ Back</Text></Pressable>
+        )}
         <View style={s.head}>
-          <Text style={type.title}>{creating ? 'New exercise' : title}</Text>
+          <Text style={inline && !creating ? type.pageTitle : type.title}>{creating ? 'New exercise' : title}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(4) }}>
             {!creating && (
               <Pressable onPress={() => setIdentify(true)} hitSlop={10} accessibilityLabel="What's this machine? Take a photo" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -99,9 +103,11 @@ export function ExercisePicker({
                 <Text style={[s.link, { fontSize: textSize.control }]}>What’s this?</Text>
               </Pressable>
             )}
-            <Pressable onPress={creating ? () => setCreating(false) : onClose} hitSlop={12}>
-              <Text style={s.link}>{creating ? 'Back' : 'Close'}</Text>
-            </Pressable>
+            {(creating || !inline) && (
+              <Pressable onPress={creating ? () => setCreating(false) : onClose} style={buttons.link}>
+                <Text style={s.link}>{creating ? 'Back' : 'Close'}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
         {creating ? (
@@ -130,7 +136,7 @@ export function ExercisePicker({
             </ChipRow>
             {libraryCount > 0 && !words.length && (
               <Pressable onPress={() => { setFull(!full); setLimit(120); }} style={{ minHeight: 44, justifyContent: 'center' }}>
-                <Text style={s.link}>{full ? 'Just the everyday list' : `Show the full library (${libraryCount} more, with how-to pictures)`}</Text>
+                <Text style={s.link}>{full ? 'Just the everyday list' : `Show ${libraryCount} more from the library`}</Text>
               </Pressable>
             )}
             {error && <Text style={s.error}>{error}</Text>}
@@ -182,7 +188,6 @@ function Row({ e, onPress }: { e: Listed; onPress: () => void }) {
         <Text style={type.small}>
           {cap(e.muscle)} · {e.equipment}
           {e.custom ? ' · yours' : ''}
-          {e.howTo ? ' · how-to' : ''}
         </Text>
       </View>
     </Pressable>

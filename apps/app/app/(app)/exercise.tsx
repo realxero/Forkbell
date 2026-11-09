@@ -3,13 +3,14 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { VARIATION_LABEL, distanceText, durationText, fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type ProgressIdea, type SetEntry, type Variation, type VariationLevel } from '@forkbell/shared';
+import { VARIATION_LABEL, distanceText, durationText, fromKg, projectGoal, todayLocal, type Exercise, type ExerciseHowTo, type PersonalRecord, type ProgressIdea, type SetEntry, type Variation } from '@forkbell/shared';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { HowToCard, CuesCard } from '../../components/HowTo';
 import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { buttons } from '../../lib/buttons';
 import { SkeletonCards } from '../../components/Skeleton';
 
@@ -42,6 +43,7 @@ export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const units = useUnit();
   const [d, setD] = useState<Detail | null>(null);
+  const [allSessions, setAllSessions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     cachedGet<Detail>(`/api/exercises/${id}`).then(setD, (e) => setError(e instanceof Error ? e.message : String(e)));
@@ -62,6 +64,16 @@ export default function ExerciseDetail() {
   const top = d?.trend.length ? Math.max(...d.trend.map((t) => t.e1rmKg)) : 0;
   const bottom = d?.trend.length ? Math.min(...d.trend.map((t) => t.e1rmKg)) * 0.9 : 0;
 
+  const done = Boolean(d?.sessions.length);
+  // The how-to and the form cues, in one card (the cues sit in it as a raised row).
+  const howTo = d && (
+    <View style={s.card}>
+      <Text style={type.heading}>How to do it</Text>
+      {d.howTo && <HowToCard howTo={d.howTo} name={d.exercise.name} short={done} />}
+      <CuesCard exercise={d.exercise} />
+    </View>
+  );
+
   return (
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content}>
@@ -78,15 +90,8 @@ export default function ExerciseDetail() {
               {d.exercise.custom ? ' · yours' : ''}
             </Text>
 
-            {d.howTo && (
-              <View style={s.card}>
-                <Text style={type.heading}>How to do it</Text>
-                <HowToCard howTo={d.howTo} name={d.exercise.name} short={d.sessions.length > 0} />
-              </View>
-            )}
-            <View style={s.card}>
-              <CuesCard exercise={d.exercise} />
-            </View>
+            {/* New to it: how to do it comes first. Done it before: your numbers do. */}
+            {!done && howTo}
 
             {d.records.length > 0 ? (
               <View style={s.records}>
@@ -113,25 +118,37 @@ export default function ExerciseDetail() {
                   ))}
                 </View>
                 <Text style={[type.small, type.number]}>
-                  {units.roundLabel(d.trend[0]!.e1rmKg)} → {units.roundLabel(d.trend.at(-1)!.e1rmKg)}
+                  {shortDate(d.trend.slice(-24)[0]!.date)}: {units.roundLabel(d.trend.slice(-24)[0]!.e1rmKg)} → {shortDate(d.trend.at(-1)!.date)}: {units.roundLabel(d.trend.at(-1)!.e1rmKg)}
                 </Text>
+              </View>
+            )}
+
+            {done && (
+              <View style={s.card}>
+                <Text style={type.heading}>Sessions</Text>
+                {(allSessions ? d.sessions : d.sessions.slice(0, 3)).map((sess) => (
+                  <Pressable key={sess.workoutId} onPress={() => router.push({ pathname: '/workout', params: { id: sess.workoutId } })} style={({ pressed }) => [s.sessionRow, pressed && { opacity: 0.7 }]}>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={type.body}>{shortDate(sess.date)} · {sess.name}</Text>
+                      <Text style={[type.small, type.number]}>{sess.sets.map(setText).join(', ')}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
+                  </Pressable>
+                ))}
+                {d.sessions.length > 3 && (
+                  <Pressable onPress={() => setAllSessions(!allSessions)} style={buttons.link}>
+                    <Text style={s.link}>{allSessions ? 'Show fewer' : `Show all ${d.sessions.length}`}</Text>
+                  </Pressable>
+                )}
               </View>
             )}
 
             {d.exercise.kind === 'weight' && <StrengthGoal exercise={d.exercise} sessions={d.sessions} />}
 
+            {done && howTo}
+
             {!!d.progressIdeas?.length && <ProgressIdeas ideas={d.progressIdeas} timed={d.exercise.kind === 'time'} />}
             {!!d.variations?.length && <Variations list={d.variations} />}
-
-            {d.sessions.length > 0 && <Text style={s.section}>Sessions</Text>}
-            {d.sessions.map((sess) => (
-              <Pressable key={sess.workoutId} onPress={() => router.push({ pathname: '/workout', params: { id: sess.workoutId } })} style={s.item}>
-                <Text style={type.body}>
-                  {shortDate(sess.date)} · {sess.name}
-                </Text>
-                <Text style={[type.small, type.number]}>{sess.sets.map(setText).join(', ')}</Text>
-              </Pressable>
-            ))}
           </>
         )}
       </ScrollView>
@@ -139,9 +156,6 @@ export default function ExerciseDetail() {
   );
 }
 
-// Neutral tints: harder isn't "over" and easier isn't "good".
-const LEVEL_TINT: Record<VariationLevel, string> = { harder: color.iron, angle: color.accent, easier: color.ironSoft };
-const LEVEL_WORDS: Record<VariationLevel, string> = { ...LEVEL_TINT };
 
 /** Ways to make it harder without more weight: for big jumps, stalls, or no heavier weight. */
 function ProgressIdeas({ ideas, timed }: { ideas: ProgressIdea[]; timed: boolean }) {
@@ -158,7 +172,7 @@ function ProgressIdeas({ ideas, timed }: { ideas: ProgressIdea[]; timed: boolean
         </View>
       ))}
       {ideas.length > 3 && (
-        <Pressable onPress={() => setOpen(!open)} hitSlop={10} style={{ minHeight: 36, justifyContent: 'center' }}>
+        <Pressable onPress={() => setOpen(!open)} style={buttons.link}>
           <Text style={s.link}>{open ? 'Show fewer' : `Show all ${ideas.length}`}</Text>
         </Pressable>
       )}
@@ -179,14 +193,12 @@ function Variations({ list }: { list: Variation[] }) {
           accessibilityRole="button"
           accessibilityLabel={`${v.exercise.name}, ${VARIATION_LABEL[v.level]}`}
         >
-          <View style={[s.level, { borderColor: LEVEL_TINT[v.level] }]}>
-            <Text style={[s.levelText, { color: LEVEL_WORDS[v.level] }]}>{VARIATION_LABEL[v.level]}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={type.label}>{VARIATION_LABEL[v.level]}</Text>
             <Text style={type.body}>{v.exercise.name}</Text>
             <Text style={type.small} numberOfLines={2}>{v.why.charAt(0).toUpperCase() + v.why.slice(1)}</Text>
           </View>
-          <Text style={[s.link, { fontSize: textSize.title }]}>›</Text>
+          <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
         </Pressable>
       ))}
     </View>
@@ -259,21 +271,19 @@ function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { 
 
 const s = StyleSheet.create({
   goalInput: { ...type.body, flex: 1, minHeight: 44, borderWidth: 1, borderColor: color.line, borderRadius: 10, paddingHorizontal: space(3), backgroundColor: color.chalk },
-  goalButton: { minHeight: 44, paddingHorizontal: space(4), borderRadius: 10, backgroundColor: color.accent, justifyContent: 'center' },
-  goalButtonText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
+  goalButton: { ...buttons.small, minHeight: 44 },
+  goalButtonText: buttons.smallText,
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   records: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
-  record: { backgroundColor: color.card, borderRadius: 12, padding: space(3), minWidth: '30%', flexGrow: 1, gap: 2 },
-  card: { backgroundColor: color.card, borderRadius: 12, padding: space(3), gap: space(2) },
+  record: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), minWidth: '30%', flexGrow: 1, gap: 2 },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   chart: { height: 90, flexDirection: 'row', alignItems: 'flex-end', gap: 3 },
   barSlot: { flex: 1, maxWidth: 28, height: '100%', justifyContent: 'flex-end' },
-  bar: { backgroundColor: color.protein, borderRadius: 3 },
-  section: { ...type.small, fontWeight: '700', marginTop: space(2) },
-  item: { backgroundColor: color.card, borderRadius: 10, padding: space(3), gap: 2 },
+  // Iron, not a plate colour: this is strength, and blue means protein.
+  bar: { backgroundColor: color.iron, borderRadius: 3 },
+  sessionRow: { flexDirection: 'row', alignItems: 'center', gap: space(2), minHeight: 52, borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(2) },
   variation: { flexDirection: 'row', alignItems: 'center', gap: space(3), minHeight: 52, borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(2) },
-  level: { borderWidth: 1, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 2, minWidth: 108, alignItems: 'center' },
-  levelText: { fontSize: textSize.label, fontWeight: '800' },
 });

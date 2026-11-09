@@ -11,6 +11,7 @@ import { HowToFrames } from './HowTo';
 import { haptic } from '../lib/haptics';
 import { formatDuration } from '../lib/units';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 export function StretchSession({ items, title, onClose }: { items: Stretch[] | null; title: string; onClose: () => void }) {
   const [i, setI] = useState(0);
@@ -95,7 +96,8 @@ export function StretchSession({ items, title, onClose }: { items: Stretch[] | n
         ) : cur ? (
           <ScrollView contentContainerStyle={s.content}>
             <Text style={type.small}>{i + 1} of {items!.length}</Text>
-            <View style={s.progress}><View style={[s.progressFill, { width: `${(100 * (i + (cur.sides ? side / 2 : 0))) / items!.length}%` }]} /></View>
+            {/* Fills as the time runs, not only when a move ends. */}
+            <View style={s.progress}><View style={[s.progressFill, { width: `${(100 * (i + Math.min(1, ((cur.sides ? side : 0) * stretchDose(cur).seconds + stretchDose(cur).seconds - left) / stretchSeconds(cur)))) / items!.length}%` }]} /></View>
             <HowToFrames images={picturePaths(cur)} name={cur.name} />
             <Text style={[type.title, { fontSize: textSize.stat }]}>{cur.name}</Text>
             <Text style={type.small}>{stretchDose(cur).label}{cur.equipment !== 'none' ? ` · needs ${cur.equipment === 'something to hold' ? 'something to hold or lean on' : `a ${cur.equipment}`}` : ''}</Text>
@@ -108,7 +110,7 @@ export function StretchSession({ items, title, onClose }: { items: Stretch[] | n
                 <Ionicons name="play-back" size={24} color={color.iron} />
               </Pressable>
               <Pressable onPress={togglePause} style={[s.ctrl, s.ctrlMain]} accessibilityLabel={paused ? 'Resume' : 'Pause'}>
-                <Ionicons name={paused ? 'play' : 'pause'} size={30} color={color.onAccent} />
+                <Ionicons name={paused ? 'play' : 'pause'} size={30} color={color.chalk} />
               </Pressable>
               <Pressable onPress={next} style={s.ctrl} accessibilityLabel={cur.sides && side === 0 ? 'Other side' : 'Next'}>
                 <Ionicons name="play-forward" size={24} color={color.iron} />
@@ -135,15 +137,16 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space(4), gap: space(2) },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  progress: { height: 6, borderRadius: 3, backgroundColor: color.line, overflow: 'hidden' },
-  progressFill: { height: 6, backgroundColor: color.accent },
-  timerRow: { flexDirection: 'row', alignItems: 'baseline', gap: space(3) },
+  progress: { height: 6, borderRadius: 3, backgroundColor: color.track, overflow: 'hidden' },
+  progressFill: { height: 6, backgroundColor: color.iron },
+  // Centred over the controls, so the eye goes timer → pause in one line.
+  timerRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: space(3) },
   timer: { fontSize: textSize.display, fontWeight: '800', color: color.iron, fontVariant: ['tabular-nums'] },
   controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space(6), marginVertical: space(2) },
   ctrl: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
-  ctrlMain: { width: 68, height: 68, borderRadius: 34, backgroundColor: color.accent },
+  ctrlMain: { width: 68, height: 68, borderRadius: 34, backgroundColor: color.iron },
   step: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
   num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: textSize.small, color: color.onAccent, backgroundColor: color.accent },
-  primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(3), alignItems: 'center' },
-  primaryText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
+  primary: buttons.filled,
+  primaryText: buttons.filledText,
 });
