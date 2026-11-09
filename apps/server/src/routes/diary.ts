@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { dayGoals, dayStatus, diaryEntries, foods, users, type connect, healthDaily } from '@forkbell/db';
-import { addDays, addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry, exerciseBonus, preferencesSchema } from '@forkbell/shared';
+import { addDays, addEntrySchema, copyMealSchema, dateSchema, sumEntries, updateEntrySchema, type DiaryDay, type DiaryEntry, exerciseBonus, preferencesSchema, todayIn } from '@forkbell/shared';
 import type { AppEnv } from '../auth.ts';
 import { toFood } from '../serialize.ts';
 import { saveFood, BadFood } from './save-food.ts';
@@ -170,10 +170,11 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
           .returning();
         // Remember the goals this day is being logged against.
         const [owner] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
-        await tx
-          .insert(dayGoals)
-          .values({ userId, date: input.date, goals: goalsFor(input.date, owner) } as typeof dayGoals.$inferInsert)
-          .onConflictDoUpdate({ target: [dayGoals.userId, dayGoals.date], set: { goals: goalsFor(input.date, owner) } });
+        // A past day keeps the goals it already had: adding a forgotten snack to last
+        // Tuesday mustn't swap in today's goals. Today (and later) follows your goals now.
+        const goals = tx.insert(dayGoals).values({ userId, date: input.date, goals: goalsFor(input.date, owner) } as typeof dayGoals.$inferInsert);
+        if (input.date < todayIn(owner?.timeZone)) await goals.onConflictDoNothing();
+        else await goals.onConflictDoUpdate({ target: [dayGoals.userId, dayGoals.date], set: { goals: goalsFor(input.date, owner) } });
         return toEntry(row!, food);
       });
       if (!entry) return c.json({ error: 'That food was not found.' }, 404);

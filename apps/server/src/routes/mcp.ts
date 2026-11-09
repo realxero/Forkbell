@@ -138,7 +138,9 @@ export function mcpRoutes(db: ReturnType<typeof connect>, internal: Internal) {
   }
 
   async function logWater(userId: string, a: Record<string, unknown>) {
-    const ml = parseWater(String(a.amount ?? ''), 'kg');
+    // A bare number is ambiguous (16 what?): ask for the unit rather than guess ml.
+    const amount = String(a.amount ?? '');
+    const ml = /[a-z]/i.test(amount) ? parseWater(amount, 'kg') : null;
     if (!ml) return text('Give an amount with a unit, like "16.9 oz" or "500 ml".', true);
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(a.date ?? '')) ? String(a.date) : todayIn(await timeZoneOf(db.asUser, userId));
     await internal('/api/wellbeing/water', userId, { method: 'POST', body: { date, ml } });

@@ -73,6 +73,8 @@ export const updateEntrySchema = z
 const itemSchema = z.object({ foodId: z.string().uuid(), grams: z.number().positive().max(10000) });
 
 export const savedMealSchema = z.object({
+  /** made on the device, so sending it again after a lost answer saves it once */
+  id: z.string().uuid().optional(),
   name: z.string().trim().min(1, 'Give the meal a name.').max(80),
   items: z.array(itemSchema).min(1, 'Add at least one food.').max(40),
 });

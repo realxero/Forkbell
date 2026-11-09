@@ -15,7 +15,9 @@ import {
   type SaveWorkoutInput,
   type SetEntry,
   type WorkoutSummary,
+  todayIn,
 } from '@forkbell/shared';
+import { timeZoneOf } from '../today.ts';
 import type { AppEnv } from '../auth.ts';
 import { historyBefore, isMissingExercise, lastSessions, loadWorkout, saveWorkout, volumeSql } from '../training.ts';
 
@@ -30,7 +32,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
   /** For the muscle map: working sets per muscle this past week, and when each was last trained. */
   r.get('/muscle-map', async (c) => {
     const t = dateSchema.safeParse(c.req.query('today'));
-    const today = t.success ? t.data : todayLocal();
+    const today = t.success ? t.data : todayIn(await timeZoneOf(asUser, c.get('profileId')));
     const rows = (await asUser(c.get('profileId'), (tx) =>
       tx.execute<{ muscle: string; sets7: string; last: string | null }>(sql`
         select e.muscle,
@@ -108,7 +110,7 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
 
   /** Recent sessions, newest first. */
   r.get('/', async (c) => {
-    const limit = Math.min(Number(c.req.query('limit')) || 20, 100);
+    const limit = Math.max(1, Math.min(Math.floor(Number(c.req.query('limit'))) || 20, 100));
     const rows = await asUser(c.get('profileId'), (tx) =>
       tx
         .select({

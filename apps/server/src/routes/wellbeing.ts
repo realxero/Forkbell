@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import { checkIns, fasts, medicationLogs, medications, waterEntries, type connect } from '@forkbell/db';
-import { addDays, dateSchema, fastStreak, MAX_WATER_ML, type Fast, type Fasts, todayLocal, waterTotal, type WaterDay } from '@forkbell/shared';
+import { addDays, dateSchema, fastStreak, MAX_WATER_ML, type Fast, type Fasts, todayIn, todayLocal, waterTotal, type WaterDay } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 import { timeZoneOf } from '../today.ts';
@@ -32,7 +32,7 @@ export function wellbeingRoutes({ asUser }: ReturnType<typeof connect>) {
 
   r.get('/', async (c) => {
     const t = dateSchema.safeParse(c.req.query('today'));
-    const today = t.success ? t.data : todayLocal();
+    const today = t.success ? t.data : todayIn(await timeZoneOf(asUser, c.get('profileId')));
     const data = await asUser(c.get('profileId'), async (tx) => ({
       checkIns: await tx.select().from(checkIns).where(gte(checkIns.date, addDays(today, -29))).orderBy(desc(checkIns.date)),
       meds: await tx.select().from(medications).orderBy(desc(medications.active), asc(medications.name)),
@@ -151,7 +151,7 @@ export function wellbeingRoutes({ asUser }: ReturnType<typeof connect>) {
   // ?today=YYYY-MM-DD&tz=<the phone's getTimezoneOffset()> so the streak counts the phone's days.
   r.get('/fasts', async (c) => {
     const d = dateSchema.safeParse(c.req.query('today'));
-    const today = d.success ? d.data : todayLocal();
+    const today = d.success ? d.data : todayIn(await timeZoneOf(asUser, c.get('profileId')));
     // The person's own time zone when it's known; else the offset the phone sent.
     const offset = Number(c.req.query('tz'));
     const zone = (await timeZoneOf(asUser, c.get('profileId'))) ?? (Number.isFinite(offset) ? offset : undefined);

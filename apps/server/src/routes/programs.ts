@@ -10,6 +10,10 @@ const isUuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
 const nameSchema = z.object({ name: z.string().trim().min(1).max(120) });
 
 async function activate(tx: Tx, id: string) {
+  // Turn others off only once this one is known to exist (and is yours), so a stale
+  // tap on a program deleted elsewhere doesn't leave you with no program at all.
+  const [mine] = await tx.select({ id: programs.id }).from(programs).where(eq(programs.id, id)).limit(1);
+  if (!mine) return [];
   await tx.update(programs).set({ active: false }).where(and(eq(programs.active, true), ne(programs.id, id)));
   return tx.update(programs).set({ active: true }).where(eq(programs.id, id)).returning({ id: programs.id });
 }

@@ -143,7 +143,8 @@ export async function loadWorkout(tx: Tx, id: string): Promise<Workout | null> {
     .orderBy(asc(workoutExercises.position));
   const sets = await setsFor(tx, items.map((i) => i.we.id));
   const previous = await lastSessions(tx, [...new Set(items.map((i) => i.ex.id))], { id: w.id, startedAt: w.startedAt });
-  const [me] = await tx.select({ prefs: users.preferences }).from(users).limit(1);
+  // Whose workout it is: someone viewing a shared profile can also see their own row.
+  const [me] = await tx.select({ prefs: users.preferences }).from(users).where(eq(users.id, w.userId)).limit(1);
   const prefs = preferencesSchema.parse(me?.prefs ?? {});
   // Pain notes always show; other tips follow the setting and any exercise you hid them for.
   const showTip = (exId: string, t: { kind: string }) => t.kind === 'pain' || (prefs.trainingTips && !prefs.training.hiddenTips.includes(exId));

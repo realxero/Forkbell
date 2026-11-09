@@ -177,7 +177,7 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
     case 'propose_water': {
       const ml = parseWater(String(a.amount ?? ''), ctx.unit ?? 'lb');
       if (!ml) return 'That amount could not be read. Give a number and a unit, like "16.9 oz" or "500 ml", up to 5 L.';
-      ctx.water = { ml: (ctx.water?.ml ?? 0) + ml <= 5000 ? (ctx.water?.ml ?? 0) + ml : ml, date: ctx.today };
+      ctx.water = { ml: Math.min(5000, (ctx.water?.ml ?? 0) + ml), date: ctx.today };
       return `Proposed ${ctx.water.ml} ml of water. The person taps Add to log it; tell them that in a few words, without repeating the number of ml unless asked.`;
     }
     case 'get_day': {

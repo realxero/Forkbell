@@ -275,8 +275,9 @@ export async function logItems(date: string, meal: Meal, items: { food: Food; gr
 /** Save foods as a named meal to log again later. Needs a connection. */
 export async function saveMeal(name: string, items: { food: Food; grams: number }[]) {
   const usable = items.filter((i) => !i.food.id.startsWith('pending-'));
-  const r = await send<{ id: string }>('POST', '/api/meals', { name, items: usable.map((i) => ({ foodId: i.food.id, grams: i.grams })) }, { label: `Save ${name}` });
-  updateCache<{ meals: SavedMeal[] }>('/api/meals', (m) => m && { meals: [...m.meals, { id: !r.queued ? r.data.id : `pending-${newId()}`, name, items: usable }].sort((a, b) => a.name.localeCompare(b.name)) });
+  const id = newId();
+  const r = await send<{ id: string }>('POST', '/api/meals', { id, name, items: usable.map((i) => ({ foodId: i.food.id, grams: i.grams })) }, { label: `Save ${name}` });
+  updateCache<{ meals: SavedMeal[] }>('/api/meals', (m) => m && { meals: [...m.meals, { id: !r.queued ? r.data.id : id, name, items: usable }].sort((a, b) => a.name.localeCompare(b.name)) });
   return r;
 }
 
