@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { Platform, type ColorValue } from 'react-native';
 import { color, textSize } from '../../../lib/theme';
+import { useWide } from '../../../lib/layout';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 const icon = (on: IconName, off: IconName) =>
@@ -17,6 +18,8 @@ export default function TabsLayout() {
   const path = usePathname();
   // Ask Bell floats over Food, Train and Progress (Bell has its own chat; Settings stays clean).
   const quickBell = !path.startsWith('/bell') && !path.startsWith('/settings');
+  // On a wide screen the tabs become a sidebar, with Tools added.
+  const wide = useWide();
   return (
     <View style={{ flex: 1 }}>
     <Tabs
@@ -29,17 +32,20 @@ export default function TabsLayout() {
         // Phones: leave height and padding out entirely, so the tab bar works out its own
         // height with the home-indicator space. (A height key set to undefined still
         // overrides it and the bar collapses to nothing.) The web gets room for the labels.
-        tabBarStyle:
-          Platform.OS === 'web'
+        ...(wide ? { tabBarPosition: 'left' as const, tabBarVariant: 'material' as const, tabBarLabelPosition: 'beside-icon' as const } : {}),
+        tabBarStyle: wide
+          ? { backgroundColor: color.card, borderRightColor: color.line, minWidth: 200 }
+          : Platform.OS === 'web'
             ? { backgroundColor: color.card, borderTopColor: color.line, height: 74, paddingTop: 6, paddingBottom: 12 }
             : { backgroundColor: color.card, borderTopColor: color.line },
-        tabBarLabelStyle: { fontSize: textSize.caption, fontWeight: '700', lineHeight: 15, marginTop: 2 },
+        tabBarLabelStyle: wide ? { fontSize: textSize.control, fontWeight: '700' } : { fontSize: textSize.caption, fontWeight: '700', lineHeight: 15, marginTop: 2 },
         tabBarItemStyle: { paddingBottom: 2 },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Food', tabBarIcon: icon('restaurant', 'restaurant-outline') }} />
       <Tabs.Screen name="train" options={{ title: 'Train', tabBarIcon: icon('barbell', 'barbell-outline') }} />
       <Tabs.Screen name="progress" options={{ title: 'Progress', tabBarIcon: icon('stats-chart', 'stats-chart-outline') }} />
+      <Tabs.Screen name="tools" options={{ title: 'Tools', href: wide ? '/tools' : null, tabBarIcon: icon('calculator', 'calculator-outline') }} />
       <Tabs.Screen name="bell" options={{ title: 'Bell', tabBarIcon: ({ color: c, focused, size }) => <BellAvatar size={size + 2} tint={c as string} outline={!focused} /> }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: icon('settings', 'settings-outline') }} />
     </Tabs>

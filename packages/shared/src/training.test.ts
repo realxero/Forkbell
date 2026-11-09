@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { estimatedOneRepMax, findRecords, formatWeight, incrementKg, nextTarget, toKg, type SetEntry } from './training.ts';
+import { estimatedOneRepMax, findRecords, weightForReps, formatWeight, incrementKg, nextTarget, toKg, type SetEntry } from './training.ts';
 
 const set = (weightKg: number | null, reps: number | null, extra: Partial<SetEntry> = {}): SetEntry => ({ weightKg, reps, seconds: null, rpe: null, warmup: false, done: true, ...extra });
 const lb = (v: number) => toKg(v, 'lb');
@@ -52,4 +52,11 @@ test('records: a first session is a baseline, then only real improvements count'
   assert.deepEqual(findRecords(ex, [set(lb(135), 8)], [set(lb(135), 8)], '2026-10-23'), []);
   // more reps at the same weight: better estimated max and volume
   assert.deepEqual(findRecords(ex, [set(lb(135), 10)], [set(lb(135), 8)], '2026-10-23').map((p) => p.kind), ['e1rm', 'volume']);
+});
+
+test('the rep table turns a one-rep max back into weights for each rep count', () => {
+  assert.equal(weightForReps(100, 1), 100);
+  // Round trip: the weight for 8 reps estimates the same max again.
+  for (const reps of [2, 5, 8, 12]) assert.ok(Math.abs(estimatedOneRepMax(weightForReps(100, reps), reps)! - 100) < 1e-9, `${reps} reps`);
+  assert.ok(weightForReps(100, 10) < weightForReps(100, 5), 'more reps, less weight');
 });

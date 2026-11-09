@@ -166,6 +166,11 @@ export function estimatedOneRepMax(weightKg: number, reps: number): number | nul
   return reps === 1 ? weightKg : weightKg * (1 + reps / 30);
 }
 
+/** What you could lift for this many reps, from a one-rep max (Epley turned around). */
+export function weightForReps(oneRepMaxKg: number, reps: number): number {
+  return reps <= 1 ? oneRepMaxKg : oneRepMaxKg / (1 + reps / 30);
+}
+
 /** Sets that say what you can lift: done, not warm-ups, and not drop sets (lighter on purpose). */
 const working = (sets: SetEntry[]) => sets.filter((s) => s.done && !s.warmup && !s.drop);
 
