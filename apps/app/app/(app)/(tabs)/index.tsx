@@ -1,5 +1,5 @@
 import { mealNow, shownMeals } from '../../../lib/meals';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -79,12 +79,22 @@ export default function Diary() {
     api<{ enabled: boolean }>('/api/bell/status').then((r) => setBell(r.enabled), () => setBell(false));
   }, []);
 
+  // Only the latest load counts: tapping through days on a slow connection must not
+  // leave an older day's numbers under a newer day's title.
+  const latest = useRef(0);
+  // Whose data `day` is (null: yours), so a goal is only celebrated on your own day.
+  const dayOwner = useRef<string | null>(null);
   const load = useCallback(async () => {
+    const mine = ++latest.current;
+    const owner = viewing?.id ?? null;
     try {
-      setDay(await cachedGet<DiaryDay>(`/api/diary/${date}`));
+      const d = await cachedGet<DiaryDay>(`/api/diary/${date}`);
+      if (mine !== latest.current) return;
+      dayOwner.current = owner;
+      setDay(d);
       setLoadError(null);
     } catch (e) {
-      setLoadError(message(e));
+      if (mine === latest.current) setLoadError(message(e));
     }
   }, [date, viewing]);
 
@@ -125,7 +135,7 @@ export default function Diary() {
 
   // A small celebration the first time a goal is reached on a day.
   useEffect(() => {
-    if (!day || viewing) return;
+    if (!day || viewing || dayOwner.current !== null) return;
     const key = `device:celebrated:${day.date}`;
     const done = readCache<string[]>(key) ?? [];
     const hit = (['protein'] as const).filter((m) => day.goals[m] && day.totals[m] >= day.goals[m]! && !done.includes(m));

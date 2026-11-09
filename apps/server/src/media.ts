@@ -17,10 +17,13 @@ const upstream = (ref: string, n: number) =>
 /** MediaPipe's pose model for Form check, pinned to one version, kept like the pictures. */
 const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 let poseJob: Promise<Buffer | null> | null = null;
+/** The model once read (a few MB): every Form check asks for the same file, so read it once. */
+let poseKept: Buffer | null = null;
 async function poseModel(): Promise<Buffer | null> {
+  if (poseKept) return poseKept;
   const file = path.join(dir, 'pose_landmarker_lite.task');
   try {
-    return await readFile(file);
+    return (poseKept = await readFile(file));
   } catch {
     /* not kept yet */
   }
@@ -33,7 +36,7 @@ async function poseModel(): Promise<Buffer | null> {
     const tmp = `${file}.${process.pid}.tmp`;
     await writeFile(tmp, body);
     await rename(tmp, file);
-    return body;
+    return (poseKept = body);
   })().finally(() => {
     poseJob = null;
   });

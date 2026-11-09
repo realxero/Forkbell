@@ -12,6 +12,9 @@ import { saveFood, BadFood } from './save-food.ts';
 
 const likeEscape = (s: string) => s.replace(/[%_\\]/g, '\\$&');
 
+/** Recent Open Food Facts and USDA answers by search words (10 minutes, at most 500). */
+const searched = new Map<string, { outside: PromiseSettledResult<FoodCandidate[]>[]; until: number }>();
+
 export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
 
@@ -35,10 +38,19 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
         .orderBy(sql`${foods.ownerId} is null`, sql`${foods.name} not ilike ${prefix}`, sql`length(${foods.name})`, desc(foods.createdAt))
         .limit(20),
     );
-    const outside = await Promise.allSettled([
-      searchOff(q),
-      env.usdaApiKey ? searchUsda(q, env.usdaApiKey) : Promise.resolve([] as FoodCandidate[]),
-    ]);
+    const key = q.trim().toLowerCase();
+    const kept = searched.get(key);
+    const outside = kept && kept.until > Date.now()
+      ? kept.outside
+      : await Promise.allSettled([
+          searchOff(q),
+          env.usdaApiKey ? searchUsda(q, env.usdaApiKey) : Promise.resolve([] as FoodCandidate[]),
+        ]);
+    // Keep answers that both sources gave (not errors) for a while: people retype and come back to the same words.
+    if (!kept && outside.every((o) => o.status === 'fulfilled')) {
+      searched.set(key, { outside, until: Date.now() + 10 * 60_000 });
+      if (searched.size > 500) searched.delete(searched.keys().next().value!);
+    }
     const mine = (await minePromise).map(toFood);
     const saved = new Set(mine.map((f) => `${f.source}:${f.sourceId}`));
     // Best match first, and among similar matches the more trustworthy data.

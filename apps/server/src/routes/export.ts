@@ -55,7 +55,10 @@ export function exportRoutes({ asUser }: ReturnType<typeof t.connect>) {
     await asUser(me, async (tx) => {
       for (const [name, table] of Object.entries(TABLES)) {
         try {
-          const rows = (await tx.select().from(table)) as Record<string, unknown>[];
+          // Filter in SQL too: the built-in food and exercise libraries are thousands of rows.
+          const cols = table as unknown as Record<string, Parameters<typeof eq>[0] | undefined>;
+          const owner = cols.ownerId ?? cols.userId;
+          const rows = (await (owner ? tx.select().from(table).where(eq(owner, me)) : tx.select().from(table))) as Record<string, unknown>[];
           // Built-in foods and exercises are everyone's; only yours are exported.
           data[name] = rows.filter((row) => ('ownerId' in row ? row.ownerId === me : 'userId' in row ? row.userId === me : true));
         } catch {

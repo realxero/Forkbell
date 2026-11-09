@@ -25,20 +25,21 @@ export function healthRoutes({ asUser }: ReturnType<typeof connect>) {
             target: [healthDaily.userId, healthDaily.date, healthDaily.kind, healthDaily.source],
             set: { value: sql`excluded.value`, updatedAt: sql`now()` } as Record<string, unknown>,
           });
-      let kept = 0;
-      for (const w of weights) {
-        const rows = await tx
-          .insert(weighIns)
-          .values({ date: w.date, weightKg: w.weightKg, bodyFat: w.bodyFat ?? null, source } as typeof weighIns.$inferInsert)
-          .onConflictDoUpdate({
-            target: [weighIns.userId, weighIns.date],
-            set: { weightKg: w.weightKg, bodyFat: w.bodyFat ?? null, source },
-            setWhere: sql`${weighIns.source} <> 'manual'`,
-          })
-          .returning({ id: weighIns.id });
-        kept += rows.length;
-      }
-      return { days: days.length, weights: kept };
+      // One statement for every day (up to 400). One row per day: the last reading
+      // given for a day wins, as it did when they went in one at a time.
+      const byDay = [...new Map(weights.map((w) => [w.date, w])).values()];
+      const kept = byDay.length
+        ? await tx
+            .insert(weighIns)
+            .values(byDay.map((w) => ({ date: w.date, weightKg: w.weightKg, bodyFat: w.bodyFat ?? null, source }) as typeof weighIns.$inferInsert))
+            .onConflictDoUpdate({
+              target: [weighIns.userId, weighIns.date],
+              set: { weightKg: sql`excluded.weight_kg`, bodyFat: sql`excluded.body_fat`, source: sql`excluded.source` } as Record<string, unknown>,
+              setWhere: sql`${weighIns.source} <> 'manual'`,
+            })
+            .returning({ id: weighIns.id })
+        : [];
+      return { days: days.length, weights: kept.length };
     });
     return c.json(counts);
   });
