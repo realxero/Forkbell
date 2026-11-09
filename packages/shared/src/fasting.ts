@@ -1,6 +1,6 @@
 // Fasting: a timer from your last meal toward a goal in hours, and a streak of
 // fasts that reached their goal. Optional, and off until you turn it on.
-import { addDays, instant } from './dates.ts';
+import { addDays, instant, todayIn } from './dates.ts';
 
 export const FAST_PRESETS = [12, 14, 16, 18, 20, 24] as const;
 
@@ -35,21 +35,31 @@ export function fastProgress(f: Pick<Fast, 'startedAt' | 'endedAt' | 'targetHour
 }
 
 /** "16h 05m". */
-export const hoursText = (hours: number) => `${Math.floor(hours)}h ${String(Math.floor((hours % 1) * 60)).padStart(2, '0')}m`;
+export const hoursText = (hours: number) => {
+  // Whole minutes first: 61 minutes as hours (1.01666…) % 1 * 60 is 0.999…, which floors to 0.
+  const minutes = Math.floor(hours * 60 + 1e-6);
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+};
 
-/** The local day an instant falls on, in this device's (or server's) time zone. */
-const localDay = (iso: string, offsetMinutes?: number) => {
-  const t = new Date(instant(iso) - (offsetMinutes ?? new Date(iso).getTimezoneOffset()) * 60_000);
-  return t.toISOString().slice(0, 10);
+/**
+ * The local day an instant falls on: in a named time zone (right on both sides
+ * of a clock change), at a fixed offset (older phones send one), or else in
+ * this device's (or server's) zone as it was at that instant.
+ */
+const localDay = (iso: string, zone?: string | number | null) => {
+  const at = instant(iso);
+  if (typeof zone === 'string') return todayIn(zone, new Date(at));
+  return new Date(at - (zone ?? new Date(at).getTimezoneOffset()) * 60_000).toISOString().slice(0, 10);
 };
 
 /**
  * Days in a row, up to today, that ended a fast which reached its goal. A day
  * without one yet (today, with a fast still going) doesn't break the streak.
- * `offsetMinutes` is the phone's getTimezoneOffset(), so days are its days.
+ * `zone` is the person's time zone (Europe/London), so days are theirs; a
+ * number is a fixed getTimezoneOffset() from an older phone.
  */
-export function fastStreak(fasts: Fast[], today: string, offsetMinutes?: number): number {
-  const met = new Set(fasts.filter((f) => f.endedAt && fastProgress(f).done).map((f) => localDay(f.endedAt!, offsetMinutes)));
+export function fastStreak(fasts: Fast[], today: string, zone?: string | number | null): number {
+  const met = new Set(fasts.filter((f) => f.endedAt && fastProgress(f).done).map((f) => localDay(f.endedAt!, zone)));
   let d = met.has(today) ? today : addDays(today, -1);
   let n = 0;
   while (met.has(d)) {

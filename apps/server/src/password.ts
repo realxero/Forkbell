@@ -64,7 +64,16 @@ export function lockedFor(username: string, ip: string) {
 }
 
 export function noteFailure(username: string, ip: string) {
-  if (failures.size > 50_000) failures.clear(); // never grow without bound
+  // Never grow without bound, but never forget everyone at once either (a flood of
+  // made-up usernames would otherwise wipe every lockout): drop finished windows,
+  // then the oldest.
+  if (failures.size > 50_000) {
+    for (const [k, f] of failures) if (Date.now() - f.since > WINDOW) failures.delete(k);
+    for (const k of failures.keys()) {
+      if (failures.size <= 40_000) break;
+      failures.delete(k);
+    }
+  }
   for (const key of [`u:${username}`, `i:${ip}`]) {
     const f = failures.get(key);
     if (!f || Date.now() - f.since > WINDOW) failures.set(key, { count: 1, since: Date.now() });

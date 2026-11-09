@@ -30,7 +30,10 @@ export const daysBetween = (a: string, b: string) => dayNumber(b) - dayNumber(a)
  * moves it; a real change shows up within a couple of weeks.
  */
 export function weightTrend(weighIns: WeighIn[]): TrendPoint[] {
-  const sorted = [...weighIns].sort((a, b) => (a.date < b.date ? -1 : 1));
+  // Several weigh-ins on one day count once, as their average (two a day shouldn't move the trend twice).
+  const byDay = new Map<string, number[]>();
+  for (const w of weighIns) byDay.set(w.date, [...(byDay.get(w.date) ?? []), w.weightKg]);
+  const sorted = [...byDay].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([date, ws]) => ({ date, weightKg: ws.reduce((s, x) => s + x, 0) / ws.length }));
   const out: TrendPoint[] = [];
   let trend: number | null = null;
   let last: string | null = null;
@@ -88,10 +91,14 @@ export function estimateEnergy(intake: Record<string, number>, series: TrendPoin
   if (first && first.date > start) start = first.date;
   const empty = (needs: string, loggedDays = 0, spanDays = 0): EnergyEstimate => ({ kcal: null, rateKgPerWeek: null, loggedDays, spanDays, confidence: null, needs });
 
-  const startPoint = trendOn(series, start);
+  // The weight change and the food it's set against cover the same days: from
+  // the first weigh-in in the window to the last, and only the food in between.
+  const startPoint = series.find((p) => p.date >= start && p.date <= end) ?? null;
   const endPoint = trendOn(series, end);
   const spanDays = startPoint && endPoint ? daysBetween(startPoint.date, endPoint.date) : 0;
-  const allLogged = Object.entries(intake).filter(([d, kcal]) => d >= start && d <= end && kcal > 0);
+  const from = startPoint?.date ?? start;
+  const to = endPoint?.date ?? end;
+  const allLogged = Object.entries(intake).filter(([d, kcal]) => d >= from && d <= to && kcal > 0);
   const finishedLogged = finished ? allLogged.filter(([d]) => finished.has(d)) : [];
   const usesFinishedDays = finishedLogged.length >= 10;
   const logged = usesFinishedDays ? finishedLogged : allLogged;

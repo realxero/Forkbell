@@ -16,6 +16,11 @@ import type { AppEnv } from '../auth.ts';
 import { aiConfigFor } from '../bell/config.ts';
 import { anthropic, openai } from '../bell/providers.ts';
 import { toFood } from '../serialize.ts';
+import { isPrivate } from '../private-address.ts';
+import { perWindow } from '../limit.ts';
+
+// Each preview fetches a page and asks the AI: 20 per person per 10 minutes.
+const previews = perWindow(20, 10 * 60_000);
 
 interface ImportedIngredient {
   line: string;
@@ -35,13 +40,6 @@ interface RecipePreview {
 }
 
 const MAX_PAGE = 3_000_000;
-
-/** Private, loopback and link-local addresses: not fetched for someone unless the server allows it. */
-function isPrivate(ip: string): boolean {
-  if (isIP(ip) === 6) return ip === '::1' || /^f[cd]/i.test(ip) || /^fe80/i.test(ip) || ip.startsWith('::ffff:') && isPrivate(ip.slice(7));
-  const [a, b] = ip.split('.').map(Number) as [number, number];
-  return a === 10 || a === 127 || a === 0 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127);
-}
 
 /**
  * Whether recipe links may point at this server's own network (a recipe site
@@ -176,6 +174,7 @@ export function recipeImportRoutes(db: ReturnType<typeof connect>) {
   r.post('/preview', async (c) => {
     const p = z.object({ source: z.string().trim().min(3, 'Paste a link or the ingredients.').max(20_000) }).safeParse(await c.req.json().catch(() => null));
     if (!p.success) return c.json({ error: p.error.issues[0]?.message ?? 'Paste a link or the ingredients.' }, 400);
+    if (!previews.take(c.get('userId'))) return c.json({ error: 'That’s a lot of imports in a short time. Try again in a few minutes.' }, 429);
     const ai = await aiConfigFor(db, c.get('userId'));
     if (!ai || 'error' in ai) return c.json({ error: ai && 'error' in ai ? ai.error : 'Importing recipes needs Bell: add an AI key in Settings → Bell.' }, 503);
 

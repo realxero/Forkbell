@@ -23,6 +23,7 @@ import {
   fastProgress,
   fastStreak,
   todayLocal,
+  deviceTimeZone,
   instant,
   toIso,
 } from '@forkbell/shared';
@@ -354,7 +355,7 @@ export async function endFast(fast: Fast) {
   updateCache<Fasts>(FASTS, (f) => {
     const cur = f ?? fastsNow();
     // Reached its goal today: the streak goes up now, not on the next refresh.
-    const streak = fastProgress(ended).done ? fastStreak([ended, ...cur.recent], todayLocal()) : cur.streak;
+    const streak = fastProgress(ended).done ? fastStreak([ended, ...cur.recent], todayLocal(), deviceTimeZone()) : cur.streak;
     return { open: null, recent: [ended, ...cur.recent].slice(0, 10), streak: Math.max(cur.streak, streak) };
   });
   await send('POST', `${FASTS}/${fast.id}/end`, { endedAt }, { label: 'End fast' });

@@ -9,7 +9,7 @@ import { color, space, textSize } from '../lib/theme';
  * syncing, or something couldn't be saved. Hidden otherwise.
  */
 export function SyncBanner() {
-  const { online, syncing, pending, problems, held } = useSync();
+  const { online, serverError, syncing, pending, problems, held } = useSync();
   const insets = useSafeAreaInsets();
   if (held.length) {
     const what = held.length === 1 ? `“${held[0]}”` : `${held.length} changes`;
@@ -31,7 +31,9 @@ export function SyncBanner() {
     );
   }
   if (online && !pending) return null;
-  const text = !online
+  const text = !online && serverError
+    ? `The server answered with an error · showing what’s saved on this device, which may be out of date${pending ? ` · ${pending} ${pending === 1 ? 'change' : 'changes'} waiting` : ''}`
+    : !online
     ? pending
       ? `Offline · ${pending} ${pending === 1 ? 'change' : 'changes'} saved on this device`
       : 'Offline · showing what’s saved on this device'

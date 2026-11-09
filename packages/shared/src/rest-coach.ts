@@ -16,23 +16,27 @@ interface RestAdvice {
   state: RestState;
   /** something to say now, or null to stay quiet */
   say: string | null;
+  /** seconds to add to the rest timer now, when you're clearly not recovered */
+  extendSeconds?: number;
 }
 
 /**
  * Advice for this moment of a rest. Heart rate only counts when it's fresh
  * (a minute old at most). `told` lists what's already been said, so each line
- * is said once.
+ * is said (and the rest stretched) once. `secondsLeft` is what the timer
+ * shows, which can differ from planned minus elapsed after a ±15.
  */
 export function restAdvice(o: {
   plannedSeconds: number;
   elapsedSeconds: number;
+  secondsLeft: number;
   hr: number | null;
   hrAgeSeconds: number | null;
   recoveredBpm: number;
   told: ReadonlySet<string>;
 }): RestAdvice {
   const fresh = o.hr !== null && o.hrAgeSeconds !== null && o.hrAgeSeconds <= 60;
-  const left = o.plannedSeconds - o.elapsedSeconds;
+  const left = o.secondsLeft;
   if (fresh) {
     const hr = Math.round(o.hr!);
     if (hr <= o.recoveredBpm) {
@@ -41,8 +45,9 @@ export function restAdvice(o: {
         return { state: 'ready', say: `Heart rate's down to ${hr}. You're ready when you are.` };
       return { state: 'ready', say: null };
     }
-    if (left <= 0 && hr > o.recoveredBpm + 8 && !o.told.has('too-soon'))
-      return { state: 'too-soon', say: `Heart rate's still ${hr}. Give it about 30 more seconds.` };
+    // Not recovered with a few seconds to go: 30 more seconds, once.
+    if (left > 0 && left <= 3 && hr > o.recoveredBpm + 8 && !o.told.has('too-soon'))
+      return { state: 'too-soon', say: `Heart rate's still ${hr}. Give it about 30 more seconds.`, extendSeconds: 30 };
     return { state: left <= 0 ? 'too-soon' : 'recovering', say: null };
   }
   return { state: left <= 0 ? 'ready' : 'recovering', say: null };

@@ -74,7 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    loadConnection().then(({ needsServer }) => (needsServer ? setStatus('signedOut') : refreshMe()));
+    // If the keychain can't be read (a phone woken before its first unlock, a broken
+    // keychain), show sign-in rather than spinning forever.
+    loadConnection().then(
+      ({ needsServer }) => (needsServer ? setStatus('signedOut') : refreshMe()),
+      () => setStatus('signedOut'),
+    );
   }, [refreshMe]);
 
   const signIn = useCallback(
@@ -88,15 +93,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await setServerUrl(server);
       // forkbell://auth in the real app; an exp:// link while testing in Expo Go.
       const returnTo = Linking.createURL('auth');
+      // A secret only this app holds: the code that comes back works only with it.
+      // An older server doesn't offer one; sign in without it there.
+      const pair = await post<{ secret: string; bind: string }>('/auth/native-secret', {}).catch(() => null);
       const result = await WebBrowser.openAuthSessionAsync(
-        `${server}/auth/login?platform=native&redirect=${encodeURIComponent(returnTo)}`,
+        `${server}/auth/login?platform=native&redirect=${encodeURIComponent(returnTo)}${pair ? `&bind=${pair.bind}` : ''}`,
         returnTo,
       );
       if (result.type !== 'success') return; // closed the sign-in window
       const code = Linking.parse(result.url).queryParams?.code;
       if (typeof code !== 'string') return setError('Sign-in did not finish. Try again.');
       try {
-        const { token } = await post<{ token: string }>('/auth/exchange', { code });
+        const { token } = await post<{ token: string }>('/auth/exchange', { code, secret: pair?.secret });
         if (!token) throw new Error('Sign-in finished but the server sent no session. Check the server address and try again.');
         await setToken(token);
         await refreshMe();

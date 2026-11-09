@@ -7,7 +7,12 @@ let serverUrl: string | null = null;
 let token: string | null = null;
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  /**
+   * fromForkbell is false when something in front of the server answered (a
+   * login page, a captive portal, a proxy error page): the status is that
+   * page's, not Forkbell's verdict, so a queued change must not be dropped for it.
+   */
+  constructor(message: string, public status: number, public fromForkbell = true) {
     super(message);
   }
 }
@@ -68,7 +73,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   // Forkbell always answers in JSON. A web page here means something in front of the
   // server answered instead, most often a login page from the reverse proxy.
   if (!(res.headers.get('content-type') ?? '').includes('application/json')) {
-    throw new ApiError(await notForkbell(serverUrl, res), res.ok ? 418 : res.status);
+    throw new ApiError(await notForkbell(serverUrl, res), res.ok ? 418 : res.status, false);
   }
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new ApiError(data.error ?? `The server answered ${res.status}.`, res.status);

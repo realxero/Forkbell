@@ -4,6 +4,7 @@ import { checkIns, fasts, medicationLogs, medications, waterEntries, type connec
 import { addDays, dateSchema, fastStreak, MAX_WATER_ML, type Fast, type Fasts, todayLocal, waterTotal, type WaterDay } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
+import { timeZoneOf } from '../today.ts';
 
 const scale = z.number().int().min(1).max(5).nullable();
 const checkInSchema = z.object({
@@ -151,10 +152,12 @@ export function wellbeingRoutes({ asUser }: ReturnType<typeof connect>) {
   r.get('/fasts', async (c) => {
     const d = dateSchema.safeParse(c.req.query('today'));
     const today = d.success ? d.data : todayLocal();
-    const tz = Number(c.req.query('tz'));
+    // The person's own time zone when it's known; else the offset the phone sent.
+    const offset = Number(c.req.query('tz'));
+    const zone = (await timeZoneOf(asUser, c.get('profileId'))) ?? (Number.isFinite(offset) ? offset : undefined);
     const rows = await asUser(c.get('profileId'), (tx) => tx.select().from(fasts).orderBy(desc(fasts.startedAt)).limit(90));
     const list: Fast[] = rows.map((f) => ({ id: f.id, startedAt: f.startedAt, endedAt: f.endedAt, targetHours: f.targetHours }));
-    return c.json({ open: list.find((f) => !f.endedAt) ?? null, recent: list.filter((f) => f.endedAt).slice(0, 10), streak: fastStreak(list, today, Number.isFinite(tz) ? tz : undefined) } satisfies Fasts);
+    return c.json({ open: list.find((f) => !f.endedAt) ?? null, recent: list.filter((f) => f.endedAt).slice(0, 10), streak: fastStreak(list, today, zone) } satisfies Fasts);
   });
   r.post('/fasts', async (c) => {
     const p = z

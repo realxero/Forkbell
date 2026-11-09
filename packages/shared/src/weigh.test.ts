@@ -35,3 +35,10 @@ test('saved plates and bowls are part of preferences', () => {
   assert.equal(p.containers[0]!.grams, 410);
   assert.throws(() => preferencesSchema.parse({ containers: [{ id: 'a', name: '', grams: 410 }] }));
 });
+
+test('a unit that is not a weight gives no weight, not grams', () => {
+  assert.equal(parseWeight('8 fl oz'), null);
+  assert.equal(parseWeight('2 cups'), null);
+  assert.equal(parseWeight('250 g'), 250);
+  assert.equal(parseWeight('250'), 250);
+});

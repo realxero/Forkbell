@@ -7,12 +7,18 @@ import type { Database } from '@forkbell/db';
 import { BUILD } from '@forkbell/shared';
 import { z } from 'zod';
 import { env } from './env.ts';
+import { perWindow } from './limit.ts';
+import { isPrivate } from './private-address.ts';
+import { getConnInfo } from '@hono/node-server/conninfo';
 import { USERNAME, decoyHash, hashPassword, lockedFor, noteFailure, noteSuccess, passwordProblem, verifyPassword } from './password.ts';
 
 /** userId: who is signed in. profileId: whose data this request is about (theirs, or someone who shared with them). */
 export type AppEnv = { Variables: { userId: string; profileId: string; tokenHash: string } };
 
 const COOKIE = 'fb_session';
+const SSO_COOKIE = 'fb_sso';
+// Each new account costs a password hash and a row: 10 per address per hour.
+const signups = perWindow(10, 60 * 60_000);
 const NATIVE_REDIRECT = 'forkbell://auth';
 /** Shortcut keys start with this, and only work on /api/shortcuts. */
 export const SHORTCUT_PREFIX = 'fbk_';
@@ -36,9 +42,9 @@ export const hashToken = (token: string) => createHmac('sha256', env.sessionSecr
 
 // Short-lived, in-memory: a login in progress and native hand-off codes.
 // Fine for a single server process; move to Postgres if you ever run several.
-type Pending = { verifier: string; platform: 'web' | 'native'; returnTo: string; expires: number };
+type Pending = { verifier: string; platform: 'web' | 'native'; returnTo: string; expires: number; bind: string | null };
 const pending = new Map<string, Pending>();
-const handoff = new Map<string, { token: string; expires: number }>();
+const handoff = new Map<string, { token: string; expires: number; bind: string | null }>();
 
 /**
  * Sign-in codes: a device that's signed in shows one ("Sign in another
@@ -110,13 +116,24 @@ async function startSession(db: Database, userId: string, method: 'sso' | 'passw
  * Only set it when the server can't be reached except through that tunnel, or
  * anyone could send the header and pick their own address.
  */
-function clientIp(header: (name: string) => string | undefined, trusted = env.trustedIpHeader) {
+function clientIp(c: Context, trusted = env.trustedIpHeader) {
+  const header = (n: string) => c.req.header(n);
+  // Forwarding headers only count when a proxy on this machine or network sent
+  // them; a visitor connecting straight in is judged by their own address, so
+  // they can't name a new one with every request.
+  let peer: string | undefined;
+  try {
+    peer = getConnInfo(c).remote.address;
+  } catch {
+    /* not a real connection (in-process request) */
+  }
+  if (peer && !isPrivate(peer)) return peer;
   if (trusted) {
     const real = header(trusted)?.split(',')[0]?.trim();
     if (real) return real;
   }
   const xff = header('x-forwarded-for')?.split(',').map((s) => s.trim()).filter(Boolean);
-  return xff?.at(-1) ?? header('x-real-ip') ?? 'direct';
+  return xff?.at(-1) ?? header('x-real-ip') ?? peer ?? 'direct';
 }
 
 const credentials = z.object({
@@ -158,7 +175,7 @@ export function authRoutes(db: Database) {
     const parsed = credentials.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success || !parsed.data.username || !parsed.data.password) return c.json({ error: 'Enter your username and password.' }, 400);
     const { username, password, platform } = parsed.data;
-    const ip = clientIp((n) => c.req.header(n));
+    const ip = clientIp(c);
     const wait = lockedFor(username, ip);
     if (wait) return c.json({ error: `Too many wrong passwords. Try again in ${wait} minute${wait === 1 ? '' : 's'}.` }, 429);
 
@@ -180,7 +197,7 @@ export function authRoutes(db: Database) {
       .safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: 'Check your details and try again.' }, 400);
     const { username, password, platform, name, code } = parsed.data;
-    const ip = clientIp((n) => c.req.header(n));
+    const ip = clientIp(c);
     if (lockedFor('#signup-code', ip)) return c.json({ error: 'Too many tries from here. Wait a few minutes.' }, 429);
     if (mode === 'code' && !sameSecret(code ?? '', env.password.signupCode)) {
       noteFailure('#signup-code', ip);
@@ -189,6 +206,7 @@ export function authRoutes(db: Database) {
     if (!USERNAME.test(username)) return c.json({ error: 'Usernames are 3 to 32 letters, numbers, dots, dashes or underscores.' }, 400);
     const problem = passwordProblem(password, username);
     if (problem) return c.json({ error: problem }, 400);
+    if (!signups.take(ip)) return c.json({ error: 'Too many new accounts from here. Try again in an hour.' }, 429);
     const [row] = await db.execute<{ id: string | null }>(sql`select auth_password_signup(${username}, ${await hashPassword(password)}, ${name || username}) as id`);
     if (!row?.id) return c.json({ error: 'That username is taken. Pick another.' }, 409);
     return finish(c, platform, await startSession(db, row.id, 'password', describeDevice(c.req.header('user-agent'), platform)));
@@ -201,7 +219,11 @@ export function authRoutes(db: Database) {
     const verifier = oidc.randomPKCECodeVerifier();
     const state = oidc.randomState();
     const platform = c.req.query('platform') === 'native' ? 'native' : 'web';
-    pending.set(state, { verifier, platform, returnTo: nativeReturn(c.req.query('redirect')), expires: Date.now() + 10 * 60_000 });
+    const bind = /^[\w-]{20,100}$/.test(c.req.query('bind') ?? '') ? c.req.query('bind')! : null;
+    pending.set(state, { verifier, platform, returnTo: nativeReturn(c.req.query('redirect')), expires: Date.now() + 10 * 60_000, bind });
+    // The browser that starts signing in has to be the one that finishes it, so a
+    // finished sign-in link someone else sends you can't sign you in as them.
+    setCookie(c, SSO_COOKIE, state, { httpOnly: true, secure: env.secureCookies, sameSite: 'Lax', path: '/auth', maxAge: 10 * 60 });
     const url = oidc.buildAuthorizationUrl(config, {
       redirect_uri: callbackUrl,
       scope: 'openid profile email',
@@ -218,6 +240,9 @@ export function authRoutes(db: Database) {
     const login = pending.get(state);
     pending.delete(state);
     if (!login || login.expires < Date.now()) return c.text('This sign-in link expired. Go back to Forkbell and sign in again.', 400);
+    const started = getCookie(c, SSO_COOKIE) ?? '';
+    deleteCookie(c, SSO_COOKIE, { path: '/auth' });
+    if (!sameSecret(started, state)) return c.text('This sign-in was started somewhere else. Go back to Forkbell and sign in again.', 400);
 
     const config = await oidcConfig();
     // Rebuild the URL from PUBLIC_URL: behind a reverse proxy the request's own host is internal.
@@ -237,7 +262,7 @@ export function authRoutes(db: Database) {
     if (login.platform === 'native') {
       // The app exchanges this one-time code for the token, so the token never sits in a URL.
       const code = randomBytes(24).toString('base64url');
-      handoff.set(code, { token, expires: Date.now() + 60_000 });
+      handoff.set(code, { token, expires: Date.now() + 60_000, bind: login.bind });
       return c.redirect(`${login.returnTo}?code=${code}`);
     }
     setCookie(c, COOKIE, token, {
@@ -255,7 +280,7 @@ export function authRoutes(db: Database) {
     sweep();
     const parsed = z.object({ code: z.string().max(40), platform: z.enum(['web', 'native']).default('web') }).safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: 'Type the code from your other device.' }, 400);
-    const ip = clientIp((n) => c.req.header(n));
+    const ip = clientIp(c);
     const miss = codeMisses.get(ip);
     if (miss && miss.n >= 10 && miss.until > Date.now()) return c.json({ error: 'Too many wrong codes. Try again in 15 minutes.' }, 429);
     // Codes never use O or I, so someone typing those meant 0 and 1.
@@ -269,12 +294,25 @@ export function authRoutes(db: Database) {
     return finish(c, parsed.data.platform, await startSession(db, hit.userId, 'code', describeDevice(c.req.header('user-agent'), parsed.data.platform)));
   });
 
+  /**
+   * The phone app's half of a sign-in: a secret it keeps, and a value derived
+   * from it that goes in the sign-in link. The code coming back to the app only
+   * works with the secret, so another app that catches the forkbell:// link
+   * can't use it. (The app has no secure random of its own, so the server makes it.)
+   */
+  r.post('/native-secret', (c) => {
+    const secret = randomBytes(32).toString('base64url');
+    return c.json({ secret, bind: hashToken(`bind:${secret}`) });
+  });
+
   r.post('/exchange', async (c) => {
     sweep();
-    const { code } = await c.req.json<{ code?: string }>().catch(() => ({ code: undefined }));
+    const { code, secret } = await c.req.json<{ code?: string; secret?: string }>().catch(() => ({ code: undefined, secret: undefined }));
     const hit = code ? handoff.get(code) : undefined;
     if (code) handoff.delete(code);
     if (!hit || hit.expires < Date.now()) return c.json({ error: 'Sign-in code expired. Sign in again.' }, 400);
+    // Older apps don't bind their sign-in; newer ones must show the secret.
+    if (hit.bind && !sameSecret(hashToken(`bind:${secret ?? ''}`), hit.bind)) return c.json({ error: 'Sign-in code expired. Sign in again.' }, 400);
     return c.json({ token: hit.token });
   });
 

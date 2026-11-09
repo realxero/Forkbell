@@ -51,7 +51,9 @@ export function parseWeight(text: string): number | null {
   const n = Number(m[1]!.replace(',', '.'));
   if (!Number.isFinite(n) || n <= 0) return null;
   const unit = m[2];
-  const factor = unit ? (UNIT_GRAMS.find(([re]) => re.test(unit))?.[1] ?? 1) : 1;
+  // A unit we don't know ("8 fl oz", "2 cups") is not grams: better no weight than a wrong one.
+  const factor = unit ? UNIT_GRAMS.find(([re]) => re.test(unit))?.[1] : 1;
+  if (factor === undefined) return null;
   const g = round1(n * factor);
   return g > 0 && g <= 20000 ? g : null;
 }

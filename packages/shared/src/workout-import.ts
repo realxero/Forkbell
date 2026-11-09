@@ -113,12 +113,21 @@ function detectFormat(headers: string[]): ImportFormat | null {
 
 // Numbers, times and dates ------------------------------------------------------
 
+/**
+ * A number as a spreadsheet wrote it, ready for Number(): "62,5" (decimal
+ * comma) → "62.5", "2,150" and "1,225.5" (thousands) → "2150", "1225.5".
+ */
+export function decimalText(t: string): string {
+  if (/^-?[1-9]\d{0,2}(,\d{3})+$/.test(t) || (t.includes(',') && t.includes('.'))) return t.replace(/,/g, '');
+  return t.replace(',', '.');
+}
+
 const num = (v: string | undefined) => {
   if (v === undefined) return null;
   const t = v.trim().replace(/\s/g, '');
   if (!t) return null;
-  // "62,5" in a semicolon file is 62.5
-  const n = Number(t.includes(',') && !t.includes('.') ? t.replace(',', '.') : t.replace(/,/g, ''));
+  // "62,5" in a semicolon file is 62.5; "1,225.5" and "2,150" have thousands
+  const n = Number(decimalText(t));
   return Number.isFinite(n) ? n : null;
 };
 

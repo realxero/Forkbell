@@ -61,6 +61,16 @@ export function classify(status: number, method: OutboxItem['method']): SendResu
   return 'retry';
 }
 
+/**
+ * After a 'rejected' answer: drop it, or set it aside. A 404 for a change to a
+ * record (not a delete) while an earlier change is set aside most likely means
+ * the record is in that set-aside change (a workout started, then its sets
+ * saved), so it waits with it instead of being lost.
+ */
+export function afterRejected(status: number, method: OutboxItem['method'], heldBefore: number): 'drop' | 'hold' {
+  return status === 404 && method !== 'DELETE' && heldBefore > 0 ? 'hold' : 'drop';
+}
+
 /** A random id the server accepts as a UUID, made on the device so offline records keep it forever. */
 export function newId(random: () => number = Math.random): string {
   const hex = Array.from({ length: 32 }, () => Math.floor(random() * 16).toString(16));
