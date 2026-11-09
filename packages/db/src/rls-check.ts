@@ -134,6 +134,43 @@ try {
   assert.equal((await as(alice, (tx) => tx`select * from day_status`)).length, 2, 'food_write: Bob can finish her day');
   assert.equal((await asBobViewingAlice((tx) => tx`select * from weigh_ins`)).length, 0, 'progress was taken off the share');
 
+  // Coaching: plan_write lets Bob build Alice's programs, never start them or log her workouts.
+  const alicesOwn = (await as(alice, (tx) => tx`insert into programs (name) values ('Mine') returning id`))[0]!.id as string;
+  await as(alice, (tx) => tx`update programs set active = false`);
+  await as(alice, (tx) => tx`update programs set active = true where id = ${alicesOwn}`);
+  await as(alice, (tx) => tx`update shares set permissions = '{training_read}' where grantee_id = ${bob}`);
+  await assert.rejects(asBobViewingAlice((tx) => tx`insert into programs (name) values ('Nope')`), 'training_read alone cannot plan her training');
+  await as(alice, (tx) => tx`update shares set permissions = '{training_read,plan_write}' where grantee_id = ${bob}`);
+  const fromBob = (await asBobViewingAlice((tx) => tx`insert into programs (name) values ('From Bob') returning id, user_id, created_by, active`))[0]!;
+  assert.equal(fromBob.user_id, alice, "Bob's program is Alice's");
+  assert.equal(fromBob.created_by, bob, 'and says Bob made it');
+  assert.equal(fromBob.active, false);
+  const day = (await asBobViewingAlice((tx) => tx`insert into routines (program_id, name, position) values (${fromBob.id}, 'Push', 0) returning id`))[0]!.id as string;
+  assert.equal((await asBobViewingAlice((tx) => tx`update routines set name = 'Push A' where id = ${day} returning id`)).length, 1, 'Bob can change the days he planned');
+  await assert.rejects(asBobViewingAlice((tx) => tx`update programs set active = true where id = ${fromBob.id}`), 'only Alice starts a program');
+  await assert.rejects(asBobViewingAlice((tx) => tx`update programs set active = false where id = ${alicesOwn}`), 'or stops one');
+  await assert.rejects(asBobViewingAlice((tx) => tx`insert into programs (name, active) values ('Sneaky', true)`), 'a coach cannot add one already running');
+  const forged = (await asBobViewingAlice((tx) => tx`insert into programs (name, created_by) values ('Forged', ${alice}) returning id, created_by`))[0]!;
+  assert.equal(forged.created_by, bob, 'created_by is always whoever is signed in');
+  await asBobViewingAlice((tx) => tx`delete from programs where id = ${forged.id}`);
+  await assert.rejects(asBobViewingAlice((tx) => tx`insert into workouts (date, name) values ('2026-10-22', 'Not his')`), 'plan_write never logs her workouts');
+  assert.equal((await asBobViewingAlice((tx) => tx`delete from programs where id = ${alicesOwn} returning id`)).length, 0, "Bob can't delete Alice's own program");
+  assert.equal((await asBobViewingAlice((tx) => tx`delete from programs where id = ${fromBob.id} returning id`)).length, 1, 'but can delete one he made');
+
+  // Planning food: food_plan keeps her meal plan and suggests targets, never logs or sets her goals.
+  await as(alice, (tx) => tx`update shares set permissions = '{food_read}' where grantee_id = ${bob}`);
+  await assert.rejects(asBobViewingAlice((tx) => tx`insert into meal_plan (weekday, meal, note) values (1, 'lunch', 'Salad')`), 'food_read alone cannot plan her food');
+  await as(alice, (tx) => tx`update shares set permissions = '{food_read,food_plan}' where grantee_id = ${bob}`);
+  const cell = (await asBobViewingAlice((tx) => tx`insert into meal_plan (weekday, meal, note, created_by) values (1, 'lunch', 'Chicken and rice', ${alice}) returning user_id, created_by`))[0]!;
+  assert.equal(cell.user_id, alice, "the plan is Alice's");
+  assert.equal(cell.created_by, bob, 'stamped with who made it, whatever was sent');
+  await asBobViewingAlice((tx) => tx`insert into target_suggestions (kcal, protein) values (2100, 150)`);
+  assert.equal((await as(alice, (tx) => tx`select kcal from target_suggestions`))[0]!.kcal, 2100, 'Alice sees the suggestion');
+  await assert.rejects(asBobViewingAlice((tx) => tx`insert into diary_entries (date, meal, food_id, grams) values ('2026-10-22', 'lunch', ${aliceFood}, 5)`), 'food_plan does not log to her diary');
+  assert.equal((await asBobViewingAlice((tx) => tx`update users set goal_kcal = 1000 where id = ${alice} returning id`)).length, 0, 'or change her goals');
+  assert.equal((await as(carol, (tx) => tx`select * from meal_plan`, alice)).length, 0, "Carol can't see Alice's plan");
+  assert.equal((await as(alice, (tx) => tx`delete from target_suggestions returning user_id`)).length, 1, 'Alice can dismiss it');
+
   // Bob leaves; nothing is visible again.
   await as(bob, (tx) => tx`delete from shares where owner_id = ${alice}`);
   assert.equal((await asBobViewingAlice((tx) => tx`select * from diary_entries`)).length, 0, 'after the share ends, nothing');

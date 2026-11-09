@@ -10,6 +10,7 @@ import { confirm } from '../../lib/confirm';
 import { color, space, type, textSize, radius } from '../../lib/theme';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
+import { useViewing } from '../../lib/profile';
 
 type Starter = { key: string; name: string; daysPerWeek: string; description: string; routines: string[] };
 
@@ -18,7 +19,8 @@ export default function Programs() {
   const [data, setData] = useState<{ programs: Program[]; starters: Starter[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
-  const [dayName, setDayName] = useState('');
+  /** the new-day box, per program */
+  const [dayNames, setDayNames] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -47,8 +49,12 @@ export default function Programs() {
     }
   };
 
+  // Coaching someone (plan_write): every program opens for editing, and they choose which to run.
+  const viewing = useViewing();
+  const coaching = Boolean(viewing?.permissions?.includes('plan_write'));
   const active = data?.programs.find((p) => p.active);
-  const others = data?.programs.filter((p) => !p.active) ?? [];
+  const cards = coaching ? (data?.programs ?? []) : active ? [active] : [];
+  const others = coaching ? [] : (data?.programs.filter((p) => !p.active) ?? []);
 
   return (
     <SafeAreaView style={s.screen}>
@@ -62,9 +68,13 @@ export default function Programs() {
         {error && <Text style={s.error}>{error}</Text>}
         {!data && !error && <SkeletonCards count={3} />}
 
-        {active && (
-          <View style={s.card}>
-            <Text style={type.small}>Active program</Text>
+        {coaching && <Text style={type.body}>You’re planning {viewing!.name}’s training. They choose when to start a program, and their workouts stay theirs.</Text>}
+        {cards.map((active) => (
+          <View key={active.id} style={s.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+              <Text style={[type.small, { flex: 1 }]}>{active.active ? 'Active program' : 'Not started yet'}</Text>
+              {active.fromCoach && <Text style={s.badge}>{coaching ? 'You made this' : 'From your coach'}</Text>}
+            </View>
             <Text style={type.title}>{active.name}</Text>
             <Text style={type.small}>Days run in this order. After you finish one, the next comes up, so a missed day just shifts the plan.</Text>
             {active.routines.map((r) => (
@@ -80,24 +90,35 @@ export default function Programs() {
               </Pressable>
             ))}
             <View style={s.inline}>
-              <TextInput value={dayName} onChangeText={setDayName} placeholder="New day, e.g. Arms" style={[s.input, { flex: 1 }]} />
+              <TextInput value={dayNames[active.id] ?? ''} onChangeText={(t) => setDayNames({ ...dayNames, [active.id]: t })} placeholder="New day, e.g. Arms" placeholderTextColor={color.placeholder} accessibilityLabel={`New day for ${active.name}`} style={[s.input, { flex: 1 }]} />
               <Pressable
-                disabled={!dayName.trim() || busy}
-                onPress={() => run(async () => { await post(`/api/programs/${active.id}/routines`, { name: dayName }); setDayName(''); })}
-                style={[s.small, (!dayName.trim() || busy) && { opacity: 0.4 }]}
+                disabled={!dayNames[active.id]?.trim() || busy}
+                onPress={() => run(async () => { await post(`/api/programs/${active.id}/routines`, { name: dayNames[active.id] }); setDayNames({ ...dayNames, [active.id]: '' }); })}
+                style={[s.small, (!dayNames[active.id]?.trim() || busy) && { opacity: 0.4 }]}
               >
                 <Text style={s.smallText}>Add day</Text>
               </Pressable>
             </View>
+            {coaching && active.fromCoach && (
+              <Pressable
+                disabled={busy}
+                onPress={async () => {
+                  if (await confirm('Delete this program?', 'It’s one you made; their own programs stay.', 'Delete')) run(() => del(`/api/programs/${active.id}`));
+                }}
+                style={{ alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={[s.link, { color: color.over }]}>Delete this program</Text>
+              </Pressable>
+            )}
           </View>
-        )}
+        ))}
 
         {others.length > 0 && <Text style={s.section}>Your other programs</Text>}
         {others.map((p) => (
           <View key={p.id} style={[s.item, { backgroundColor: color.card }]}>
             <View style={{ flex: 1 }}>
               <Text style={type.body}>{p.name}</Text>
-              <Text style={type.small}>{p.routines.length} days</Text>
+              <Text style={type.small}>{p.routines.length} days{p.fromCoach ? ' · from your coach' : ''}</Text>
             </View>
             <Pressable disabled={busy} onPress={() => run(() => post(`/api/programs/${p.id}/activate`, {}))} hitSlop={6}>
               <Text style={s.link}>Use</Text>
@@ -158,4 +179,5 @@ const s = StyleSheet.create({
   smallText: { ...buttons.smallText },
   button: { ...buttons.filled, marginTop: space(1) },
   buttonText: { ...buttons.filledText },
+  badge: { ...type.label, color: color.accent, backgroundColor: color.infoBg, paddingHorizontal: space(2), paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
 });

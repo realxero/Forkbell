@@ -116,3 +116,61 @@ test('activating a program that is gone leaves the active one alone', async () =
   const programs = (list.programs ?? list.mine) as { id: string; active: boolean }[];
   assert.equal(programs.find((p) => p.id === id)?.active, true, 'still active');
 });
+
+test('a coach (plan_write) builds programs for you; only you start one, and your workouts stay yours', async () => {
+  const client = await newUser('Client');
+  const coach = await newUser('Coach');
+  const invite = await client.call('POST', '/api/shares/invites', { permissions: ['plan_write'] });
+  assert.equal(invite.status, 201, invite.text);
+  assert.equal((await coach.call('POST', '/api/shares/accept', { code: invite.body.code })).status, 200);
+  const { sharingWith } = (await client.call('GET', '/api/shares')).body as { sharingWith: { permissions: string[] }[] };
+  assert.deepEqual(sharingWith[0]!.permissions.sort(), ['plan_write', 'training_read'], 'planning training includes seeing it');
+
+  const asCoach = (method: string, p: string, body?: unknown) =>
+    fetch(`${BASE}${p}`, {
+      method,
+      headers: { authorization: `Bearer ${coach.token}`, 'x-forkbell-profile': client.id, ...(body ? { 'content-type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(async (r) => ({ status: r.status, body: await r.json().catch(() => null) }));
+  const made = await asCoach('POST', '/api/programs', { name: 'Coach plan' });
+  assert.equal(made.status, 201);
+  const day = await asCoach('POST', `/api/programs/${made.body.id}/routines`, { name: 'Lower' });
+  assert.equal(day.status, 201);
+  assert.equal((await asCoach('POST', `/api/programs/${made.body.id}/activate`, {})).status, 403, 'only the client starts a program');
+  assert.equal((await asCoach('POST', '/api/workouts', { date: '2026-10-20' })).status, 403, 'a coach never logs workouts');
+
+  const mine = (await client.call('GET', '/api/programs')).body.programs as { id: string; active: boolean; fromCoach?: boolean }[];
+  const plan = mine.find((p) => p.id === made.body.id)!;
+  assert.equal(plan.fromCoach, true, 'marked as from the coach');
+  assert.equal(plan.active, false, 'waiting for the client');
+  assert.equal((await client.call('POST', `/api/programs/${plan.id}/activate`, {})).status, 200);
+});
+
+test('a food coach (food_plan) keeps a meal plan and suggests targets; you apply them', async () => {
+  const client = await newUser('Client');
+  const coach = await newUser('Coach');
+  const invite = await client.call('POST', '/api/shares/invites', { permissions: ['food_plan'] });
+  assert.equal((await coach.call('POST', '/api/shares/accept', { code: invite.body.code })).status, 200);
+  const asCoach = (method: string, p: string, body?: unknown) =>
+    fetch(`${BASE}${p}`, {
+      method,
+      headers: { authorization: `Bearer ${coach.token}`, 'x-forkbell-profile': client.id, ...(body ? { 'content-type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then((r) => r.status);
+  assert.equal(await asCoach('PUT', '/api/plans/meal-plan', { weekday: 1, meal: 'lunch', note: 'Chicken, rice, greens', savedMealId: null }), 200);
+  assert.equal(await asCoach('PUT', '/api/plans/coach-targets', { kcal: 2200, protein: 170, carbs: 230, fat: 70, note: 'Training days' }), 200);
+  assert.equal(await asCoach('PUT', '/api/plans/coach-targets', { kcal: 500, protein: null, carbs: null, fat: null, note: null }), 400, 'not under 800');
+  assert.equal(await asCoach('POST', '/api/diary', { date: '2026-10-20', meal: 'lunch', grams: 50, foodId: crypto.randomUUID() }), 403, 'planning is not logging');
+  // Your account (goals included) is never someone else's to change: this request is about the coach.
+  await asCoach('PUT', '/api/me/goals', { kcal: 1000, protein: null, carbs: null, fat: null });
+
+  const plan = (await client.call('GET', '/api/plans/meal-plan')).body.cells as { weekday: number; meal: string; note: string; fromCoach: boolean }[];
+  assert.deepEqual(plan.map((c) => [c.weekday, c.meal, c.note, c.fromCoach]), [[1, 'lunch', 'Chicken, rice, greens', true]]);
+  const { suggestion } = (await client.call('GET', '/api/plans/coach-targets')).body;
+  assert.equal(suggestion.kcal, 2200);
+  assert.equal(suggestion.fromCoach, true);
+  assert.notEqual((await client.call('GET', '/api/me')).body.goals.kcal, 1000, "the client's goals are untouched");
+  assert.equal((await coach.call('GET', '/api/me')).body.goals.kcal, 1000, "it changed the coach's own");
+  assert.equal((await client.call('DELETE', '/api/plans/coach-targets')).status, 200);
+  assert.equal((await client.call('GET', '/api/plans/coach-targets')).body.suggestion, null);
+});

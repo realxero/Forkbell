@@ -1,3 +1,4 @@
+import { useViewing } from '../../../lib/profile';
 import { TrainReadiness } from '../../../components/ReadinessCard';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -36,6 +37,8 @@ function dayName(date: string) {
 type Starting = 'routine' | 'empty' | null;
 
 export default function Train() {
+  // Someone viewing your training (or planning it, as a coach) never starts or logs a workout.
+  const viewing = useViewing();
   const units = useUnit();
   const { me } = useAuth();
   const [open, setOpen] = useState<Workout | null>(null);
@@ -160,7 +163,7 @@ export default function Train() {
         ) : program && next ? (
           <View style={s.card}>
             <Pressable onPress={() => router.push('/programs')} hitSlop={8} style={s.programLink} accessibilityLabel={`${program.name}. Programs`}>
-              <Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>{program.name}</Text>
+              <Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>{program.name}{program.fromCoach ? ' · from your coach' : ''}</Text>
               <Ionicons name="chevron-forward" size={14} color={color.accent} />
             </Pressable>
             <Text style={type.title}>{pick ? next.name : `Next up: ${next.name}`}</Text>
@@ -172,9 +175,13 @@ export default function Train() {
                 ))}
               </View>
             )}
-            <Pressable onPress={() => start('routine', next.id)} disabled={busy} style={[s.button, busy && { opacity: 0.5 }]} accessibilityState={{ busy: starting === 'routine', disabled: busy }}>
-              <Text style={s.buttonText}>{starting === 'routine' ? 'Starting…' : `Start ${next.name}`}</Text>
-            </Pressable>
+            {viewing ? (
+              <Text style={type.small}>Only {viewing.name} starts and logs workouts.</Text>
+            ) : (
+              <Pressable onPress={() => start('routine', next.id)} disabled={busy} style={[s.button, busy && { opacity: 0.5 }]} accessibilityState={{ busy: starting === 'routine', disabled: busy }}>
+                <Text style={s.buttonText}>{starting === 'routine' ? 'Starting…' : `Start ${next.name}`}</Text>
+              </Pressable>
+            )}
             {startProblem('routine', () => start('routine', next.id))}
           </View>
         ) : history ? (
@@ -193,7 +200,7 @@ export default function Train() {
 
         {history && (
           <View style={s.tools}>
-            {!open && (
+            {!open && !viewing && (
               <Pressable onPress={() => start('empty')} disabled={busy} style={[s.tool, busy && { opacity: 0.5 }]} accessibilityLabel="Start an empty workout" accessibilityState={{ busy: starting === 'empty', disabled: busy }}>
                 <Ionicons name="add-circle-outline" size={22} color={color.iron} />
                 <Text style={s.toolText}>{starting === 'empty' ? 'Starting…' : 'Empty workout'}</Text>
@@ -203,10 +210,10 @@ export default function Train() {
               <Ionicons name="barbell-outline" size={22} color={color.iron} />
               <Text style={s.toolText}>Plates</Text>
             </Pressable>
-            <Pressable onPress={() => setLogPast(true)} style={s.tool} accessibilityLabel="Log a past workout">
+            {!viewing && <Pressable onPress={() => setLogPast(true)} style={s.tool} accessibilityLabel="Log a past workout">
               <Ionicons name="time-outline" size={22} color={color.iron} />
               <Text style={s.toolText}>Log past</Text>
-            </Pressable>
+            </Pressable>}
           </View>
         )}
         {startProblem('empty', () => start('empty'))}

@@ -10,12 +10,12 @@ import { perWindow } from '../limit.ts';
 // Invite codes are short, so guessing is capped: 10 wrong codes per person per hour.
 const wrongCodes = perWindow(10, 60 * 60_000);
 
-const PERMISSIONS = ['food_read', 'food_write', 'training_read', 'progress_read', 'wellbeing_read'] as const;
+const PERMISSIONS = ['food_read', 'food_write', 'training_read', 'progress_read', 'wellbeing_read', 'plan_write', 'food_plan'] as const;
 const permsSchema = z
   .array(z.enum(PERMISSIONS))
   .min(1, 'Pick at least one thing to share.')
-  // Logging food for someone means seeing their diary too.
-  .transform((p) => [...new Set(p.includes('food_write') ? [...p, 'food_read' as const] : p)]);
+  // Logging or planning food means seeing it; planning training means seeing it.
+  .transform((p) => [...new Set([...p, ...(p.includes('food_write') || p.includes('food_plan') ? ['food_read' as const] : []), ...(p.includes('plan_write') ? ['training_read' as const] : [])])]);
 
 // Codes are 8 letters and digits without look-alikes (no 0/O, 1/I/L).
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';

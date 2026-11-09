@@ -4,13 +4,13 @@ import { RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, checkFood, forAmount, mealForTime, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, entryAmountText, entryName } from '@forkbell/shared';
+import { addDays, checkFood, forAmount, mealForTime, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type MealPlanCell, type SavedMeal, type TargetSuggestion, entryAmountText, entryName } from '@forkbell/shared';
 import { SuggestionsCard } from '../../../components/SuggestionsCard';
 import { useAuth } from '../../../lib/auth';
 import { canLogFood, useViewing } from '../../../lib/profile';
 import { cachedGet, readCache, writeCache } from '../../../lib/sync';
-import { api } from '../../../lib/api';
-import { copyDay, setDayFinished } from '../../../lib/actions';
+import { api, del, put } from '../../../lib/api';
+import { copyDay, logItems, setDayFinished } from '../../../lib/actions';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { Ring, ringScale } from '../../../components/Ring';
@@ -48,7 +48,7 @@ function dayLabel(date: string) {
 }
 
 export default function Diary() {
-  const { me } = useAuth();
+  const { me, refreshMe } = useAuth();
   const viewing = useViewing();
   // Someone else's diary is read-only unless they allowed "Log food for me".
   const canWrite = canLogFood(viewing);
@@ -93,6 +93,37 @@ export default function Diary() {
       load();
     }, [load]),
   );
+
+  // The weekly meal plan (yours, or from a food coach) and any targets a coach suggests.
+  const [plan, setPlan] = useState<MealPlanCell[]>([]);
+  const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
+  const [suggestion, setSuggestion] = useState<TargetSuggestion | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      cachedGet<{ cells: MealPlanCell[] }>('/api/plans/meal-plan').then((r) => setPlan(r.cells), () => setPlan([]));
+      cachedGet<{ meals: SavedMeal[] }>('/api/meals').then((r) => setSavedMeals(r.meals), () => {});
+      if (!viewing) cachedGet<{ suggestion: TargetSuggestion | null }>('/api/plans/coach-targets').then((r) => setSuggestion(r.suggestion), () => {});
+    }, [viewing]),
+  );
+  const weekday = new Date(`${date}T12:00:00`).getDay();
+  const planFor = (meal: Meal) => plan.find((c) => c.weekday === weekday && c.meal === meal);
+  const foodCoach = Boolean(viewing?.permissions?.includes('food_plan'));
+  const answerSuggestion = async (apply: boolean) => {
+    const g = suggestion!;
+    setSuggestion(null);
+    try {
+      if (apply) {
+        await put('/api/me/goals', { kcal: g.kcal, protein: g.protein, carbs: g.carbs, fat: g.fat });
+        await refreshMe();
+      }
+      await del('/api/plans/coach-targets');
+      if (apply) showToast(`Goals set to ${g.kcal.toLocaleString()} kcal`);
+      void load();
+    } catch (e) {
+      setSuggestion(g);
+      showToast(`Couldn’t ${apply ? 'apply' : 'dismiss'} it: ${message(e)}`);
+    }
+  };
 
   // The quick ways to add (scan, quick add, photo, weigh) show on one meal at a time:
   // the meal for this time of day when you're on today, otherwise the one you open.
@@ -235,11 +266,33 @@ export default function Diary() {
               </View>
             )}
 
-            {!viewing && date >= todayLocal() && (
-              <Pressable onPress={() => router.push({ pathname: '/plan', params: { date } })} style={s.planLink} accessibilityRole="link">
-                <Text style={s.link}>Plan {isToday ? 'the rest of today' : 'this day'} ›</Text>
-              </Pressable>
+            {!viewing && suggestion && (
+              <View style={s.suggestion} accessibilityLiveRegion="polite">
+                <Text style={[type.body, { fontWeight: '700' }]}>{suggestion.fromCoach ? 'Your coach suggests new targets' : 'Suggested targets'}</Text>
+                <Text style={[type.body, type.number]}>
+                  {suggestion.kcal.toLocaleString()} kcal
+                  {[suggestion.protein && `${suggestion.protein} g protein`, suggestion.carbs && `${suggestion.carbs} g carbs`, suggestion.fat && `${suggestion.fat} g fat`].filter(Boolean).map((x) => ` · ${x}`).join('')}
+                </Text>
+                {suggestion.note && <Text style={type.small}>{suggestion.note}</Text>}
+                <View style={{ flexDirection: 'row', gap: space(2) }}>
+                  <Pressable onPress={() => void answerSuggestion(true)} style={s.finishButton} accessibilityRole="button"><Text style={s.finishButtonText}>Use these</Text></Pressable>
+                  <Pressable onPress={() => void answerSuggestion(false)} style={s.quietButton} accessibilityRole="button"><Text style={buttons.quietText}>Not now</Text></Pressable>
+                </View>
+              </View>
             )}
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4) }}>
+              {!viewing && date >= todayLocal() && (
+                <Pressable onPress={() => router.push({ pathname: '/plan', params: { date } })} style={s.planLink} accessibilityRole="link">
+                  <Text style={s.link}>Plan {isToday ? 'the rest of today' : 'this day'} ›</Text>
+                </Pressable>
+              )}
+              {(!viewing || foodCoach) && (
+                <Pressable onPress={() => router.push('/meal-plan')} style={s.planLink} accessibilityRole="link">
+                  <Text style={s.link}>Meal plan ›</Text>
+                </Pressable>
+              )}
+            </View>
 
             {shownMeals().map((meal) => {
               const entries = day.entries.filter((e) => e.meal === meal);
@@ -270,6 +323,25 @@ export default function Diary() {
                       </>
                     )}
                   </View>
+                  {(() => {
+                    // This weekday's plan for the meal, from your meal plan or your coach's.
+                    const planned = planFor(meal);
+                    if (!planned) return null;
+                    const saved = planned.savedMealId ? savedMeals.find((m) => m.id === planned.savedMealId) : undefined;
+                    return (
+                      <View style={s.planned}>
+                        <Ionicons name="clipboard-outline" size={16} color={color.ironSoft} />
+                        <Text style={[type.small, { flex: 1 }]}>
+                          Planned{planned.fromCoach ? ' by your coach' : ''}: {[planned.note, saved?.name].filter(Boolean).join(' · ')}
+                        </Text>
+                        {saved && canWrite && (
+                          <Pressable onPress={() => void logItems(date, meal, saved.items).then(load)} style={s.finishLink} accessibilityRole="button" accessibilityLabel={`Log ${saved.name}`}>
+                            <Text style={s.link}>Log it</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    );
+                  })()}
                   {entries.map((e) => {
                     const n = forAmount(e.food.per100, e.grams);
                     // Name-based allergy and diet flags, so a mistake is easy to spot.
@@ -412,6 +484,9 @@ const s = StyleSheet.create({
   macros: { paddingTop: space(3), borderTopWidth: 1, borderTopColor: color.line },
   readOnly: { flexDirection: 'row', alignItems: 'center', gap: space(2), paddingHorizontal: space(1) },
   planLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+  planned: { flexDirection: 'row', alignItems: 'center', gap: space(2), backgroundColor: color.raised, borderRadius: radius.input, paddingHorizontal: space(3), paddingVertical: space(2), minHeight: 44 },
+  suggestion: { backgroundColor: color.infoBg, borderRadius: radius.card, padding: space(4), gap: space(2) },
+  quietButton: { ...buttons.quiet, minHeight: 44 },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   meal: { gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4) },
   mealHead: { flexDirection: 'row', alignItems: 'center', gap: space(2), minHeight: 44 },

@@ -121,6 +121,8 @@ export interface Program {
   routines: Routine[];
   /** the routine that comes after the last one you finished */
   nextRoutineId: string | null;
+  /** made by someone coaching you (plan_write), not by you */
+  fromCoach?: boolean;
 }
 
 type RecordKind = 'weight' | 'e1rm' | 'reps' | 'volume' | 'time';
@@ -158,12 +160,19 @@ export function incrementKg(increment: 'small' | 'large', unit: WeightUnit): num
 
 // Strength math ---------------------------------------------------------------
 /**
- * Estimated one-rep max (Epley). Only trusted up to 12 reps; past that the
- * estimate drifts too far to call it a record.
+ * Estimated one-rep max (Epley). Only used up to 10 reps: prediction errors
+ * grow past that, and heavy sets of about 2 to 6 reps predict best
+ * (Reynolds, Gordon & Robergs, J Strength Cond Res 2006;20:584-592).
  */
+export const MAX_E1RM_REPS = 10;
 export function estimatedOneRepMax(weightKg: number, reps: number): number | null {
-  if (weightKg <= 0 || reps < 1 || reps > 12) return null;
+  if (weightKg <= 0 || reps < 1 || reps > MAX_E1RM_REPS) return null;
   return reps === 1 ? weightKg : weightKg * (1 + reps / 30);
+}
+
+/** What you could lift for this many reps, from a one-rep max (Epley turned around). */
+export function weightForReps(oneRepMaxKg: number, reps: number): number {
+  return reps <= 1 ? oneRepMaxKg : oneRepMaxKg / (1 + reps / 30);
 }
 
 /** Sets that say what you can lift: done, not warm-ups, and not drop sets (lighter on purpose). */

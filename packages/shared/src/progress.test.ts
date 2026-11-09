@@ -84,7 +84,8 @@ test('weight milestones follow the trend toward the goal', () => {
 test('goal presets add up and respect the floor', () => {
   const g = presetGoals('lose', 2600, 80);
   assert.equal(g.kcal, 2160); // 2600 - 80 × 0.005 × 7700 / 7 = 2160
-  assert.equal(g.protein, 128);
+  assert.equal(g.protein, 160, '2.0 g per kg while losing');
+  assert.equal(presetGoals('gain', 2600, 80).protein, 128, '1.6 g per kg otherwise');
   assert.ok(Math.abs(g.protein * 4 + g.carbs * 4 + g.fat * 9 - g.kcal) < 15);
   assert.equal(presetGoals('lose', 1250, 50).kcal, 1200);
 });

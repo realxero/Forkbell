@@ -29,6 +29,7 @@ import { exportRoutes } from './routes/export.ts';
 import { shortcutRoutes } from './routes/shortcuts.ts';
 import { photoRoutes } from './routes/photos.ts';
 import { recipeImportRoutes } from './routes/recipe-import.ts';
+import { planRoutes } from './routes/plans.ts';
 import { mcpRoutes } from './routes/mcp.ts';
 import { importRoutes } from './routes/import.ts';
 import { accountRoutes } from './routes/account.ts';
@@ -81,8 +82,11 @@ const SHAREABLE: [prefix: string, read: string, write: string | null][] = [
   ['/api/recipes', 'food_read', 'food_write'],
   ['/api/workouts', 'training_read', null],
   ['/api/exercises', 'training_read', null],
-  ['/api/programs', 'training_read', null],
-  ['/api/routines', 'training_read', null],
+  // A coach (plan_write) can build programs; logged workouts stay yours alone.
+  ['/api/programs', 'training_read', 'plan_write'],
+  ['/api/routines', 'training_read', 'plan_write'],
+  // A food coach (food_plan) keeps a meal plan and suggests targets; logging stays food_write.
+  ['/api/plans', 'food_read', 'food_plan'],
   ['/api/progress', 'progress_read', null],
   ['/api/wellbeing', 'wellbeing_read', null],
 ];
@@ -113,6 +117,7 @@ api.route('/exercises', exerciseRoutes(database));
 api.route('/workouts', workoutRoutes(database));
 api.route('/programs', programRoutes(database));
 api.route('/routines', routineRoutes(database));
+api.route('/plans', planRoutes(database));
 api.route('/progress', progressRoutes(database));
 api.route('/health', healthRoutes(database));
 api.route('/shares', shareRoutes(database));

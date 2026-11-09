@@ -10,7 +10,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
 import { put } from '../../../lib/api';
-import { cachedGet, send } from '../../../lib/sync';
+import { cachedGet, readCache, send, writeCache } from '../../../lib/sync';
+import { useWide } from '../../../lib/layout';
 import { saveWeighIn } from '../../../lib/actions';
 import { useAuth } from '../../../lib/auth';
 import { useUnit } from '../../../lib/units';
@@ -51,6 +52,8 @@ type GoalBody = { goalWeightKg: number | null; goalDate: string | null; weeklyWo
 /** Saves something and resolves to null, or to plain words saying why it didn't save. */
 type Submit<T> = (value: T) => Promise<string | null>;
 
+/** Simple or Advanced on wide screens, shared with Tools and remembered on this device. */
+const DETAIL = 'device:tools-detail';
 const CM_PER_IN = 2.54;
 const RANGES = [
   { label: '1 month', days: 31 },
@@ -82,6 +85,11 @@ function goalShort(p: Progress, label: (kg: number | null) => string) {
 export default function ProgressScreen() {
   const units = useUnit();
   const viewing = useViewing();
+  // Wide screens: three columns, and Simple (the headline cards) or Advanced (everything).
+  // Phones always show everything, one column, as before.
+  const wide = useWide();
+  const [advanced, setAdvanced] = useState(readCache<boolean>(DETAIL) ?? false);
+  const full = !wide || advanced;
   const { me, refreshMe } = useAuth();
   const [p, setP] = useState<Progress | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -167,14 +175,22 @@ export default function ProgressScreen() {
     <SafeAreaView style={s.screen} edges={['top']}>
       <ScrollView
         ref={scroll}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, wide && s.contentWide]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         // Keeps a field you're typing in (weigh-in, a measurement) above the keyboard on iPhone.
         automaticallyAdjustKeyboardInsets
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
-        <Text style={type.pageTitle}>Progress</Text>
+        <View style={s.titleRow}>
+          <Text style={[type.pageTitle, { flex: 1 }]}>Progress</Text>
+          {wide && (
+            <View style={{ flexDirection: 'row', gap: space(2) }} accessibilityRole="radiogroup" accessibilityLabel="Detail">
+              <Chip label="Simple" on={!advanced} onPress={() => { setAdvanced(false); writeCache(DETAIL, false); }} />
+              <Chip label="Advanced" on={advanced} onPress={() => { setAdvanced(true); writeCache(DETAIL, true); }} />
+            </View>
+          )}
+        </View>
         {loadError && (
           <View style={s.problem} accessibilityLiveRegion="polite">
             <Ionicons name="cloud-offline-outline" size={22} color={color.over} />
@@ -265,6 +281,8 @@ export default function ProgressScreen() {
 
             {p.checkIn && <FoodCheckInCard checkIn={p.checkIn} unit={units.unit} onChanged={load} />}
 
+            <View style={wide ? s.columns : s.stack}>
+            <View style={[s.stack, wide && s.col]}>
             <Text style={s.heading} accessibilityRole="header">Weight and goal</Text>
             {p.weighIns.length > 0 && (
               <View style={s.card}>
@@ -299,10 +317,13 @@ export default function ProgressScreen() {
               />
             </View>
 
-            <MeasurementsCard p={p} units={units} onSave={submitMeasurement} />
+            {full && <MeasurementsCard p={p} units={units} onSave={submitMeasurement} />}
 
             {/* Progress photos: only ever yours, so not shown when viewing someone */}
-            {!viewing && <ProgressPhotosCard weighIns={p.weighIns} />}
+            {full && !viewing && <ProgressPhotosCard weighIns={p.weighIns} />}
+            </View>
+
+            <View style={[s.stack, wide && s.col]}>
 
             {/* Calories and macros, day by day */}
             {p.days && (
@@ -312,11 +333,13 @@ export default function ProgressScreen() {
                   <Text style={type.title}>Calories, last 2 weeks</Text>
                   <CalorieBars days={p.days.slice(-14)} today={p.today} />
                 </View>
-                <View style={s.card}>
-                  <Text style={type.title}>Where your calories come from</Text>
-                  <Text style={type.small}>Last 7 days</Text>
-                  <MacroDonut days={p.days.slice(-7)} />
-                </View>
+                {full && (
+                  <View style={s.card}>
+                    <Text style={type.title}>Where your calories come from</Text>
+                    <Text style={type.small}>Last 7 days</Text>
+                    <MacroDonut days={p.days.slice(-7)} />
+                  </View>
+                )}
                 <View style={s.card}>
                   <Text style={type.title}>Days logged</Text>
                   <LogMonth days={p.days} today={p.today} goal={p.calorieGoal ?? null} onOpenDay={viewing ? undefined : (d) => router.push({ pathname: '/', params: { date: d } })} />
@@ -336,26 +359,31 @@ export default function ProgressScreen() {
               </>
             )}
 
+            </View>
+
+            <View style={[s.stack, wide && s.col]}>
             <Text style={s.heading} accessibilityRole="header">Training</Text>
             <WorkoutsCard
               streaks={p.streaks}
               weekly={p.goal.weeklyWorkoutGoal}
               onChange={viewing ? undefined : (n) => act('save your weekly goal', () => putGoal({ ...goalBody(p), weeklyWorkoutGoal: n }))}
             />
-            <BodyMap />
+            {full && <BodyMap />}
 
-            <Text style={s.heading} accessibilityRole="header">Recovery and wellbeing</Text>
+            {(full || (!viewing && p.activity?.readiness) || Boolean(p.activity?.metrics?.length)) && <Text style={s.heading} accessibilityRole="header">Recovery and wellbeing</Text>}
             {/* Everything from Apple Health / Health Connect */}
             {!viewing && p.activity?.readiness && <ReadinessCard r={p.activity.readiness} />}
             {p.activity?.source && p.activity.metrics && p.activity.metrics.length > 0 && (
               <HealthCard metrics={p.activity.metrics} source={p.activity.source} unit={units.unit} today={p.today} />
             )}
 
-            <WellbeingCard healthSleepMin={p.activity?.metrics?.find((m) => m.kind === 'sleep_min' && m.latestDate === p.today)?.latest ?? null} />
+            {full && <WellbeingCard healthSleepMin={p.activity?.metrics?.find((m) => m.kind === 'sleep_min' && m.latestDate === p.today)?.latest ?? null} />}
 
             <Text style={s.heading} accessibilityRole="header">Looking back</Text>
             <ThisMonthCard list={p.milestones} recap={recap} unit={units.unit} />
-            <PatternsCard />
+            {full && <PatternsCard />}
+            </View>
+            </View>
           </>
         )}
       </ScrollView>
@@ -805,6 +833,11 @@ function MeasurementsCard({ p, units, onSave }: { p: Progress; units: Units; onS
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
+  contentWide: { maxWidth: 1400, padding: space(6) },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space(4) },
+  stack: { gap: space(3) },
+  col: { flex: 1, minWidth: 0 },
   // Group headings: Weight and goal, Food, Training, Recovery and wellbeing, Looking back.
   heading: { ...type.label, marginTop: space(3) },
   problem: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.dangerBg, borderRadius: radius.card, padding: space(4) },
