@@ -1,3 +1,5 @@
+# Tabs read "Train, tab, 2 of 5" to iOS 26 automation, so they are matched as
+# "Train(, tab.*)?" (Maestro matches the whole text).
 # Sign in the way a person would: server address, then username and password.
 # The account comes from seed.mjs. Return moves from Username to Password and
 # Return in Password signs in (the app wires both up), which avoids tapping
@@ -9,7 +11,7 @@ appId: com.realxero.forkbell
 # clearState doesn't empty the iOS Keychain, where the app keeps its session,
 # so a second try opens already signed in. Either screen is fine.
 - extendedWaitUntil:
-    visible: "forkbell.example.com|Train"
+    visible: "forkbell.example.com|Train(, tab.*)?"
     timeout: 60000
 - runFlow:
     when:
@@ -48,13 +50,13 @@ appId: com.realxero.forkbell
       # Signing in works, then iOS offers to save the password in a sheet that
       # hides the tab bar from automation. Wait for either, and decline.
       - extendedWaitUntil:
-          visible: "Save Password\\?|Train"
+          visible: "Save Password\\?|Train(, tab.*)?"
           timeout: 60000
       - tapOn:
           text: "Not Now"
           optional: true
 - extendedWaitUntil:
-    visible: "Train"
+    visible: "Train(, tab.*)?"
     timeout: 60000
 # Anything iOS asks on first open (notifications, Health): say no and carry on.
 - tapOn:

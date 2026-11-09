@@ -5,7 +5,7 @@ appId: com.realxero.forkbell
 ---
 - launchApp
 - extendedWaitUntil:
-    visible: "Train"
+    visible: "Train(, tab.*)?"
     timeout: 60000
 - tapOn:
     text: "Don.t Allow"
@@ -18,14 +18,14 @@ appId: com.realxero.forkbell
 - takeScreenshot: ${OUT}/${MODE}-02-food-lower
 
 # Train
-- tapOn: "Train"
+- tapOn: "Train(, tab.*)?"
 - waitForAnimationToEnd
 - takeScreenshot: ${OUT}/${MODE}-03-train
 - scroll
 - takeScreenshot: ${OUT}/${MODE}-04-train-lower
 
 # Progress, top to bottom, with the goal sheet on the way
-- tapOn: "Progress"
+- tapOn: "Progress(, tab.*)?"
 - waitForAnimationToEnd
 - takeScreenshot: ${OUT}/${MODE}-05-progress
 - scrollUntilVisible:
@@ -50,12 +50,12 @@ appId: com.realxero.forkbell
 - takeScreenshot: ${OUT}/${MODE}-11-progress-lower-3
 
 # Bell (off on this server: no AI key)
-- tapOn: "Bell"
+- tapOn: "Bell(, tab.*)?"
 - waitForAnimationToEnd
 - takeScreenshot: ${OUT}/${MODE}-12-bell
 
 # Settings
-- tapOn: "Settings"
+- tapOn: "Settings(, tab.*)?"
 - waitForAnimationToEnd
 - takeScreenshot: ${OUT}/${MODE}-13-settings
 - scroll
