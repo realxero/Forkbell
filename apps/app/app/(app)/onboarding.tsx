@@ -215,7 +215,7 @@ export default function Onboarding() {
                 <>
                   <Label text="Days you train" />
                   <View style={s.chips}>
-                    {DAYS.map((d, i) => <Chip key={d} label={d} on={days.includes(i)} onPress={() => setDays((x) => (x.includes(i) ? x.filter((y) => y !== i) : [...x, i]))} />)}
+                    {DAYS.map((d, i) => <Chip role="checkbox" key={d} label={d} on={days.includes(i)} onPress={() => setDays((x) => (x.includes(i) ? x.filter((y) => y !== i) : [...x, i]))} />)}
                   </View>
                 </>
               )}

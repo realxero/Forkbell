@@ -174,3 +174,62 @@ test('a food coach (food_plan) keeps a meal plan and suggests targets; you apply
   assert.equal((await client.call('DELETE', '/api/plans/coach-targets')).status, 200);
   assert.equal((await client.call('GET', '/api/plans/coach-targets')).body.suggestion, null);
 });
+
+test('coaching edges: starters wait for the client, their programs are safe, permissions can be taken back', async () => {
+  const client = await newUser('Client');
+  const coach = await newUser('Coach');
+  assert.equal((await client.call('POST', '/api/shares/invites', { permissions: ['bogus'] })).status, 400, 'unknown permissions are refused');
+  const invite = await client.call('POST', '/api/shares/invites', { permissions: ['plan_write', 'food_plan'] });
+  assert.equal((await coach.call('POST', '/api/shares/accept', { code: invite.body.code })).status, 200);
+  const share = ((await client.call('GET', '/api/shares')).body.sharingWith as { shareId: string; permissions: string[] }[])[0]!;
+  assert.deepEqual(share.permissions.sort(), ['food_plan', 'food_read', 'plan_write', 'training_read'], 'each plan permission includes seeing what it plans');
+
+  const asCoach = (method: string, p: string, body?: unknown) =>
+    fetch(`${BASE}${p}`, {
+      method,
+      headers: { authorization: `Bearer ${coach.token}`, 'x-forkbell-profile': client.id, ...(body ? { 'content-type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(async (r) => ({ status: r.status, body: await r.json().catch(() => null) }));
+
+  // A starter copied by a coach waits for the client to start it.
+  const starters = (await client.call('GET', '/api/programs')).body.starters as { key: string }[];
+  const copied = await asCoach('POST', '/api/programs/starter', { key: starters[0]!.key });
+  assert.equal(copied.status, 201);
+  const programs = () => client.call('GET', '/api/programs').then((r) => r.body.programs as { id: string; active: boolean }[]);
+  assert.equal((await programs()).find((p) => p.id === copied.body.id)?.active, false);
+
+  // The client's own program is out of the coach's reach.
+  const own = (await client.call('POST', '/api/programs', { name: 'Mine' })).body.id as string;
+  assert.equal((await asCoach('DELETE', `/api/programs/${own}`)).status, 404);
+  assert.ok((await programs()).some((p) => p.id === own), 'still there');
+
+  // Meal plan: overwrite, clear, and limits.
+  const cell = { weekday: 2, meal: 'dinner', savedMealId: null };
+  assert.equal((await asCoach('PUT', '/api/plans/meal-plan', { ...cell, note: 'Fish' })).status, 200);
+  assert.equal((await asCoach('PUT', '/api/plans/meal-plan', { ...cell, note: 'Tofu' })).status, 200);
+  const cells = () => client.call('GET', '/api/plans/meal-plan').then((r) => r.body.cells as { weekday: number; meal: string; note: string | null; fromCoach: boolean }[]);
+  assert.deepEqual((await cells()).map((c) => c.note), ['Tofu'], 'one cell, the latest note');
+  assert.equal((await asCoach('PUT', '/api/plans/meal-plan', { ...cell, note: null })).status, 200);
+  assert.equal((await cells()).length, 0, 'no note and no saved meal clears it');
+  assert.equal((await asCoach('PUT', '/api/plans/meal-plan', { ...cell, weekday: 7, note: 'x' })).status, 400);
+  assert.ok((await asCoach('PUT', '/api/plans/meal-plan', { ...cell, note: 'x', savedMealId: crypto.randomUUID() })).status >= 400, "only the client's own saved meals");
+  assert.equal((await client.call('PUT', '/api/plans/meal-plan', { ...cell, note: 'My own' })).status, 200);
+  assert.equal((await cells())[0]!.fromCoach, false, 'your own plan is not from a coach');
+
+  // Suggested targets: limits, and the client's goals stay theirs.
+  const before = (await client.call('GET', '/api/me')).body.goals;
+  assert.equal((await asCoach('PUT', '/api/plans/coach-targets', { kcal: 10001, protein: null, carbs: null, fat: null, note: null })).status, 400);
+  assert.equal((await asCoach('PUT', '/api/plans/coach-targets', { kcal: 2000, protein: null, carbs: null, fat: null, note: 'x'.repeat(501) })).status, 400);
+  assert.equal((await asCoach('PUT', '/api/plans/coach-targets', { kcal: 2000, protein: 150, carbs: null, fat: null, note: null })).status, 200);
+  assert.deepEqual((await client.call('GET', '/api/me')).body.goals, before, 'a suggestion never changes goals');
+
+  // Taking planning away stops it at once.
+  assert.equal((await client.call('PUT', `/api/shares/${share.shareId}`, { permissions: ['food_read', 'training_read'] })).status, 200);
+  assert.equal((await asCoach('PUT', '/api/plans/meal-plan', { ...cell, note: 'Too late' })).status, 403);
+  assert.equal((await asCoach('POST', '/api/programs', { name: 'Too late' })).status, 403);
+});
+
+test('new accounts weigh in pounds', async () => {
+  const u = await newUser('New');
+  assert.equal((await u.call('GET', '/api/me')).body.weightUnit, 'lb');
+});

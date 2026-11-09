@@ -29,7 +29,8 @@ Food and training logged in one place, on a server the user owns. Success means 
 - Gym: workout logging with sets, rest timer, spoken rest coach, heart-rate sensor, screen kept awake.
 - Kitchen and meals: barcode camera, photo logging through Bell, recipes, portions in servings, oz, cups, ml.
 - Apple Health and Health Connect sync in the phone app.
-- Family sharing: someone else can view chosen data and, if allowed, log food for the owner.
+- Family sharing and coaching: someone else can view chosen data and, if allowed, log food, plan training or keep a meal plan for the owner. The owner starts programs and applies targets.
+- Web on a desktop: a sidebar, Tools, and a coach switching between the people they coach.
 
 ## Capabilities and Constraints
 
@@ -47,7 +48,7 @@ Food and training logged in one place, on a server the user owns. Success means 
 
 ## Evidence on Hand
 
-- Real product: a working app with all nine roadmap phases shipped (README.md, ROADMAP.md changelog through 0.19).
+- Real product: a working app with all nine roadmap phases shipped (README.md, ROADMAP.md changelog through 0.24).
 - Assets: app icon, mark SVG, Bell avatar component, sounds in `assets/sounds`.
 - No testimonials, user counts, reviews or press exist. Do not invent any.
 

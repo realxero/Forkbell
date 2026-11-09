@@ -1,7 +1,7 @@
 // The weekly meal plan, and targets a coach suggests. Yours to keep, or kept
 // for you by someone you invited to plan your food (Sharing → "Plan my food").
 // Planning never logs anything: Today shows the day's plan, and you log it.
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +25,15 @@ export default function MealPlan() {
   /** notes being typed, by weekday and meal; saved when the box is left */
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  /** said aloud (a live region) after each save */
+  const [saved, setSaved] = useState<string | null>(null);
+  // A note saves a second after you stop typing (and on leaving the box), so
+  // nothing typed is lost by going straight to another screen.
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const later = (key: string, fn: () => void) => {
+    clearTimeout(timers.current[key]);
+    timers.current[key] = setTimeout(fn, 1000);
+  };
 
   const load = useCallback(() => {
     cachedGet<{ cells: MealPlanCell[] }>('/api/plans/meal-plan').then((r) => setCells(r.cells), (e) => setError(e instanceof Error ? e.message : String(e)));
@@ -37,7 +46,9 @@ export default function MealPlan() {
     // Shows straight away; sent now, or when there's a connection.
     setCells((all) => [...all.filter((c) => !(c.weekday === next.weekday && c.meal === next.meal)), ...(next.note || next.savedMealId ? [next] : [])]);
     try {
+      setError(null);
       await send('PUT', '/api/plans/meal-plan', { weekday: next.weekday, meal: next.meal, note: next.note || null, savedMealId: next.savedMealId }, { label: `Plan ${MEAL_NAMES[next.meal]}`, coalesceKey: `plan:${viewing?.id ?? 'me'}:${next.weekday}:${next.meal}` });
+      setSaved(`Saved ${DAYS[next.weekday]} ${MEAL_NAMES[next.meal].toLowerCase()}.`);
     } catch (e) {
       // Refused (a share ended, bad data): show what's really saved again.
       setError(e instanceof Error ? e.message : String(e));
@@ -57,9 +68,9 @@ export default function MealPlan() {
         <Text style={type.small}>
           {viewing ? `You’re planning ${viewing.name}’s meals. They see the day’s plan on Today and log it themselves.` : 'Each day’s plan shows under its meals on Today, ready to log in a tap when it’s a saved meal.'}
         </Text>
-        {error && <Text style={[type.small, { color: color.over }]}>{error}</Text>}
+        <Text style={[type.small, error && { color: color.over }]} accessibilityLiveRegion="polite">{error ?? saved ?? ''}</Text>
 
-        <View style={s.wrap} accessibilityRole="tablist">
+        <View style={s.wrap} accessibilityRole="radiogroup" accessibilityLabel="Day">
           {DAYS.map((d, i) => <Chip key={d} label={d} on={day === i} onPress={() => setDay(i)} />)}
         </View>
 
@@ -67,8 +78,9 @@ export default function MealPlan() {
           const cell = cellFor(meal);
           const key = `${day}:${meal}`;
           const draft = drafts[key] ?? cell?.note ?? '';
-          const commit = () => {
-            const note = draft.trim();
+          const commit = (text = draft) => {
+            clearTimeout(timers.current[key]);
+            const note = text.trim();
             if (note !== (cell?.note ?? '')) void save({ weekday: day, meal, note: note || null, savedMealId: cell?.savedMealId ?? null });
           };
           return (
@@ -79,8 +91,8 @@ export default function MealPlan() {
               </View>
               <TextInput
                 value={draft}
-                onChangeText={(t) => setDrafts({ ...drafts, [key]: t })}
-                onBlur={commit}
+                onChangeText={(t) => { setDrafts({ ...drafts, [key]: t }); later(key, () => commit(t)); }}
+                onBlur={() => commit()}
                 placeholder="What to eat, e.g. Greek yogurt, berries, granola"
                 placeholderTextColor={color.placeholder}
                 accessibilityLabel={`${DAYS[day]} ${MEAL_NAMES[meal]} plan`}
@@ -92,6 +104,7 @@ export default function MealPlan() {
                   {meals.map((m) => (
                     <Chip
                       key={m.id}
+                      role="checkbox"
                       label={m.name}
                       on={cell?.savedMealId === m.id}
                       onPress={() => void save({ weekday: day, meal, note: draft.trim() || null, savedMealId: cell?.savedMealId === m.id ? null : m.id })}
@@ -158,7 +171,7 @@ function Suggestion({ coaching }: { coaching: boolean }) {
       <Pressable onPress={() => void save()} style={buttons.filled} accessibilityRole="button">
         <Text style={buttons.filledText}>Suggest these targets</Text>
       </Pressable>
-      {status && <Text style={type.small}>{status}</Text>}
+      <Text style={type.small} accessibilityLiveRegion="polite">{status ?? ''}</Text>
     </View>
   );
 }
@@ -171,5 +184,5 @@ const s = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   input: { ...type.body, backgroundColor: color.chalk, borderRadius: radius.input, borderWidth: 1, borderColor: color.line, padding: space(3), color: color.iron },
-  badge: { ...type.label, color: color.accent, backgroundColor: color.infoBg, paddingHorizontal: space(2), paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
+  badge: { ...type.label, color: color.iron, backgroundColor: color.infoBg, paddingHorizontal: space(2), paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
 });

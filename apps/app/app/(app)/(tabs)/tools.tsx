@@ -55,14 +55,14 @@ export default function Tools() {
           </View>
         </View>
         <View style={[s.body, wide && s.bodyWide]}>
-          <View style={[s.list, wide && s.listWide]}>
+          <View style={[s.list, wide && s.listWide]} accessibilityRole="radiogroup" accessibilityLabel="Tools">
             {TOOLS.map((t) => (
               <Pressable
                 key={t.id}
                 onPress={() => setOpen(t.id)}
                 style={[s.item, open === t.id && s.itemOn]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: open === t.id }}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: open === t.id }}
               >
                 <Ionicons name={t.icon} size={22} color={color.iron} />
                 <View style={{ flex: 1 }}>
@@ -99,18 +99,18 @@ function OneRepMax({ advanced }: { advanced: boolean }) {
       <View style={s.inputs}>
         <View style={{ flex: 1, gap: space(1) }}>
           <Text style={type.label}>WEIGHT ({units.unit})</Text>
-          <TextInput value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder={units.unit === 'lb' ? '185' : '85'} placeholderTextColor={color.placeholder} style={s.input} accessibilityLabel={`Weight lifted in ${units.unit}`} />
+          <TextInput value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder={units.unit === 'lb' ? '185' : '85'} placeholderTextColor={color.placeholder} style={s.input} accessibilityLabel={`Weight (${units.unit})`} />
         </View>
         <View style={{ flex: 1, gap: space(1) }}>
           <Text style={type.label}>REPS</Text>
-          <TextInput value={reps} onChangeText={setReps} keyboardType="number-pad" placeholder="5" placeholderTextColor={color.placeholder} style={s.input} accessibilityLabel="Reps done" />
+          <TextInput value={reps} onChangeText={setReps} keyboardType="number-pad" placeholder="5" placeholderTextColor={color.placeholder} style={s.input} accessibilityLabel="Reps" />
         </View>
       </View>
       {kg !== null && kg > 0 && n > MAX_E1RM_REPS && <Text style={type.small}>Use a set of {MAX_E1RM_REPS} reps or fewer: past that the estimate drifts too far to trust.</Text>}
       <Text style={type.small}>Most accurate from a heavy set of about 2 to 6 reps.</Text>
       {max !== null && (
         <>
-          <View accessible accessibilityLabel={`Estimated one-rep max ${units.roundLabel(max)}`}>
+          <View accessible accessibilityLabel={`Estimated one-rep max ${units.roundLabel(max)}`} accessibilityLiveRegion="polite">
             <Text style={type.label}>ESTIMATED MAX</Text>
             <Text style={[type.pageTitle, type.number]}>{units.roundLabel(max)}</Text>
           </View>
@@ -184,7 +184,7 @@ function AboutYou({ about, set, activity }: { about: About; set: (a: Partial<Abo
   const [height, setHeight] = useState(about.heightCm ? len.show(about.heightCm) : '');
   return (
     <View style={{ gap: space(3) }}>
-      <View style={s.chips}>
+      <View style={s.chips} accessibilityRole="radiogroup" accessibilityLabel="Sex">
         <Chip label="Male" on={about.sex === 'male'} onPress={() => set({ sex: 'male' })} />
         <Chip label="Female" on={about.sex === 'female'} onPress={() => set({ sex: 'female' })} />
       </View>
@@ -193,7 +193,7 @@ function AboutYou({ about, set, activity }: { about: About; set: (a: Partial<Abo
         <Field label={`Height (${len.unit})`} value={height} onChange={(t) => { setHeight(t); set({ heightCm: len.toCm(t) }); }} placeholder={len.unit === 'in' ? '70' : '178'} />
       </View>
       {activity && (
-        <View style={s.chips} accessibilityLabel="How active you are">
+        <View style={s.chips} accessibilityRole="radiogroup" accessibilityLabel="How active you are">
           {(['sedentary', 'light', 'moderate', 'very'] as const).map((a) => (
             <Chip key={a} label={{ sedentary: 'Desk, little exercise', light: 'Light, 1–3 days', moderate: 'Moderate, 3–5 days', very: 'Very, 6–7 days' }[a]} on={about.activity === a} onPress={() => set({ activity: a })} />
           ))}
@@ -229,7 +229,7 @@ function DailyBurn({ advanced, mine }: { advanced: boolean; mine: Mine | null })
       <Text style={type.title} accessibilityRole="header">Daily burn</Text>
       <AboutYou about={about} set={set} activity />
       {!kg && <Text style={type.small}>Weigh in on Progress and your trend weight fills in here.</Text>}
-      <View style={s.results}>
+      <View style={s.results} accessibilityLiveRegion="polite">
         <Result label="Formula estimate" value={formula ? `${formula.toLocaleString()} kcal` : '–'} note={kg ? `At your trend weight, ${units.label(kg)}` : undefined} />
         <Result label="Measured from your logs" value={e?.kcal ? `${e.kcal.toLocaleString()} kcal` : '–'} note={e?.kcal ? `Over ${e.spanDays} days, ${e.loggedDays} logged` : e?.needs ?? 'Loading your logs…'} />
       </View>
@@ -284,7 +284,7 @@ function Phase({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
       </View>
       {plan && startKg && (
         <>
-          <View style={s.results}>
+          <View style={s.results} accessibilityLiveRegion="polite">
             <Result label="You'd get there" value={date(plan.end)} note={`${plan.weeks} weeks from ${units.label(startKg)}`} />
             <Result label="Eat about" value={eat ? `${eat.toLocaleString()} kcal` : '–'} note={eat ? `a day at first, ${Math.abs(eat - burn!).toLocaleString()} ${bulking ? 'over' : 'under'} your burn` : 'Once your burn is measured (see Daily burn)'} />
           </View>
@@ -336,7 +336,7 @@ function Body({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
         <Field label={`Waist at navel (${len.unit})`} value={waist} onChange={(t) => setTape({ ...tape, waist: t })} />
         {about.sex === 'female' && <Field label={`Hips (${len.unit})`} value={hips} onChange={(t) => setTape({ ...tape, hips: t })} />}
       </View>
-      <View style={s.results}>
+      <View style={s.results} accessibilityLiveRegion="polite">
         <Result label="Body fat (estimate)" value={bf !== null ? `${bf.toFixed(1)}%` : '–'} note={bf !== null && kg ? `${units.roundLabel(kg * (1 - bf / 100))} lean` : 'Sex, height, neck and waist needed'} />
         <Result label="BMI" value={b ? b.toFixed(1) : '–'} note={kg ? `At ${units.label(kg)}` : 'Weigh in on Progress'} />
         {f !== null && <Result label="Fat-free mass index" value={f.toFixed(1)} />}

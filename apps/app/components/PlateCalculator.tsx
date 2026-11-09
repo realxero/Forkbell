@@ -171,7 +171,7 @@ export function PlateCalculator({
           </Pressable>
           {editPlates && (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
-              {ALL_PLATES[unit].map((p) => <Chip key={p} label={`${fmt(p)} ${unit}`} on={plates.includes(p)} onPress={() => togglePlate(p)} />)}
+              {ALL_PLATES[unit].map((p) => <Chip role="checkbox" key={p} label={`${fmt(p)} ${unit}`} on={plates.includes(p)} onPress={() => togglePlate(p)} />)}
             </View>
           )}
           {onUse && load && load.total > 0 && (

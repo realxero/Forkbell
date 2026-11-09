@@ -237,7 +237,7 @@ The small coloured squares behind icons in Settings rows and on the Health card,
 
 ## Layout
 
-A single column on a chalk page, one card per subject (a meal, water, a workout's exercise), stacked with even gaps. Spacing is a 4 pt grid (`space(n) = n × 4`): 8 between items in a card, 12 to 16 inside cards, 16 page gutters. Sheets rise from the bottom up to 640 pt wide and 92% tall; dialogs are centred, up to 440 wide. On the web, content keeps these widths and chip rows wrap instead of scrolling sideways. Ask Bell floats bottom-right over Food, Train and Progress. A workout's Finish is a full-width iron button floating at the bottom, in thumb reach; while you rest, the rest timer takes its place. Today puts the meals within the first screen: Water and an idle fast are one line each until opened, and streak cheers are toasts. Touch targets stay at 44 pt or more.
+A single column on a chalk page, one card per subject (a meal, water, a workout's exercise), stacked with even gaps. Spacing is a 4 pt grid (`space(n) = n × 4`): 8 between items in a card, 12 to 16 inside cards, 16 page gutters. Sheets rise from the bottom up to 640 pt wide and 92% tall; dialogs are centred, up to 440 wide. On the web, content keeps these widths and chip rows wrap instead of scrolling sideways. Ask Bell floats bottom-right over Food, Train and Progress. A workout's Finish is a full-width iron button floating at the bottom, in thumb reach; while you rest, the rest timer takes its place. Today puts the meals within the first screen: Water and an idle fast are one line each until opened, and streak cheers are toasts. Touch targets stay at 44 pt or more. On screens 1024 pt or wider, the tabs become a sidebar and Progress and Tools use columns.
 
 ## Elevation & Depth
 

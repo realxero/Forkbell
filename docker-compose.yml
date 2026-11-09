@@ -86,5 +86,11 @@ services:
       TTS_VOICE: ${TTS_VOICE:-af_heart}
       TTS_MODEL: ${TTS_MODEL:-kokoro}
       TTS_API_KEY: ${TTS_API_KEY:-}
+      # Settings from .env that the server reads (each was ignored in Docker before).
+      TRUSTED_IP_HEADER: ${TRUSTED_IP_HEADER:-}
+      IMPORT_PRIVATE_LINKS: ${IMPORT_PRIVATE_LINKS:-}
+      MEDIA_DIR: ${MEDIA_DIR:-}
+      PREFETCH_PICTURES: ${PREFETCH_PICTURES:-}
+      SESSION_DAYS: ${SESSION_DAYS:-30}
     depends_on:
       migrate: { condition: service_completed_successfully }
