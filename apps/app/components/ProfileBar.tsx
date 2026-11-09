@@ -31,12 +31,12 @@ export function ProfileBar() {
   if (wide && people.length > 0) {
     const coaching = (p: Person) => p.permissions.includes('plan_write') || p.permissions.includes('food_plan');
     return (
-      <View style={[s.bar, s.switcher]} accessibilityRole="tablist" accessibilityLabel="Whose data">
+      <View style={[s.bar, s.switcher]} accessibilityRole="radiogroup" accessibilityLabel="Whose data">
         <Text style={s.text}>Viewing</Text>
         {[null, ...people].map((p) => {
           const on = (p?.personId ?? null) === (v?.id ?? null);
           return (
-            <Pressable key={p?.personId ?? 'me'} onPress={() => go(p)} style={[s.chip, on && s.chipOn]} accessibilityRole="tab" accessibilityState={{ selected: on }}>
+            <Pressable key={p?.personId ?? 'me'} onPress={() => go(p)} style={[s.chip, on && s.chipOn]} accessibilityRole="radio" accessibilityState={{ checked: on }}>
               <Text style={[s.chipText, on && { color: color.iron }]}>{p ? `${p.name}${coaching(p) ? ' · client' : ''}` : 'You'}</Text>
             </Pressable>
           );

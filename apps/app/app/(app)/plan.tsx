@@ -79,7 +79,7 @@ export default function Plan() {
         <Text style={type.small}>Fills meals that are still empty, from foods you log and the common foods, keeping to your allergies, diet and dislikes.</Text>
         <View style={s.chips}>
           {week.map((d) => (
-            <Chip key={d} label={label(d, today)} on={picked.includes(d)} onPress={() => setPicked((p) => (p.includes(d) ? (p.length > 1 ? p.filter((x) => x !== d) : p) : [...p, d]))} />
+            <Chip role="checkbox" key={d} label={label(d, today)} on={picked.includes(d)} onPress={() => setPicked((p) => (p.includes(d) ? (p.length > 1 ? p.filter((x) => x !== d) : p) : [...p, d]))} />
           ))}
         </View>
         <View style={s.row}>

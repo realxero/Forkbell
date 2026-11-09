@@ -70,7 +70,7 @@ export default function PreferencesScreen() {
           <>
 
         <Text style={s.section}>Allergies</Text>
-        <View style={s.chips}>{ALLERGENS.map((a) => <Chip key={a} label={cap(a)} on={p.allergies.includes(a)} onPress={() => toggleAllergy(a)} />)}</View>
+        <View style={s.chips}>{ALLERGENS.map((a) => <Chip role="checkbox" key={a} label={cap(a)} on={p.allergies.includes(a)} onPress={() => toggleAllergy(a)} />)}</View>
         <Text style={s.label}>Anything else to keep out completely (comma-separated)</Text>
         <TextInput value={avoid} onChangeText={setAvoid} placeholder="e.g. mushrooms, alcohol" style={s.input} />
         <Text style={s.note}>
@@ -177,12 +177,12 @@ export default function PreferencesScreen() {
         <Text style={s.label}>Equipment you have</Text>
         <View style={s.chips}>
           <Chip label="Full gym" on={t.equipment.length === 0} onPress={() => setP({ ...p, training: { ...t, equipment: [] } })} />
-          {EQUIPMENT_KINDS.map((e) => <Chip key={e} label={cap(e)} on={t.equipment.includes(e)} onPress={() => toggle('equipment', e)} />)}
+          {EQUIPMENT_KINDS.map((e) => <Chip role="checkbox" key={e} label={cap(e)} on={t.equipment.includes(e)} onPress={() => toggle('equipment', e)} />)}
         </View>
         <Text style={s.note}>Swaps and Bell only suggest what you can do. Bodyweight exercises always count.</Text>
 
         <Text style={s.label}>Go easy on</Text>
-        <View style={s.chips}>{BODY_AREAS.map((a) => <Chip key={a} label={cap(a)} on={t.protectedAreas.includes(a)} onPress={() => toggle('protectedAreas', a)} />)}</View>
+        <View style={s.chips}>{BODY_AREAS.map((a) => <Chip role="checkbox" key={a} label={cap(a)} on={t.protectedAreas.includes(a)} onPress={() => toggle('protectedAreas', a)} />)}</View>
         <Text style={s.note}>Swaps steer away from exercises that load these, and say when one is easier on them. This isn’t medical advice; if something hurts, get it checked.</Text>
 
         <Text style={s.label}>Never suggest these exercises</Text>

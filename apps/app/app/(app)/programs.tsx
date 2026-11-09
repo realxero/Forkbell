@@ -188,5 +188,5 @@ const s = StyleSheet.create({
   button: { ...buttons.filled, marginTop: space(1) },
   buttonText: { ...buttons.filledText },
   tap: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
-  badge: { ...type.label, color: color.accent, backgroundColor: color.infoBg, paddingHorizontal: space(2), paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
+  badge: { ...type.label, color: color.iron, backgroundColor: color.infoBg, paddingHorizontal: space(2), paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
 });

@@ -116,6 +116,8 @@ export function themeCss() {
     `:root[data-theme="dark"]{${vars(dark)}color-scheme:dark}`,
     `:root[data-theme="light"]{${vars(light)}color-scheme:light}`,
     'html,body{background:var(--fb-chalk)}',
+    // Keyboard focus is always visible, in the accent (3:1 or better on chalk, card and iron).
+    ':focus-visible{outline:3px solid var(--fb-accent);outline-offset:2px}',
   ].join('\n');
 }
 

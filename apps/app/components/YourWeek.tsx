@@ -88,7 +88,7 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
           <Text style={type.title}>Which days do you train?</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
             {DAYS.map((name, i) => (
-              <Chip key={name} label={name} on={days.includes(i)} onPress={() => setDays((x) => (x.includes(i) ? x.filter((y) => y !== i) : [...x, i]))} />
+              <Chip role="checkbox" key={name} label={name} on={days.includes(i)} onPress={() => setDays((x) => (x.includes(i) ? x.filter((y) => y !== i) : [...x, i]))} />
             ))}
           </View>
           <Text style={type.small}>{days.length} {days.length === 1 ? 'day' : 'days'} a week. Rest days are part of the plan.</Text>

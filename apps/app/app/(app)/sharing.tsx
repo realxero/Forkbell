@@ -91,7 +91,7 @@ export default function Sharing() {
                 <Text style={[type.body, { fontWeight: '700' }]}>{p.name}</Text>
                 <View style={s.chips}>
                   {PERMS.map((x) => (
-                    <Chip key={x.key} label={x.label} on={p.permissions.includes(x.key)} onPress={() => {
+                    <Chip role="checkbox" key={x.key} label={x.label} on={p.permissions.includes(x.key)} onPress={() => {
                       const next = toggle(p.permissions, x.key);
                       if (next.length) run(() => put(`/api/shares/${p.shareId}`, { permissions: next }));
                     }} />
@@ -108,7 +108,7 @@ export default function Sharing() {
         <View style={s.card}>
           <Text style={type.title}>Invite someone</Text>
           <Text style={type.small}>Choose what they can see, then send them the code. It works once and expires in 7 days.</Text>
-          <View style={s.chips}>{PERMS.map((x) => <Chip key={x.key} label={x.label} on={perms.includes(x.key)} onPress={() => setPerms(toggle(perms, x.key))} />)}</View>
+          <View style={s.chips}>{PERMS.map((x) => <Chip role="checkbox" key={x.key} label={x.label} on={perms.includes(x.key)} onPress={() => setPerms(toggle(perms, x.key))} />)}</View>
           {perms.includes('food_write') && <Text style={type.small}>“Log food for me” lets them add, change and remove food in your diary, for example a parent logging for a child.</Text>}
           <Pressable disabled={!perms.length} onPress={() => run(async () => setCode((await post<{ code: string }>('/api/shares/invites', { permissions: perms })).code))} style={[s.button, !perms.length && { opacity: 0.4 }]}>
             <Text style={s.buttonText}>Create invite code</Text>

@@ -5,7 +5,8 @@ import { MEALS, amountFromGrams, amountText, forAmount, parseQuantity, unitFor, 
 import { useAuth } from '../lib/auth';
 import { readCache } from '../lib/sync';
 import { setFoodServing } from '../lib/actions';
-import { color, space, type, textSize } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { buttons } from '../lib/buttons';
 
 // Your meal names (Settings → Food preferences → Meals), shared by every screen.
@@ -197,9 +198,15 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
   );
 }
 
-export function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+/**
+ * A choice in a row of choices: one of several (radio, the usual) or an
+ * on/off toggle (checkbox). Selected shows a tick as well as the fill, so it
+ * never depends on colour, and screen readers hear "checked".
+ */
+export function Chip({ label, on, onPress, role = 'radio' }: { label: string; on: boolean; onPress: () => void; role?: 'radio' | 'checkbox' }) {
   return (
-    <Pressable onPress={onPress} style={[s.chip, on && s.chipOn]} accessibilityState={{ selected: on }}>
+    <Pressable onPress={onPress} style={[s.chip, on && s.chipOn]} accessibilityRole={role} accessibilityState={{ checked: on }} accessibilityLabel={label}>
+      {on && <Ionicons name="checkmark" size={14} color={color.card} />}
       <Text style={[type.small, on && { color: color.card }]}>{label}</Text>
     </Pressable>
   );
@@ -226,7 +233,7 @@ const s = StyleSheet.create({
   list: { padding: space(4), gap: space(2), paddingBottom: space(16), maxWidth: 640, width: '100%', alignSelf: 'center' },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2), marginTop: space(2) },
-  chip: { borderWidth: 1, borderColor: color.line, borderRadius: 20, paddingHorizontal: space(3), paddingVertical: space(2), backgroundColor: color.card },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, borderWidth: 1, borderColor: color.line, borderRadius: radius.pill, paddingHorizontal: space(3), paddingVertical: space(2), backgroundColor: color.card },
   chipOn: { backgroundColor: color.iron, borderColor: color.iron },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   link: { color: color.accent, fontWeight: '700' },

@@ -70,7 +70,7 @@ export default function Stretches() {
         <View style={s.chips}>
           <Chip label="Everything" on={!muscles.length} onPress={() => setMuscles([])} />
           {BODY.map((m) => (
-            <Chip key={m} label={m} on={muscles.includes(m)} onPress={() => setMuscles((list) => (list.includes(m) ? list.filter((x) => x !== m) : [...list, m]))} />
+            <Chip role="checkbox" key={m} label={m} on={muscles.includes(m)} onPress={() => setMuscles((list) => (list.includes(m) ? list.filter((x) => x !== m) : [...list, m]))} />
           ))}
         </View>
         {kind !== 'roll' && (
