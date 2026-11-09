@@ -1,3 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Don't install a package version until it's been public for a day: hijacked
+# releases are usually caught and pulled within hours. (Minutes.)
+minimumReleaseAge: 1440
