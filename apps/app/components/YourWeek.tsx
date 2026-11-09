@@ -67,7 +67,7 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
               <View key={d.date} style={[s.day, isToday && s.today]}>
                 <Text style={[type.label, isToday && { color: color.accent }]}>{NARROW[d.weekday]}</Text>
                 {d.done ? (
-                  <Ionicons name="checkmark-circle" size={22} color={color.fat} />
+                  <Ionicons name="checkmark-circle" size={22} color={color.iron} />
                 ) : d.routine ? (
                   <View style={[s.dot, { backgroundColor: color.accent }]} />
                 ) : (

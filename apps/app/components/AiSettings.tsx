@@ -133,7 +133,7 @@ export function AiSettings() {
         </View>
       )}
       {(models || saved) && <TextInput value={model} onChangeText={setModel} placeholder="Model" autoCapitalize="none" autoCorrect={false} style={s.input} accessibilityLabel="Model" />}
-      {msg && <Text style={{ color: msg.bad ? color.over : color.fatText, fontWeight: '600' }}>{msg.text}</Text>}
+      {msg && <Text style={{ color: msg.bad ? color.over : color.iron, fontWeight: '600' }}>{msg.text}</Text>}
 
       <View style={{ flexDirection: 'row', gap: space(3), alignItems: 'center' }}>
         <Pressable disabled={busy || !model.trim() || (!key.trim() && !(sameProvider && saved?.keyHint) && provider !== 'custom')} onPress={save} style={[s.primary, (busy || !model.trim()) && { opacity: 0.4 }]}>

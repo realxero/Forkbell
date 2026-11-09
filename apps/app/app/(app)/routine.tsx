@@ -9,7 +9,7 @@ import { api, del } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { formatDuration } from '../../lib/units';
 import { ExercisePicker } from '../../components/ExercisePicker';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, space, type, textSize, radius } from '../../lib/theme';
 import { SkeletonCards } from '../../components/Skeleton';
 
 /** Edit one training day: its name, exercises, sets, rep range and rest. */
@@ -173,7 +173,7 @@ const s = StyleSheet.create({
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
   input: { backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  card: { backgroundColor: color.card, borderRadius: 14, padding: space(3), gap: space(2) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   icon: { fontSize: textSize.heading, color: color.ironSoft, paddingHorizontal: space(1) },
   step: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
@@ -182,5 +182,5 @@ const s = StyleSheet.create({
   groupTag: { color: color.accent, fontWeight: '800', fontSize: textSize.label },
   linkRow: { alignSelf: 'center', paddingVertical: space(1), minHeight: 32, justifyContent: 'center' },
   small: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
-  add: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },
+  add: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: radius.card, padding: space(4), alignItems: 'center', backgroundColor: color.card },
 });

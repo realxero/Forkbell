@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { aisleOf, nextDays, shoppingList, todayLocal, type DiaryDay, type ShoppingItem } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../../lib/sync';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, space, type, textSize, radius } from '../../lib/theme';
 import { Check } from '../../components/Check';
 import { SkeletonRows } from '../../components/Skeleton';
 
@@ -86,9 +86,9 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
-  card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(2) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   box: { width: 24, height: 24, borderRadius: 6, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
-  boxOn: { backgroundColor: color.fat, borderColor: color.fat },
+  boxOn: { backgroundColor: color.iron, borderColor: color.iron },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
 });

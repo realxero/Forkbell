@@ -269,7 +269,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 const Label = ({ text }: { text: string }) => <Text style={[type.small, { marginTop: space(2) }]}>{text}</Text>;
 function Macro({ label, value, tint }: { label: string; value: number; tint: string }) {
   return (
-    <View style={{ flex: 1, backgroundColor: color.card, borderRadius: 14, padding: space(3), borderTopWidth: 4, borderTopColor: tint, gap: 2 }}>
+    <View style={{ flex: 1, backgroundColor: color.card, borderRadius: radius.card, padding: space(3), borderTopWidth: 4, borderTopColor: tint, gap: 2 }}>
       <Text style={type.label}>{label}</Text>
       <Text style={[type.title, type.number]}>{value} g</Text>
     </View>
@@ -291,6 +291,6 @@ const s = StyleSheet.create({
   optionOn: { borderColor: color.accent, backgroundColor: color.infoBg },
   kcalCard: { alignItems: 'center', backgroundColor: color.card, borderRadius: radius.card, padding: space(5) },
   bottom: { padding: space(4), borderTopWidth: 1, borderTopColor: color.line, backgroundColor: color.chalk },
-  primary: { backgroundColor: color.accent, borderRadius: 14, paddingVertical: space(4), alignItems: 'center', maxWidth: 560, width: '100%', alignSelf: 'center' },
+  primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(4), alignItems: 'center', maxWidth: 560, width: '100%', alignSelf: 'center' },
   primaryText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
 });

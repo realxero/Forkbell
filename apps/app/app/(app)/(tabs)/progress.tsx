@@ -321,7 +321,7 @@ export default function ProgressScreen() {
                   <Text style={type.title}>Days logged</Text>
                   <LogMonth days={p.days} today={p.today} goal={p.calorieGoal ?? null} onOpenDay={viewing ? undefined : (d) => router.push({ pathname: '/', params: { date: d } })} />
                   <View style={s.legend}>
-                    <Key fill={color.fat} label="At or under your goal" />
+                    <Key fill={color.iron} label="Logged" />
                     <Key fill={color.over} label="Over your goal" />
                     <Key fill={color.track} label="Nothing logged" />
                   </View>
@@ -473,7 +473,7 @@ function GoalAndBurnCard({ p, units, signed, onEdit, onUseKcal }: { p: Progress;
       ) : (
         <Text style={type.body}>No weight goal yet. Set one and Forkbell estimates when you’ll get there from your own trend.</Text>
       )}
-      {plan?.reached && <Text style={[type.body, { color: color.fatText, fontWeight: '700' }]}>You’re at your goal weight.</Text>}
+      {plan?.reached && <Text style={[type.body, { color: color.iron, fontWeight: '700' }]}>You’re at your goal weight.</Text>}
       {plan && !plan.reached && <Text style={type.body}>{units.label(Math.abs(plan.remainingKg))} to go.</Text>}
       {p.goal.weightKg && paceText && <Text style={type.body}>{paceText}</Text>}
       {plan?.kcalForDate && <Text style={type.body}>To make {longDate(p.goal.date!)}, eat about {plan.kcalForDate.toLocaleString()} kcal a day.</Text>}
@@ -605,7 +605,7 @@ function ThisMonthCard({ list, recap, unit }: { list: Milestone[]; recap: Return
       {reached.length > 0 && <Text style={[type.label, recap && s.divided]}>Milestones</Text>}
       {reached.slice(0, 4).map((m) => (
         <View key={m.key} style={s.milestone}>
-          <Ionicons name="checkmark-circle" size={20} color={color.fat} accessibilityLabel="Reached" />
+          <Ionicons name="checkmark-circle" size={20} color={color.iron} accessibilityLabel="Reached" />
           <View style={{ flex: 1 }}>
             <Text style={type.body}>{m.label}</Text>
             <Text style={type.small}>

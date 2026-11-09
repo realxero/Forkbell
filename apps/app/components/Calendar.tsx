@@ -85,7 +85,7 @@ export function CalendarSheet({
             if (!d) return <View key={`e${i}`} style={s.cell} />;
             const kcal = totals[d];
             const goal = goalFor(d);
-            const dot = kcal ? (goal && kcal > goal * 1.05 ? color.over : color.fat) : null;
+            const dot = kcal ? (goal && kcal > goal * 1.05 ? color.over : color.iron) : null;
             // Logged but not finished: an outline, so half-logged days stand out.
             const open = Boolean(kcal) && !finished.has(d) && d <= today;
             const on = d === selected;
@@ -100,8 +100,8 @@ export function CalendarSheet({
           })}
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4), rowGap: space(1) }}>
-          <Text style={type.small}><Text style={{ color: color.fat }}>●</Text> finished</Text>
-          <Text style={type.small}><Text style={{ color: color.fat }}>○</Text> logged, not finished</Text>
+          <Text style={type.small}><Text style={{ color: color.iron }}>●</Text> finished</Text>
+          <Text style={type.small}><Text style={{ color: color.iron }}>○</Text> logged, not finished</Text>
           <Text style={type.small}><Text style={{ color: color.over }}>●</Text> over goal</Text>
         </View>
         {footer}

@@ -133,5 +133,5 @@ const s = StyleSheet.create({
   smallText: { ...buttons.smallText },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   dose: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
-  doseOn: { backgroundColor: color.fat, borderColor: color.fat },
+  doseOn: { backgroundColor: color.iron, borderColor: color.iron },
 });

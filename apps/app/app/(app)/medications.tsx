@@ -8,7 +8,7 @@ import { api, del, post, put } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { askForNotifications, refreshReminders, reminderSettings, remindersSupported } from '../../lib/reminders';
 import type { Med, Wellbeing } from '../../components/WellbeingCard';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, space, type, textSize, radius } from '../../lib/theme';
 import { buttons } from '../../lib/buttons';
 
 const MAX_DOSES = 6;
@@ -178,7 +178,7 @@ const s = StyleSheet.create({
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
-  card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(2) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   time: { minWidth: 104, textAlign: 'center', paddingVertical: space(2) },

@@ -106,5 +106,5 @@ const s = StyleSheet.create({
   button: { ...buttons.filled },
   secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: color.line },
   buttonText: { ...buttons.filledText },
-  code: { fontFamily: 'Menlo', fontSize: textSize.label, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: 8 },
+  code: { fontFamily: 'Menlo', fontSize: textSize.label, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: radius.input },
 });

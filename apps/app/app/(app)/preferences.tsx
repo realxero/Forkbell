@@ -90,7 +90,7 @@ export default function PreferencesScreen() {
 
         <Text style={s.label}>Test a food</Text>
         <TextInput value={testName} onChangeText={setTestName} placeholder="Type a food name" style={s.input} />
-        {test && <Text style={[type.small, { color: test.skip ? color.over : color.fatText }]}>{test.skip ? `Kept out of suggestions: ${test.reasons.join('; ')}.` : 'Nothing on your lists matches this name (that doesn’t mean it’s safe).'}</Text>}
+        {test && <Text style={[type.small, { color: test.skip ? color.over : color.iron }]}>{test.skip ? `Kept out of suggestions: ${test.reasons.join('; ')}.` : 'Nothing on your lists matches this name (that doesn’t mean it’s safe).'}</Text>}
 
         <Text style={s.section}>Smart suggestions</Text>
         {sw('Show suggestions in the diary', sg.enabled, (v) => setP({ ...p, suggestions: { ...sg, enabled: v } }))}

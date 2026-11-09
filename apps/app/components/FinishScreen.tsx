@@ -98,7 +98,7 @@ export function FinishScreen({ w, summary }: { w: Workout; summary: FinishSummar
         {comparison && <Text style={[type.body, { textAlign: 'center' }]}>{comparison}</Text>}
 
         {summary.records.length > 0 && (
-          <View style={[s.card, { borderColor: color.carbs, borderWidth: 2 }]}>
+          <View style={[s.card, { borderColor: color.accent, borderWidth: 2 }]}>
             <Text style={type.title}>🏆 {summary.records.length === 1 ? 'New personal record' : `${summary.records.length} new personal records`}</Text>
             {summary.records.map((r, i) => (
               <View key={i} style={s.row}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
 import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent, textSize } from '../lib/theme';
+import { MACRO_STYLES, MacroDisplay, macroStyle, setMacroStyle, type MacroStyle } from './MacroDisplay';
 import { Check } from './Check';
 import { buttons } from '../lib/buttons';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -10,7 +11,7 @@ import { router } from 'expo-router';
 import type { Goals } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { put } from '../lib/api';
-import { color, space, type } from '../lib/theme';
+import { color, radius, space, type } from '../lib/theme';
 import { Chip } from './AmountPicker';
 import { AiSettings } from './AiSettings';
 import { Platform, Switch } from 'react-native';
@@ -287,6 +288,25 @@ function Appearance() {
         ))}
       </View>
       {Platform.OS !== 'web' && !nativeThemeSupported && <Text style={type.small}>On this phone the accent colour shows in the web version of Forkbell.</Text>}
+      <MacroStylePicker />
+    </View>
+  );
+}
+
+/** How protein, carbs and fat look on Today, with a live preview. */
+function MacroStylePicker() {
+  const [style, setStyle] = useState<MacroStyle>(macroStyle());
+  return (
+    <View style={{ gap: space(2), marginTop: space(3) }}>
+      <Text style={type.small}>Macros on Today</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+        {MACRO_STYLES.map((m) => (
+          <Chip key={m.key} label={m.label} on={style === m.key} onPress={() => { setStyle(m.key); setMacroStyle(m.key); }} />
+        ))}
+      </View>
+      <View style={{ backgroundColor: color.card, borderRadius: radius.card, padding: space(4) }} accessibilityLabel="Preview">
+        <MacroDisplay protein={92} carbs={160} fat={81} goals={{ protein: 150, carbs: 220, fat: 75 }} style={style} />
+      </View>
     </View>
   );
 }
@@ -446,7 +466,7 @@ const s = StyleSheet.create({
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
-  cta: { backgroundColor: color.accent, borderRadius: 14, padding: space(4), gap: 2 },
+  cta: { backgroundColor: color.accent, borderRadius: radius.card, padding: space(4), gap: 2 },
   ctaText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '800' },
   account: { marginTop: space(8), paddingTop: space(4), borderTopWidth: 1, borderTopColor: color.line, gap: space(3) },
 });

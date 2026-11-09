@@ -13,7 +13,8 @@ import { api } from '../../../lib/api';
 import { copyDay, setDayFinished } from '../../../lib/actions';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
-import { MacroRing, Ring, ringScale } from '../../../components/Ring';
+import { Ring, ringScale } from '../../../components/Ring';
+import { MacroDisplay, macroStyle } from '../../../components/MacroDisplay';
 import { EntryMenu, removeWithUndo } from '../../../components/EntryMenu';
 import { SwipeRow } from '../../../components/SwipeRow';
 import { SelectionBar } from '../../../components/SelectionBar';
@@ -36,17 +37,6 @@ const MEAL_ICONS: Record<Meal, ComponentProps<typeof Ionicons>['name']> = { brea
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-function Stat({ icon, label, value }: { icon: ComponentProps<typeof Ionicons>['name']; label: string; value: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }} accessible accessibilityLabel={`${label}: ${value}`}>
-      <Ionicons name={icon} size={18} color={color.ironSoft} />
-      <View>
-        <Text style={type.label}>{label}</Text>
-        <Text style={[type.body, type.number, { fontWeight: '700' }]}>{value}</Text>
-      </View>
-    </View>
-  );
-}
 
 function dayLabel(date: string) {
   const today = todayLocal();
@@ -158,6 +148,9 @@ export default function Diary() {
         : `${Math.abs(left).toLocaleString()} calories over your goal of ${goal!.toLocaleString()}`;
   // At large text sizes the ring grows with the words in it, and the stats move under it.
   const stacked = fontScale > 1.3;
+  // Bars stand beside the ring; the other styles sit in a row beneath it.
+  const style = macroStyle();
+  const barsBeside = style === 'bars';
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -203,26 +196,32 @@ export default function Diary() {
 
         {day && (
           <>
+            {/* The day at a glance: calories in the ring, macros the way you chose to see them. */}
             <View style={s.summary}>
-              <View style={[s.summaryTop, stacked && s.summaryStacked]}>
-                <Ring value={eaten} goal={goal} size={148 * ringScale(fontScale)} stroke={14} tint={color.iron} label={ringLabel}>
+              <View style={[s.summaryTop, (stacked || !barsBeside) && s.summaryStacked]}>
+                <Ring value={eaten} goal={goal} size={132 * ringScale(fontScale)} stroke={13} tint={color.iron} label={ringLabel}>
                   <Text style={[s.ringNumber, type.number, left !== null && left < 0 && { color: color.over }]}>
                     {left !== null ? Math.abs(left).toLocaleString() : eaten.toLocaleString()}
                   </Text>
                   <Text style={type.small}>{left === null ? 'kcal eaten' : left >= 0 ? 'kcal left' : 'kcal over'}</Text>
+                  {goal !== null && (
+                    <Text style={[type.small, type.number, { fontSize: textSize.caption }]}>
+                      {eaten.toLocaleString()} of {goal.toLocaleString()}{bonus > 0 ? ` (+${bonus})` : ''}
+                    </Text>
+                  )}
                 </Ring>
-                <View style={[{ gap: space(3) }, stacked ? { alignSelf: 'stretch' } : { flex: 1 }]}>
-                  <Stat icon="restaurant-outline" label="Eaten" value={eaten.toLocaleString()} />
-                  <Stat icon="flag-outline" label={bonus > 0 ? `Goal · +${bonus} exercise` : 'Goal'} value={goal ? goal.toLocaleString() : '–'} />
-                  <Stat icon="leaf-outline" label="Fiber" value={`${Math.round(day.totals.fiber)} g`} />
-                </View>
+                {barsBeside && !stacked && (
+                  <View style={{ flex: 1 }}>
+                    <MacroDisplay protein={day.totals.protein} carbs={day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} />
+                  </View>
+                )}
               </View>
               {goal === null && <Text style={type.small}>Set a calorie goal in Settings → Goals and targets to see what’s left.</Text>}
-              <View style={s.macros}>
-                <MacroRing label="Protein" value={day.totals.protein} goal={day.goals.protein} tint={color.protein} />
-                <MacroRing label="Carbs" value={day.totals.carbs} goal={day.goals.carbs} tint={color.carbs} />
-                <MacroRing label="Fat" value={day.totals.fat} goal={day.goals.fat} tint={color.fat} />
-              </View>
+              {(!barsBeside || stacked) && (
+                <View style={s.macros}>
+                  <MacroDisplay protein={day.totals.protein} carbs={day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} />
+                </View>
+              )}
             </View>
 
             {/* Water is logged more often than any meal, so it sits right under the summary. */}
@@ -263,8 +262,10 @@ export default function Diary() {
                         >
                           <Ionicons name="ellipsis-horizontal" size={20} color={open ? color.iron : color.ironSoft} />
                         </Pressable>
-                        <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date } })} hitSlop={6} style={s.addRound} accessibilityRole="button" accessibilityLabel={`Add food to ${MEAL_NAMES[meal]}`}>
-                          <Ionicons name="add" size={20} color={color.chalk} />
+                        <Pressable onPress={() => router.push({ pathname: '/add', params: { meal, date } })} style={s.addTap} accessibilityRole="button" accessibilityLabel={`Add food to ${MEAL_NAMES[meal]}`}>
+                          <View style={s.addRound}>
+                            <Ionicons name="add" size={22} color={color.chalk} />
+                          </View>
                         </Pressable>
                       </>
                     )}
@@ -319,7 +320,7 @@ export default function Diary() {
 
             {/* Ideas come after the meals, so logging is the first thing on the screen. */}
             {!viewing && <SuggestionsCard day={day} onChanged={load} />}
-            {day.entries.length > 0 && <MicrosCard entries={day.entries} />}
+            {day.entries.length > 0 && <MicrosCard entries={day.entries} fiber={day.totals.fiber} />}
 
             {canWrite && day.entries.length > 0 && date <= todayLocal() && (
               <FinishDay
@@ -375,7 +376,7 @@ function FinishDay({ date, finished, onChange }: { date: string; finished: boole
   if (finished)
     return (
       <View style={[s.finish, s.finished]} accessibilityLiveRegion="polite">
-        <Ionicons name="checkmark-circle" size={24} color={color.fat} />
+        <Ionicons name="checkmark-circle" size={24} color={color.iron} />
         <Text style={[type.body, { flex: 1, fontWeight: '700' }]}>{today ? 'Today is finished' : 'This day is finished'}</Text>
         <Pressable onPress={() => onChange(false)} hitSlop={10} style={s.finishLink} accessibilityRole="button" accessibilityLabel="Reopen this day">
           <Text style={s.link}>Reopen</Text>
@@ -404,24 +405,25 @@ const s = StyleSheet.create({
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(4), maxWidth: 640, width: '100%', alignSelf: 'center' },
   problem: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.dangerBg, borderRadius: radius.card, padding: space(4) },
   retry: { ...buttons.small, minHeight: 44 },
-  summary: { backgroundColor: color.card, borderRadius: radius.card, padding: space(5), gap: space(4), borderWidth: 1, borderColor: color.line },
+  summary: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(4) },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: space(5) },
   summaryStacked: { flexDirection: 'column', alignItems: 'center' },
   ringNumber: { fontSize: textSize.large, fontWeight: '800', letterSpacing: -0.5, color: color.iron },
-  macros: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: space(3), borderTopWidth: 1, borderTopColor: color.line },
+  macros: { paddingTop: space(3), borderTopWidth: 1, borderTopColor: color.line },
   readOnly: { flexDirection: 'row', alignItems: 'center', gap: space(2), paddingHorizontal: space(1) },
   planLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
-  meal: { gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
+  meal: { gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4) },
   mealHead: { flexDirection: 'row', alignItems: 'center', gap: space(2), minHeight: 44 },
   more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  addRound: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
+  addTap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  addRound: { width: 36, height: 36, borderRadius: radius.pill, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
   entry: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(2), borderTopWidth: 1, borderTopColor: color.line },
   check: { width: 38, height: 38, borderRadius: radius.pill, borderWidth: 2, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: color.accent, borderColor: color.accent },
   flagRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   flag: { flex: 1, fontSize: textSize.label, color: color.warnText, fontWeight: '600' },
-  finish: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
+  finish: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, padding: space(4) },
   finished: { backgroundColor: color.infoBg, borderColor: color.infoBg },
   finishButton: { ...buttons.small, minHeight: 44 },
   finishButtonText: buttons.smallText,

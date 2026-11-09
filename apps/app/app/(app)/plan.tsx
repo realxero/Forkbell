@@ -10,7 +10,7 @@ import { addEntry, foodLibrary } from '../../lib/actions';
 import { cachedGet } from '../../lib/sync';
 import { Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { FoodIcon } from '../../components/FoodIcon';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, space, type, textSize, radius } from '../../lib/theme';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
@@ -118,7 +118,7 @@ export default function Plan() {
             <Text style={[type.small, type.number]}>Plan total about {p.kcal.toLocaleString()} kcal and {Math.round(p.protein)} g protein. Tap an item to leave it out.</Text>
             {p.notes.map((n) => <Text key={n} style={s.note}>{n}</Text>)}
             {added.includes(p.date) ? (
-              <Text style={[type.small, { color: color.fatText, fontWeight: '700' }]}>Added to the diary.</Text>
+              <Text style={[type.small, { color: color.iron, fontWeight: '700' }]}>Added to the diary.</Text>
             ) : p.items.length > 0 ? (
               <Pressable disabled={busy} onPress={() => addPlan(p)} style={[s.button, busy && { opacity: 0.5 }]}><Text style={s.buttonText}>Add to {label(p.date, today)}</Text></Pressable>
             ) : null}
@@ -137,7 +137,7 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   row: { flexDirection: 'row', gap: space(5) },
-  card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(2), paddingVertical: 3 },
   note: { ...type.small, color: color.warnText },
   button: { ...buttons.filled },

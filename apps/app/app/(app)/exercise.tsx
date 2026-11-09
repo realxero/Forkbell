@@ -138,8 +138,9 @@ export default function ExerciseDetail() {
   );
 }
 
-const LEVEL_TINT: Record<VariationLevel, string> = { harder: color.over, angle: color.accent, easier: color.fat };
-const LEVEL_WORDS: Record<VariationLevel, string> = { ...LEVEL_TINT, easier: color.fatText };
+// Neutral tints: harder isn't "over" and easier isn't "good".
+const LEVEL_TINT: Record<VariationLevel, string> = { harder: color.iron, angle: color.accent, easier: color.ironSoft };
+const LEVEL_WORDS: Record<VariationLevel, string> = { ...LEVEL_TINT };
 
 /** Ways to make it harder without more weight: for big jumps, stalls, or no heavier weight. */
 function ProgressIdeas({ ideas, timed }: { ideas: ProgressIdea[]; timed: boolean }) {

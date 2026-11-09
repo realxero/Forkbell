@@ -613,8 +613,8 @@ export function Proposals({ items, added, done = [], onProgress, onAdded }: { it
       )}
       {allIn ? (
         <View style={s.addedLine} accessibilityLiveRegion="polite">
-          <Ionicons name="checkmark-circle" size={18} color={color.fat} />
-          <Text style={[type.small, { color: color.fatText, fontWeight: '700' }]}>Added to {viewing ? `${viewing.name.split(' ')[0]}’s` : 'your'} diary.</Text>
+          <Ionicons name="checkmark-circle" size={18} color={color.iron} />
+          <Text style={[type.small, { color: color.iron, fontWeight: '700' }]}>Added to {viewing ? `${viewing.name.split(' ')[0]}’s` : 'your'} diary.</Text>
         </View>
       ) : (
         todo.length > 0 && (

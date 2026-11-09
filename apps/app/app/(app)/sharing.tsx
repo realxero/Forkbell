@@ -8,7 +8,7 @@ import { api, del, post, put } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
 import { getViewing, setViewing } from '../../lib/profile';
 import { Chip } from '../../components/AmountPicker';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, space, type, textSize, radius } from '../../lib/theme';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
@@ -143,7 +143,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
-  card: { backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   person: { gap: space(2), borderTopWidth: 1, borderTopColor: color.line, paddingTop: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(4), flexWrap: 'wrap' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },

@@ -10,7 +10,7 @@ import { forAmount, entryName } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { removeWithUndo } from '../../components/EntryMenu';
 import { AmountPicker } from '../../components/AmountPicker';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, space, type, textSize, radius } from '../../lib/theme';
 import { SkeletonCards } from '../../components/Skeleton';
 
 /** Change an entry's amount or meal, or remove it. */
@@ -143,7 +143,7 @@ function FixNumbers({ entry, onDone }: { entry: DiaryEntry; onDone: () => void }
 }
 
 const s = StyleSheet.create({
-  fix: { gap: space(2), marginHorizontal: space(4), marginTop: space(2), padding: space(3), borderRadius: 14, backgroundColor: color.card, borderWidth: 1, borderColor: color.line },
+  fix: { gap: space(2), marginHorizontal: space(4), marginTop: space(2), padding: space(3), borderRadius: radius.card, backgroundColor: color.card, borderWidth: 1, borderColor: color.line },
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(2) },
   save: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
   saveText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },

@@ -142,7 +142,7 @@ const s = StyleSheet.create({
   start: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.accent, borderRadius: radius.card, padding: space(4) },
   startText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.row, padding: space(2) },
-  thumb: { width: 72, height: 48, borderRadius: 8, backgroundColor: color.raised },
+  thumb: { width: 72, height: 48, borderRadius: radius.input, backgroundColor: color.raised },
   sheet: { maxHeight: '88%' },
   secondary: { minHeight: 44, justifyContent: 'center' },
 });

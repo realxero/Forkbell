@@ -7,7 +7,7 @@ import { Pressable } from './Tap';
 import { api } from '../lib/api';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { daysBetween, type TrendPoint } from '@forkbell/shared';
-import { color, space, type, textSize } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 
 // SVG text uses a serif font on the web unless told otherwise.
 const font = Platform.OS === 'web' ? { fontFamily: 'system-ui, -apple-system, sans-serif' } : {};
@@ -73,7 +73,7 @@ export function WeightChart({ points, goalKg, show }: { points: TrendPoint[]; go
             <SvgText {...font} key={`l${t}`} x={padL - 6} y={y(t) + 4} fontSize={11} fill={color.ironSoft} textAnchor="end">{show(t)}</SvgText>
           ))}
           <Path d={area} fill="url(#trendFill)" />
-          {showGoal && <Line x1={padL} x2={width} y1={y(goalKg!)} y2={y(goalKg!)} stroke={color.fat} strokeWidth={2} strokeDasharray="6 5" />}
+          {showGoal && <Line x1={padL} x2={width} y1={y(goalKg!)} y2={y(goalKg!)} stroke={color.ironSoft} strokeWidth={2} strokeDasharray="6 5" />}
           {points.map((p) => (
             <Circle key={p.date} cx={x(p.date)} cy={y(p.weightKg)} r={2.6} fill={color.ironSoft} opacity={0.55} />
           ))}
@@ -86,7 +86,7 @@ export function WeightChart({ points, goalKg, show }: { points: TrendPoint[]; go
       <View style={{ flexDirection: 'row', gap: space(4), marginTop: space(2) }}>
         <Text style={type.small}>● weigh-ins</Text>
         <Text style={[type.small, { color: color.accent }]}>━ trend</Text>
-        {showGoal && <Text style={[type.small, { color: color.fatText }]}>┅ goal {show(goalKg!)}</Text>}
+        {showGoal && <Text style={[type.small, { color: color.ironSoft }]}>┅ goal {show(goalKg!)}</Text>}
       </View>
     </View>
   );
@@ -145,8 +145,8 @@ export function CalorieBars({ days, today }: { days: DayTotals[]; today: string 
             <SvgText {...font} x={padL - 6} y={y(0) + 4} fontSize={10} fill={color.ironSoft} textAnchor="end">0</SvgText>
             {goal && (
               <>
-                <Line x1={padL} x2={width} y1={y(goal)} y2={y(goal)} stroke={color.fat} strokeWidth={1.5} strokeDasharray="5 4" />
-                <SvgText {...font} x={padL - 6} y={y(goal) + 4} fontSize={10} fill={color.fatText} textAnchor="end" fontWeight="700">{goal >= 1000 ? `${(goal / 1000).toFixed(1)}k` : goal}</SvgText>
+                <Line x1={padL} x2={width} y1={y(goal)} y2={y(goal)} stroke={color.ironSoft} strokeWidth={1.5} strokeDasharray="5 4" />
+                <SvgText {...font} x={padL - 6} y={y(goal) + 4} fontSize={10} fill={color.iron} textAnchor="end" fontWeight="700">{goal >= 1000 ? `${(goal / 1000).toFixed(1)}k` : goal}</SvgText>
               </>
             )}
             {days.map((d, i) => {
@@ -189,7 +189,7 @@ export function CalorieBars({ days, today }: { days: DayTotals[]; today: string 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(4) }}>
         <Text style={type.small}><Text style={{ color: color.accent }}>■</Text> within goal</Text>
         <Text style={type.small}><Text style={{ color: color.over }}>■</Text> over goal</Text>
-        <Text style={type.small}><Text style={{ color: color.fat }}>┄</Text> goal</Text>
+        <Text style={type.small}><Text style={{ color: color.ironSoft }}>┄</Text> goal</Text>
         <Text style={type.small}>Tap a day for its total</Text>
       </View>
     </View>
@@ -317,16 +317,18 @@ export function LogMonth({ days, today, goal, onOpenDay }: { days: DayTotals[]; 
           if (!d) return <View key={`x${i}`} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />;
           const v = byDate.get(d);
           const future = d > today;
-          const bg = v && v.kcal > 0 ? (v.goal && v.kcal > v.goal * 1.05 ? color.over : color.fat) : color.track;
+          // Logged days are iron and days over the goal red: no green "good day".
+          const overDay = Boolean(v && v.goal && v.kcal > v.goal * 1.05);
+          const bg = v && v.kcal > 0 ? (overDay ? color.over : color.iron) : color.track;
           return (
             <View key={d} style={{ width: `${100 / 7}%`, aspectRatio: 1, padding: 3 }}>
               <Pressable
                 disabled={future || !onOpenDay}
                 onPress={() => onOpenDay?.(d)}
                 accessibilityLabel={`${shortDate(d)}: ${v && v.kcal > 0 ? `${Math.round(v.kcal)} kcal${v.goal && v.kcal > v.goal * 1.05 ? ', over your goal' : ''}` : future ? 'not yet' : 'nothing logged'}`}
-                style={{ flex: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: future ? 'transparent' : bg, opacity: future ? 0.35 : 1, borderWidth: d === today ? 2 : future ? 1 : 0, borderColor: d === today ? color.iron : color.line }}
+                style={{ flex: 1, borderRadius: radius.input, alignItems: 'center', justifyContent: 'center', backgroundColor: future ? 'transparent' : bg, opacity: future ? 0.35 : 1, borderWidth: d === today ? 2 : future ? 1 : 0, borderColor: d === today ? color.iron : color.line }}
               >
-                <Text style={{ fontSize: textSize.label, fontWeight: '700', color: v && v.kcal > 0 ? '#fff' : color.ironSoft }}>{Number(d.slice(8))}</Text>
+                <Text style={{ fontSize: textSize.label, fontWeight: '700', color: v && v.kcal > 0 ? (overDay ? color.onAccent : color.chalk) : color.ironSoft }}>{Number(d.slice(8))}</Text>
               </Pressable>
             </View>
           );

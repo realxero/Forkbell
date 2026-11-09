@@ -92,7 +92,7 @@ export function IdentifyEquipment({ onClose, onPick }: { onClose: () => void; on
                 {!!r.what && <Text style={type.body}>{r.what}</Text>}
               </View>
               {list('Set it up', r.setup, 'construct-outline', color.accent)}
-              {list('How to use it', r.how, 'play-circle-outline', color.fat)}
+              {list('How to use it', r.how, 'play-circle-outline', color.accent)}
               {list('Stay safe', r.safety, 'shield-checkmark-outline', color.over)}
               {r.exercises.length > 0 && (
                 <View style={s.block}>

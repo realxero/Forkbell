@@ -1,24 +1,19 @@
-import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Pressable } from './Tap';
+import { useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { streakCheer, todayLocal, type StreakCheer as Cheer, type Streaks } from '@forkbell/shared';
+import { streakCheer, todayLocal, type Streaks } from '@forkbell/shared';
 import { api } from '../lib/api';
 import { readCache, writeCache } from '../lib/sync';
 import { haptic } from '../lib/haptics';
-import { BellAvatar } from './BellAvatar';
-import { Confetti } from './Confetti';
-import { color, radius, space, type } from '../lib/theme';
+import { showToast } from '../lib/toast';
 
 const SEEN = 'device:streak-cheers';
 
 /**
  * Bell cheering a streak milestone on Today: 3, 7, 14, 21 and 30 days of
- * logging, 2, 4 and 8 weeks of training. Each milestone of a streak shows once.
+ * logging, 2, 4 and 8 weeks of training. Each milestone of a streak shows once,
+ * as a celebration toast, so it never pushes the meals down the screen.
  */
 export function StreakCheer({ enabled, tick = 0 }: { enabled: boolean; /** changes when food is logged, to check again */ tick?: number }) {
-  const [cheer, setCheer] = useState<Cheer | null>(null);
   useFocusEffect(
     useCallback(() => {
       if (!enabled) return;
@@ -30,8 +25,8 @@ export function StreakCheer({ enabled, tick = 0 }: { enabled: boolean; /** chang
           if (!c || gone) return;
           // Marked as shown straight away: leaving and coming back doesn't repeat it.
           writeCache(SEEN, [...seen, c.key].slice(-60));
-          setCheer(c);
           haptic.success();
+          showToast(`${c.title} ${c.detail}`, { tone: 'celebrate', ms: 5000 });
         },
         () => {}, // offline: celebrate next time
       );
@@ -40,22 +35,5 @@ export function StreakCheer({ enabled, tick = 0 }: { enabled: boolean; /** chang
       };
     }, [enabled, tick]),
   );
-  if (!cheer) return null;
-  return (
-    <View style={s.card} accessibilityLiveRegion="polite">
-      <Confetti height={180} />
-      <BellAvatar size={56} mood="proud" alive />
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[type.body, { fontWeight: '800' }]}>{cheer.kind === 'food' ? '🔥 ' : '🏋 '}{cheer.title}</Text>
-        <Text style={type.small}>{cheer.detail}</Text>
-      </View>
-      <Pressable onPress={() => setCheer(null)} hitSlop={12} accessibilityLabel="Dismiss">
-        <Ionicons name="close" size={20} color={color.ironSoft} />
-      </Pressable>
-    </View>
-  );
+  return null;
 }
-
-const s = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.card, borderWidth: 1, borderColor: color.line, padding: space(4), overflow: 'hidden' },
-});

@@ -6,7 +6,7 @@ import { put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { addEntry, deleteEntry, foodLibrary } from '../lib/actions';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
-import { color, space, type, textSize } from '../lib/theme';
+import { color, space, type, textSize, radius } from '../lib/theme';
 
 /** The meal an idea goes into: the one for the time of day today, else the emptiest of lunch and dinner. */
 function mealFor(day: DiaryDay, isToday: boolean): Meal {
@@ -107,10 +107,10 @@ export function SuggestionsCard({ day, onChanged }: { day: DiaryDay; onChanged: 
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: color.infoBg, borderRadius: 14, padding: space(4), gap: space(3) },
+  card: { backgroundColor: color.infoBg, borderRadius: radius.card, padding: space(4), gap: space(3) },
   item: { gap: space(1) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   x: { color: color.ironSoft, fontSize: textSize.body },
-  plus: { minWidth: 36, height: 32, borderRadius: 16, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(3) },
+  plus: { minWidth: 36, height: 32, borderRadius: radius.pill, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(3) },
   plusText: { color: color.chalk, fontWeight: '800' },
 });

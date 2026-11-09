@@ -7,7 +7,7 @@ import type { Program } from '@forkbell/shared';
 import { cachedGet } from '../../lib/sync';
 import { api, del, post } from '../../lib/api';
 import { confirm } from '../../lib/confirm';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, space, type, textSize, radius } from '../../lib/theme';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
@@ -149,7 +149,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
-  card: { backgroundColor: color.card, borderRadius: 16, padding: space(4), gap: space(2) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.chalk, borderRadius: 10, padding: space(3) },
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },
   inline: { flexDirection: 'row', gap: space(2), alignItems: 'center' },

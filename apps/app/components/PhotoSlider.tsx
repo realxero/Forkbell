@@ -54,5 +54,5 @@ const s = StyleSheet.create({
   handle: { position: 'absolute', top: 0, bottom: 0, width: 3, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   knob: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
   knobText: { color: '#000', fontWeight: '800' },
-  tag: { ...type.small, position: 'absolute', bottom: space(2), color: '#fff', backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, overflow: 'hidden', paddingHorizontal: space(2), paddingVertical: 2, fontWeight: '700' },
+  tag: { ...type.small, position: 'absolute', bottom: space(2), color: '#fff', backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: radius.input, overflow: 'hidden', paddingHorizontal: space(2), paddingVertical: 2, fontWeight: '700' },
 });

@@ -40,6 +40,9 @@ const light = {
   water: '#1E88C8',
   waterText: '#13689C',
   waterBg: '#E4F2FB',
+  // Fasting has its own colour: it isn't a macro, and it isn't "done".
+  fast: '#6A4BD1',
+  fastText: '#5A3DBF',
   // Icon tiles (Settings rows, Health metrics). Kept clear of the plates: no
   // protein blue, carb yellow, fat green, over red or water blue, so a tile's
   // colour never reads as a macro. White icons on these reach 3:1.
@@ -77,6 +80,8 @@ const dark: Record<keyof typeof light, string> = {
   water: '#4FB3F0',
   waterText: '#4FB3F0',
   waterBg: '#122A3A',
+  fast: '#A58BFF',
+  fastText: '#A58BFF',
   tilePurple: '#A48BFF',
   tileMagenta: '#F27AC0',
   tileTeal: '#3CC9C4',

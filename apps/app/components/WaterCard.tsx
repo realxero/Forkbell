@@ -23,6 +23,8 @@ export function WaterCard({ date, readOnly }: { date: string; readOnly?: boolean
   const [typing, setTyping] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [party, setParty] = useState(0);
+  /** the other cup sizes, a typed amount and Undo; closed, the card is one line */
+  const [open, setOpen] = useState(false);
   const fromCache = useCallback(() => setDay(readCache<WaterDay>(path) ?? { date, entries: [], totalMl: 0 }), [path, date]);
   useFocusEffect(
     useCallback(() => {
@@ -78,18 +80,29 @@ export function WaterCard({ date, readOnly }: { date: string; readOnly?: boolean
           <Confetti pieces={22} height={180} />
         </View>
       )}
+      {/* One line: how much, toward the goal, and your first cup size one tap away. */}
       <View style={s.row}>
         <Ionicons name="water" size={22} color={color.water} />
-        <Text style={[type.heading, { flex: 1 }]}>Water</Text>
-        <Text style={[type.body, type.number, { fontWeight: '800' }]} accessibilityLabel={`${waterText(total, unit)} of ${waterText(goal, unit)}`}>
-          {waterText(total, unit)} <Text style={[type.small, { fontWeight: '400' }]}>of {waterText(goal, unit)}</Text>
-        </Text>
+        <View style={{ flex: 1, gap: space(1) }}>
+          <Text style={[type.body, type.number, { fontWeight: '800' }]} accessibilityLabel={`Water: ${waterText(total, unit)} of ${waterText(goal, unit)}${total >= goal ? ', goal reached' : ''}`}>
+            {waterText(total, unit)} <Text style={[type.small, { fontWeight: '400' }]}>of {waterText(goal, unit)}{total >= goal ? ' · goal reached' : ''}</Text>
+          </Text>
+          <View style={s.bar} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}>
+            <View style={[s.fill, { width: `${pct * 100}%` }]} />
+          </View>
+        </View>
+        {!readOnly && (
+          <>
+            <Pressable onPress={() => void add(waterButtons(unit)[0]!.ml)} style={({ pressed }) => [s.quick, pressed && { backgroundColor: color.waterBg }]} accessibilityRole="button" accessibilityLabel={`Add ${waterButtons(unit)[0]!.label.slice(1)} of water`}>
+              <Text style={s.buttonText}>{waterButtons(unit)[0]!.label}</Text>
+            </Pressable>
+            <Pressable onPress={() => setOpen((o) => !o)} style={s.more} accessibilityRole="button" accessibilityLabel="More ways to add water" accessibilityState={{ expanded: open }}>
+              <Ionicons name={open ? 'chevron-up' : 'ellipsis-horizontal'} size={20} color={color.ironSoft} />
+            </Pressable>
+          </>
+        )}
       </View>
-      <View style={s.bar} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}>
-        <View style={[s.fill, { width: `${pct * 100}%` }]} />
-      </View>
-      {total >= goal && <Text style={[type.small, { color: color.waterText, fontWeight: '700' }]}>Goal reached 💧</Text>}
-      {!readOnly && (
+      {!readOnly && open && (
         <>
           <View style={s.row}>
             {waterButtons(unit).map((b) => (
@@ -135,15 +148,17 @@ export function WaterCard({ date, readOnly }: { date: string; readOnly?: boolean
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3), overflow: 'hidden' },
+  card: { backgroundColor: color.card, borderRadius: radius.card, paddingVertical: space(3), paddingHorizontal: space(4), gap: space(3), overflow: 'hidden' },
+  quick: { minHeight: 44, minWidth: 64, paddingHorizontal: space(3), borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.water, alignItems: 'center', justifyContent: 'center' },
+  more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  bar: { height: 10, borderRadius: 5, backgroundColor: color.track, overflow: 'hidden' },
-  fill: { height: 10, borderRadius: 5, backgroundColor: color.water },
-  button: { flex: 1, minHeight: 42, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.water, alignItems: 'center', justifyContent: 'center' },
+  bar: { height: 6, borderRadius: 3, backgroundColor: color.track, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3, backgroundColor: color.water },
+  button: { flex: 1, minHeight: 44, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.water, alignItems: 'center', justifyContent: 'center' },
   buttonText: { color: color.waterText, fontWeight: '800', fontSize: textSize.control },
   link: { color: color.waterText, fontWeight: '700' },
-  input: { ...type.body, flex: 1, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
-  addButton: { backgroundColor: color.water, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(2) },
-  addButtonText: { color: '#fff', fontWeight: '800' },
+  input: { ...type.body, flex: 1, backgroundColor: color.chalk, borderRadius: radius.input, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
+  addButton: { backgroundColor: color.water, borderRadius: radius.input, paddingHorizontal: space(4), paddingVertical: space(2) },
+  addButtonText: { color: color.onAccent, fontWeight: '800' },
   undo: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36 },
 });
