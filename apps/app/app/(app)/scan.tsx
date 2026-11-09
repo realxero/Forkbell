@@ -19,7 +19,9 @@ import { color, radius, space, type, textSize } from '../../lib/theme';
 type Found = { name: string; box: [number, number, number, number]; density: number; note: string | null };
 type Item = Found & { ml: number; coverage: number; edited: string | null };
 type Photo = { uri: string; width: number; height: number };
-const COLORS = ['#2E9E62', '#E8590C', '#2B6BD6', '#C2185B', '#6A4BD1', '#0F8B8D', '#D99A00', '#5B6B73'];
+// The tile colours, not the plates: a numbered food on the photo is just a
+// label, and a plate colour there would read as protein, carbs or fat.
+const COLORS = [color.tileTeal, color.tileMagenta, color.tilePurple, color.tileCopper, color.tileSlate, color.tileGrey];
 
 export default function Scan() {
   const params = useLocalSearchParams<{ meal?: Meal; date?: string }>();
@@ -208,5 +210,5 @@ const s = StyleSheet.create({
   input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   grams: { width: 100, fontSize: textSize.title, fontWeight: '800', textAlign: 'center' },
   dot: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  dotText: { color: '#fff', fontWeight: '800', fontSize: textSize.small },
+  dotText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.small },
 });

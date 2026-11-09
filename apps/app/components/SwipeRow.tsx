@@ -74,7 +74,7 @@ export function SwipeRow({ left, right, children }: { left?: Action; right?: Act
       style={[s.action, side === 'left' ? { left: 0 } : { right: 0 }, { backgroundColor: a.tint }]}
       accessibilityLabel={a.label}
     >
-      <Ionicons name={a.icon} size={22} color="#FFFFFF" />
+      <Ionicons name={a.icon} size={22} color={color.onAccent} />
       <Text style={s.label}>{a.label}</Text>
     </Pressable>
   );
@@ -98,5 +98,5 @@ export function SwipeRow({ left, right, children }: { left?: Action; right?: Act
 const s = StyleSheet.create({
   wrap: { overflow: 'hidden' },
   action: { position: 'absolute', top: 0, bottom: 0, width: WIDTH, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  label: { color: '#FFFFFF', fontWeight: '700', fontSize: textSize.small },
+  label: { color: color.onAccent, fontWeight: '700', fontSize: textSize.small },
 });

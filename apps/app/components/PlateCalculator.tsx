@@ -8,22 +8,27 @@ import { BARS, DEFAULT_PLATES, fromKg, loadPlates, toKg, type Bar, type WeightUn
 import { useTrainingSetup } from '../lib/training-setup';
 import { Chip } from './AmountPicker';
 import { ChipRow } from './ChipRow';
-import { color, radius, space, type, textSize } from '../lib/theme';
+import { color, radius, space, type, textSize, type ColorName } from '../lib/theme';
 
-// Competition plate colours, by kilogram size (lb plates use the nearest kg size).
-const PLATE_COLOR: [number, string][] = [
-  [25, '#D2423A'],
-  [20, '#2B6BD6'],
-  [15, '#E3B505'],
-  [10, '#2E9E62'],
-  [5, '#E9EDEF'],
-  [2.5, '#1C252B'],
-  [0, '#9BA7AE'],
+// Competition plate colours, by kilogram size (lb plates use the nearest kg
+// size). These are the macro plates the whole app is built on, so they come
+// from the theme and follow dark mode.
+const PLATE_COLOR: [number, ColorName][] = [
+  [25, 'over'],
+  [20, 'protein'],
+  [15, 'carbs'],
+  [10, 'fat'],
+  [5, 'plateWhite'],
+  [2.5, 'plateBlack'],
+  [0, 'sleeve'],
 ];
-const plateColor = (p: number, unit: WeightUnit) => {
+const plateTone = (p: number, unit: WeightUnit): ColorName => {
   const kg = unit === 'lb' ? p * 0.4536 : p;
-  return PLATE_COLOR.find(([min]) => kg >= min - 1.2)?.[1] ?? '#9BA7AE';
+  return PLATE_COLOR.find(([min]) => kg >= min - 1.2)?.[1] ?? 'sleeve';
 };
+/** Words on a plate: dark on the light plates (white, yellow, bare sleeve), light on the black one. */
+const plateWords = (tone: ColorName) =>
+  tone === 'plateBlack' ? color.plateWhite : tone === 'plateWhite' || tone === 'carbs' || tone === 'sleeve' ? color.plateBlack : color.onAccent;
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, ''));
 const ALL_PLATES: Record<WeightUnit, number[]> = { lb: [55, 45, 35, 25, 15, 10, 5, 2.5, 1.25], kg: [25, 20, 15, 10, 5, 2.5, 2, 1.25, 1, 0.5] };
 
@@ -139,11 +144,15 @@ export function PlateCalculator({
               {/* The bar end, drawn with the plates on it, heaviest nearest the middle. */}
               <View style={s.barDraw}>
                 <View style={s.sleeveStop} />
-                {load.perSide.map((p, i) => (
-                  <View key={i} style={[s.plate, { backgroundColor: plateColor(p, unit), height: 36 + Math.min(70, p * (unit === 'lb' ? 1.4 : 3)) }]}>
-                    <Text style={[s.plateText, { color: plateColor(p, unit) === '#E9EDEF' ? '#1C252B' : '#fff' }]}>{fmt(p)}</Text>
-                  </View>
-                ))}
+                {load.perSide.map((p, i) => {
+                  const tone = plateTone(p, unit);
+                  return (
+                    <View key={i} style={[s.plate, { backgroundColor: color[tone], height: 36 + Math.min(70, p * (unit === 'lb' ? 1.4 : 3)) }]}>
+                      {/* A fixed-size plate: the label grows with larger text only so far, then stays inside it. */}
+                      <Text style={[s.plateText, { color: plateWords(tone) }]} maxFontSizeMultiplier={1.3} numberOfLines={1}>{fmt(p)}</Text>
+                    </View>
+                  );
+                })}
                 <View style={s.sleeve} />
               </View>
               <Text style={[type.body, { fontWeight: '800' }]}>
@@ -193,10 +202,10 @@ const s = StyleSheet.create({
   target: { fontSize: textSize.display, fontWeight: '900', color: color.iron, textAlign: 'center', minWidth: 150, fontVariant: ['tabular-nums'] },
   box: { backgroundColor: color.raised, borderRadius: radius.card, padding: space(3), gap: space(2) },
   barDraw: { flexDirection: 'row', alignItems: 'center', height: 110, gap: 2 },
-  sleeveStop: { width: 10, height: 34, borderRadius: 3, backgroundColor: '#9BA7AE' },
+  sleeveStop: { width: 10, height: 34, borderRadius: 3, backgroundColor: color.sleeve },
   plate: { width: 22, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   plateText: { fontSize: 9, fontWeight: '900', transform: [{ rotate: '-90deg' }], width: 40, textAlign: 'center' },
-  sleeve: { flex: 1, height: 12, borderRadius: 3, backgroundColor: '#9BA7AE' },
+  sleeve: { flex: 1, height: 12, borderRadius: 3, backgroundColor: color.sleeve },
   input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
   link: { color: color.accent, fontWeight: '700' },
   primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
