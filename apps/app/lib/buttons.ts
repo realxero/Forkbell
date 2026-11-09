@@ -18,4 +18,6 @@ export const buttons = {
   /** The second choice next to a filled button. */
   quiet: { backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.row, paddingVertical: space(3) + 2, paddingHorizontal: space(4), alignItems: 'center', justifyContent: 'center' },
   quietText: { color: color.iron, fontSize: textSize.body, fontWeight: '700' },
+  /** A text link's tap area (Cancel, Save, + Add set): 44 points both ways however short the word. */
+  link: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
 } satisfies Record<string, ViewStyle | TextStyle>;

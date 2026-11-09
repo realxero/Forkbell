@@ -13,6 +13,7 @@ import { confirm } from '../lib/confirm';
 import { Chip } from './AmountPicker';
 import { PhotoSlider } from './PhotoSlider';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 export const niceDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 const canUseCamera = Platform.OS !== 'web';
@@ -37,7 +38,7 @@ export function ProgressPhotosCard({ weighIns }: { weighIns: TrendPoint[] }) {
       <View style={s.head}>
         <Text style={[type.title, { flex: 1 }]}>Progress photos</Text>
         {Boolean(photos?.length) && (
-          <Pressable onPress={() => router.push('/photos')} style={s.linkTap} accessibilityLabel="See all photos"><Text style={s.link}>See all ›</Text></Pressable>
+          <Pressable onPress={() => router.push('/photos')} style={buttons.link} accessibilityLabel="See all photos"><Text style={s.link}>See all ›</Text></Pressable>
         )}
       </View>
       <Text style={type.small}>Only you can see these, even with family sharing on.</Text>
@@ -157,7 +158,6 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   head: { flexDirection: 'row', alignItems: 'center' },
   link: { color: color.accent, fontWeight: '700' },
-  linkTap: { minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: space(1) },
   section: { ...type.label, marginTop: space(2) },
   row: { flexDirection: 'row', gap: space(2) },
   chips: { flexDirection: 'row', gap: space(2) },

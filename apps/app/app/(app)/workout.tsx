@@ -918,7 +918,7 @@ function ExerciseCard(props: {
 
       {kind === 'cardio' && <CardioSummary e={e} unit={units.unit} />}
       <View style={s.cardFoot}>
-        <Pressable onPress={props.onAddSet} hitSlop={6}><Text style={s.addText}>{kind === 'cardio' ? '+ Add a bout' : '+ Add set'}</Text></Pressable>
+        <Pressable onPress={props.onAddSet} style={buttons.link}><Text style={s.addText}>{kind === 'cardio' ? '+ Add a bout' : '+ Add set'}</Text></Pressable>
         {e.exercise.kind === 'weight' && (
           <Pressable onPress={props.onWarmupSets} hitSlop={6} accessibilityLabel={`Add warm-up sets for ${e.exercise.name}`}><Text style={s.addText}>Warm-up sets</Text></Pressable>
         )}
@@ -926,7 +926,7 @@ function ExerciseCard(props: {
           <Pressable onPress={props.onPlates} hitSlop={6} accessibilityLabel={`What to load on the bar for ${e.exercise.name}`}><Text style={s.addText}>Plates</Text></Pressable>
         )}
         {e.sets.length > 0 && (
-          <Pressable onPress={props.onRemoveSet} hitSlop={6}><Text style={[s.addText, { color: color.ironSoft }]}>− Remove</Text></Pressable>
+          <Pressable onPress={props.onRemoveSet} style={buttons.link}><Text style={[s.addText, { color: color.ironSoft }]}>− Remove</Text></Pressable>
         )}
       </View>
     </View>

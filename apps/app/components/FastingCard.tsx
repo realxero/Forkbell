@@ -16,6 +16,7 @@ import { haptic } from '../lib/haptics';
 import { showToast } from '../lib/toast';
 import { Chip } from './AmountPicker';
 import { color, radius, space, type, textSize } from '../lib/theme';
+import { buttons } from '../lib/buttons';
 
 const PATH = '/api/wellbeing/fasts';
 
@@ -104,7 +105,7 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
             <Pressable onPress={() => void end()} style={[s.button, p.done && s.buttonOn]} accessibilityRole="button">
               <Text style={[s.buttonText, p.done && { color: color.onAccent }]}>{p.done ? 'End fast' : 'End early'}</Text>
             </Pressable>
-            <Pressable onPress={() => void remove()} hitSlop={8}><Text style={[type.small, { color: color.ironSoft }]}>Remove</Text></Pressable>
+            <Pressable onPress={() => void remove()} style={buttons.link}><Text style={[type.small, { color: color.ironSoft }]}>Remove</Text></Pressable>
           </View>
         )}
       </View>

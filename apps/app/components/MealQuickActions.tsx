@@ -146,7 +146,7 @@ function PhotoLog({ date, meal, onClose, onAdded }: { date: string; meal: Meal; 
       <View style={[s.page, { backgroundColor: color.chalk }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={type.title}>Photo for {MEAL_NAMES[meal]}</Text>
-          <Pressable onPress={onClose} hitSlop={10}><Text style={{ color: color.accent, fontWeight: '700', fontSize: textSize.body }}>{added ? 'Done' : 'Cancel'}</Text></Pressable>
+          <Pressable onPress={onClose} style={buttons.link}><Text style={{ color: color.accent, fontWeight: '700', fontSize: textSize.body }}>{added ? 'Done' : 'Cancel'}</Text></Pressable>
         </View>
         <ScrollView contentContainerStyle={{ gap: space(3), paddingBottom: space(10) }}>
           {!image ? (

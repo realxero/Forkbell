@@ -10,6 +10,7 @@ import { cachedGet } from '../../lib/sync';
 import { api } from '../../lib/api';
 import { useUnit } from '../../lib/units';
 import { color, space, type, textSize } from '../../lib/theme';
+import { buttons } from '../../lib/buttons';
 import { SkeletonCards } from '../../components/Skeleton';
 
 type Detail = {
@@ -226,7 +227,7 @@ function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { 
           <TextInput value={text} onChangeText={setText} keyboardType="decimal-pad" placeholder={`e.g. ${units.unit === 'kg' ? 100 : 225}`} placeholderTextColor={color.placeholder} style={s.goalInput} accessibilityLabel={`Goal in ${units.unit}`} autoFocus />
           <Text style={type.body}>{units.unit}</Text>
           <Pressable onPress={() => { const kg = units.read(text); if (kg) void store(kg); }} style={s.goalButton}><Text style={s.goalButtonText}>Save</Text></Pressable>
-          <Pressable onPress={() => setEditing(false)} hitSlop={10}><Text style={s.link}>Cancel</Text></Pressable>
+          <Pressable onPress={() => setEditing(false)} style={buttons.link}><Text style={s.link}>Cancel</Text></Pressable>
         </View>
       ) : goalKg ? (
         <>
@@ -242,8 +243,8 @@ function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { 
           </Text>
           {p?.status === 'projected' && <Text style={type.small}>An estimate from your last eight weeks, not a promise. Progress slows as you get stronger.</Text>}
           <View style={{ flexDirection: 'row', gap: space(4) }}>
-            <Pressable onPress={() => { setText(String(Math.round(fromKg(goalKg, units.unit)))); setEditing(true); }} hitSlop={10}><Text style={s.link}>Change</Text></Pressable>
-            <Pressable onPress={() => void store(null)} hitSlop={10}><Text style={[s.link, { color: color.ironSoft }]}>Remove</Text></Pressable>
+            <Pressable onPress={() => { setText(String(Math.round(fromKg(goalKg, units.unit)))); setEditing(true); }} style={buttons.link}><Text style={s.link}>Change</Text></Pressable>
+            <Pressable onPress={() => void store(null)} style={buttons.link}><Text style={[s.link, { color: color.ironSoft }]}>Remove</Text></Pressable>
           </View>
         </>
       ) : (
