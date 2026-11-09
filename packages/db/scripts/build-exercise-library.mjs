@@ -124,6 +124,17 @@ for (const [key, id] of Object.entries(CORE)) if (!byId.has(id)) throw new Error
 const coreIds = new Set(Object.values(CORE));
 
 const clean = (s) => s.replace(/\s+/g, ' ').trim();
+// Names read like the app's own ("Incline bench press"), not the source's Title
+// Case. Kept as they are: acronyms (EZ, DB), a single letter before a hyphen
+// (T-bar, V-up) and names of people and places.
+const PROPER = new Set(['Arnold', 'Turkish', 'Smith', 'Russian', 'Bradford', 'Olympic', 'Achilles', 'Rocky']);
+export const sentence = (name) => {
+  return name.replace(/[A-Za-z][A-Za-z']*/g, (w, at, all) => {
+    if (at === 0) return w;
+    if (PROPER.has(w) || /^[A-Z]{2,}$/.test(w) || (w.length === 1 && all[at + 1] === '-')) return w;
+    return w.toLowerCase();
+  });
+};
 const howTo = (e) => ({
   ref: e.id,
   level: e.level ?? null,
@@ -142,7 +153,7 @@ for (const e of raw) {
   const lower = ['quads', 'hamstrings', 'glutes'].includes(muscle) || muscle === 'full body';
   const increment = e.mechanic === 'compound' && lower && (equipment === 'barbell' || equipment === 'machine') ? 'large' : 'small';
   const restSeconds = kind === 'time' ? 60 : e.mechanic === 'compound' ? (equipment === 'barbell' ? 180 : 120) : 90;
-  library.push({ key: `lib:${e.id}`, name: clean(e.name), muscle, equipment, kind, increment, restSeconds, ...howTo(e) });
+  library.push({ key: `lib:${e.id}`, name: sentence(clean(e.name)), muscle, equipment, kind, increment, restSeconds, ...howTo(e) });
 }
 library.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -153,7 +164,7 @@ for (const e of raw) {
   const muscles = [...new Set([...(e.primaryMuscles ?? []), ...(e.secondaryMuscles ?? [])].map((m) => MUSCLE[m]).filter(Boolean))];
   stretches.push({
     key: `str:${e.id}`,
-    name: clean(e.name).replace(/\s*-\s*SMR$/, ' (foam roll)'),
+    name: sentence(clean(e.name).replace(/\s*-\s*SMR$/, ' (foam roll)')),
     kind,
     muscles: muscles.length ? muscles : ['full body'],
     equipment: kind === 'roll' ? 'foam roller' : (STRETCH_EQUIPMENT[e.equipment ?? 'body only'] ?? 'something to hold'),

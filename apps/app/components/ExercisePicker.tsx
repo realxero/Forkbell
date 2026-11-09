@@ -12,7 +12,8 @@ import { post } from '../lib/api';
 import { cachedGet, updateCache } from '../lib/sync';
 import { Chip } from './AmountPicker';
 import { ChipRow } from './ChipRow';
-import { color, space, type, textSize } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
+import { BackLink } from './BackLink';
 import { SkeletonRows } from './Skeleton';
 import { buttons } from '../lib/buttons';
 
@@ -92,9 +93,9 @@ export function ExercisePicker({
       <SafeAreaView style={s.screen}>
         {/* As a page it goes back like every other page; as a sheet over a workout it closes. */}
         {inline && !creating && (
-          <Pressable onPress={onClose} style={[buttons.link, { alignSelf: 'flex-start', marginLeft: space(4) }]}><Text style={s.link}>‹ Back</Text></Pressable>
+          <BackLink onPress={onClose} style={{ marginLeft: space(4), marginTop: space(4) }} />
         )}
-        <View style={s.head}>
+        <View style={[s.head, inline && !creating && { paddingTop: space(3) }]}>
           <Text style={inline && !creating ? type.pageTitle : type.title}>{creating ? 'New exercise' : title}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(4) }}>
             {!creating && (
@@ -205,17 +206,27 @@ const GEAR_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> 
 };
 
 /** The exercise's first how-to picture, or an icon for its equipment. */
+/**
+ * A light wash of the page colour over list thumbnails, so the source photos'
+ * bright gym walls sit in the chalk-and-iron palette instead of shouting over
+ * it. Big how-to pictures stay in full colour.
+ */
+export const wash = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: color.chalk, opacity: 0.22 } as const;
+
 export function Thumb({ e, size = 52 }: { e: Pick<Exercise, 'howToRef' | 'pictures' | 'equipment' | 'name'>; size?: number }) {
   const [failed, setFailed] = useState(false);
   if (e.howToRef && (e.pictures ?? 0) > 0 && !failed)
     return (
-      <Image
-        source={pictureSource(picturePath(e.howToRef, 0))}
-        onError={() => setFailed(true)}
-        style={{ width: size, height: size, borderRadius: 10, backgroundColor: color.raised }}
-        resizeMode="cover"
-        accessibilityLabel={`${e.name} start position`}
-      />
+      <View style={{ width: size, height: size, borderRadius: radius.input, overflow: 'hidden', backgroundColor: color.raised }}>
+        <Image
+          source={pictureSource(picturePath(e.howToRef, 0))}
+          onError={() => setFailed(true)}
+          style={{ width: size, height: size }}
+          resizeMode="cover"
+          accessibilityLabel={`${e.name} start position`}
+        />
+        <View style={wash} pointerEvents="none" />
+      </View>
     );
   return (
     <View style={{ width: size, height: size, borderRadius: 10, backgroundColor: color.raised, alignItems: 'center', justifyContent: 'center' }}>

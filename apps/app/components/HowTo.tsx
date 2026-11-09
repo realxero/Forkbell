@@ -41,7 +41,7 @@ export function CuesCard({ exercise }: { exercise: { name: string; muscle: strin
 }
 
 /** The movement, as its start and end positions fading into each other. */
-export function HowToFrames({ images, name }: { images: string[]; name: string }) {
+export function HowToFrames({ images, name, compact }: { images: string[]; name: string; compact?: boolean }) {
   const fade = useRef(new Animated.Value(0)).current;
   const [still, setStill] = useState(false);
 
@@ -71,12 +71,12 @@ export function HowToFrames({ images, name }: { images: string[]; name: string }
     return (
       <View style={s.pair} accessibilityRole="image" accessibilityLabel={`${name}: start and end positions`}>
         {images.slice(0, 2).map((p, i) => (
-          <Image key={p} source={src(p)} style={[s.frame, { flex: 1 }]} resizeMode="cover" accessibilityLabel={i === 0 ? 'Start position' : 'End position'} />
+          <Image key={p} source={src(p)} style={[s.frame, compact && s.compact, { flex: 1 }]} resizeMode="cover" accessibilityLabel={i === 0 ? 'Start position' : 'End position'} />
         ))}
       </View>
     );
   return (
-    <View style={s.stage} accessibilityRole="image" accessibilityLabel={`${name}, moving between the start and end positions`}>
+    <View style={[s.stage, compact && s.compact]} accessibilityRole="image" accessibilityLabel={`${name}, moving between the start and end positions`}>
       <Image source={src(images[0]!)} style={s.fill} resizeMode="cover" />
       <Animated.Image source={src(images[1]!)} style={[s.fill, { opacity: fade }]} resizeMode="cover" />
     </View>
@@ -89,7 +89,8 @@ export function HowToCard({ howTo, name, short }: { howTo: ExerciseHowTo; name: 
   const steps = all ? howTo.steps : howTo.steps.slice(0, 2);
   return (
     <View style={{ gap: space(3) }}>
-      <HowToFrames images={howTo.images} name={name} />
+      {/* Done it before: a shorter picture, since it's a reminder now. */}
+      <HowToFrames images={howTo.images} name={name} compact={short} />
       {(howTo.level || howTo.secondary.length > 0) && (
         <Text style={type.small}>
           {[howTo.level && `${howTo.level.charAt(0).toUpperCase()}${howTo.level.slice(1)}`, howTo.secondary.length && `also works ${howTo.secondary.join(', ')}`].filter(Boolean).join(' · ')}
@@ -148,6 +149,7 @@ const s = StyleSheet.create({
   stage: { width: '100%', aspectRatio: 3 / 2, borderRadius: radius.row, overflow: 'hidden', backgroundColor: color.raised },
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   pair: { flexDirection: 'row', gap: space(2) },
+  compact: { aspectRatio: 2.4 },
   frame: { aspectRatio: 3 / 2, borderRadius: radius.row, backgroundColor: color.raised },
   step: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
   num: { width: 24, height: 24, borderRadius: 12, overflow: 'hidden', textAlign: 'center', lineHeight: 24, fontWeight: '800', fontSize: textSize.small, color: color.onAccent, backgroundColor: color.accent },
