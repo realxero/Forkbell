@@ -1,0 +1,33 @@
+# Weekly dependency updates, grouped so they arrive as a few PRs, not dozens.
+# Security updates come separately and as soon as they're published.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    ignore:
+      # Expo pins these to its SDK; upgrade them together with
+      # `npx expo install --fix` when moving to a new SDK.
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly }
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly }
