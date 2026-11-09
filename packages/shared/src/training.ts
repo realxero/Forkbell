@@ -121,6 +121,8 @@ export interface Program {
   routines: Routine[];
   /** the routine that comes after the last one you finished */
   nextRoutineId: string | null;
+  /** made by someone coaching you (plan_write), not by you */
+  fromCoach?: boolean;
 }
 
 type RecordKind = 'weight' | 'e1rm' | 'reps' | 'volume' | 'time';

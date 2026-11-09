@@ -116,3 +116,32 @@ test('activating a program that is gone leaves the active one alone', async () =
   const programs = (list.programs ?? list.mine) as { id: string; active: boolean }[];
   assert.equal(programs.find((p) => p.id === id)?.active, true, 'still active');
 });
+
+test('a coach (plan_write) builds programs for you; only you start one, and your workouts stay yours', async () => {
+  const client = await newUser('Client');
+  const coach = await newUser('Coach');
+  const invite = await client.call('POST', '/api/shares/invites', { permissions: ['plan_write'] });
+  assert.equal(invite.status, 201, invite.text);
+  assert.equal((await coach.call('POST', '/api/shares/accept', { code: invite.body.code })).status, 200);
+  const { sharingWith } = (await client.call('GET', '/api/shares')).body as { sharingWith: { permissions: string[] }[] };
+  assert.deepEqual(sharingWith[0]!.permissions.sort(), ['plan_write', 'training_read'], 'planning training includes seeing it');
+
+  const asCoach = (method: string, p: string, body?: unknown) =>
+    fetch(`${BASE}${p}`, {
+      method,
+      headers: { authorization: `Bearer ${coach.token}`, 'x-forkbell-profile': client.id, ...(body ? { 'content-type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(async (r) => ({ status: r.status, body: await r.json().catch(() => null) }));
+  const made = await asCoach('POST', '/api/programs', { name: 'Coach plan' });
+  assert.equal(made.status, 201);
+  const day = await asCoach('POST', `/api/programs/${made.body.id}/routines`, { name: 'Lower' });
+  assert.equal(day.status, 201);
+  assert.equal((await asCoach('POST', `/api/programs/${made.body.id}/activate`, {})).status, 403, 'only the client starts a program');
+  assert.equal((await asCoach('POST', '/api/workouts', { date: '2026-10-20' })).status, 403, 'a coach never logs workouts');
+
+  const mine = (await client.call('GET', '/api/programs')).body.programs as { id: string; active: boolean; fromCoach?: boolean }[];
+  const plan = mine.find((p) => p.id === made.body.id)!;
+  assert.equal(plan.fromCoach, true, 'marked as from the coach');
+  assert.equal(plan.active, false, 'waiting for the client');
+  assert.equal((await client.call('POST', `/api/programs/${plan.id}/activate`, {})).status, 200);
+});

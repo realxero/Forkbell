@@ -96,6 +96,8 @@ export const programs = pgTable('programs', {
   name: text('name').notNull(),
   active: boolean('active').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  /** who made it: the owner, or a coach with plan_write (set by the database) */
+  createdBy: uuid('created_by'),
 });
 
 export const routines = pgTable('routines', {

@@ -142,7 +142,7 @@ export interface GoalPlan {
 export const MIN_SUGGESTED_KCAL = 1200;
 
 export function planGoal(opts: { currentKg: number; goalKg: number; goalDate: string | null; today: string; energy: EnergyEstimate; unit?: WeightUnit }): GoalPlan {
-  const { currentKg, goalKg, goalDate, today, energy, unit = 'kg' } = opts;
+  const { currentKg, goalKg, goalDate, today, energy, unit = 'lb' } = opts;
   const remainingKg = goalKg - currentKg;
   const warnings: string[] = [];
   const reached = Math.abs(remainingKg) < 0.3;

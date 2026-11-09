@@ -7,6 +7,8 @@ import type { AppEnv } from '../auth.ts';
 import { isMissingExercise, loadRoutines, nextRoutineId } from '../training.ts';
 
 const isUuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
+/** Planning someone else's training (a coach with plan_write), not your own. */
+const coaching = (c: { get: (k: 'userId' | 'profileId') => string }) => c.get('profileId') !== c.get('userId');
 const nameSchema = z.object({ name: z.string().trim().min(1).max(120) });
 
 async function activate(tx: Tx, id: string) {
@@ -29,7 +31,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
       const out: Program[] = [];
       for (const p of rows) {
         const rs = byProgram.get(p.id) ?? [];
-        out.push({ id: p.id, name: p.name, active: p.active, routines: rs, nextRoutineId: p.active ? await nextRoutineId(tx, rs) : null });
+        out.push({ id: p.id, name: p.name, active: p.active, routines: rs, nextRoutineId: p.active ? await nextRoutineId(tx, rs) : null, fromCoach: p.createdBy !== null && p.createdBy !== p.userId });
       }
       return out;
     });
@@ -55,6 +57,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
             items.map(([k, sets, repMin, repMax], i) => ({ routineId: row!.id, exerciseId: byKey.get(k)!.id, position: i, sets, repMin, repMax, restSeconds: byKey.get(k)!.rest }) as typeof routineExercises.$inferInsert),
           );
       }
+      if (coaching(c)) return p!.id; // a coach makes it; they choose when to start it
       await activate(tx, p!.id);
       return p!.id;
     });
@@ -67,7 +70,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
     if (!parsed.success) return c.json({ error: 'Give the program a name.' }, 400);
     const id = await asUser(c.get('profileId'), async (tx) => {
       const [p] = await tx.insert(programs).values({ name: parsed.data.name, active: false } as typeof programs.$inferInsert).returning({ id: programs.id });
-      await activate(tx, p!.id);
+      if (!coaching(c)) await activate(tx, p!.id);
       return p!.id;
     });
     return c.json({ id }, 201);
@@ -76,6 +79,7 @@ export function programRoutes({ asUser }: ReturnType<typeof connect>) {
   r.post('/:id/activate', async (c) => {
     const id = c.req.param('id');
     if (!isUuid(id)) return c.json({ error: 'That program was not found.' }, 404);
+    if (coaching(c)) return c.json({ error: 'Only they can choose which program to run.' }, 403);
     const done = await asUser(c.get('profileId'), (tx) => activate(tx, id));
     return done.length ? c.json({ ok: true }) : c.json({ error: 'That program was not found.' }, 404);
   });

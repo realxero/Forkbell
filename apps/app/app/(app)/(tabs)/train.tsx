@@ -160,7 +160,7 @@ export default function Train() {
         ) : program && next ? (
           <View style={s.card}>
             <Pressable onPress={() => router.push('/programs')} hitSlop={8} style={s.programLink} accessibilityLabel={`${program.name}. Programs`}>
-              <Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>{program.name}</Text>
+              <Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>{program.name}{program.fromCoach ? ' · from your coach' : ''}</Text>
               <Ionicons name="chevron-forward" size={14} color={color.accent} />
             </Pressable>
             <Text style={type.title}>{pick ? next.name : `Next up: ${next.name}`}</Text>

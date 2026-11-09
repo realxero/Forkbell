@@ -75,8 +75,8 @@ export function foodCheckIn(w: FoodWeek): FoodCheckIn {
   // Turn the difference into calories a day, in steps of 50, at most 300 at a time.
   const perDay = Math.max(-300, Math.min(300, Math.round(((gap * KCAL_PER_KG) / 7) / 50) * 50));
   const fmt = (kg: number) => {
-    const v = w.unit === 'lb' ? kg * 2.20462 : kg;
-    return `${v > 0 ? '+' : ''}${v.toFixed(1)} ${w.unit ?? 'kg'}`;
+    const v = (w.unit ?? 'lb') === 'lb' ? kg * 2.20462 : kg;
+    return `${v > 0 ? '+' : ''}${v.toFixed(1)} ${w.unit ?? 'lb'}`;
   };
   const parts = `You averaged ${avgKcal!.toLocaleString()} kcal on ${logged.length} days against a burn of about ${w.burn.toLocaleString()}. Your trend moved ${fmt(actualKg)} this week${targetKg ? ` (plan: ${fmt(targetKg)})` : ''}.`;
 

@@ -81,8 +81,9 @@ const SHAREABLE: [prefix: string, read: string, write: string | null][] = [
   ['/api/recipes', 'food_read', 'food_write'],
   ['/api/workouts', 'training_read', null],
   ['/api/exercises', 'training_read', null],
-  ['/api/programs', 'training_read', null],
-  ['/api/routines', 'training_read', null],
+  // A coach (plan_write) can build programs; logged workouts stay yours alone.
+  ['/api/programs', 'training_read', 'plan_write'],
+  ['/api/routines', 'training_read', 'plan_write'],
   ['/api/progress', 'progress_read', null],
   ['/api/wellbeing', 'wellbeing_read', null],
 ];
