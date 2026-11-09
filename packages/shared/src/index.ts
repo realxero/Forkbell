@@ -18,6 +18,7 @@ export * from './reminders.ts';
 export * from './checkins.ts';
 export * from './patterns.ts';
 export * from './targets.ts';
+export * from './body.ts';
 export * from './food-sources.ts';
 export * from './cues.ts';
 export * from './form.ts';
