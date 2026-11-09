@@ -15,9 +15,9 @@ jobs:
       DATABASE_URL: postgres://forkbell_app:ci-app@localhost:5432/forkbell
       APP_DB_PASSWORD: ci-app
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with: { node-version-file: .nvmrc, check-latest: true, cache: pnpm }
       - name: Node version has no known security holes
         run: node scripts/check-node.mjs
@@ -65,7 +65,7 @@ jobs:
           npm run monkey
       - name: Keep the monkey report and the server log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: |
