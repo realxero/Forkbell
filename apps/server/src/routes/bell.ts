@@ -4,6 +4,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { fasts, users, waterEntries, type connect } from '@forkbell/db';
 import { z } from 'zod';
 import { BIG_JUMP, fastProgress, hoursText, waterGoalMl, waterText, supersetLetter, KOKORO_VOICES, TTS_VOICE, bellChatSchema, extractJson, incrementKg, jumpShare, progressIdeas, type Workout, labelReadSchema, labelToFood, preferencesSchema, type BellQuestion, type BellReply, type FoodProposal } from '@forkbell/shared';
+import { perWindow } from '../limit.ts';
 import type { AppEnv } from '../auth.ts';
 import { anthropic, openai, type ToolCall } from '../bell/providers.ts';
 import { aiConfigFor, customAllowed } from '../bell/config.ts';
@@ -28,24 +29,12 @@ function within<T>(work: Promise<T>, deadline: number): Promise<T> {
   return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }
 // A simple guard against runaway costs: 40 messages per person per 10 minutes.
-const recent = new Map<string, number[]>();
-function allowed(userId: string) {
-  const now = Date.now();
-  const list = (recent.get(userId) ?? []).filter((t) => now - t < 10 * 60 * 1000);
-  if (list.length >= 40) return false;
-  recent.set(userId, [...list, now]);
-  return true;
-}
+const recent = perWindow(40, 10 * 60_000);
+const allowed = (userId: string) => recent.take(userId);
 
 // Bell's voice from your speech server: generous, but not unlimited (each one is GPU time).
-const spoken = new Map<string, number[]>();
-function mayspeak(userId: string) {
-  const now = Date.now();
-  const list = (spoken.get(userId) ?? []).filter((t) => now - t < 10 * 60 * 1000);
-  if (list.length >= 150) return false;
-  spoken.set(userId, [...list, now]);
-  return true;
-}
+const spoken = perWindow(150, 10 * 60_000);
+const mayspeak = (userId: string) => spoken.take(userId);
 const ttsHeaders = () => ({ 'content-type': 'application/json', ...(env.tts.apiKey ? { authorization: `Bearer ${env.tts.apiKey}` } : {}) });
 
 const labelSchema = z.object({ image: z.string().max(4_000_000).regex(/^data:image\/(jpeg|png|webp|gif);base64,/, 'Send a JPEG, PNG, WebP or GIF photo.') });

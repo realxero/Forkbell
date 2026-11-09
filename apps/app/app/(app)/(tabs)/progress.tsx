@@ -93,15 +93,20 @@ export default function ProgressScreen() {
   const goalY = useRef(0);
   const recap = useRecap();
 
+  // Only the latest load counts: a slow answer for someone you were viewing a moment
+  // ago must not fill in their chart, or their weight in your weigh-in box.
+  const loadId = useRef(0);
   const load = useCallback(async () => {
+    const mine = ++loadId.current;
     try {
       const data = await cachedGet<Progress>(`/api/progress?today=${todayLocal()}`);
+      if (mine !== loadId.current) return;
       setP(data);
       const todays = data.weighIns.find((w) => w.date === data.today);
       setWeight(todays ? units.show(todays.weightKg) : '');
       setLoadError(null);
     } catch (e) {
-      setLoadError(problem(e));
+      if (mine === loadId.current) setLoadError(problem(e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [units.unit, viewing]);
