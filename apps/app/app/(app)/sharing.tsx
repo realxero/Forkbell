@@ -21,8 +21,8 @@ const PERMS: { key: Perm; label: string }[] = [
   { key: 'training_read', label: 'See workouts' },
   { key: 'progress_read', label: 'See weight and progress' },
   { key: 'wellbeing_read', label: 'See sleep, mood and medications' },
-  { key: 'plan_write', label: 'Plan my training (a coach)' },
-  { key: 'food_plan', label: 'Plan my food (a coach)' },
+  { key: 'plan_write', label: 'Plan my training (a coach; includes seeing workouts)' },
+  { key: 'food_plan', label: 'Plan my food (a coach; includes seeing food)' },
 ];
 const describe = (p: Perm[]) => PERMS.filter((x) => p.includes(x.key)).map((x) => x.label.toLowerCase()).join(', ');
 

@@ -148,13 +148,25 @@ try {
   const day = (await asBobViewingAlice((tx) => tx`insert into routines (program_id, name, position) values (${fromBob.id}, 'Push', 0) returning id`))[0]!.id as string;
   assert.equal((await asBobViewingAlice((tx) => tx`update routines set name = 'Push A' where id = ${day} returning id`)).length, 1, 'Bob can change the days he planned');
   await assert.rejects(asBobViewingAlice((tx) => tx`update programs set active = true where id = ${fromBob.id}`), 'only Alice starts a program');
-  await assert.rejects(asBobViewingAlice((tx) => tx`update programs set active = false where id = ${alicesOwn}`), 'or stops one');
+  assert.equal((await asBobViewingAlice((tx) => tx`update programs set active = false where id = ${alicesOwn} returning id`)).length, 0, 'or stops one (her own programs are out of his reach)');
   await assert.rejects(asBobViewingAlice((tx) => tx`insert into programs (name, active) values ('Sneaky', true)`), 'a coach cannot add one already running');
   const forged = (await asBobViewingAlice((tx) => tx`insert into programs (name, created_by) values ('Forged', ${alice}) returning id, created_by`))[0]!;
   assert.equal(forged.created_by, bob, 'created_by is always whoever is signed in');
   await asBobViewingAlice((tx) => tx`delete from programs where id = ${forged.id}`);
   await assert.rejects(asBobViewingAlice((tx) => tx`insert into workouts (date, name) values ('2026-10-22', 'Not his')`), 'plan_write never logs her workouts');
   assert.equal((await asBobViewingAlice((tx) => tx`delete from programs where id = ${alicesOwn} returning id`)).length, 0, "Bob can't delete Alice's own program");
+  // Her own program's days are hers alone; his program's days are his to change.
+  const herDay = (await as(alice, (tx) => tx`insert into routines (program_id, name, position) values (${alicesOwn}, 'Her day', 0) returning id`))[0]!.id as string;
+  assert.equal((await asBobViewingAlice((tx) => tx`update routines set name = 'Changed' where id = ${herDay} returning id`)).length, 0, "Bob can't change her own program's days");
+  assert.equal((await asBobViewingAlice((tx) => tx`delete from routines where id = ${herDay} returning id`)).length, 0, "or delete them");
+  await assert.rejects(asBobViewingAlice((tx) => tx`insert into routines (program_id, name, position) values (${alicesOwn}, 'Sneaked in', 1)`), 'or add days to her program');
+  assert.equal((await asBobViewingAlice((tx) => tx`update programs set name = 'Renamed' where id = ${alicesOwn} returning id`)).length, 0, 'or rename it');
+  await assert.rejects(asBobViewingAlice((tx) => tx`update programs set created_by = null where id = ${fromBob.id}`), "and can't erase that he made his");
+  await as(alice, (tx) => tx`update programs set active = false where id = ${alicesOwn}`);
+  await as(alice, (tx) => tx`update programs set active = true where id = ${fromBob.id}`);
+  assert.equal((await asBobViewingAlice((tx) => tx`delete from programs where id = ${fromBob.id} returning id`)).length, 0, "not while she's running it");
+  await as(alice, (tx) => tx`update programs set active = false where id = ${fromBob.id}`);
+  await as(alice, (tx) => tx`update programs set active = true where id = ${alicesOwn}`);
   assert.equal((await asBobViewingAlice((tx) => tx`delete from programs where id = ${fromBob.id} returning id`)).length, 1, 'but can delete one he made');
 
   // Planning food: food_plan keeps her meal plan and suggests targets, never logs or sets her goals.

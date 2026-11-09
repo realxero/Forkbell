@@ -11,7 +11,7 @@ import { Pressable } from '../../components/Tap';
 import { Chip } from '../../components/AmountPicker';
 import { cachedGet, send } from '../../lib/sync';
 import { MEAL_NAMES, shownMeals } from '../../lib/meals';
-import { useViewing } from '../../lib/profile';
+import { getViewing, useViewing } from '../../lib/profile';
 import { buttons } from '../../lib/buttons';
 import { color, radius, space, type } from '../../lib/theme';
 
@@ -37,9 +37,11 @@ export default function MealPlan() {
     // Shows straight away; sent now, or when there's a connection.
     setCells((all) => [...all.filter((c) => !(c.weekday === next.weekday && c.meal === next.meal)), ...(next.note || next.savedMealId ? [next] : [])]);
     try {
-      await send('PUT', '/api/plans/meal-plan', { weekday: next.weekday, meal: next.meal, note: next.note || null, savedMealId: next.savedMealId }, { label: `Plan ${MEAL_NAMES[next.meal]}`, coalesceKey: `plan:${next.weekday}:${next.meal}` });
+      await send('PUT', '/api/plans/meal-plan', { weekday: next.weekday, meal: next.meal, note: next.note || null, savedMealId: next.savedMealId }, { label: `Plan ${MEAL_NAMES[next.meal]}`, coalesceKey: `plan:${viewing?.id ?? 'me'}:${next.weekday}:${next.meal}` });
     } catch (e) {
+      // Refused (a share ended, bad data): show what's really saved again.
       setError(e instanceof Error ? e.message : String(e));
+      load();
     }
   };
 
@@ -119,7 +121,7 @@ function Suggestion({ coaching }: { coaching: boolean }) {
         setCurrent(r.suggestion);
         const g = r.suggestion;
         if (g) setForm({ kcal: String(g.kcal), protein: g.protein?.toString() ?? '', carbs: g.carbs?.toString() ?? '', fat: g.fat?.toString() ?? '', note: g.note ?? '' });
-      }, () => {});
+      }, (e) => setStatus(`Couldn’t load the current suggestion (${e instanceof Error ? e.message : String(e)}), so saving would replace one you can’t see.`));
     }, []),
   );
   if (!coaching) {
@@ -130,8 +132,8 @@ function Suggestion({ coaching }: { coaching: boolean }) {
     const kcal = num(form.kcal);
     if (!kcal || kcal < 800) return setStatus('Calories from 800 up.');
     try {
-      await send('PUT', '/api/plans/coach-targets', { kcal: Math.round(kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat), note: form.note.trim() || null }, { label: 'Suggest targets', coalesceKey: 'coach-targets' });
-      setStatus('Suggested. They’ll see it on Today.');
+      const r = await send('PUT', '/api/plans/coach-targets', { kcal: Math.round(kcal), protein: num(form.protein), carbs: num(form.carbs), fat: num(form.fat), note: form.note.trim() || null }, { label: 'Suggest targets', coalesceKey: `coach-targets:${getViewing()?.id ?? 'me'}` });
+      setStatus(r.queued ? 'Saved on this device. It’s sent when you’re back online.' : 'Suggested. They’ll see it on Today.');
     } catch (e) {
       setStatus(e instanceof Error ? e.message : String(e));
     }

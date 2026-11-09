@@ -55,13 +55,15 @@ export default function Programs() {
   const active = data?.programs.find((p) => p.active);
   const cards = coaching ? (data?.programs ?? []) : active ? [active] : [];
   const others = coaching ? [] : (data?.programs.filter((p) => !p.active) ?? []);
+  // Viewing someone's training without planning rights: look, don't touch.
+  const readOnly = Boolean(viewing) && !coaching;
 
   return (
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.head}>
           <Text style={type.title}>Programs</Text>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Pressable onPress={() => router.back()} style={s.tap} accessibilityRole="button">
             <Text style={s.link}>Done</Text>
           </Pressable>
         </View>
@@ -89,7 +91,7 @@ export default function Programs() {
                 <Text style={s.link}>Edit</Text>
               </Pressable>
             ))}
-            <View style={s.inline}>
+            {!readOnly && <View style={s.inline}>
               <TextInput value={dayNames[active.id] ?? ''} onChangeText={(t) => setDayNames({ ...dayNames, [active.id]: t })} placeholder="New day, e.g. Arms" placeholderTextColor={color.placeholder} accessibilityLabel={`New day for ${active.name}`} style={[s.input, { flex: 1 }]} />
               <Pressable
                 disabled={!dayNames[active.id]?.trim() || busy}
@@ -98,7 +100,7 @@ export default function Programs() {
               >
                 <Text style={s.smallText}>Add day</Text>
               </Pressable>
-            </View>
+            </View>}
             {coaching && active.fromCoach && (
               <Pressable
                 disabled={busy}
@@ -120,7 +122,8 @@ export default function Programs() {
               <Text style={type.body}>{p.name}</Text>
               <Text style={type.small}>{p.routines.length} days{p.fromCoach ? ' · from your coach' : ''}</Text>
             </View>
-            <Pressable disabled={busy} onPress={() => run(() => post(`/api/programs/${p.id}/activate`, {}))} hitSlop={6}>
+            {!readOnly && <>
+            <Pressable disabled={busy} onPress={() => run(() => post(`/api/programs/${p.id}/activate`, {}))} style={s.tap} accessibilityRole="button" accessibilityLabel={`Use ${p.name}`}>
               <Text style={s.link}>Use</Text>
             </Pressable>
             <Pressable
@@ -128,13 +131,17 @@ export default function Programs() {
               onPress={async () => {
                 if (await confirm('Delete this program?', 'Past workouts stay in your history.', 'Delete')) run(() => del(`/api/programs/${p.id}`));
               }}
-              hitSlop={6}
+              style={s.tap}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete ${p.name}`}
             >
               <Text style={[s.link, { color: color.over }]}>Delete</Text>
             </Pressable>
+            </>}
           </View>
         ))}
 
+        {!readOnly && <>
         <Text style={s.section}>Starter programs</Text>
         <Text style={type.small}>Copied into your programs, so you can change anything afterwards.</Text>
         {data?.starters.map((st) => (
@@ -150,7 +157,7 @@ export default function Programs() {
 
         <Text style={s.section}>Build your own</Text>
         <View style={s.inline}>
-          <TextInput value={newName} onChangeText={setNewName} placeholder="Program name" style={[s.input, { flex: 1 }]} />
+          <TextInput value={newName} onChangeText={setNewName} placeholder="Program name" placeholderTextColor={color.placeholder} accessibilityLabel="New program name" style={[s.input, { flex: 1 }]} />
           <Pressable
             disabled={!newName.trim() || busy}
             onPress={() => run(async () => { await post('/api/programs', { name: newName }); setNewName(''); })}
@@ -159,6 +166,7 @@ export default function Programs() {
             <Text style={s.smallText}>Create</Text>
           </Pressable>
         </View>
+        </>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -179,5 +187,6 @@ const s = StyleSheet.create({
   smallText: { ...buttons.smallText },
   button: { ...buttons.filled, marginTop: space(1) },
   buttonText: { ...buttons.filledText },
+  tap: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
   badge: { ...type.label, color: color.accent, backgroundColor: color.infoBg, paddingHorizontal: space(2), paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
 });

@@ -9,6 +9,8 @@ import { perWindow } from '../limit.ts';
 
 // Invite codes are short, so guessing is capped: 10 wrong codes per person per hour.
 const wrongCodes = perWindow(10, 60 * 60_000);
+// And across the whole server, so making many accounts doesn't buy more guesses (a code can grant coaching).
+const wrongCodesEverywhere = perWindow(100, 60 * 60_000);
 
 const PERMISSIONS = ['food_read', 'food_write', 'training_read', 'progress_read', 'wellbeing_read', 'plan_write', 'food_plan'] as const;
 const permsSchema = z
@@ -62,14 +64,17 @@ export function shareRoutes({ asUser }: ReturnType<typeof connect>) {
   r.post('/accept', async (c) => {
     const parsed = z.object({ code: z.string().trim().min(8).max(12) }).safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: 'Enter the 8-character code.' }, 400);
-    if (wrongCodes.full(me(c))) return c.json({ error: 'Too many wrong codes. Try again in an hour.' }, 429);
+    if (wrongCodes.full(me(c)) || wrongCodesEverywhere.full('all')) return c.json({ error: 'Too many wrong codes. Try again in an hour.' }, 429);
     try {
       await asUser(me(c), (tx) => tx.execute(sql`select accept_share_invite(${hashCode(parsed.data.code)})`));
       return c.json({ ok: true });
     } catch (e) {
       const msg = JSON.stringify(e, Object.getOwnPropertyNames(e)) + String((e as { cause?: unknown }).cause ?? '');
       if (msg.includes('your own invite')) return c.json({ error: 'That’s your own invite. Send it to the person you want to share with.' }, 400);
-      if (msg.includes('not found or expired')) wrongCodes.take(me(c));
+      if (msg.includes('not found or expired')) {
+        wrongCodes.take(me(c));
+        wrongCodesEverywhere.take('all');
+      }
       if (msg.includes('not found or expired')) return c.json({ error: 'That code isn’t valid, was already used, or has expired.' }, 404);
       throw e;
     }

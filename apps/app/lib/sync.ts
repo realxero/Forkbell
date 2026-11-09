@@ -196,7 +196,7 @@ export function setSyncOwner(id: string | null) {
  * neither sends nor sees any of it. Settings that belong to the phone
  * (theme, sounds, the health connection, ...) stay.
  */
-const PERSONAL_DEVICE_KEYS = ['device:bell-chat', 'device:shopping', 'device:checkin:', 'device:fast-asked', 'device:rest-asked', 'device:streak-cheers'];
+const PERSONAL_DEVICE_KEYS = ['device:tools-about', 'device:bell-chat', 'device:shopping', 'device:checkin:', 'device:fast-asked', 'device:rest-asked', 'device:streak-cheers'];
 export async function forgetAccount() {
   await initSync();
   state.outbox = state.outbox.filter((o) => o.userId && o.userId !== owner);

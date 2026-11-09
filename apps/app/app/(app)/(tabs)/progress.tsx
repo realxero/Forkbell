@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
 import { put } from '../../../lib/api';
 import { cachedGet, readCache, send, writeCache } from '../../../lib/sync';
-import { useWide } from '../../../lib/layout';
+import { useAdvanced, useWide } from '../../../lib/layout';
 import { saveWeighIn } from '../../../lib/actions';
 import { useAuth } from '../../../lib/auth';
 import { useUnit } from '../../../lib/units';
@@ -52,8 +52,6 @@ type GoalBody = { goalWeightKg: number | null; goalDate: string | null; weeklyWo
 /** Saves something and resolves to null, or to plain words saying why it didn't save. */
 type Submit<T> = (value: T) => Promise<string | null>;
 
-/** Simple or Advanced on wide screens, shared with Tools and remembered on this device. */
-const DETAIL = 'device:tools-detail';
 const CM_PER_IN = 2.54;
 const RANGES = [
   { label: '1 month', days: 31 },
@@ -88,7 +86,7 @@ export default function ProgressScreen() {
   // Wide screens: three columns, and Simple (the headline cards) or Advanced (everything).
   // Phones always show everything, one column, as before.
   const wide = useWide();
-  const [advanced, setAdvanced] = useState(readCache<boolean>(DETAIL) ?? false);
+  const [advanced, setAdvanced] = useAdvanced();
   const full = !wide || advanced;
   const { me, refreshMe } = useAuth();
   const [p, setP] = useState<Progress | null>(null);
@@ -186,8 +184,8 @@ export default function ProgressScreen() {
           <Text style={[type.pageTitle, { flex: 1 }]}>Progress</Text>
           {wide && (
             <View style={{ flexDirection: 'row', gap: space(2) }} accessibilityRole="radiogroup" accessibilityLabel="Detail">
-              <Chip label="Simple" on={!advanced} onPress={() => { setAdvanced(false); writeCache(DETAIL, false); }} />
-              <Chip label="Advanced" on={advanced} onPress={() => { setAdvanced(true); writeCache(DETAIL, true); }} />
+              <Chip label="Simple" on={!advanced} onPress={() => setAdvanced(false)} />
+              <Chip label="Advanced" on={advanced} onPress={() => setAdvanced(true)} />
             </View>
           )}
         </View>

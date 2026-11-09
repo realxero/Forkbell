@@ -100,14 +100,18 @@ export default function Diary() {
   const [suggestion, setSuggestion] = useState<TargetSuggestion | null>(null);
   useFocusEffect(
     useCallback(() => {
-      cachedGet<{ cells: MealPlanCell[] }>('/api/plans/meal-plan').then((r) => setPlan(r.cells), () => setPlan([]));
-      cachedGet<{ meals: SavedMeal[] }>('/api/meals').then((r) => setSavedMeals(r.meals), () => {});
-      if (!viewing) cachedGet<{ suggestion: TargetSuggestion | null }>('/api/plans/coach-targets').then((r) => setSuggestion(r.suggestion), () => {});
+      // A failed load keeps what's on screen (offline with nothing saved yet is normal); anything else is logged.
+      const quiet = (what: string) => (e: unknown) => console.warn(`Couldn't load ${what}`, e);
+      cachedGet<{ cells: MealPlanCell[] }>('/api/plans/meal-plan').then((r) => setPlan(r.cells), quiet('the meal plan'));
+      cachedGet<{ meals: SavedMeal[] }>('/api/meals').then((r) => setSavedMeals(r.meals), quiet('saved meals'));
+      if (!viewing) cachedGet<{ suggestion: TargetSuggestion | null }>('/api/plans/coach-targets').then((r) => setSuggestion(r.suggestion), quiet('suggested targets'));
     }, [viewing]),
   );
   const weekday = new Date(`${date}T12:00:00`).getDay();
   const planFor = (meal: Meal) => plan.find((c) => c.weekday === weekday && c.meal === meal);
   const foodCoach = Boolean(viewing?.permissions?.includes('food_plan'));
+  /** meals being logged from the plan, so a second tap can't log them twice */
+  const [logging, setLogging] = useState<Meal | null>(null);
   const answerSuggestion = async (apply: boolean) => {
     const g = suggestion!;
     setSuggestion(null);
@@ -335,7 +339,7 @@ export default function Diary() {
                           Planned{planned.fromCoach ? ' by your coach' : ''}: {[planned.note, saved?.name].filter(Boolean).join(' · ')}
                         </Text>
                         {saved && canWrite && (
-                          <Pressable onPress={() => void logItems(date, meal, saved.items).then(load)} style={s.finishLink} accessibilityRole="button" accessibilityLabel={`Log ${saved.name}`}>
+                          <Pressable disabled={logging === meal} onPress={() => { setLogging(meal); void logItems(date, meal, saved.items).catch((e) => showToast(`Couldn’t log ${saved.name}: ${message(e)}`)).finally(() => { setLogging(null); void load(); }); }} style={s.finishLink} accessibilityRole="button" accessibilityLabel={`Log ${saved.name}`}>
                             <Text style={s.link}>Log it</Text>
                           </Pressable>
                         )}
