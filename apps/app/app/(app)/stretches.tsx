@@ -13,12 +13,20 @@ import { cachedGet } from '../../lib/sync';
 import { pictureSource } from '../../lib/picture-cache';
 import { formatDuration } from '../../lib/units';
 import { Chip } from '../../components/AmountPicker';
+import { ChipRow } from '../../components/ChipRow';
+import { buttons } from '../../lib/buttons';
 import { HowToCard } from '../../components/HowTo';
 import { StretchSession } from '../../components/StretchSession';
 import { color, radius, space, type, textSize } from '../../lib/theme';
 import { SkeletonRows } from '../../components/Skeleton';
 
 const CREDIT = 'Steps and pictures: Free Exercise DB (public domain)';
+const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+/** Only what's different about a move: both sides, or something it needs. */
+const differs = (x: Stretch) => [
+  ...(x.sides ? ['each side'] : []),
+  ...(x.equipment !== 'none' && x.kind !== 'roll' ? [x.equipment === 'something to hold' ? 'needs something to hold' : `needs a ${x.equipment}`] : []),
+];
 const BODY = MUSCLES.filter((m) => m !== 'full body');
 
 export default function Stretches() {
@@ -55,24 +63,24 @@ export default function Stretches() {
   return (
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
+        <Pressable onPress={() => router.back()} style={[buttons.link, { alignSelf: 'flex-start' }]}><Text style={s.link}>‹ Back</Text></Pressable>
         <Text style={type.pageTitle}>Warm-up and stretches</Text>
         <View style={s.tabs} accessibilityRole="tablist">
           {STRETCH_KINDS.map((k) => (
             <Pressable key={k.kind} onPress={() => setKind(k.kind)} style={[s.tab, kind === k.kind && s.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: kind === k.kind }}>
-              <Text style={[s.tabText, kind === k.kind && { color: color.onAccent }]}>{k.label}</Text>
+              <Text style={[s.tabText, kind === k.kind && { color: color.chalk }]}>{k.label}</Text>
             </Pressable>
           ))}
         </View>
-        <Text style={type.small}>{info.when}</Text>
+        {/* The usual timing once here, so each row only says what's different about it. */}
+        <Text style={type.small}>{info.when} Each one: {stretchDose({ kind, sides: false }).label.replace(/^Hold /, 'hold ')}.</Text>
 
-        <Text style={type.label}>For</Text>
-        <View style={s.chips}>
+        <ChipRow>
           <Chip label="Everything" on={!muscles.length} onPress={() => setMuscles([])} />
           {BODY.map((m) => (
-            <Chip role="checkbox" key={m} label={m} on={muscles.includes(m)} onPress={() => setMuscles((list) => (list.includes(m) ? list.filter((x) => x !== m) : [...list, m]))} />
+            <Chip role="checkbox" key={m} label={cap(m)} on={muscles.includes(m)} onPress={() => setMuscles((list) => (list.includes(m) ? list.filter((x) => x !== m) : [...list, m]))} />
           ))}
-        </View>
+        </ChipRow>
         {kind !== 'roll' && (
           <View style={s.row}>
             <Text style={[type.body, { flex: 1 }]}>Include ones that need a chair, ball or wall</Text>
@@ -84,11 +92,11 @@ export default function Stretches() {
         {!all && !error && <SkeletonRows rows={5} />}
         {routine.length > 0 && (
           <Pressable onPress={() => setSession(routine)} style={s.start} accessibilityHint="Starts a guided routine with a timer">
-            <Ionicons name="play" size={20} color={color.onAccent} />
+            <Ionicons name="play" size={20} color={color.chalk} />
             <View style={{ flex: 1 }}>
               <Text style={s.startText}>Start a {info.label.toLowerCase()} routine</Text>
-              <Text style={[type.small, { color: color.onAccent }]} numberOfLines={2}>
-                {routine.length} moves · about {minutes} min · {routine.map((r) => r.name).join(', ')}
+              <Text style={[type.small, { color: color.chalk }]}>
+                {routine.length} moves · about {minutes} min
               </Text>
             </View>
           </Pressable>
@@ -100,7 +108,7 @@ export default function Stretches() {
             <Image source={pictureSource(picturePath(x.howToRef, 0))} style={s.thumb} accessibilityIgnoresInvertColors />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={[type.body, { fontWeight: '700' }]}>{x.name}</Text>
-              <Text style={type.small}>{x.muscles.slice(0, 3).join(', ')} · {stretchDose(x).label}</Text>
+              <Text style={type.small}>{[x.muscles.slice(0, 3).map(cap).join(', '), ...differs(x)].join(' · ')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={color.ironSoft} />
           </Pressable>
@@ -134,13 +142,14 @@ const s = StyleSheet.create({
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   tabs: { flexDirection: 'row', backgroundColor: color.card, borderRadius: radius.pill, padding: 4, gap: 4 },
-  tab: { flex: 1, minHeight: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  tabOn: { backgroundColor: color.accent },
+  tab: { flex: 1, minHeight: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  // Selected is iron, the same as a selected chip; the accent belongs to Bell and links.
+  tabOn: { backgroundColor: color.iron },
   tabText: { fontWeight: '700', color: color.iron },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  start: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.accent, borderRadius: radius.card, padding: space(4) },
-  startText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.body },
+  // The screen's main action: iron, like every other Start.
+  start: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.iron, borderRadius: radius.card, padding: space(4) },
+  startText: { color: color.chalk, fontWeight: '800', fontSize: textSize.body },
   item: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.row, padding: space(2) },
   thumb: { width: 72, height: 48, borderRadius: radius.input, backgroundColor: color.raised },
   sheet: { maxHeight: '88%' },
