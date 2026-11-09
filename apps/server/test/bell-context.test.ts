@@ -156,6 +156,26 @@ test('Bell gives amounts in their unit: 11 fl oz works out its own grams', async
   assert.deepEqual([p.servingGrams, p.servingLabel], [325, '11 fl oz']);
 });
 
+test('Bell resending the whole meal replaces the cards instead of doubling them', async () => {
+  const u = await newUser();
+  const eggs = { name: 'Scrambled eggs', grams: 200, per100: { kcal: 113, protein: 11.3, carbs: 1, fat: 7.5 } };
+  const tots = { name: 'Tater tots', grams: 150, per100: { kcal: 186, protein: 2.3, carbs: 24, fat: 9 } };
+  const toast = { name: 'French toast', grams: 130, per100: { kcal: 229, protein: 7.7, carbs: 25, fat: 11 } };
+  let calls = 0;
+  // Round 1 shows eggs and tots; round 2 sends the whole meal again with the toast added.
+  script = (sent) => {
+    if (sent.messages?.at(-1)?.role === 'tool' && calls === 2) return { role: 'assistant', content: 'Here’s what I’d log.' };
+    const items = calls++ === 0 ? [eggs, tots] : [{ ...eggs, grams: 180 }, tots, toast];
+    return { role: 'assistant', content: '', tool_calls: [{ id: `p${calls}`, type: 'function', function: { name: 'propose_food_entries', arguments: JSON.stringify({ items }) } }] };
+  };
+  const r = await ask(u, { messages: [{ role: 'user', text: 'eggs, tots and french toast for breakfast' }], today: '2026-10-25', meal: 'breakfast' });
+  script = null;
+  assert.equal(r.status, 200, r.text);
+  const names = r.body.proposals.map((p: { name: string }) => p.name);
+  assert.deepEqual(names, ['Scrambled eggs', 'Tater tots', 'French toast'], `one card each: ${names}`);
+  assert.equal(r.body.proposals[0].grams, 180, 'the later amount wins');
+});
+
 test('a slow answer comes back as a ticket the app checks on, never as a timeout', async () => {
   const u = await newUser();
   slowMs = 2000; // longer than the server waits before handing out a ticket (1 s here, 20 s for real)

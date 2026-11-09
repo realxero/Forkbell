@@ -154,6 +154,10 @@ const trimFood = (f: Food & { id?: string }) => ({
   portions: f.portions?.slice(0, 3),
 });
 
+/** The same food for the same meal and day: a resend, not a second helping. */
+const sameProposal = (a: FoodProposal, b: FoodProposal) =>
+  a.date === b.date && a.meal === b.meal && (a.food && b.food ? a.food.id === b.food.id : a.name.trim().toLowerCase() === b.name.trim().toLowerCase());
+
 /** Run one tool. Returns text for the model; proposals are collected separately. */
 export interface ToolContext {
   call: Internal;
@@ -302,7 +306,7 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
           }
           replaces = { id: old.id, name: old.food.name, kcal: Math.round((old.food.per100.kcal * old.grams) / 100) };
         }
-        ctx.proposals.push({
+        const proposal: FoodProposal = {
           name: food?.name ?? item.name,
           brand: food?.brand ?? item.brand ?? null,
           grams: Math.round(item.grams * 10) / 10,
@@ -318,12 +322,19 @@ export async function runTool(name: string, args: unknown, ctx: ToolContext): Pr
           note: item.note ?? null,
           warnings: checkFood(`${food?.name ?? item.name} ${food?.brand ?? item.brand ?? ''}`, ctx.prefs).reasons.filter((r) => !r.startsWith('you dislike') && !r.includes('never-suggest')),
           replaces,
-        });
+        };
+        // A second call often resends the whole meal (to fix one item, or after a
+        // "Not shown" note). The same food for the same meal and day replaces the
+        // card already shown instead of adding a second one.
+        const same = ctx.proposals.findIndex((p) => sameProposal(p, proposal));
+        if (same >= 0) ctx.proposals[same] = proposal;
+        else ctx.proposals.push(proposal);
       }
       const ok = parsed.data.items.length - problems.length;
+      const shown = `${ctx.proposals.length} item(s) are on the review card now; to change one, send just that item again with the same name.`;
       return problems.length
-        ? `${ok} item(s) shown to the person for review. Not shown: ${problems.join(' ')}`
-        : `${ok} item(s) shown to the person for review. They will confirm or change them; do not say they are logged.`;
+        ? `${ok} item(s) shown to the person for review. Not shown: ${problems.join(' ')} ${shown}`
+        : `${ok} item(s) shown to the person for review. They will confirm or change them; do not say they are logged. ${shown}`;
     }
     case 'ask_question': {
       const parsed = askArgsSchema.safeParse(args);
