@@ -206,7 +206,7 @@ export function QuickBell() {
 
 const s = StyleSheet.create({
   fabWrap: { position: 'absolute', right: space(4), bottom: FAB_BOTTOM },
-  bubble: { position: 'absolute', right: space(4), bottom: FAB_BOTTOM + FAB_SIZE + 12, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  bubble: { position: 'absolute', right: space(4), bottom: FAB_BOTTOM + FAB_SIZE + 12, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: radius.row, padding: space(3), borderWidth: 1, borderColor: color.line, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   fab: { width: FAB_SIZE, height: FAB_SIZE, borderRadius: FAB_SIZE / 2, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listening: { flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.dangerBg, borderRadius: 12, padding: space(3) },

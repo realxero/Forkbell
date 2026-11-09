@@ -128,9 +128,9 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
 const s = StyleSheet.create({
   fabWrap: { position: 'absolute', right: space(4), bottom: space(6) },
   fab: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
-  bubble: { position: 'absolute', right: space(4), bottom: space(6) + 70, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: 16, padding: space(3), borderWidth: 1, borderColor: color.line },
+  bubble: { position: 'absolute', right: space(4), bottom: space(6) + 70, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: radius.row, padding: space(3), borderWidth: 1, borderColor: color.line },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  msg: { borderRadius: 14, padding: space(3), maxWidth: '88%' },
+  msg: { borderRadius: radius.row, padding: space(3), maxWidth: '88%' },
   mine: { alignSelf: 'flex-end', backgroundColor: color.iron },
   theirs: { alignSelf: 'flex-start', backgroundColor: color.raised },
   quick: { borderWidth: 1, borderColor: color.line, borderRadius: radius.pill, paddingHorizontal: space(3), paddingVertical: space(2) },

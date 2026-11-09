@@ -110,7 +110,7 @@ export function ImportRecipe({ visible, onClose, onReady }: { visible: boolean; 
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: !off }}
                     >
-                      <Ionicons name={off ? 'square-outline' : 'checkbox'} size={22} color={off ? color.ironSoft : color.fat} />
+                      <Ionicons name={off ? 'square-outline' : 'checkbox'} size={22} color={off ? color.ironSoft : color.iron} />
                       <View style={{ flex: 1 }}>
                         <Text style={[type.body, { fontWeight: '600' }]}>{ing.match?.name ?? ing.name}</Text>
                         <Text style={type.small}>

@@ -56,7 +56,7 @@ export function FormCheck({ exercise, onClose, onResult }: { exercise: string | 
         </View>
         {last && (
           <View style={s.bar}>
-            <Ionicons name="checkmark-circle" size={20} color={color.fat} />
+            <Ionicons name="checkmark-circle" size={20} color={color.iron} />
             <Text style={[type.body, { flex: 1 }]}>{last.reps} reps sent to your workout.</Text>
           </View>
         )}

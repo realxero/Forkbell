@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { color, space, type } from '../lib/theme';
+import { color, space, type, radius } from '../lib/theme';
 
 export type BarcodeCameraProps = {
   onCode: (code: string) => void;
@@ -47,7 +47,7 @@ export function BarcodeCamera({ onCode, onError }: BarcodeCameraProps) {
 }
 
 const s = StyleSheet.create({
-  frame: { width: '100%', aspectRatio: 3 / 4, maxHeight: 480, borderRadius: 16, overflow: 'hidden', backgroundColor: color.iron },
+  frame: { width: '100%', aspectRatio: 3 / 4, maxHeight: 480, borderRadius: radius.card, overflow: 'hidden', backgroundColor: color.iron },
   center: { alignItems: 'center', justifyContent: 'center', padding: space(4) },
   target: { position: 'absolute', left: '12%', right: '12%', top: '38%', height: '24%', borderWidth: 3, borderColor: color.chalk, borderRadius: 12 },
 });

@@ -22,7 +22,7 @@ import { FormCheck } from '../../components/FormCheck';
 import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
 import { NumberField } from '../../components/NumberField';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 import { Check } from '../../components/Check';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
@@ -480,8 +480,8 @@ export default function WorkoutScreen() {
     <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={s.head}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={s.link}>‹ Back</Text>
+          <Pressable onPress={() => router.back()} style={s.back} accessibilityRole="button" accessibilityLabel="Back">
+            <Ionicons name="chevron-back" size={26} color={color.iron} />
           </Pressable>
           <View style={{ alignItems: 'center' }}>
             <Text style={type.title} numberOfLines={1}>{w.name}</Text>
@@ -490,13 +490,8 @@ export default function WorkoutScreen() {
               {saveState === 'saving' ? ' · saving…' : saveState === 'error' ? ' · not saved' : ''}
             </Text>
           </View>
-          {w.finishedAt ? (
-            <View style={{ width: 60 }} />
-          ) : (
-            <Pressable onPress={finish} disabled={finishing} style={[s.finish, finishing && { opacity: 0.5 }]}>
-              <Text style={s.finishText}>Finish</Text>
-            </Pressable>
-          )}
+          {/* Balances the back button so the title stays centred. */}
+          <View style={s.back} />
         </View>
 
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
@@ -516,7 +511,7 @@ export default function WorkoutScreen() {
           )}
           {!w.finishedAt && !skipWarmup && w.exercises.length > 0 && !w.exercises.some((e) => e.sets.some((x) => x.done)) && (
             <View style={s.warmup}>
-              <Ionicons name="flame-outline" size={22} color={color.fat} />
+              <Ionicons name="flame-outline" size={22} color={color.iron} />
               <View style={{ flex: 1, gap: space(1) }}>
                 <Text style={[type.body, { fontWeight: '700' }]}>Warm up first?</Text>
                 <Text style={type.small}>A few minutes of moving stretches for {trained(w).join(', ') || 'your whole body'}, with pictures and a timer.</Text>
@@ -596,13 +591,21 @@ export default function WorkoutScreen() {
           </Pressable>
         </ScrollView>
 
+        {/* Finish sits where a thumb reaches it; while you rest, the rest timer takes its place. */}
+        {!w.finishedAt && restLeft === null && (
+          <View style={s.finishBar}>
+            <Pressable onPress={finish} disabled={finishing} style={[s.finish, finishing && { opacity: 0.5 }]} accessibilityRole="button" accessibilityState={{ busy: finishing, disabled: finishing }}>
+              <Text style={s.finishText}>{finishing ? 'Finishing…' : 'Finish workout'}</Text>
+            </Pressable>
+          </View>
+        )}
         {restLeft !== null && (
-          <View style={[s.rest, restLeft === 0 && { backgroundColor: color.fatText }]}>
+          <View style={[s.rest, restLeft === 0 && { backgroundColor: color.accent }]}>
             <View style={[s.restFill, { width: `${restTotal ? (100 * restLeft) / restTotal : 0}%` }]} />
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={[s.restText, { flex: 1 }]}>{restLeft === 0 ? 'Rest over. Next set!' : `Rest ${formatDuration(restLeft)}`}</Text>
               {hrFresh && (
-                <Text style={[s.hr, hrFresh.bpm <= recoveredBpm && { backgroundColor: color.fat }]} accessibilityLabel={`Heart rate ${Math.round(hrFresh.bpm)}${hrFresh.bpm <= recoveredBpm ? ', recovered' : ''}`}>
+                <Text style={[s.hr, hrFresh.bpm <= recoveredBpm && { backgroundColor: color.iron }]} accessibilityLabel={`Heart rate ${Math.round(hrFresh.bpm)}${hrFresh.bpm <= recoveredBpm ? ', recovered' : ''}`}>
                   ♥ {Math.round(hrFresh.bpm)}
                 </Text>
               )}
@@ -616,7 +619,7 @@ export default function WorkoutScreen() {
             )}
           </View>
         )}
-        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color.fat, opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] }) }]} />
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color.accent, opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] }) }]} />
         {!w.finishedAt && <WorkoutBell workoutId={w.id} beforeAsk={flush} lifted={restLeft !== null} />}
       </KeyboardAvoidingView>
       <HowToSheet exercise={howToFor} onClose={() => setHowToFor(null)} />
@@ -829,7 +832,7 @@ function ExerciseCard(props: {
           >
             <View style={[s.setRow, set.done && s.setDone]}>
               <Pressable style={s.colSet} onPress={() => { haptic.tap(); props.onSet(k, then); }} accessibilityLabel={`${what}. Tap to make it ${thenWhat}`}>
-                <Text style={[s.setNo, set.warmup && { color: color.carbsText }, set.drop && { color: color.over }]}>{label}</Text>
+                <Text style={[s.setNo, set.warmup && { color: color.ironSoft }, set.drop && { color: color.over }]}>{label}</Text>
               </Pressable>
               <Text style={[s.colPrev, type.small, type.number]} numberOfLines={1}>{prevText}</Text>
               {kind === 'cardio' ? (
@@ -963,21 +966,24 @@ const trained = (w: Workout) => [...new Set(w.exercises.map((e) => e.exercise.mu
 
 
 const s = StyleSheet.create({
-  warmup: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start', backgroundColor: color.card, borderRadius: 14, padding: space(4) },
-  coolDown: { flexDirection: 'row', alignItems: 'center', gap: space(2), backgroundColor: color.card, borderRadius: 14, padding: space(4) },
+  warmup: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start', backgroundColor: color.card, borderRadius: radius.card, padding: space(4) },
+  coolDown: { flexDirection: 'row', alignItems: 'center', gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4) },
   howToButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: space(1) },
   tipActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   tipButton: { minHeight: 36, justifyContent: 'center', paddingHorizontal: space(3), borderRadius: 18, borderWidth: 1, borderColor: color.line },
   tipButtonText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   screen: { flex: 1, backgroundColor: color.chalk },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(4), paddingVertical: space(3), gap: space(3) },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space(2), paddingVertical: space(2), gap: space(2) },
   content: { padding: space(3), paddingBottom: space(24), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
-  finish: { backgroundColor: color.fat, borderRadius: 8, paddingHorizontal: space(3), paddingVertical: space(2) },
-  finishText: { color: color.card, fontWeight: '800', fontSize: textSize.control },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  // It floats over the list, so it takes the Float shadow (DESIGN.md: only floaters cast shadows).
+  finishBar: { position: 'absolute', left: space(3), right: space(3), bottom: space(3), maxWidth: 616, alignSelf: 'center', borderRadius: radius.row, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  finish: buttons.filled,
+  finishText: buttons.filledText,
   error: { ...type.body, color: color.over },
   hint: { ...type.small, color: color.over, textAlign: 'center' },
-  card: { backgroundColor: color.card, borderRadius: 14, padding: space(3), gap: space(1) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(1) },
   grouped: { borderLeftWidth: 4, borderLeftColor: color.accent },
   groupedNext: { marginTop: -space(2), borderTopLeftRadius: 4, borderTopRightRadius: 4 },
   groupTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 2, marginBottom: space(1) },
@@ -986,7 +992,7 @@ const s = StyleSheet.create({
   dots: { fontSize: textSize.stat, color: color.ironSoft, paddingHorizontal: space(1), lineHeight: 26 },
   setHead: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: space(1) },
   th: { ...type.small, fontSize: textSize.caption, fontWeight: '700', textAlign: 'center' },
-  setRow: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: 3, borderRadius: 8 },
+  setRow: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: 3, borderRadius: radius.input },
   setDone: { backgroundColor: color.successBg },
   colSet: { width: 30, alignItems: 'center' },
   colPrev: { flex: 1.3, textAlign: 'center' },
@@ -995,23 +1001,23 @@ const s = StyleSheet.create({
   colWide: { flex: 2 },
   colDone: { width: 40 },
   setNo: { ...type.body, fontWeight: '700' },
-  cell: { ...type.body, ...type.number, textAlign: 'center', backgroundColor: color.chalk, borderRadius: 8, paddingVertical: space(2), paddingHorizontal: 2, minWidth: 0 },
-  check: { height: 36, borderRadius: 8, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
-  checkOn: { backgroundColor: color.fat, borderColor: color.fat },
-  tip: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, borderRadius: 8, padding: space(2), marginBottom: space(1) },
-  pain: { backgroundColor: color.dangerBg, borderRadius: 8, padding: space(2), gap: space(1), marginBottom: space(1) },
+  cell: { ...type.body, ...type.number, textAlign: 'center', backgroundColor: color.chalk, borderRadius: radius.input, paddingVertical: space(2), paddingHorizontal: 2, minWidth: 0 },
+  check: { height: 44, borderRadius: radius.input, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
+  checkOn: { backgroundColor: color.iron, borderColor: color.iron },
+  tip: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, borderRadius: radius.input, padding: space(2), marginBottom: space(1) },
+  pain: { backgroundColor: color.dangerBg, borderRadius: radius.input, padding: space(2), gap: space(1), marginBottom: space(1) },
   painInput: { ...type.small, backgroundColor: color.card, borderRadius: 6, padding: space(2) },
   cardFoot: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: space(2) },
   addText: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
-  addExercise: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: 14, padding: space(4), alignItems: 'center', backgroundColor: color.card },
-  rest: { position: 'absolute', left: space(3), right: space(3), bottom: space(3), backgroundColor: color.iron, borderRadius: 14, padding: space(3), overflow: 'hidden', maxWidth: 616, alignSelf: 'center' },
+  addExercise: { borderWidth: 1, borderStyle: 'dashed', borderColor: color.line, borderRadius: radius.card, padding: space(4), alignItems: 'center', backgroundColor: color.card },
+  rest: { position: 'absolute', left: space(3), right: space(3), bottom: space(3), backgroundColor: color.iron, borderRadius: radius.row, padding: space(3), overflow: 'hidden', maxWidth: 616, alignSelf: 'center' },
   restFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: color.restFill },
   hr: { color: color.onAccent, fontWeight: '800', backgroundColor: color.over, borderRadius: 10, overflow: 'hidden', paddingHorizontal: space(2), paddingVertical: 2 },
   restText: { color: color.chalk, fontWeight: '800', fontSize: textSize.heading, fontVariant: ['tabular-nums'] },
   restButtons: { flexDirection: 'row', gap: space(5), marginTop: space(2) },
   restButton: { color: color.chalk, fontWeight: '700', fontSize: textSize.control },
   restTap: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
-  stats: { flexDirection: 'row', backgroundColor: color.card, borderRadius: 14, padding: space(4), gap: space(3) },
+  stats: { flexDirection: 'row', backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },
 });

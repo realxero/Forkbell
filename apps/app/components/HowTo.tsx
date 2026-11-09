@@ -21,7 +21,7 @@ export function CuesCard({ exercise }: { exercise: { name: string; muscle: strin
   return (
     <View style={s.cues}>
       <View style={s.cueRow}>
-        <Ionicons name="body-outline" size={18} color={color.fat} />
+        <Ionicons name="body-outline" size={18} color={color.ironSoft} />
         <View style={{ flex: 1 }}>
           <Text style={type.label}>Where you should feel it</Text>
           <Text style={type.body}>{c.feel}</Text>

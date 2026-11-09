@@ -9,7 +9,7 @@ colors:
   iron-soft: "#5F6B73"
   line: "#DDE2E4"
   track: "#E6E9EA"
-  placeholder: "#7C868C"
+  placeholder: "#6B757B"
   accent: "#2B6BD6"
   on-accent: "#FFFFFF"
   protein: "#2B6BD6"
@@ -19,6 +19,8 @@ colors:
   fat-text: "#1F7A4A"
   water: "#1E88C8"
   water-text: "#13689C"
+  fast: "#6A4BD1"
+  fast-text: "#5A3DBF"
   over: "#D2423A"
   rest-fill: "#2F4350"
   success-bg: "#E5F4EC"
@@ -180,9 +182,10 @@ A neutral chalk-and-iron base with bumper-plate macro colours. Every colour has 
 ### Tertiary (the plates)
 - **20 kg Blue, protein** (#2B6BD6): protein rings, bars and icons.
 - **15 kg Yellow, carbs** (#D99A00): carb rings and bars; words use **Carb Text** (#8A5A00).
-- **10 kg Green, fat** (#2E9E62): fat rings and bars, plus success marks; words use **Fat Text** (#1F7A4A).
+- **10 kg Green, fat** (#2E9E62): fat rings and bars, and nothing else; words use **Fat Text** (#1F7A4A).
 - **25 kg Red, over** (#D2423A): a ring past its goal, errors, destructive actions.
 - **Water Blue** (#1E88C8): water card, glasses and actions; words use **Water Text** (#13689C).
+- **Fasting Violet** (#6A4BD1): the fasting card's icon, bar and buttons; words use **Fasting Text** (#5A3DBF). Not a plate: fasting isn't a macro, and it isn't "done".
 
 ### Neutral
 - **Chalk** (#F4F5F2): the page background behind every screen and tab, and the fill of inputs set inside cards.
@@ -199,6 +202,8 @@ The small coloured squares behind icons in Settings rows and on the Health card,
 
 ### Named Rules
 **The Plates Carry Meaning Rule.** A plate colour always means its subject: blue is protein, yellow carbs, green fat, red over, water blue water. A plate colour may mark an action about its own subject (an "Add water" button in water blue), but never decorates something unrelated.
+
+**The Done Is Iron Rule.** Completion has no colour of its own: a ticked set, a finished day, a checked item and a reached goal are iron (an iron tick, an iron fill with chalk words). Green is fat. Celebrations (toasts, records) take the accent, Bell's colour. Logged days on the calendar are iron and days over the goal red; there is no green "good day".
 
 **The Text Twin Rule.** Bright plate colours are for rings, bars, fills and icons. Words in those colours use the `*-text` twin, never the bright fill colour on white.
 
@@ -232,14 +237,14 @@ The small coloured squares behind icons in Settings rows and on the Health card,
 
 ## Layout
 
-A single column on a chalk page, one card per subject (a meal, water, a workout's exercise), stacked with even gaps. Spacing is a 4 pt grid (`space(n) = n × 4`): 8 between items in a card, 12 to 16 inside cards, 16 page gutters. Sheets rise from the bottom up to 640 pt wide and 92% tall; dialogs are centred, up to 440 wide. On the web, content keeps these widths and chip rows wrap instead of scrolling sideways. Ask Bell floats bottom-right over Food, Train and Progress. Touch targets stay at 44 pt or more.
+A single column on a chalk page, one card per subject (a meal, water, a workout's exercise), stacked with even gaps. Spacing is a 4 pt grid (`space(n) = n × 4`): 8 between items in a card, 12 to 16 inside cards, 16 page gutters. Sheets rise from the bottom up to 640 pt wide and 92% tall; dialogs are centred, up to 440 wide. On the web, content keeps these widths and chip rows wrap instead of scrolling sideways. Ask Bell floats bottom-right over Food, Train and Progress. A workout's Finish is a full-width iron button floating at the bottom, in thumb reach; while you rest, the rest timer takes its place. Today puts the meals within the first screen: Water and an idle fast are one line each until opened, and streak cheers are toasts. Touch targets stay at 44 pt or more.
 
 ## Elevation & Depth
 
 Flat at rest. Depth comes from tone: chalk page, white card, raised-chalk rows on the card. Shadows exist only on things that float above the page.
 
 ### Shadow Vocabulary
-- **Float** (`shadowColor #000, opacity 0.25, radius 10 to 12, offset 0/4`): toasts, the Ask Bell button, the voice button, the selection bar.
+- **Float** (`shadowColor #000, opacity 0.25, radius 10 to 12, offset 0/4`): toasts, the Ask Bell button, the voice button, the selection bar, a workout's Finish bar.
 - **Bubble** (`opacity 0.2, radius 8, offset 0/3`, plus a Chalk Line border): Bell's speech bubble above the button.
 - **Backdrop** (`rgba(0,0,0,0.45)`): behind every sheet and dialog.
 
@@ -250,7 +255,7 @@ Flat at rest. Depth comes from tone: chalk page, white card, raised-chalk rows o
 
 Soft, generous corners in four steps: **card** (18 pt) for cards, sheets and dialogs; **row** (12 pt) for buttons and list rows; **input** (10 pt) for text fields and inner items set on a card; **pill** (999) for chips, badges and the round Ask Bell button. Borders are 1 pt Chalk Line. A grouped set (supersets) is marked by a 4 pt accent bar on its left edge. Bell and the Forkbell mark share one silhouette: a kettlebell.
 
-**The Four Corners Rule.** Use only 18, 12, 10 or pill. The 14, 16 and 8 pt corners found in some screens are drift to bring back to these steps when those screens are next touched.
+**The Four Corners Rule.** Use only 18, 12, 10 or pill, through `radius` in `lib/theme.ts`.
 
 ## Components
 
@@ -275,7 +280,7 @@ Heavy, rounded and easy to hit.
 - **Internal Padding:** 16 pt, 8 to 12 pt gaps.
 
 ### Inputs / Fields
-- **Style:** 16 pt body text, Chalk fill (Card White when on chalk), 1 pt Chalk Line border, 10 pt corners, 12 pt padding. Placeholder in #7C868C.
+- **Style:** 16 pt body text, Chalk fill (Card White when on chalk), 1 pt Chalk Line border, 10 pt corners, 12 pt padding. Placeholder in #6B757B (4.7:1 on white; #8A969D in dark).
 - **Error:** a Danger tint note beneath, words in Over red.
 
 ### Navigation
@@ -285,11 +290,14 @@ Heavy, rounded and easy to hit.
 ### Progress Ring (signature)
 A circular track in Empty Track with a plate-colour arc for the subject. The value sits in the middle in Stat or Page Title figures with a Caption unit below. Past 100% (with 2% leeway) the whole ring turns Over red and stays full.
 
+### Macros on Today
+Protein, carbs and fat sit under the calorie ring in one of four styles, chosen per phone in Settings → Units and appearance: **Rings** (the default), **Bars** (beside the ring), **Compact** (one short row of three) and **Plates** (bumper plates on a bar that grow toward full size as you near each goal). Every style says the grams and what's left in words and turns Over red past the goal, so none relies on colour alone.
+
 ### Bell (signature)
 A kettlebell with a face, drawn in the accent with on-accent features. Moods: happy, thinking, listening, curious, excited, proud, concerned. When alive it blinks, bobs and glances around. All motion stops with Reduce Motion.
 
 ### Sheets and Toasts
-Sheets rise from the bottom with 18 pt top corners over the 45% backdrop. Toasts are iron pills (14 pt corners) with chalk words and the Float shadow.
+Sheets rise from the bottom with 18 pt top corners over the 45% backdrop. Toasts are iron (12 pt corners) with chalk words and the Float shadow; a celebration toast is the accent.
 
 ## Do's and Don'ts
 

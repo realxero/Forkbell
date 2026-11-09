@@ -63,7 +63,7 @@ export function WebSearchSettings() {
       ) : status === null ? (
         <Text style={type.small}>Couldn’t reach the server to check.</Text>
       ) : (
-        <Text style={[type.body, { fontWeight: '700', color: status.on ? color.fatText : color.ironSoft }]}>
+        <Text style={[type.body, { fontWeight: '700', color: status.on ? color.iron : color.ironSoft }]}>
           {status.on ? (status.source === 'yours' ? 'On, with your address' : 'On, with the server’s search') : 'Off'}
         </Text>
       )}
@@ -109,7 +109,7 @@ export function WebSearchSettings() {
           </Text>
         </>
       ) : null}
-      {note && <Text style={[type.small, { color: note.ok ? color.fatText : color.over }]}>{note.text}</Text>}
+      {note && <Text style={[type.small, { color: note.ok ? color.iron : color.over }]}>{note.text}</Text>}
     </View>
   );
 }

@@ -16,14 +16,33 @@ appId: com.realxero.forkbell
       visible: "forkbell.example.com"
     commands:
       - tapOn: "forkbell.example.com"
+      # Typing straight after the tap can lose the first letters while the
+      # keyboard is still coming up ("http://localhost:3999" became "hst:3999").
+      # Wait for it, check what landed, and type it again if anything's missing.
+      - waitForAnimationToEnd
       - inputText: ${SERVER}
+      - runFlow:
+          when:
+            notVisible: ${SERVER}
+          commands:
+            - eraseText: 60
+            - inputText: ${SERVER}
+      - assertVisible: ${SERVER}
       - tapOn: "Continue"
       - extendedWaitUntil:
           visible: "Username"
           timeout: 30000
       - tapOn: "Username"
+      - waitForAnimationToEnd
       - inputText: ${USERNAME}
+      - runFlow:
+          when:
+            notVisible: ${USERNAME}
+          commands:
+            - eraseText: 40
+            - inputText: ${USERNAME}
       - pressKey: Enter
+      - waitForAnimationToEnd
       - inputText: ${PASSWORD}
       - pressKey: Enter
       # Signing in works, then iOS offers to save the password in a sheet that

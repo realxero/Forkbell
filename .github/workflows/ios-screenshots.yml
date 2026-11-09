@@ -129,7 +129,9 @@ jobs:
           MAESTRO_CLI_NO_ANALYTICS: '1'
           # Maestro's helper app on the Simulator can take minutes to answer on a busy
           # runner (two minutes is its default, and wasn't always enough).
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
+          # The driver builds and runs its own checks first; on a busy runner that
+          # has taken just over 5 minutes (it came up 1 s after a 300 s limit).
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '600000'
         run: |
           mkdir -p "$OUT"
           shoot() {
@@ -137,7 +139,8 @@ jobs:
           }
           xcrun simctl ui "$UDID" appearance light
           signin() { maestro --device "$UDID" test -e SERVER="$SERVER" -e USERNAME="$SEED_USERNAME" -e PASSWORD="$SEED_PASSWORD" e2e/screenshots/signin.yaml; }
-          signin || { echo "::warning::sign-in flow failed once; trying again"; signin; }
+          # A failed first try can leave the driver restarting; give it a moment.
+          signin || { echo "::warning::sign-in flow failed once; trying again"; sleep 30; signin; }
           shoot light
           xcrun simctl ui "$UDID" appearance dark
           shoot dark

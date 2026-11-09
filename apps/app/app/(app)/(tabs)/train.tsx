@@ -125,10 +125,10 @@ export default function Train() {
         <View style={s.head}>
           <Text style={type.pageTitle}>Train</Text>
           <View style={{ flexDirection: 'row', gap: space(4) }}>
-            <Pressable onPress={() => router.push('/stretches')} hitSlop={10}>
+            <Pressable onPress={() => router.push('/stretches')} style={s.headLink} accessibilityRole="link">
               <Text style={s.link}>Stretches</Text>
             </Pressable>
-            <Pressable onPress={() => router.push('/exercises')} hitSlop={10}>
+            <Pressable onPress={() => router.push('/exercises')} style={s.headLink} accessibilityRole="link">
               <Text style={s.link}>Exercises</Text>
             </Pressable>
           </View>
@@ -255,6 +255,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: QUICK_BELL_ROOM, gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headLink: { minHeight: 44, justifyContent: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
   problem: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.dangerBg, borderRadius: radius.card, padding: space(4) },
   retry: { ...buttons.small, minHeight: 44 },

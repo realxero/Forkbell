@@ -138,7 +138,7 @@ export default function AddFood() {
             {view.check && (
               // A scanned product checked against a second database.
               <View style={[s.check, !view.check.agrees && s.checkOff]} accessibilityLiveRegion="polite">
-                <Ionicons name={view.check.agrees ? 'checkmark-circle' : 'alert-circle'} size={18} color={view.check.agrees ? color.fat : color.carbs} />
+                <Ionicons name={view.check.agrees ? 'checkmark-circle' : 'alert-circle'} size={18} color={view.check.agrees ? color.iron : color.warnText} />
                 <Text style={[type.small, { flex: 1, color: color.iron }]}>{view.check.text}</Text>
               </View>
             )}
@@ -293,7 +293,7 @@ function Row({ food, onPress }: { food: Pick; onPress: () => void }) {
         <Text style={type.body} numberOfLines={2}>{food.name}</Text>
         <Text style={type.small} numberOfLines={1}>
           {food.brand ? `${food.brand} · ` : ''}
-          <Text style={{ color: trusted ? color.fatText : color.ironSoft, fontWeight: '700' }}>{trusted ? '✓ ' : ''}{kind.tag}</Text>
+          <Text style={{ color: trusted ? color.iron : color.ironSoft, fontWeight: '700' }}>{trusted ? '✓ ' : ''}{kind.tag}</Text>
         </Text>
       </View>
       <Text style={[type.small, type.number, { textAlign: 'right' }]}>
@@ -499,7 +499,7 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
 
 const s = StyleSheet.create({
   check: { flexDirection: 'row', gap: space(2), alignItems: 'flex-start', padding: space(3), borderRadius: 10, backgroundColor: color.infoBg },
-  checkOff: { backgroundColor: color.raised, borderWidth: 1, borderColor: color.carbs },
+  checkOff: { backgroundColor: color.warnBg, borderWidth: 1, borderColor: color.warnBg },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
   list: { padding: space(4), gap: space(2), paddingBottom: space(16), maxWidth: 640, width: '100%', alignSelf: 'center' },
@@ -511,7 +511,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, padding: space(3), borderRadius: 10 },
   plus: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
   plusText: { color: color.chalk, fontSize: textSize.stat, lineHeight: 24, fontWeight: '700' },
-  added: { ...type.small, color: color.fatText, fontWeight: '700' },
+  added: { ...type.small, color: color.iron, fontWeight: '700' },
   error: { ...type.body, color: color.over },
   button: { ...buttons.filled, marginTop: space(2) },
   buttonText: { ...buttons.filledText },

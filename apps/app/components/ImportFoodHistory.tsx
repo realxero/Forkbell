@@ -94,7 +94,7 @@ export function ImportFoodHistory() {
         </View>
       )}
       {done && (
-        <Text style={[type.body, { fontWeight: '700', color: color.fatText }]}>
+        <Text style={[type.body, { fontWeight: '700', color: color.iron }]}>
           Imported {done.days.toLocaleString()} days ({done.lines.toLocaleString()} lines). They’re in your diary and Progress; the foods stay out of search and your lists.
         </Text>
       )}

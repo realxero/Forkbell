@@ -8,21 +8,29 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { MICROS, microText, sumMicros, type DiaryEntry } from '@forkbell/shared';
 import { color, radius, space, type } from '../lib/theme';
 
-export function MicrosCard({ entries }: { entries: Pick<DiaryEntry, 'grams' | 'food'>[] }) {
+/** Fiber, and the vitamins and minerals from foods that list them (tap to open). */
+export function MicrosCard({ entries, fiber }: { entries: Pick<DiaryEntry, 'grams' | 'food'>[]; fiber: number }) {
   const [open, setOpen] = useState(false);
   const day = sumMicros(entries);
-  if (!day.known) return null;
   const shown = MICROS.filter((m) => day.totals[m.key] !== undefined);
+  const head = (
+    <>
+      <Ionicons name="nutrition-outline" size={20} color={color.ironSoft} />
+      <View style={{ flex: 1 }}>
+        <Text style={[type.body, { fontWeight: '700' }]}>
+          Fiber <Text style={type.number}>{Math.round(fiber)} g</Text>
+        </Text>
+        <Text style={type.small}>
+          {day.known ? `Vitamins and minerals from ${day.known} of ${day.of} food${day.of === 1 ? '' : 's'} that list them` : 'None of today’s foods list vitamins and minerals'}
+        </Text>
+      </View>
+    </>
+  );
+  if (!day.known) return <View style={[s.card, s.head]}>{head}</View>;
   return (
     <View style={s.card}>
       <Pressable onPress={() => setOpen((o) => !o)} style={s.head} accessibilityRole="button" accessibilityState={{ expanded: open }}>
-        <Ionicons name="nutrition-outline" size={20} color={color.fat} />
-        <View style={{ flex: 1 }}>
-          <Text style={[type.body, { fontWeight: '700' }]}>Vitamins and minerals</Text>
-          <Text style={type.small}>
-            From {day.known} of {day.of} food{day.of === 1 ? '' : 's'} that list them
-          </Text>
-        </View>
+        {head}
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={color.ironSoft} />
       </Pressable>
       {open && (
@@ -57,5 +65,5 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   track: { height: 6, borderRadius: 3, backgroundColor: color.track, overflow: 'hidden' },
-  fill: { height: 6, borderRadius: 3, backgroundColor: color.fat },
+  fill: { height: 6, borderRadius: 3, backgroundColor: color.ironSoft },
 });

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { dismissToast, useToast } from '../lib/toast';
-import { color, space, textSize } from '../lib/theme';
+import { color, space, textSize, radius } from '../lib/theme';
 
 /** Shows the current toast above the tab bar. */
 export function ToastHost() {
@@ -14,7 +14,7 @@ export function ToastHost() {
   if (!t) return null;
   return (
     <View pointerEvents="box-none" style={s.wrap}>
-      <View style={[s.toast, t.tone === 'celebrate' && { backgroundColor: color.fatText }]} accessibilityLiveRegion="polite">
+      <View style={[s.toast, t.tone === 'celebrate' && { backgroundColor: color.accent }]} accessibilityLiveRegion="polite">
         <Text style={s.text}>{t.text}</Text>
         {t.action && (
           <Pressable
@@ -36,7 +36,7 @@ export function ToastHost() {
 
 const s = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, bottom: 150, alignItems: 'center', paddingHorizontal: space(4) },
-  toast: { flexDirection: 'row', alignItems: 'center', gap: space(4), backgroundColor: color.iron, borderRadius: 14, paddingVertical: space(3), paddingHorizontal: space(4), maxWidth: 560, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+  toast: { flexDirection: 'row', alignItems: 'center', gap: space(4), backgroundColor: color.iron, borderRadius: radius.row, paddingVertical: space(3), paddingHorizontal: space(4), maxWidth: 560, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
   text: { color: color.chalk, fontSize: textSize.control, fontWeight: '600', flexShrink: 1 },
   action: { color: color.chalk, fontSize: textSize.control, fontWeight: '800', textDecorationLine: 'underline' },
 });

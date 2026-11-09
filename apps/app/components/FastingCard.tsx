@@ -26,6 +26,8 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
   const [hours, setHours] = useState(prefs?.hours ?? 16);
   /** started this many hours ago (forgot to tap Start after dinner) */
   const [ago, setAgo] = useState(0);
+  /** length and start-time choices; closed, a fast you aren't in is one line */
+  const [options, setOptions] = useState(false);
   const [, tick] = useState(0);
   const fromCache = () => setF(readCache<Fasts>(PATH) ?? { open: null, recent: [], streak: 0 });
   const load = useCallback(() => {
@@ -78,9 +80,9 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
 
   const head = (
     <View style={s.row}>
-      <Ionicons name="hourglass-outline" size={22} color={color.fat} />
+      <Ionicons name="hourglass-outline" size={22} color={color.fast} />
       <Text style={[type.heading, { flex: 1 }]}>Fasting</Text>
-      {f.streak > 0 && <Text style={type.small}>🔥 {f.streak} in a row</Text>}
+      {f.streak > 0 && <Text style={type.small}>{f.streak} in a row</Text>}
     </View>
   );
 
@@ -111,7 +113,23 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
   if (readOnly) return null;
   return (
     <View style={s.card}>
-      {head}
+      <View style={s.row}>
+        <Ionicons name="hourglass-outline" size={22} color={color.fast} />
+        <View style={{ flex: 1 }}>
+          <Text style={[type.body, { fontWeight: '700' }]}>Fasting</Text>
+          {f.streak > 0 && <Text style={type.small}>{f.streak} in a row</Text>}
+        </View>
+        {!options && (
+          <Pressable onPress={() => void start()} style={s.quick} accessibilityRole="button" accessibilityLabel={`Start a ${hours}-hour fast now`}>
+            <Text style={s.buttonText}>Start {hours}h</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={() => setOptions((o) => !o)} style={s.more} accessibilityRole="button" accessibilityLabel="Fast length and when you last ate" accessibilityState={{ expanded: options }}>
+          <Ionicons name={options ? 'chevron-up' : 'ellipsis-horizontal'} size={20} color={color.ironSoft} />
+        </Pressable>
+      </View>
+      {options && (
+        <>
       <View style={s.chips}>
         {FAST_PRESETS.map((h) => <Chip key={h} label={`${h}h`} on={hours === h} onPress={() => setHours(h)} />)}
       </View>
@@ -122,17 +140,21 @@ export function FastingCard({ readOnly }: { readOnly?: boolean }) {
       <Pressable onPress={() => void start()} style={s.button} accessibilityRole="button">
         <Text style={s.buttonText}>Start a {hours}-hour fast</Text>
       </Pressable>
+        </>
+      )}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(3) },
+  card: { backgroundColor: color.card, borderRadius: radius.card, paddingVertical: space(3), paddingHorizontal: space(4), gap: space(3) },
+  quick: { minHeight: 44, paddingHorizontal: space(4), borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.fast, alignItems: 'center', justifyContent: 'center' },
+  more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   bar: { height: 10, borderRadius: 5, backgroundColor: color.track, overflow: 'hidden' },
-  fill: { height: 10, borderRadius: 5, backgroundColor: color.fat },
-  button: { flex: 1, minHeight: 42, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.fat, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(2) },
-  buttonOn: { backgroundColor: color.fatText, borderColor: color.fatText },
-  buttonText: { color: color.fatText, fontWeight: '800', textAlign: 'center' },
+  fill: { height: 10, borderRadius: 5, backgroundColor: color.fast },
+  button: { flex: 1, minHeight: 44, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.fast, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space(2) },
+  buttonOn: { backgroundColor: color.fastText, borderColor: color.fastText },
+  buttonText: { color: color.fastText, fontWeight: '800', textAlign: 'center' },
 });

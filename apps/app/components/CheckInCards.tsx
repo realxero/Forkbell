@@ -77,7 +77,7 @@ export function TrainingCheckInCard() {
   const c = trainingCheckIn(w);
   // Green marks a good week (a success mark); a week to hold steady stays neutral,
   // because red means over a goal, not a quiet week.
-  const tint = c.tone === 'good' ? color.fat : c.tone === 'hold' ? color.ironSoft : color.accent;
+  const tint = c.tone === 'good' ? color.iron : c.tone === 'hold' ? color.ironSoft : color.accent;
   return (
     <View style={s.card}>
       <View style={s.head}>
