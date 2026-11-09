@@ -22,7 +22,7 @@ export function ProfileBar() {
   const [people, setPeople] = useState<Person[]>([]);
   useEffect(() => {
     if (!wide) return;
-    cachedGet<{ sharedWithMe: Person[] }>('/api/shares').then((r) => setPeople(r.sharedWithMe), () => {});
+    cachedGet<{ sharedWithMe: Person[] }>('/api/shares').then((r) => setPeople(r.sharedWithMe), (e) => console.warn('Couldn’t load the people who share with you', e));
   }, [wide, v?.id]);
   const go = (p: Person | null) => {
     setViewing(p && { id: p.personId, name: p.name, permissions: p.permissions });

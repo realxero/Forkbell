@@ -2,7 +2,7 @@
 // wide screen; the list sits beside the open tool when there's room. The
 // maths lives in @forkbell/shared; this page only takes inputs and shows
 // results, which update as you type. Advanced shows how each number is made.
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -12,7 +12,9 @@ import { Pressable } from '../../../components/Tap';
 import { Chip } from '../../../components/AmountPicker';
 import { PlateCalculator } from '../../../components/PlateCalculator';
 import { buttons } from '../../../lib/buttons';
-import { useWide } from '../../../lib/layout';
+import { useAdvanced, useWide } from '../../../lib/layout';
+import { useViewing } from '../../../lib/profile';
+import { useFocusEffect } from 'expo-router';
 import { cachedGet, readCache, writeCache } from '../../../lib/sync';
 import { useUnit } from '../../../lib/units';
 import { color, radius, space, type } from '../../../lib/theme';
@@ -26,22 +28,21 @@ const TOOLS: { id: ToolId; title: string; detail: string; icon: ComponentProps<t
   { id: 'plates', title: 'Plates', detail: 'What to load on each side of the bar', icon: 'barbell-outline' },
 ];
 
-/** Simple shows the answer; Advanced also shows the working. Remembered on this device. */
-const DETAIL = 'device:tools-detail';
 
 export default function Tools() {
   const wide = useWide();
   const [open, setOpen] = useState<ToolId>('tdee');
   // Your own numbers fill the tools in: trend weight, measured burn, goal, tape measurements.
   const [mine, setMine] = useState<Mine | null>(null);
-  useEffect(() => {
-    cachedGet<Mine>(`/api/progress?today=${todayLocal()}`).then(setMine, () => setMine(null));
-  }, []);
-  const [advanced, setAdvanced] = useState(readCache<boolean>(DETAIL) ?? false);
-  const detail = (on: boolean) => {
-    setAdvanced(on);
-    writeCache(DETAIL, on);
-  };
+  // Fresh each time Tools opens, and for whoever you're viewing (never the last person's numbers).
+  const viewing = useViewing();
+  useFocusEffect(
+    useCallback(() => {
+      setMine(null);
+      cachedGet<Mine>(`/api/progress?today=${todayLocal()}`).then(setMine, () => setMine(null));
+    }, [viewing?.id]),
+  );
+  const [advanced, detail] = useAdvanced();
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -105,7 +106,7 @@ function OneRepMax({ advanced }: { advanced: boolean }) {
           <TextInput value={reps} onChangeText={setReps} keyboardType="number-pad" placeholder="5" placeholderTextColor={color.placeholder} style={s.input} accessibilityLabel="Reps done" />
         </View>
       </View>
-      {kg && n > MAX_E1RM_REPS && <Text style={type.small}>Use a set of {MAX_E1RM_REPS} reps or fewer: past that the estimate drifts too far to trust.</Text>}
+      {kg !== null && kg > 0 && n > MAX_E1RM_REPS && <Text style={type.small}>Use a set of {MAX_E1RM_REPS} reps or fewer: past that the estimate drifts too far to trust.</Text>}
       <Text style={type.small}>Most accurate from a heavy set of about 2 to 6 reps.</Text>
       {max !== null && (
         <>
@@ -146,10 +147,11 @@ const trendKg = (m: Mine | null) => m?.weighIns.at(-1)?.trendKg ?? null;
  * About you: sex, age and height, which only the formulas need. Kept on this
  * device (Forkbell doesn't store them), and shared by every tool that asks.
  */
-type About = { sex: Sex | null; age: string; height: string; activity: ActivityLevel };
+/** Height is kept in centimetres, so switching between pounds and kilograms can't change it. */
+type About = { sex: Sex | null; age: string; heightCm: number | null; activity: ActivityLevel };
 const ABOUT = 'device:tools-about';
 function useAbout() {
-  const [about, setAbout] = useState<About>(readCache<About>(ABOUT) ?? { sex: null, age: '', height: '', activity: 'moderate' });
+  const [about, setAbout] = useState<About>({ sex: null, age: '', heightCm: null, activity: 'moderate', ...readCache<Partial<About>>(ABOUT) });
   const set = (a: Partial<About>) => setAbout((old) => {
     const next = { ...old, ...a };
     writeCache(ABOUT, next);
@@ -179,6 +181,7 @@ function Field({ label, value, onChange, placeholder, decimal = true }: { label:
 
 function AboutYou({ about, set, activity }: { about: About; set: (a: Partial<About>) => void; activity?: boolean }) {
   const len = useLength();
+  const [height, setHeight] = useState(about.heightCm ? len.show(about.heightCm) : '');
   return (
     <View style={{ gap: space(3) }}>
       <View style={s.chips}>
@@ -187,7 +190,7 @@ function AboutYou({ about, set, activity }: { about: About; set: (a: Partial<Abo
       </View>
       <View style={s.inputs}>
         <Field label="Age" value={about.age} onChange={(age) => set({ age })} placeholder="35" decimal={false} />
-        <Field label={`Height (${len.unit})`} value={about.height} onChange={(height) => set({ height })} placeholder={len.unit === 'in' ? '70' : '178'} />
+        <Field label={`Height (${len.unit})`} value={height} onChange={(t) => { setHeight(t); set({ heightCm: len.toCm(t) }); }} placeholder={len.unit === 'in' ? '70' : '178'} />
       </View>
       {activity && (
         <View style={s.chips} accessibilityLabel="How active you are">
@@ -218,7 +221,7 @@ function DailyBurn({ advanced, mine }: { advanced: boolean; mine: Mine | null })
   const [about, set] = useAbout();
   const kg = trendKg(mine);
   const age = Number(about.age);
-  const heightCm = len.toCm(about.height);
+  const heightCm = about.heightCm;
   const formula = about.sex && age >= 13 && age <= 100 && heightCm && kg ? estimateBurn({ sex: about.sex, age, heightCm, weightKg: kg, activity: about.activity }) : null;
   const e = mine?.energy;
   return (
@@ -256,7 +259,7 @@ function Phase({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
   const floor = about.sex === 'male' ? 1500 : MIN_SUGGESTED_KCAL;
   const startKg = trendKg(mine);
   const [target, setTarget] = useState<string | null>(null);
-  const targetText = target ?? (mine?.goal.weightKg ? String(Math.round(fromKg(mine.goal.weightKg, units.unit))) : '');
+  const targetText = target ?? (mine?.goal.weightKg ? units.show(mine.goal.weightKg) : '');
   const targetKg = units.read(targetText);
   const bulking = startKg !== null && targetKg !== null && targetKg > startKg;
   const [pct, setPct] = useState<number>(0.5);
@@ -318,7 +321,7 @@ function Body({ advanced, mine }: { advanced: boolean; mine: Mine | null }) {
   const waist = tape.waist ?? latest('waist');
   const hips = tape.hips ?? latest('hips');
   const kg = trendKg(mine);
-  const heightCm = len.toCm(about.height);
+  const heightCm = about.heightCm;
   const neckCm = len.toCm(neck);
   const waistCm = len.toCm(waist);
   const bf = about.sex && heightCm && neckCm && waistCm ? navyBodyFat({ sex: about.sex, heightCm, neckCm, waistCm, hipCm: len.toCm(hips) }) : null;

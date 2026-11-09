@@ -218,11 +218,14 @@ export default function Train() {
         )}
         {startProblem('empty', () => start('empty'))}
 
-        <YourWeek
-          program={program}
-          finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
-          onChanged={load}
-        />
+        {/* Built from the signed-in person's own training days, so only for your own week. */}
+        {!viewing && (
+          <YourWeek
+            program={program}
+            finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
+            onChanged={load}
+          />
+        )}
         <TrainingCheckInCard />
         <TrainReadiness />
 
