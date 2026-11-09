@@ -12,7 +12,7 @@ import { color, space, type, textSize, radius } from '../../lib/theme';
 import { SkeletonCards } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
-type Perm = 'food_read' | 'food_write' | 'training_read' | 'progress_read' | 'wellbeing_read' | 'plan_write';
+type Perm = 'food_read' | 'food_write' | 'training_read' | 'progress_read' | 'wellbeing_read' | 'plan_write' | 'food_plan';
 type Person = { shareId: string; personId: string; name: string; permissions: Perm[] };
 type Data = { sharingWith: Person[]; sharedWithMe: Person[]; invites: { id: string; permissions: Perm[]; expiresAt: string }[] };
 const PERMS: { key: Perm; label: string }[] = [
@@ -22,6 +22,7 @@ const PERMS: { key: Perm; label: string }[] = [
   { key: 'progress_read', label: 'See weight and progress' },
   { key: 'wellbeing_read', label: 'See sleep, mood and medications' },
   { key: 'plan_write', label: 'Plan my training (a coach)' },
+  { key: 'food_plan', label: 'Plan my food (a coach)' },
 ];
 const describe = (p: Perm[]) => PERMS.filter((x) => p.includes(x.key)).map((x) => x.label.toLowerCase()).join(', ');
 

@@ -333,3 +333,26 @@ export const dayGoals = pgTable('day_goals', {
   date: date('date', { mode: 'string' }).notNull(),
   goals: jsonb('goals').$type<{ kcal: number | null; protein: number | null; carbs: number | null; fat: number | null }>().notNull(),
 });
+
+/** A coach's (or your own) weekly meal plan: a note and/or a saved meal per weekday and meal. */
+export const mealPlan = pgTable('meal_plan', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  weekday: integer('weekday').notNull(),
+  meal: text('meal').notNull(),
+  note: text('note'),
+  savedMealId: uuid('saved_meal_id'),
+  createdBy: uuid('created_by'),
+});
+
+/** Targets someone coaching you suggests, until you apply or dismiss them. */
+export const targetSuggestions = pgTable('target_suggestions', {
+  userId: uuid('user_id').primaryKey(),
+  kcal: integer('kcal').notNull(),
+  protein: num('protein'),
+  carbs: num('carbs'),
+  fat: num('fat'),
+  note: text('note'),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).defaultNow(),
+});

@@ -95,3 +95,22 @@ export const goalsSchema = z.object({
 });
 
 export type FoodInput = z.infer<typeof foodInputSchema>;
+
+/** One cell of the weekly meal plan; with neither a note nor a saved meal it's cleared. */
+export const mealPlanCellSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  meal: z.enum(MEALS),
+  note: z.string().trim().max(300).nullable(),
+  savedMealId: z.string().uuid().nullable(),
+});
+export type MealPlanCell = z.infer<typeof mealPlanCellSchema> & { savedMealName?: string | null; fromCoach?: boolean };
+
+/** Targets a coach suggests. Calories inside the range a person could follow. */
+export const targetSuggestionSchema = z.object({
+  kcal: z.number().int().min(800).max(10000),
+  protein: z.number().min(0).max(1000).nullable(),
+  carbs: z.number().min(0).max(2000).nullable(),
+  fat: z.number().min(0).max(1000).nullable(),
+  note: z.string().trim().max(500).nullable(),
+});
+export type TargetSuggestion = z.infer<typeof targetSuggestionSchema> & { fromCoach: boolean };
