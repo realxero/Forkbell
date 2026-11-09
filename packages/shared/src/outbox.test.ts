@@ -75,3 +75,18 @@ test('a change to a record that is waiting in a set-aside change waits with it',
   assert.equal(afterRejected(404, 'DELETE', 1), 'drop');
   assert.equal(afterRejected(400, 'PUT', 1), 'drop');
 });
+
+test('meal plan edits offline: the same cell keeps its latest, other people stay apart, order is kept', () => {
+  const put = (key: string, note: string): OutboxItem => ({ id: newId(), method: 'PUT', path: '/api/plans/meal-plan', body: { note }, coalesceKey: key, label: 'Plan', createdAt: 0, attempts: 0 });
+  let q: OutboxItem[] = [];
+  q = enqueue(q, put('plan:alice:1:lunch', 'a'));
+  q = enqueue(q, put('plan:alice:1:lunch', 'b'));
+  assert.equal(q.length, 1, 'same person, day and meal: the latest only');
+  assert.deepEqual(q[0]!.body, { note: 'b' });
+  q = enqueue(q, put('plan:bob:1:lunch', 'c'));
+  assert.equal(q.length, 2, "another client's same cell is a separate change");
+  q = enqueue(q, put('plan:alice:1:lunch', 'd'));
+  // A change to the same kind of record sits in between, so nothing is merged past it:
+  // all three go up in order, and Alice's latest note still arrives last.
+  assert.deepEqual(q.map((i) => [i.coalesceKey, (i.body as { note: string }).note]), [['plan:alice:1:lunch', 'b'], ['plan:bob:1:lunch', 'c'], ['plan:alice:1:lunch', 'd']]);
+});

@@ -182,6 +182,9 @@ try {
   assert.equal((await asBobViewingAlice((tx) => tx`update users set goal_kcal = 1000 where id = ${alice} returning id`)).length, 0, 'or change her goals');
   assert.equal((await as(carol, (tx) => tx`select * from meal_plan`, alice)).length, 0, "Carol can't see Alice's plan");
   assert.equal((await as(alice, (tx) => tx`delete from target_suggestions returning user_id`)).length, 1, 'Alice can dismiss it');
+  assert.equal((await asBobViewingAlice((tx) => tx`update meal_plan set note = 'Rice and beans' where weekday = 1 returning id`)).length, 1, 'Bob can change the plan he keeps');
+  await as(alice, (tx) => tx`update shares set permissions = '{food_read}' where grantee_id = ${bob}`);
+  assert.equal((await asBobViewingAlice((tx) => tx`update meal_plan set note = 'Nope' where weekday = 1 returning id`)).length, 0, 'not once planning is taken away');
 
   // Bob leaves; nothing is visible again.
   await as(bob, (tx) => tx`delete from shares where owner_id = ${alice}`);

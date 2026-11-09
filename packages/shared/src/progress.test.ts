@@ -152,3 +152,9 @@ test('the burn estimate sets the weight change against the food from the same da
   assert.equal(e.spanDays, 19);
   assert.ok(e.kcal !== null && Math.abs(e.kcal - 2500) < 400, `kcal ${e.kcal}`);
 });
+
+test('maintaining keeps calories at the burn and protein at 1.6 g per kg', () => {
+  const g = presetGoals('maintain', 2400, 80);
+  assert.equal(g.kcal, 2400);
+  assert.equal(g.protein, 128);
+});

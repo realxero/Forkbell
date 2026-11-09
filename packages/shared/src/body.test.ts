@@ -28,3 +28,8 @@ test('a cut at 0.5% a week reaches its target with weekly checkpoints', () => {
   assert.ok(phaseTimeline({ startKg: 70, targetKg: 75, pctPerWeek: 0.25, start: '2026-01-05' })!.weeks > 20, 'a lean bulk is slow');
   assert.equal(phaseTimeline({ startKg: 80, targetKg: 80, pctPerWeek: 0.5, start: '2026-01-05' }), null);
 });
+
+test('a phase too slow to finish in three years is not drawn; no pace is no plan', () => {
+  assert.equal(phaseTimeline({ startKg: 80, targetKg: 60, pctPerWeek: 0.01, start: '2026-01-05' }), null);
+  assert.equal(phaseTimeline({ startKg: 80, targetKg: 70, pctPerWeek: 0, start: '2026-01-05' }), null);
+});

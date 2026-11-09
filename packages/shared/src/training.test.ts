@@ -62,3 +62,9 @@ test('the rep table turns a one-rep max back into weights for each rep count', (
   for (const reps of [2, 5, 8, 10]) assert.ok(Math.abs(estimatedOneRepMax(weightForReps(100, reps), reps)! - 100) < 1e-9, `${reps} reps`);
   assert.ok(weightForReps(100, 10) < weightForReps(100, 5), 'more reps, less weight');
 });
+
+test('no estimate from nothing lifted or no reps; the rep table at 30 reps is half the max', () => {
+  assert.equal(estimatedOneRepMax(100, 0), null);
+  assert.equal(estimatedOneRepMax(0, 5), null);
+  assert.equal(weightForReps(100, 30), 50);
+});
