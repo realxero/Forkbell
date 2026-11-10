@@ -663,7 +663,7 @@ function TimelineSheet({ visible, reached, next, onClose }: { visible: boolean; 
           <Text style={type.title} accessibilityRole="header">Timeline</Text>
           <Pressable onPress={onClose} hitSlop={10} style={s.linkHit}><Text style={[s.link, { fontSize: textSize.body }]}>Done</Text></Pressable>
         </View>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: space(4), paddingBottom: space(10) }}>
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={{ paddingHorizontal: space(4), paddingBottom: space(10) }}>
           {reached.map((m, i) => (
             <View key={m.key} style={{ flexDirection: 'row', gap: space(3) }}>
               <View style={{ alignItems: 'center', width: 32 }}>

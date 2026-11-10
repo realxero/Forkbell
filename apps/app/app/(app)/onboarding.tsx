@@ -126,7 +126,7 @@ export default function Onboarding() {
           <View style={s.dots}>{STEPS.slice(1).map((x, i) => <View key={x} style={[s.dot, i < index && { backgroundColor: color.accent }]} />)}</View>
           <View style={[s.side, { alignItems: 'flex-end' }]}><Pressable onPress={() => finish(true)} hitSlop={12}><Text style={[s.link, { color: color.ironSoft }]}>Skip</Text></Pressable></View>
         </View>
-        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           {step === 'welcome' && (
             <View style={{ alignItems: 'center', gap: space(4), paddingTop: space(10) }}>
               <Logo size={120} />

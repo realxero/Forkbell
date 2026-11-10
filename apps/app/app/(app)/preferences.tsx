@@ -59,7 +59,7 @@ export default function PreferencesScreen() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.head}>
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>Cancel</Text></Pressable>
           <Text style={type.title}>{training ? 'Training setup' : 'Food and suggestions'}</Text>

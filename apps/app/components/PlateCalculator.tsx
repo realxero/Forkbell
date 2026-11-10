@@ -110,7 +110,7 @@ export function PlateCalculator({
           <Text style={type.title}>Plate calculator</Text>
           <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
         </View>
-        <ScrollView contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
           <View style={s.targetRow}>
             <Pressable onPress={() => step(-smallest)} style={s.stepBtn} accessibilityLabel="Less"><Ionicons name="remove" size={22} color={color.iron} /></Pressable>
             <TextInput value={target} onChangeText={setTarget} keyboardType="decimal-pad" placeholder={fmt(bar.weight)} style={s.target} accessibilityLabel={`Target weight in ${unit}`} />

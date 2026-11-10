@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
-import { MEALS, amountFromGrams, amountText, forAmount, parseQuantity, unitFor, unitsFor, type DiaryDay, type Food, type FoodCandidate, type Meal } from '@forkbell/shared';
+import { MEALS, amountFromGrams, amountText, forAmount, isLiquid, parseQuantity, unitFor, unitsFor, type DiaryDay, type Food, type FoodCandidate, type Meal } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { readCache } from '../lib/sync';
 import { setFoodServing } from '../lib/actions';
@@ -45,7 +45,7 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
   const [naming, setNaming] = useState<string | null>(null);
   const [servingError, setServingError] = useState<string | null>(null);
   const units = useMemo(() => unitsFor(food, prefer), [food, prefer]);
-  // Start with what was said before, else last time's amount, else one serving, else 100 g in your unit.
+  // Start with what was said before, else last time's amount, else one serving, else a cup of a drink or 100 g of a food, in your units.
   const start = useMemo(() => {
     if (initialAmount) return { q: initialAmount.amount, key: unitFor(food, initialAmount.unit, prefer).key };
     const grams = initialGrams ?? lastGrams ?? null;
@@ -54,6 +54,7 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
       return a.unit.key === 'g' && prefer === 'lb' ? { q: Math.round((grams / 28.349523) * 10) / 10, key: 'oz' } : { q: a.quantity, key: a.unit.key };
     }
     if (food.servingGrams) return { q: 1, key: 'serving' };
+    if (isLiquid(food)) return prefer === 'lb' ? { q: 8, key: 'floz' } : { q: 250, key: 'ml' };
     return prefer === 'lb' ? { q: 3.5, key: 'oz' } : { q: 100, key: 'g' };
   }, [food, initialAmount, initialGrams, lastGrams, prefer]);
   const [qty, setQty] = useState(String(start.q));
@@ -79,7 +80,7 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
   const last = lastGrams && lastGrams > 0 ? amountFromGrams(food, lastGrams, prefer) : null;
 
   return (
-    <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
+    <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
       <Text style={type.title}>{food.name}</Text>
       {food.brand ? <Text style={type.small}>{food.brand}</Text> : null}
       {food.servingLabel || food.servingGrams ? (

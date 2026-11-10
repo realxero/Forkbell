@@ -46,7 +46,7 @@ export default function Tools() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScrollView contentContainerStyle={[s.content, wide && s.contentWide]}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[s.content, wide && s.contentWide]}>
         <View style={s.head}>
           <Text style={[type.pageTitle, { flex: 1 }]}>Tools</Text>
           <View style={{ flexDirection: 'row', gap: space(2) }} accessibilityRole="radiogroup" accessibilityLabel="Detail">

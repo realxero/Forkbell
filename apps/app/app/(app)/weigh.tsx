@@ -90,7 +90,7 @@ export default function Weigh() {
   return (
     <SafeAreaView style={s.screen}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
           <Text style={type.pageTitle}>Weigh your meal</Text>
           {lidarSupported && (
@@ -307,7 +307,7 @@ function FoodPicker({ visible, recent, onPick, onClose }: { visible: boolean; re
           <TextInput value={q} onChangeText={setQ} placeholder="Search foods" placeholderTextColor={color.placeholder} style={[s.input, { flex: 1 }]} autoFocus returnKeyType="search" />
           <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space(1), paddingBottom: space(8) }}>
+        <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space(1), paddingBottom: space(8) }}>
           {busy && <ActivityIndicator color={color.iron} />}
           {found ? (
             <>

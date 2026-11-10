@@ -105,7 +105,7 @@ export default function Settings() {
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScrollView contentContainerStyle={s.content}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content}>
         <Text style={type.pageTitle}>Settings</Text>
         <Pressable
           onPress={() => router.push('/setting/security')}

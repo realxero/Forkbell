@@ -186,7 +186,7 @@ export function QuickBell() {
           </ScrollView>
           <View style={s.inputRow}>
             <TextInput value={text} onChangeText={setText} placeholder="Ask Bell" style={s.input} onSubmitEditing={() => { void ask(text, false); setText(''); }} returnKeyType="send" />
-            <Pressable disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
+            <Pressable hitSlop={6} disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
               <Ionicons name="arrow-up" size={20} color={color.onAccent} />
             </Pressable>
           </View>

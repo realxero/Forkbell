@@ -57,9 +57,9 @@ export function SplitRecipe({ recipe, onClose }: { recipe: Recipe | null; onClos
           <Text style={type.small}>A batch you’ll eat over several meals or days. Each portion is one serving: {Math.round(serving)} g, {each.kcal} kcal, {each.protein} g protein.</Text>
           <Text style={type.label}>Portions</Text>
           <View style={s.stepper}>
-            <Pressable onPress={() => setPortions(Math.max(1, count - 1))} style={s.step} accessibilityLabel="One fewer portion"><Ionicons name="remove" size={20} color={color.iron} /></Pressable>
+            <Pressable hitSlop={6} onPress={() => setPortions(Math.max(1, count - 1))} style={s.step} accessibilityLabel="One fewer portion"><Ionicons name="remove" size={20} color={color.iron} /></Pressable>
             <Text style={[type.title, { minWidth: 40, textAlign: 'center' }]}>{count}</Text>
-            <Pressable onPress={() => setPortions(Math.min(14, count + 1))} style={s.step} accessibilityLabel="One more portion"><Ionicons name="add" size={20} color={color.iron} /></Pressable>
+            <Pressable hitSlop={6} onPress={() => setPortions(Math.min(14, count + 1))} style={s.step} accessibilityLabel="One more portion"><Ionicons name="add" size={20} color={color.iron} /></Pressable>
           </View>
           <View style={s.chips}>
             <Chip label="One a day" on={mode === 'days'} onPress={() => setMode('days')} />

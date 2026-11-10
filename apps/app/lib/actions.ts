@@ -56,7 +56,7 @@ export async function addEntry(input: { date: string; meal: Meal; grams: number;
   if ('id' in input.food) {
     updateCache<RecentFoods>('/api/foods/recent', (r) => {
       if (!r) return r;
-      const entry = { food, lastGrams: input.grams, lastMeal: input.meal, uses: (r.recent.find((x) => x.food.id === food.id)?.uses ?? 0) + 1 };
+      const entry = { food, lastGrams: input.grams, lastAmount: input.amount ?? null, lastUnit: input.unit ?? null, lastMeal: input.meal, uses: (r.recent.find((x) => x.food.id === food.id)?.uses ?? 0) + 1 };
       return { ...r, recent: [entry, ...r.recent.filter((x) => x.food.id !== food.id)].slice(0, 15) };
     });
   }

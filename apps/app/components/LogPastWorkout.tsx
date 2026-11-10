@@ -55,7 +55,7 @@ export function LogPastWorkout({ visible, program, onClose }: { visible: boolean
           <Text style={type.title}>Log a past workout</Text>
           <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Close"><Ionicons name="close" size={24} color={color.ironSoft} /></Pressable>
         </View>
-        <ScrollView contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={{ gap: space(3) }} keyboardShouldPersistTaps="handled">
           <Text style={type.small}>For a workout you did without logging it. It’s saved as finished; then add exercises and tick the sets you did.</Text>
           <Text style={type.label}>Day</Text>
           <Pressable onPress={() => setCalendar(true)} style={s.field} accessibilityRole="button"><Text style={type.body}>{nice(day)}</Text></Pressable>

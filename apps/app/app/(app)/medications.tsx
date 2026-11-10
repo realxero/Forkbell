@@ -55,7 +55,7 @@ export default function Medications() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
         <Text style={type.pageTitle}>Medications</Text>
         <Text style={type.small}>A simple checklist for medications and supplements. Forkbell doesn’t check doses or interactions; follow your prescription and ask your pharmacist or doctor about anything you’re unsure of.</Text>
