@@ -36,5 +36,21 @@ export function isPrivate(ip: string): boolean {
   const nat64 = g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0);
   const compat = g.slice(0, 6).every((x) => x === 0) && (g[6]! | g[7]!) > 1; // ::a.b.c.d (old style)
   if (mapped || nat64 || compat) return blocked.check(`${g[6]! >> 8}.${g[6]! & 255}.${g[7]! >> 8}.${g[7]! & 255}`, 'ipv4');
+  if (g[0] === 0x2002) return blocked.check(`${g[1]! >> 8}.${g[1]! & 255}.${g[2]! >> 8}.${g[2]! & 255}`, 'ipv4'); // 6to4
   return blocked.check(ip.split('%')[0]!, 'ipv6');
+}
+
+/** Teredo (2001::/32) and local-use NAT64 (64:ff9b:1::/48) tunnel to addresses we can't see. */
+const tunnels = new BlockList();
+tunnels.addSubnet('2001::', 32, 'ipv6');
+tunnels.addSubnet('64:ff9b:1::', 48, 'ipv6');
+
+/**
+ * Whether the server must not fetch this address for someone: private ones,
+ * and tunnels that could lead anywhere. Kept apart from isPrivate, which also
+ * decides whose forwarding headers to believe.
+ */
+export function unfetchable(ip: string): boolean {
+  const bare = ip.split('%')[0]!;
+  return isPrivate(ip) || (isIP(bare) === 6 && tunnels.check(bare, 'ipv6'));
 }
