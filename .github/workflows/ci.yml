@@ -28,6 +28,8 @@ jobs:
         run: |
           pnpm migrate
           pnpm --filter @forkbell/db rls-check
+      - name: Form check page builds (the Docker image runs this too)
+        run: pnpm --filter @forkbell/app build:form
       - name: Web build
         run: cd apps/app && CI=1 npx expo export --platform web --output-dir dist
       # Real requests against a real server: every path the app calls exists,

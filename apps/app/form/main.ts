@@ -13,7 +13,8 @@ const status = $('status');
 const live = $('live');
 const result = $('result');
 const ctx = canvas.getContext('2d')!;
-$('title').textContent = `Form check: ${exercise}`;
+// The app's own header already says "Form check".
+$('title').textContent = exercise;
 if (!formChecked(formPattern(exercise))) $('tip').textContent += ' This exercise gets a rep count; form checks cover squats, hinges, presses, curls and pulls.';
 
 let landmarker: PoseLandmarker | null = null;
@@ -78,6 +79,7 @@ function start() {
   live.hidden = false;
   live.textContent = '0 reps';
   $('stop').hidden = false;
+  $('pick').hidden = true; // one main action while watching: Finish set
   status.textContent = 'Watching… do your set, then tap Finish set.';
   requestAnimationFrame(tick);
 }
@@ -87,6 +89,7 @@ function finish() {
   running = false;
   live.hidden = true;
   $('stop').hidden = true;
+  $('pick').hidden = false;
   stream?.getTracks().forEach((t) => t.stop());
   stream = null;
   $('flip').hidden = true;
@@ -105,7 +108,9 @@ async function camera() {
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 960 } }, audio: false });
     video.srcObject = stream;
-    await video.play();
+    // Don't wait on play(): on an iPhone web view it can stay pending while the
+    // camera runs, and the set never started. tick() waits for real frames.
+    void video.play().catch(() => {});
     $('flip').hidden = false;
     start();
   } catch (e) {
