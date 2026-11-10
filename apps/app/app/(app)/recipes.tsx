@@ -43,7 +43,7 @@ export default function Recipes() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={s.content}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content}>
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
         <Text style={type.pageTitle}>Recipes</Text>
         <Text style={type.small}>Add the ingredients once; Forkbell works out the numbers per serving. Recipes show up in food search like your other foods.</Text>
@@ -155,7 +155,7 @@ function Editor({ draft, onClose, onSaved }: { draft: Draft; onClose: () => void
   return (
     <SafeAreaView style={s.screen}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           <View style={[s.row, { justifyContent: 'space-between' }]}>
             <Pressable onPress={onClose} hitSlop={12}><Text style={s.link}>Cancel</Text></Pressable>
             <Text style={type.title}>{d.id ? 'Edit recipe' : 'New recipe'}</Text>

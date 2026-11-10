@@ -108,7 +108,7 @@ export function IdentifyEquipment({ onClose, onPick }: { onClose: () => void; on
                         </View>
                       </Pressable>
                       {onPick && (
-                        <Pressable onPress={() => onPick(e)} style={s.add} accessibilityLabel={`Add ${e.name}`}>
+                        <Pressable hitSlop={6} onPress={() => onPick(e)} style={s.add} accessibilityLabel={`Add ${e.name}`}>
                           <Ionicons name="add" size={20} color={color.onAccent} />
                         </Pressable>
                       )}

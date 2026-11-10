@@ -77,7 +77,7 @@ export default function ExerciseDetail() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={s.content}>
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content}>
         <BackLink />
         {error && <Text style={s.error}>{error}</Text>}
         {!d && !error && <SkeletonCards count={3} />}

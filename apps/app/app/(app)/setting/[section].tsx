@@ -44,7 +44,7 @@ export default function SettingSection() {
           <Text style={s.backText}>Settings</Text>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Text style={type.pageTitle}>{def?.title ?? 'Settings'}</Text>
         {def ? <def.body /> : <Text style={type.body}>That page doesn’t exist.</Text>}
       </ScrollView>

@@ -114,7 +114,7 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
           </ScrollView>
           <View style={s.inputRow}>
             <TextInput value={text} onChangeText={setText} placeholder="Ask about this workout" placeholderTextColor={color.placeholder} style={s.input} returnKeyType="send" onSubmitEditing={() => { void ask(text, false); setText(''); }} />
-            <Pressable disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
+            <Pressable hitSlop={6} disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
               <Ionicons name="arrow-up" size={20} color={color.onAccent} />
             </Pressable>
           </View>

@@ -503,7 +503,7 @@ export default function WorkoutScreen() {
           <View style={s.back} />
         </View>
 
-        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
           {error && <Text style={s.error}>{error}</Text>}
           {hint && <Text style={s.hint}>{hint}</Text>}
           {w.finishedAt && (

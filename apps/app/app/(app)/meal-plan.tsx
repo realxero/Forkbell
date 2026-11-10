@@ -58,7 +58,7 @@ export default function MealPlan() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <View style={s.head}>
           <Pressable onPress={() => router.back()} style={s.back} accessibilityRole="button" accessibilityLabel="Back">
             <Ionicons name="chevron-back" size={26} color={color.iron} />

@@ -86,7 +86,7 @@ export default function Scan() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.back()} hitSlop={12}><Text style={s.link}>‹ Back</Text></Pressable>
         <Text style={type.pageTitle}>Measure with LiDAR</Text>
         <Text style={type.small}>{MEAL_NAMES[meal]}{date === todayLocal() ? '' : ` · ${date}`}</Text>

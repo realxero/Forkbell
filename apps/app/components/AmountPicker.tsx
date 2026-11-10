@@ -80,7 +80,7 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
   const last = lastGrams && lastGrams > 0 ? amountFromGrams(food, lastGrams, prefer) : null;
 
   return (
-    <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
+    <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
       <Text style={type.title}>{food.name}</Text>
       {food.brand ? <Text style={type.small}>{food.brand}</Text> : null}
       {food.servingLabel || food.servingGrams ? (

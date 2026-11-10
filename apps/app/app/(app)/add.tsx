@@ -184,7 +184,7 @@ export default function AddFood() {
         ) : view.kind === 'scan' ? (
           <Scanner onCode={onCode} onCancel={() => setView({ kind: 'search' })} error={error} />
         ) : (
-          <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
+          <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
             <View style={s.searchRow}>
               <TextInput
                 value={q}
@@ -330,7 +330,7 @@ function Scanner({ onCode, onCancel, error }: { onCode: (code: string) => Promis
   );
 
   return (
-    <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
+    <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
       {looking ? (
         <View style={{ alignItems: 'center', gap: space(3), paddingVertical: space(10) }}>
           <ActivityIndicator color={color.iron} />
@@ -443,7 +443,7 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
   );
 
   return (
-    <ScrollView contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
+    <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
       {note && <Text style={type.body}>{note}</Text>}
       {canReadLabels && (
         <Pressable onPress={readLabel} disabled={read?.busy} style={[s.labelButton, read?.busy && { opacity: 0.6 }]} accessibilityLabel="Read the nutrition label from a photo">
