@@ -39,7 +39,30 @@ import { postgresCode, refusalFor, loggable } from './db-errors.ts';
 const database = connect(env.databaseUrl);
 const app = new Hono();
 
-app.use('*', secureHeaders());
+// Enforced: no plugins, no <base> rewrites, no framing, forms post only here.
+// Report-only: the full lockdown, logged in the browser console without blocking.
+// ponytail: enforce the report-only set once a week of use shows no violations
+// (the form page's pose model is the one to watch: wasm and workers).
+app.use(
+  '*',
+  secureHeaders({
+    contentSecurityPolicy: { objectSrc: ["'none'"], baseUri: ["'self'"], frameAncestors: ["'none'"], formAction: ["'self'"] },
+    contentSecurityPolicyReportOnly: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      mediaSrc: ["'self'", 'data:', 'blob:'],
+      fontSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      workerSrc: ["'self'", 'blob:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"],
+      formAction: ["'self'"],
+    },
+  }),
+);
 // Every answer says which version it came from: curl -sI https://forkbell… | grep forkbell
 app.use('*', async (c, next) => {
   await next();

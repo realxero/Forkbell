@@ -15,8 +15,18 @@ import { USERNAME, decoyHash, hashPassword, lockedFor, noteFailure, noteSuccess,
 /** userId: who is signed in. profileId: whose data this request is about (theirs, or someone who shared with them). */
 export type AppEnv = { Variables: { userId: string; profileId: string; tokenHash: string } };
 
-const COOKIE = 'fb_session';
-const SSO_COOKIE = 'fb_sso';
+// On https the cookies carry a prefix the browser enforces: __Host- can only be
+// set by this host over https for the whole site, so a sibling subdomain can't
+// plant or overwrite a session. Over plain http (local use) they can't, so no prefix.
+const OLD_COOKIE = 'fb_session';
+const COOKIE = env.secureCookies ? '__Host-fb_session' : OLD_COOKIE;
+const SSO_COOKIE = env.secureCookies ? '__Secure-fb_sso' : 'fb_sso';
+/** The session cookie, or the one from before the prefix, so nobody is signed out by the change. */
+const sessionCookie = (c: Context) => getCookie(c, COOKIE) ?? getCookie(c, OLD_COOKIE);
+function setSessionCookie(c: Context, token: string, expires: Date) {
+  setCookie(c, COOKIE, token, { httpOnly: true, secure: env.secureCookies, sameSite: 'Lax', path: '/', expires });
+  if (COOKIE !== OLD_COOKIE && getCookie(c, OLD_COOKIE)) deleteCookie(c, OLD_COOKIE, { path: '/' });
+}
 // Each new account costs a password hash and a row: 10 per address per hour.
 const signups = perWindow(10, 60 * 60_000);
 const NATIVE_REDIRECT = 'forkbell://auth';
@@ -166,7 +176,7 @@ export function authRoutes(db: Database) {
   /** Hands out a session: a cookie on the web, the token itself to the phone app. */
   const finish = (c: Context, platform: 'web' | 'native', s: { token: string; expires: Date }) => {
     if (platform === 'native') return c.json({ token: s.token });
-    setCookie(c, COOKIE, s.token, { httpOnly: true, secure: env.secureCookies, sameSite: 'Lax', path: '/', expires: s.expires });
+    setSessionCookie(c, s.token, s.expires);
     return c.json({ ok: true });
   };
 
@@ -185,7 +195,7 @@ export function authRoutes(db: Database) {
       noteFailure(username, ip);
       return c.json({ error: 'That username and password don’t match.' }, 401);
     }
-    noteSuccess(username);
+    noteSuccess(username, ip);
     return finish(c, platform, await startSession(db, row.user_id, 'password', describeDevice(c.req.header('user-agent'), platform)));
   });
 
@@ -252,7 +262,8 @@ export function authRoutes(db: Database) {
     if (!claims?.sub) return c.text('The sign-in provider did not say who you are.', 400);
 
     const name = (claims.name ?? claims.preferred_username ?? null) as string | null;
-    const email = (claims.email ?? null) as string | null;
+    // An address the provider says it hasn't checked could be anyone's, and it's shown to people you share with.
+    const email = claims.email_verified === false ? null : ((claims.email ?? null) as string | null);
     const [row] = await db.execute<{ id: string }>(
       sql`select auth_upsert_user(${claims.iss}, ${claims.sub}, ${email}, ${name}) as id`,
     );
@@ -265,13 +276,7 @@ export function authRoutes(db: Database) {
       handoff.set(code, { token, expires: Date.now() + 60_000, bind: login.bind });
       return c.redirect(`${login.returnTo}?code=${code}`);
     }
-    setCookie(c, COOKIE, token, {
-      httpOnly: true,
-      secure: env.secureCookies,
-      sameSite: 'Lax',
-      path: '/',
-      expires,
-    });
+    setSessionCookie(c, token, expires);
     return c.redirect(env.appUrl);
   });
 
@@ -317,9 +322,10 @@ export function authRoutes(db: Database) {
   });
 
   r.post('/logout', async (c) => {
-    const token = readToken(c.req.header('authorization'), getCookie(c, COOKIE));
+    const token = readToken(c.req.header('authorization'), sessionCookie(c));
     if (token) await db.execute(sql`select auth_end_session(${hashToken(token)})`);
     deleteCookie(c, COOKIE, { path: '/' });
+    if (COOKIE !== OLD_COOKIE) deleteCookie(c, OLD_COOKIE, { path: '/' });
     return c.json({ ok: true });
   });
 
@@ -340,7 +346,7 @@ function readToken(authorization: string | undefined, cookie: string | undefined
 
 export function requireUser(db: Database): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const token = readToken(c.req.header('authorization'), getCookie(c, COOKIE));
+    const token = readToken(c.req.header('authorization'), sessionCookie(c));
     if (!token) return c.json({ error: 'Sign in to continue.' }, 401);
     // A Shortcut key can ask Bell and log what you confirm, nothing else, and can't make more keys.
     if (token.startsWith(SHORTCUT_PREFIX) && (!c.req.path.startsWith('/api/shortcuts/') || c.req.path.startsWith('/api/shortcuts/keys')))
