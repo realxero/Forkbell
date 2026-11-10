@@ -212,7 +212,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listening: { flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.dangerBg, borderRadius: radius.row, padding: space(3) },
   inputRow: { flexDirection: 'row', gap: space(2), alignItems: 'center' },
-  input: { ...type.body, flex: 1, backgroundColor: color.chalk, borderRadius: 20, paddingHorizontal: space(4), paddingVertical: space(2) + 2, borderWidth: 1, borderColor: color.line },
+  input: { ...type.body, flex: 1, backgroundColor: color.chalk, borderRadius: radius.pill, paddingHorizontal: space(4), paddingVertical: space(2) + 2, borderWidth: 1, borderColor: color.line },
   send: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   link: { color: color.accent, fontWeight: '700' },
 });

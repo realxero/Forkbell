@@ -9,11 +9,14 @@ import { searchOff, barcodeOff } from '../providers/off.ts';
 import { barcodeUsda, searchUsda } from '../providers/usda.ts';
 import { env } from '../env.ts';
 import { saveFood, BadFood } from './save-food.ts';
+import { perWindow } from '../limit.ts';
 
 const likeEscape = (s: string) => s.replace(/[%_\\]/g, '\\$&');
 
 /** Recent Open Food Facts and USDA answers by search words (10 minutes, at most 500). */
 const searched = new Map<string, { outside: PromiseSettledResult<FoodCandidate[]>[]; until: number }>();
+/** Outside lookups per person, so one account can't get the server's address banned by OFF or burn the USDA key. */
+const lookups = perWindow(120, 10 * 60_000);
 
 export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
@@ -40,7 +43,11 @@ export function foodRoutes({ asUser }: ReturnType<typeof connect>) {
     );
     const key = q.trim().toLowerCase();
     const kept = searched.get(key);
-    const outside = kept && kept.until > Date.now()
+    const fresh = kept && kept.until > Date.now();
+    if (!fresh && !lookups.take(c.get('userId'))) {
+      return c.json({ mine: (await minePromise).map(toFood), results: [], errors: ['That’s a lot of searches in a short time. Outside food databases are back in a few minutes.'] });
+    }
+    const outside = fresh
       ? kept.outside
       : await Promise.allSettled([
           searchOff(q),

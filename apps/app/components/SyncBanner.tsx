@@ -3,7 +3,7 @@ import { AccessibilityInfo, Alert, Platform, StyleSheet, Text, View } from 'reac
 import { Pressable } from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearProblems, discardHeld, flush, retryHeld, useSync } from '../lib/sync';
-import { color, space, textSize } from '../lib/theme';
+import { color, radius, space, textSize } from '../lib/theme';
 
 /**
  * A small pill near the bottom (clear of headers and the tab bar) when offline,
@@ -72,6 +72,6 @@ function chooseHeld(what: string) {
 
 const s = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 100 },
-  pill: { borderRadius: 20, paddingHorizontal: space(4), paddingVertical: space(2), maxWidth: 360, opacity: 0.95 },
+  pill: { borderRadius: radius.pill, paddingHorizontal: space(4), paddingVertical: space(2), maxWidth: 360, opacity: 0.95 },
   text: { color: color.onAccent, fontWeight: '700', fontSize: textSize.small, textAlign: 'center' },
 });

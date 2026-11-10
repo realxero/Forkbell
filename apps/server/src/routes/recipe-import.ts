@@ -17,7 +17,7 @@ import type { AppEnv } from '../auth.ts';
 import { aiConfigFor } from '../bell/config.ts';
 import { anthropic, openai } from '../bell/providers.ts';
 import { toFood } from '../serialize.ts';
-import { isPrivate } from '../private-address.ts';
+import { unfetchable } from '../private-address.ts';
 import { perWindow } from '../limit.ts';
 
 // Each preview fetches a page and asks the AI: 20 per person per 10 minutes.
@@ -63,7 +63,7 @@ function publicOnly(hostname: string, options: LookupOptions, done: (err: NodeJS
     if (err) return done(err, '');
     const list = found as LookupAddress[];
     if (!list.length) return done(Object.assign(new Error('not found'), { code: 'ENOTFOUND' }), '');
-    if (list.some((a) => isPrivate(a.address))) return done(Object.assign(new Error(PRIVATE_LINK), { code: 'FORKBELL_PRIVATE' }), '');
+    if (list.some((a) => unfetchable(a.address))) return done(Object.assign(new Error(PRIVATE_LINK), { code: 'FORKBELL_PRIVATE' }), '');
     if (options.all) return done(null, list);
     done(null, list[0]!.address, list[0]!.family);
   });
@@ -75,7 +75,7 @@ type Got = { status: number; location: string | null; text: string };
 function getOnce(target: URL, allowPrivate: boolean): Promise<Got> {
   // A link that is an address itself is never looked up, so it's checked here.
   const host = target.hostname.replace(/^\[|\]$/g, '');
-  if (!allowPrivate && isIP(host) && isPrivate(host)) return Promise.reject(Object.assign(new Error(PRIVATE_LINK), { code: 'FORKBELL_PRIVATE' }));
+  if (!allowPrivate && isIP(host) && unfetchable(host)) return Promise.reject(Object.assign(new Error(PRIVATE_LINK), { code: 'FORKBELL_PRIVATE' }));
   return new Promise((resolve, reject) => {
     const req = (target.protocol === 'https:' ? httpsRequest : httpRequest)(
       target,
@@ -104,7 +104,11 @@ function getOnce(target: URL, allowPrivate: boolean): Promise<Got> {
         res.on('error', reject);
       },
     );
-    req.on('timeout', () => req.destroy(Object.assign(new Error('The page took too long to answer.'), { code: 'ETIMEDOUT' })));
+    const tooLong = () => req.destroy(Object.assign(new Error('The page took too long to answer.'), { code: 'ETIMEDOUT' }));
+    req.on('timeout', tooLong); // nothing for 10 s
+    // ...and a page sent a trickle at a time can't hold the connection open for good.
+    const total = setTimeout(tooLong, 20_000);
+    req.on('close', () => clearTimeout(total));
     req.on('error', reject);
     req.end();
   });
