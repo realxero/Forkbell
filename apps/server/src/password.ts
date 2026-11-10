@@ -41,12 +41,15 @@ export function passwordProblem(password: string, username: string) {
 }
 
 /**
- * Guessing limits, kept in memory (one server process): 8 wrong passwords for a
- * username, or 30 from one address, in 15 minutes, then a wait.
+ * Guessing limits, kept in memory (one server process), per 15 minutes: 8 wrong
+ * passwords for a username from one address, 30 from one address, then a wait.
+ * A username alone locks only at 100, so someone who knows your username can't
+ * lock you out with a few tries, but guessing spread over many addresses still
+ * slows down.
  */
 const WINDOW = 15 * 60_000;
 const failures = new Map<string, { count: number; since: number }>();
-const LIMITS = { user: 8, ip: 30 };
+const LIMITS = { pair: 8, ip: 30, user: 100 };
 
 function over(key: string, limit: number) {
   const f = failures.get(key);
@@ -60,7 +63,7 @@ function over(key: string, limit: number) {
 
 /** Minutes to wait before trying again, or 0. */
 export function lockedFor(username: string, ip: string) {
-  return Math.max(over(`u:${username}`, LIMITS.user), over(`i:${ip}`, LIMITS.ip));
+  return Math.max(over(`p:${username}|${ip}`, LIMITS.pair), over(`i:${ip}`, LIMITS.ip), over(`u:${username}`, LIMITS.user));
 }
 
 export function noteFailure(username: string, ip: string) {
@@ -74,13 +77,14 @@ export function noteFailure(username: string, ip: string) {
       failures.delete(k);
     }
   }
-  for (const key of [`u:${username}`, `i:${ip}`]) {
+  for (const key of [`p:${username}|${ip}`, `i:${ip}`, `u:${username}`]) {
     const f = failures.get(key);
     if (!f || Date.now() - f.since > WINDOW) failures.set(key, { count: 1, since: Date.now() });
     else f.count++;
   }
 }
 
-export function noteSuccess(username: string) {
+export function noteSuccess(username: string, ip: string) {
+  failures.delete(`p:${username}|${ip}`);
   failures.delete(`u:${username}`);
 }

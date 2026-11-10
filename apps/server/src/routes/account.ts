@@ -62,7 +62,14 @@ export function accountRoutes({ db, asUser }: ReturnType<typeof connect>) {
         noteFailure(key, key);
         return c.json({ error: 'Your current password isn’t right.' }, 403);
       }
-      noteSuccess(key);
+      noteSuccess(key, key);
+    } else {
+      // Adding a first password needs a recent sign-in, so a session lifted from a
+      // device can't quietly give itself a way back in that outlives it.
+      const [me] = await run<{ created_at: string }>(c, sql`select created_at from auth_list_sessions(${c.get('tokenHash')}) where current`);
+      if (!me || Date.now() - new Date(me.created_at).getTime() > 10 * 60_000) {
+        return c.json({ error: 'To add a password, sign out and sign in again, then add it within 10 minutes.' }, 403);
+      }
     }
     const [ok] = await run<{ ok: boolean }>(c, sql`select auth_password_set(${username}, ${await hashPassword(password)}) as ok`);
     if (!ok?.ok) return c.json({ error: 'That username is taken. Pick another.' }, 409);
