@@ -1014,7 +1014,7 @@ const s = StyleSheet.create({
   setHead: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: space(1) },
   th: { ...type.small, fontSize: textSize.caption, fontWeight: '700', textAlign: 'center' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: space(1), paddingVertical: 3, borderRadius: radius.input },
-  setDone: { backgroundColor: color.successBg },
+  setDone: { backgroundColor: color.raised }, // done is iron and chalk, never green (green is fat)
   colSet: { width: 30, alignItems: 'center' },
   colPrev: { flex: 1.3, textAlign: 'center' },
   colNum: { flex: 1 },

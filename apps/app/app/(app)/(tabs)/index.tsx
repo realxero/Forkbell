@@ -285,19 +285,6 @@ export default function Diary() {
               </View>
             )}
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4) }}>
-              {!viewing && date >= todayLocal() && (
-                <Pressable onPress={() => router.push({ pathname: '/plan', params: { date } })} style={s.planLink} accessibilityRole="link">
-                  <Text style={s.link}>Plan {isToday ? 'the rest of today' : 'this day'} ›</Text>
-                </Pressable>
-              )}
-              {(!viewing || foodCoach) && (
-                <Pressable onPress={() => router.push('/meal-plan')} style={s.planLink} accessibilityRole="link">
-                  <Text style={s.link}>Meal plan ›</Text>
-                </Pressable>
-              )}
-            </View>
-
             {shownMeals().map((meal) => {
               const entries = day.entries.filter((e) => e.meal === meal);
               const kcal = sumEntries(entries).kcal;
@@ -394,7 +381,19 @@ export default function Diary() {
               );
             })}
 
-            {/* Ideas come after the meals, so logging is the first thing on the screen. */}
+            {/* Planning and ideas come after the meals, so logging is the first thing on the screen. */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: space(4) }}>
+              {!viewing && date >= todayLocal() && (
+                <Pressable onPress={() => router.push({ pathname: '/plan', params: { date } })} style={s.planLink} accessibilityRole="link">
+                  <Text style={s.link}>Plan {isToday ? 'the rest of today' : 'this day'} ›</Text>
+                </Pressable>
+              )}
+              {(!viewing || foodCoach) && (
+                <Pressable onPress={() => router.push('/meal-plan')} style={s.planLink} accessibilityRole="link">
+                  <Text style={s.link}>Meal plan ›</Text>
+                </Pressable>
+              )}
+            </View>
             {!viewing && <SuggestionsCard day={day} onChanged={load} />}
             {day.entries.length > 0 && <MicrosCard entries={day.entries} fiber={day.totals.fiber} />}
 

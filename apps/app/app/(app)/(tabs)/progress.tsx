@@ -667,7 +667,7 @@ function TimelineSheet({ visible, reached, next, onClose }: { visible: boolean; 
           {reached.map((m, i) => (
             <View key={m.key} style={{ flexDirection: 'row', gap: space(3) }}>
               <View style={{ alignItems: 'center', width: 32 }}>
-                <View style={{ width: 32, height: 32, borderRadius: radius.pill, backgroundColor: color.successBg, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 32, height: 32, borderRadius: radius.pill, backgroundColor: color.infoBg, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name={icon(m)} size={18} color={color.iron} />
                 </View>
                 {i < reached.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: color.line, minHeight: 18 }} />}

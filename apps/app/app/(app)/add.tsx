@@ -119,7 +119,7 @@ export default function AddFood() {
           <Text style={type.title}>
             {view.kind === 'scan' ? 'Scan a barcode' : view.kind === 'create' ? 'New food' : view.kind === 'amount' ? 'How much?' : `Add to ${MEAL_NAMES[meal]}`}
           </Text>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Pressable onPress={() => router.back()} hitSlop={12} style={buttons.link} accessibilityRole="button">
             <Text style={s.link}>{added.length ? 'Done' : 'Close'}</Text>
           </Pressable>
         </View>
@@ -265,20 +265,34 @@ function RecentList({
         <Chip label="Most logged" on={tab === 'frequent'} onPress={() => setTab('frequent')} />
       </View>
       {list.length === 0 && <Text style={type.small}>Foods you log more than once show up here.</Text>}
-      {list.map((r) => (
-        <Pressable key={r.food.id} onPress={() => onPick(r)} style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}>
-          <FoodIcon name={r.food.name} brand={r.food.brand} size={36} />
-          <View style={{ flex: 1 }}>
-            <Text style={type.body} numberOfLines={1}>{r.food.name}</Text>
-            <Text style={type.small} numberOfLines={1}>
-              {entryAmountText({ grams: r.lastGrams, amount: r.lastAmount, unit: r.lastUnit, food: r.food }, me?.weightUnit ?? 'lb')} · {forAmount(r.food.per100, r.lastGrams).kcal} kcal{r.food.brand ? ` · ${r.food.brand}` : ''}
-            </Text>
-          </View>
-          <Pressable onPress={() => onQuickAdd(r)} hitSlop={8} style={s.plus} accessibilityLabel={`Add ${entryAmountText({ grams: r.lastGrams, amount: r.lastAmount, unit: r.lastUnit, food: r.food }, me?.weightUnit ?? 'lb')} of ${r.food.name}`}>
-            <Text style={s.plusText}>+</Text>
+      {list.map((r) => {
+        const amount = entryAmountText({ grams: r.lastGrams, amount: r.lastAmount, unit: r.lastUnit, food: r.food }, me?.weightUnit ?? 'lb');
+        const kcal = forAmount(r.food.per100, r.lastGrams).kcal;
+        return (
+          // The row is one VoiceOver element, so the round + is offered as its action too.
+          <Pressable
+            key={r.food.id}
+            onPress={() => onPick(r)}
+            style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityLabel={`${r.food.name}, ${amount}, ${kcal} kcal`}
+            accessibilityHint="Opens how much. Use actions to add the same again."
+            accessibilityActions={[{ name: 'again', label: `Add ${amount} again` }]}
+            onAccessibilityAction={(e) => e.nativeEvent.actionName === 'again' && onQuickAdd(r)}
+          >
+            <FoodIcon name={r.food.name} brand={r.food.brand} size={36} />
+            <View style={{ flex: 1 }}>
+              <Text style={type.body} numberOfLines={1}>{r.food.name}</Text>
+              <Text style={type.small} numberOfLines={1}>
+                {amount} · {kcal} kcal{r.food.brand ? ` · ${r.food.brand}` : ''}
+              </Text>
+            </View>
+            <Pressable onPress={() => onQuickAdd(r)} hitSlop={8} style={s.plus} accessibilityLabel={`Add ${amount} of ${r.food.name}`}>
+              <Ionicons name="add" size={22} color={color.chalk} />
+            </Pressable>
           </Pressable>
-        </Pressable>
-      ))}
+        );
+      })}
     </>
   );
 }
@@ -517,7 +531,6 @@ const s = StyleSheet.create({
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, padding: space(3), borderRadius: radius.input },
   plus: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
-  plusText: { color: color.chalk, fontSize: textSize.stat, lineHeight: 24, fontWeight: '700' },
   added: { ...type.small, color: color.iron, fontWeight: '700' },
   error: { ...type.body, color: color.over },
   button: { ...buttons.filled, marginTop: space(2) },
