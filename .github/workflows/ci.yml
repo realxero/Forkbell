@@ -74,3 +74,12 @@ jobs:
             e2e/monkey-report.json
             ${{ runner.temp }}/server.log
           if-no-files-found: ignore
+
+  # The server image builds (Dockerfile), so a base-image bump that breaks it
+  # fails here instead of on the server. Runs beside check, not after it.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Server image builds
+        run: docker build --pull -t forkbell:ci .
