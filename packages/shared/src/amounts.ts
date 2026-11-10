@@ -41,7 +41,7 @@ const VOLUME_WORDS: [RegExp, string][] = [
   [/(\d+(?:\.\d+)?)\s*(?:tbsp|tablespoons?)\b/i, 'tbsp'],
   [/(\d+(?:\.\d+)?)\s*(?:tsp|teaspoons?)\b/i, 'tsp'],
 ];
-const LIQUID = /\b(shake|milk|juice|soda|cola|coffee|latte|cappuccino|tea|water|smoothie|kombucha|beer|wine|drink|lemonade|broth|soup|creamer|oil|syrup|sauce|dressing|yogurt drink|kefir|horchata|energy drink|sports drink|seltzer|spritz)\b/i;
+const LIQUID = /\b(shake|milk|juice|soda|cola|coffee|latte|cappuccino|tea|water|smoothie|kombucha|beer|wine|drink|beverage|lemonade|broth|soup|creamer|oil|syrup|sauce|dressing|yogurt drink|kefir|horchata|energy drink|sports drink|seltzer|spritz)\b/i;
 
 /** A serving label that's a volume ("11 fl oz", "1 cup (240 ml)"): its millilitres. */
 function servingMl(label: string | null | undefined): number | null {
@@ -145,6 +145,12 @@ export function amountFromGrams(food: AmountFood, grams: number, prefer: WeightU
     const q = grams / u.grams;
     const quarter = Math.round(q * 4) / 4;
     if (quarter > 0 && quarter <= 20 && Math.abs(q - quarter) / q < 0.02) return { quantity: quarter, unit: u };
+  }
+  // A drink is measured, not weighed: 12 fl oz or 355 ml, not 355 g.
+  if (isLiquid(food)) {
+    const u = unitFor(food, prefer === 'lb' ? 'floz' : 'ml', prefer);
+    const q = grams / u.grams;
+    return { quantity: u.key === 'ml' ? Math.round(q) : Math.round(q * 10) / 10, unit: u };
   }
   return { quantity: Math.round(grams * 10) / 10, unit: unitFor(food, 'g', prefer) };
 }

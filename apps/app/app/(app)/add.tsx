@@ -104,7 +104,13 @@ export default function AddFood() {
     }
   }, []);
 
-  const lastGramsFor = (food: Pick) => ('id' in food ? recent?.recent.concat(recent.frequent).find((r) => r.food.id === food.id)?.lastGrams : undefined);
+  const lastFor = (food: Pick) => ('id' in food ? recent?.recent.concat(recent.frequent).find((r) => r.food.id === food.id) : undefined);
+  const lastGramsFor = (food: Pick) => lastFor(food)?.lastGrams;
+  // The unit you used last time for this food is the one it opens in.
+  const lastSaidFor = (food: Pick) => {
+    const r = lastFor(food);
+    return r?.lastAmount && r.lastUnit ? { amount: r.lastAmount, unit: r.lastUnit } : null;
+  };
 
   return (
     <SafeAreaView style={s.screen}>
@@ -123,6 +129,7 @@ export default function AddFood() {
             food={view.food}
             initialMeal={meal}
             lastGrams={view.lastGrams ?? lastGramsFor(view.food)}
+            initialAmount={lastSaidFor(view.food)}
             date={date}
             submitLabel={(m) => `Add to ${MEAL_NAMES[m]}`}
             error={error}
@@ -267,7 +274,7 @@ function RecentList({
               {entryAmountText({ grams: r.lastGrams, amount: r.lastAmount, unit: r.lastUnit, food: r.food }, me?.weightUnit ?? 'lb')} · {forAmount(r.food.per100, r.lastGrams).kcal} kcal{r.food.brand ? ` · ${r.food.brand}` : ''}
             </Text>
           </View>
-          <Pressable onPress={() => onQuickAdd(r)} hitSlop={8} style={s.plus} accessibilityLabel={`Add ${r.lastGrams} grams of ${r.food.name}`}>
+          <Pressable onPress={() => onQuickAdd(r)} hitSlop={8} style={s.plus} accessibilityLabel={`Add ${entryAmountText({ grams: r.lastGrams, amount: r.lastAmount, unit: r.lastUnit, food: r.food }, me?.weightUnit ?? 'lb')} of ${r.food.name}`}>
             <Text style={s.plusText}>+</Text>
           </Pressable>
         </Pressable>

@@ -46,6 +46,12 @@ test('saying an amount', () => {
   assert.equal(entryAmountText({ grams: 50, food: bar }), '50 g');
 });
 
+test('a drink without a serving is measured, not weighed', () => {
+  const tea = { name: 'Iced tea', servingGrams: null, servingLabel: null, portions: [] };
+  assert.equal(entryAmountText({ grams: 355, food: tea }, 'lb'), '12 fl oz (355 g)');
+  assert.equal(entryAmountText({ grams: 355, food: tea }, 'kg'), '355 ml (355 g)');
+});
+
 test('a serving word keeps an s that belongs to it', () => {
   assert.equal(servingWord('1 glass (240 ml)'), 'glass');
   assert.equal(servingWord('1 bass fillet'), 'bass fillet');
