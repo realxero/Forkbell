@@ -36,9 +36,14 @@ const parseDataUrl = (url: string) => {
 };
 
 async function post(url: string, headers: Record<string, string>, body: unknown) {
-  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(90_000) });
+  // No redirects, and the reply body stays in the server log: with a custom AI
+  // address (AI_ALLOW_CUSTOM_URL) the body could be any internal page.
+  const res = await fetch(url, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(90_000) });
   const text = await res.text();
-  if (!res.ok) throw new Error(`The AI service answered ${res.status}: ${text.slice(0, 300)}`);
+  if (!res.ok) {
+    console.error(`AI service answered ${res.status}: ${text.slice(0, 300)}`);
+    throw new Error(res.status === 401 || res.status === 403 ? 'The AI service refused the key. Check it in Settings → Bell.' : `The AI service answered ${res.status}. The server log has its reply.`);
+  }
   return JSON.parse(text) as Record<string, unknown>;
 }
 

@@ -55,10 +55,11 @@ export function accountRoutes({ db, asUser }: ReturnType<typeof connect>) {
     if (pw) {
       // Changing a password needs the old one.
       const key = `account:${c.get('userId')}`;
-      if (lockedFor(key, '')) return c.json({ error: 'Too many wrong passwords. Wait a few minutes.' }, 429);
+      // Keyed to this account in both slots: an empty IP put everyone in one bucket.
+      if (lockedFor(key, key)) return c.json({ error: 'Too many wrong passwords. Wait a few minutes.' }, 429);
       const [row] = await db.execute<{ password_hash: string }>(sql`select password_hash from auth_password_lookup(${pw.username})`);
       if (!current || !row || !(await verifyPassword(current, row.password_hash))) {
-        noteFailure(key, '');
+        noteFailure(key, key);
         return c.json({ error: 'Your current password isn’t right.' }, 403);
       }
       noteSuccess(key);

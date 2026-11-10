@@ -136,3 +136,22 @@ test('someone else’s sign-ins can’t be seen or ended', async () => {
   assert.equal((await b.call('GET', '/api/me')).status, 200);
   assert.ok((await a.call('GET', '/api/me/security')).body.sessions.every((s: { id: string }) => s.id !== bs.id));
 });
+
+test('wrong current passwords lock that account only, never everyone’s password changes', async () => {
+  // Made straight in the database (sign-ups are rate-limited), each with a password.
+  const withPassword = async () => {
+    const u = await newUser();
+    const username = name();
+    assert.equal((await u.call('PUT', '/api/me/security/password', { username, password: PW })).status, 200);
+    return { ...u, username };
+  };
+  // Four accounts each get 8 wrong guesses: 32 in all, past the old shared limit of 30.
+  for (let n = 0; n < 4; n++) {
+    const u = await withPassword();
+    for (let i = 0; i < 8; i++) await u.call('PUT', '/api/me/security/password', { username: u.username, password: 'a new long password', current: 'wrong guess' });
+    assert.equal((await u.call('PUT', '/api/me/security/password', { username: u.username, password: 'a new long password', current: PW })).status, 429, 'that account waits');
+  }
+  const fine = await withPassword();
+  const r = await fine.call('PUT', '/api/me/security/password', { username: fine.username, password: 'a new long password', current: PW });
+  assert.equal(r.status, 200, `someone else can still change theirs: ${r.text}`);
+});

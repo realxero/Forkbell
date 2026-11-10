@@ -36,9 +36,14 @@ const TABLES = {
   progressPhotos: t.progressPhotos,
 } as const;
 
-/** One CSV cell: quoted when it needs to be. */
+/**
+ * One CSV cell: quoted when it needs to be. Text starting with = + - @ (a food
+ * name from a database or a recipe page, say) gets a leading ' so a spreadsheet
+ * shows it instead of running it as a formula. Numbers, negative ones too, stay numbers.
+ */
 const cell = (v: unknown) => {
-  const s = v === null || v === undefined ? '' : String(v);
+  const raw = v === null || v === undefined ? '' : String(v);
+  const s = typeof v === 'string' && /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 const csv = (header: string[], rows: unknown[][]) => [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';

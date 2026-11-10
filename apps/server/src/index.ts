@@ -34,7 +34,7 @@ import { mcpRoutes } from './routes/mcp.ts';
 import { importRoutes } from './routes/import.ts';
 import { accountRoutes } from './routes/account.ts';
 import { BUILD } from '@forkbell/shared';
-import { postgresCode, refusalFor } from './db-errors.ts';
+import { postgresCode, refusalFor, loggable } from './db-errors.ts';
 
 const database = connect(env.databaseUrl);
 const app = new Hono();
@@ -178,7 +178,7 @@ app.onError((err, c) => {
     console.warn(`refused ${c.req.method} ${c.req.path}: Postgres ${postgresCode(err)} (${refused.status})`);
     return c.json({ error: refused.error }, refused.status);
   }
-  console.error(err);
+  console.error(`${c.req.method} ${c.req.path}:`, loggable(err));
   return c.json({ error: 'Something went wrong on the server. Check its log.' }, 500);
 });
 

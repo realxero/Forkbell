@@ -107,6 +107,8 @@ export function mcpRoutes(db: ReturnType<typeof connect>, internal: Internal) {
       }
     };
     if (Array.isArray(body)) {
+      // A batch is a handful of calls, not thousands of database reads from one request.
+      if (body.length > 20) return c.json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'At most 20 calls in one batch.' } }, 400);
       const out = (await Promise.all(body.map(one))).filter(Boolean);
       return out.length ? c.json(out) : c.body(null, 202);
     }

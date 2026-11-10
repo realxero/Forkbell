@@ -135,13 +135,14 @@ export async function searchWeb(query: string, base: string | null = env.searchU
   const q = query.trim().slice(0, 200);
   if (!q) return 'Give some search words.';
   try {
-    const r = await fetch(`${base}/search?q=${encodeURIComponent(q)}&format=json&safesearch=1`, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/json' } });
+    const r = await fetch(`${base}/search?q=${encodeURIComponent(q)}&format=json&safesearch=1`, { redirect: 'manual', signal: AbortSignal.timeout(8000), headers: { accept: 'application/json' } });
     if (!r.ok) return `Search failed (${r.status}). If this keeps happening, SearXNG may need the JSON format turned on.`;
     const data = (await r.json()) as { results?: { title?: string; url?: string; content?: string }[] };
     const top = (data.results ?? []).slice(0, 6).map((x) => ({ title: (x.title ?? '').slice(0, 120), url: (x.url ?? '').slice(0, 200), snippet: (x.content ?? '').replace(/\s+/g, ' ').slice(0, 320) }));
     return top.length ? JSON.stringify(top) : 'No results.';
   } catch (e) {
-    return `Search failed: ${e instanceof Error ? e.message : String(e)}`;
+    console.error('Web search:', e instanceof Error ? e.message : e);
+    return 'Search failed: the search service didn’t answer.';
   }
 }
 

@@ -45,11 +45,12 @@ export async function aiConfigFor(db: ReturnType<typeof connect>, userId: string
 export async function listModels(format: 'anthropic' | 'openai', baseUrl: string, apiKey: string, provider: ProviderName): Promise<string[]> {
   const url = format === 'anthropic' ? `${baseUrl}/v1/models?limit=100` : `${baseUrl.replace(/\/$/, '')}/models`;
   const headers: Record<string, string> = format === 'anthropic' ? { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' } : apiKey ? { authorization: `Bearer ${apiKey}` } : {};
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+  const res = await fetch(url, { headers, redirect: 'manual', signal: AbortSignal.timeout(15000) });
   if (res.status === 401 || res.status === 403) throw new Error('That key was refused. Check it and try again.');
   if (!res.ok) throw new Error(`The AI service answered ${res.status}.`);
   const data = (await res.json()) as { data?: { id: string }[] };
-  let ids = (data.data ?? []).map((m) => m.id.replace(/^models\//, ''));
+  // Only strings shaped like model ids come back, never other fields of whatever answered.
+  let ids = (Array.isArray(data.data) ? data.data : []).map((m) => (typeof m?.id === 'string' ? m.id.replace(/^models\//, '') : '')).filter((id) => /^[\w.:@/-]{1,100}$/.test(id));
   // Only chat models that can see photos and use tools.
   // Gemini lists robotics, image-making ("nano banana"), speech and embedding models too; Bell needs a chat model that sees photos and uses tools.
   if (provider === 'gemini') ids = ids.filter((id) => id.startsWith('gemini') && !/embedding|imagen|tts|image|audio|live|aqa|robotics|banana|nano|learnlm/i.test(id));

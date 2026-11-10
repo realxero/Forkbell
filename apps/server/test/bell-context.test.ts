@@ -19,6 +19,7 @@ const systems: string[] = [];
 const searches: string[] = [];
 const toolNames: string[][] = [];
 let hang = false;
+let failWith = '';
 let slowMs = 0;
 let script: ((sent: { messages?: { role: string; content: unknown }[] }) => unknown) | null = null;
 
@@ -36,6 +37,7 @@ before(async () => {
       toolNames.push((sent.tools ?? []).map((t) => t.function?.name ?? ''));
       systems.push(String(sent.messages?.find((m) => m.role === 'system')?.content ?? ''));
       if (hang) return; // the AI service never answers
+      if (failWith) return void res.writeHead(500, { 'content-type': 'text/plain' }).end(failWith);
       if (slowMs) await new Promise((r) => setTimeout(r, slowMs));
       if (script) {
         const m = script(sent);
@@ -174,6 +176,16 @@ test('Bell resending the whole meal replaces the cards instead of doubling them'
   const names = r.body.proposals.map((p: { name: string }) => p.name);
   assert.deepEqual(names, ['Scrambled eggs', 'Tater tots', 'French toast'], `one card each: ${names}`);
   assert.equal(r.body.proposals[0].grams, 180, 'the later amount wins');
+});
+
+test('an AI service error never shows its reply to the person (it could be any internal page)', async () => {
+  const u = await newUser();
+  failWith = 'INTERNAL-ONLY metadata: secret-token-123';
+  const r = await ask(u, { messages: [{ role: 'user', text: 'hello' }], today: '2026-10-25', meal: 'lunch' });
+  failWith = '';
+  assert.equal(r.status, 502, r.text);
+  assert.ok(!r.text.includes('secret-token-123'), r.text);
+  assert.match(r.body.error, /answered 500/);
 });
 
 test('a slow answer comes back as a ticket the app checks on, never as a timeout', async () => {
