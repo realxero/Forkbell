@@ -207,7 +207,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.row, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
-  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   grams: { width: 100, fontSize: textSize.title, fontWeight: '800', textAlign: 'center' },
   dot: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   dotText: { color: color.onAccent, fontWeight: '800', fontSize: textSize.small },

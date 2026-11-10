@@ -124,11 +124,11 @@ export function CalorieBars({ days, today }: { days: DayTotals[]; today: string 
   return (
     <View style={{ gap: space(3) }}>
       <View style={{ flexDirection: 'row', gap: space(3) }}>
-        <View style={{ flex: 1, backgroundColor: color.raised, borderRadius: 12, padding: space(3) }}>
+        <View style={{ flex: 1, backgroundColor: color.raised, borderRadius: radius.row, padding: space(3) }}>
           <Text style={type.label}>Daily average</Text>
           <Text style={[type.title, type.number]}>{avg ? avg.toLocaleString() : '–'}<Text style={type.small}> kcal</Text></Text>
         </View>
-        <View style={{ flex: 1, backgroundColor: color.raised, borderRadius: 12, padding: space(3) }}>
+        <View style={{ flex: 1, backgroundColor: color.raised, borderRadius: radius.row, padding: space(3) }}>
           <Text style={type.label}>On target</Text>
           <Text style={[type.title, type.number]}>{logged.length ? `${onTarget} of ${logged.length}` : '–'}<Text style={type.small}> days</Text></Text>
         </View>

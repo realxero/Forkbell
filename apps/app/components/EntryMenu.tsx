@@ -170,7 +170,7 @@ export function EntryMenu({ entry, onClose, onChanged, onSelect }: { entry: Diar
 const s = StyleSheet.create({
   sheet: { gap: space(1) },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingBottom: space(3), borderBottomWidth: 1, borderBottomColor: color.line, marginBottom: space(1) },
-  item: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(3), paddingHorizontal: space(2), borderRadius: 10 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(3), paddingHorizontal: space(2), borderRadius: radius.input },
   option: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   swap: { backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(4), paddingVertical: space(2) },
   swapText: { color: color.onAccent, fontWeight: '800' },

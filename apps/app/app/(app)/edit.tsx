@@ -144,14 +144,14 @@ function FixNumbers({ entry, onDone }: { entry: DiaryEntry; onDone: () => void }
 
 const s = StyleSheet.create({
   fix: { gap: space(2), marginHorizontal: space(4), marginTop: space(2), padding: space(3), borderRadius: radius.card, backgroundColor: color.card, borderWidth: 1, borderColor: color.line },
-  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(2) },
-  save: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
+  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(2) },
+  save: { backgroundColor: color.accent, borderRadius: radius.input, paddingVertical: space(3), alignItems: 'center' },
   saveText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.control },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
-  nameInput: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3), color: color.iron },
+  nameInput: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3), color: color.iron },
   remove: { alignSelf: 'center', padding: space(3), marginTop: space(2) },
   removeText: { color: color.over, fontWeight: '700', fontSize: textSize.body },
 });

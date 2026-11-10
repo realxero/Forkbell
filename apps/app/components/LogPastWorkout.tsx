@@ -93,7 +93,7 @@ export function LogPastWorkout({ visible, program, onClose }: { visible: boolean
 const s = StyleSheet.create({
   sheet: { maxHeight: '90%' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  field: { ...type.body, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(3), color: color.iron },
+  field: { ...type.body, backgroundColor: color.chalk, borderRadius: radius.input, paddingHorizontal: space(3), paddingVertical: space(3), color: color.iron },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },

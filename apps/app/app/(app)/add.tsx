@@ -14,7 +14,7 @@ import { AmountPicker, Chip, MEAL_NAMES } from '../../components/AmountPicker';
 import { BarcodeCamera } from '../../components/BarcodeCamera';
 import { FoodIcon } from '../../components/FoodIcon';
 import { MealShortcuts } from '../../components/MealShortcuts';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 import { SkeletonRows } from '../../components/Skeleton';
 import { buttons } from '../../lib/buttons';
 
@@ -505,17 +505,17 @@ function CreateFood({ initialName, initialBrand, barcode, note, canReadLabels, o
 }
 
 const s = StyleSheet.create({
-  check: { flexDirection: 'row', gap: space(2), alignItems: 'flex-start', padding: space(3), borderRadius: 10, backgroundColor: color.infoBg },
+  check: { flexDirection: 'row', gap: space(2), alignItems: 'flex-start', padding: space(3), borderRadius: radius.input, backgroundColor: color.infoBg },
   checkOff: { backgroundColor: color.warnBg, borderWidth: 1, borderColor: color.warnBg },
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
   list: { padding: space(4), gap: space(2), paddingBottom: space(16), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  scanButton: { backgroundColor: color.iron, borderRadius: 10, paddingHorizontal: space(4), paddingVertical: space(3) },
+  scanButton: { backgroundColor: color.iron, borderRadius: radius.input, paddingHorizontal: space(4), paddingVertical: space(3) },
   scanText: { color: color.chalk, fontWeight: '700', fontSize: textSize.body },
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, padding: space(3), borderRadius: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, padding: space(3), borderRadius: radius.input },
   plus: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.iron, alignItems: 'center', justifyContent: 'center' },
   plusText: { color: color.chalk, fontSize: textSize.stat, lineHeight: 24, fontWeight: '700' },
   added: { ...type.small, color: color.iron, fontWeight: '700' },
@@ -523,8 +523,8 @@ const s = StyleSheet.create({
   button: { ...buttons.filled, marginTop: space(2) },
   buttonText: { ...buttons.filledText },
   secondary: { alignSelf: 'center', padding: space(3), minHeight: 44, justifyContent: 'center' },
-  labelButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space(2), minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
+  labelButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space(2), minHeight: 48, borderRadius: radius.input, borderWidth: 1, borderColor: color.accent, backgroundColor: color.card },
   labelButtonText: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
-  readNote: { backgroundColor: color.infoBg, borderRadius: 10, padding: space(3), color: color.iron },
+  readNote: { backgroundColor: color.infoBg, borderRadius: radius.input, padding: space(3), color: color.iron },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
 });

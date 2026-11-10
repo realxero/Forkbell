@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { useReduceMotion } from '../lib/motion';
+import { color } from '../lib/theme';
 
-const COLORS = ['#FFC53D', '#2E9E62', '#2B6BD6', '#E8590C', '#C2185B', '#6A4BD1'];
+// A celebration is Bell's: the accent, plus the tile colours that never read as a macro.
+const colors = () => [color.accent, color.tilePurple, color.tileMagenta, color.tileTeal, color.tileCopper];
 
 /** A short burst of falling confetti over its parent. Nothing at all with Reduce Motion. */
 export function Confetti({ pieces = 28, height = 260 }: { pieces?: number; height?: number }) {
@@ -15,7 +17,7 @@ export function Confetti({ pieces = 28, height = 260 }: { pieces?: number; heigh
         delay: Math.random() * 0.35,
         drift: (Math.random() - 0.5) * 60,
         spin: (Math.random() > 0.5 ? 1 : -1) * (180 + Math.random() * 360),
-        color: COLORS[i % COLORS.length]!,
+        color: colors()[i % 5]!,
         w: 6 + Math.random() * 5,
         round: Math.random() > 0.7,
       })),

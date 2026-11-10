@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BUILD, versionLabel } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { getServerUrl } from '../lib/api';
-import { color, space, type, textSize } from '../lib/theme';
+import { color, radius, space, type, textSize } from '../lib/theme';
 import { buttons } from '../lib/buttons';
 
 type Mode = 'signIn' | 'signUp';
@@ -217,7 +217,7 @@ const s = StyleSheet.create({
   body: { flexGrow: 1, justifyContent: 'center', padding: space(6), gap: space(5), maxWidth: 480, width: '100%', alignSelf: 'center' },
   wordmark: { fontSize: 52, fontWeight: '900', letterSpacing: -2, color: color.iron },
   lede: { ...type.body, color: color.ironSoft, marginTop: -space(3) },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   error: { ...type.body, color: color.over },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },

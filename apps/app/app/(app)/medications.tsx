@@ -180,7 +180,7 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   time: { minWidth: 104, textAlign: 'center', paddingVertical: space(2) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },

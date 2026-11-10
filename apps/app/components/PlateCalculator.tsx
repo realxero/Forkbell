@@ -206,8 +206,8 @@ const s = StyleSheet.create({
   plate: { width: 22, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   plateText: { fontSize: 9, fontWeight: '900', transform: [{ rotate: '-90deg' }], width: 40, textAlign: 'center' },
   sleeve: { flex: 1, height: 12, borderRadius: 3, backgroundColor: color.sleeve },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   link: { color: color.accent, fontWeight: '700' },
-  primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
+  primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(3), alignItems: 'center' },
   primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
 });

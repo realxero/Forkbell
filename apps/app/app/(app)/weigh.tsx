@@ -339,7 +339,7 @@ const s = StyleSheet.create({
   tabText: { fontWeight: '700', color: color.iron, fontSize: textSize.control, textAlign: 'center' },
   card: { backgroundColor: color.card, borderRadius: radius.row, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   big: { width: 120, fontSize: textSize.stat, fontWeight: '800', textAlign: 'center', fontVariant: ['tabular-nums'] },
   add: { flexDirection: 'row', alignItems: 'center', gap: space(2), minHeight: 48, justifyContent: 'center', borderRadius: radius.row, borderWidth: 1, borderColor: color.line, borderStyle: 'dashed' },
   primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(4), alignItems: 'center' },

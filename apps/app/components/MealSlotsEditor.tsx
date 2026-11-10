@@ -6,7 +6,7 @@ import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { mealSlots, type MealSlot, type Preferences } from '@forkbell/shared';
-import { color, space, type } from '../lib/theme';
+import { color, radius, space, type } from '../lib/theme';
 
 export function MealSlotsEditor({ prefs, onChange }: { prefs: Preferences; onChange: (meals: MealSlot[]) => void }) {
   const slots = mealSlots(prefs.meals);
@@ -56,6 +56,6 @@ export function MealSlotsEditor({ prefs, onChange }: { prefs: Preferences; onCha
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  input: { ...type.body, flex: 1, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
+  input: { ...type.body, flex: 1, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
   note: { ...type.small },
 });

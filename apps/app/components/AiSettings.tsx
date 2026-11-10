@@ -151,9 +151,9 @@ export function AiSettings() {
 const s = StyleSheet.create({
   card: { gap: space(3), marginTop: space(6), padding: space(4), backgroundColor: color.card, borderRadius: radius.card, borderWidth: 1, borderColor: color.line },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
-  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
-  primary: { backgroundColor: color.accent, borderRadius: 10, paddingVertical: space(3), paddingHorizontal: space(6) },
+  primary: { backgroundColor: color.accent, borderRadius: radius.input, paddingVertical: space(3), paddingHorizontal: space(6) },
   primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
-  secondary: { borderWidth: 1, borderColor: color.line, borderRadius: 10, paddingVertical: space(3), alignItems: 'center' },
+  secondary: { borderWidth: 1, borderColor: color.line, borderRadius: radius.input, paddingVertical: space(3), alignItems: 'center' },
 });
