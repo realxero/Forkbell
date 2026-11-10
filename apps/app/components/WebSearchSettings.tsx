@@ -116,7 +116,7 @@ export function WebSearchSettings() {
 
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), gap: space(2), marginTop: space(4) },
-  input: { ...type.body, backgroundColor: color.chalk, borderRadius: 10, borderWidth: 1, borderColor: color.line, padding: space(3), color: color.iron },
+  input: { ...type.body, backgroundColor: color.chalk, borderRadius: radius.input, borderWidth: 1, borderColor: color.line, padding: space(3), color: color.iron },
   button: { ...buttons.small },
   secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: color.line },
   buttonText: { ...buttons.smallText },

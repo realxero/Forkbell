@@ -83,5 +83,5 @@ export function WhenCard({ date, startedAt, finishedAt, onChange }: { date: stri
 const s = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2) },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
-  field: { ...type.body, backgroundColor: color.chalk, borderRadius: 10, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
+  field: { ...type.body, backgroundColor: color.chalk, borderRadius: radius.input, paddingHorizontal: space(3), paddingVertical: space(2), color: color.iron },
 });

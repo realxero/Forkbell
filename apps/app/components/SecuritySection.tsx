@@ -163,7 +163,7 @@ export function SecuritySection() {
 
 const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, borderWidth: 1, borderColor: color.line, padding: space(4), gap: space(2) },
-  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.chalk, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   button: { ...buttons.small },
   buttonText: { ...buttons.smallText },
   quiet: { paddingVertical: space(3), paddingHorizontal: space(2), alignItems: 'center' },

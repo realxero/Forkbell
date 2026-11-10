@@ -137,7 +137,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), backgroundColor: color.card, borderRadius: radius.row, padding: space(3) },
   fresh: { gap: space(2), backgroundColor: color.card, borderRadius: radius.row, padding: space(3), borderWidth: 1, borderColor: color.accent },
   token: { fontFamily: 'Courier', fontSize: textSize.small, color: color.iron, backgroundColor: color.chalk, padding: space(2), borderRadius: radius.input },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   button: { ...buttons.small },
   buttonText: { ...buttons.smallText },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },

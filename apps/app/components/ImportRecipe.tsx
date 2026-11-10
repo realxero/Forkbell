@@ -144,7 +144,7 @@ export function ImportRecipe({ visible, onClose, onReady }: { visible: boolean; 
 
 const s = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  input: { ...type.body, minHeight: 140, textAlignVertical: 'top', backgroundColor: color.chalk, borderRadius: 10, borderWidth: 1, borderColor: color.line, padding: space(3), color: color.iron },
+  input: { ...type.body, minHeight: 140, textAlignVertical: 'top', backgroundColor: color.chalk, borderRadius: radius.input, borderWidth: 1, borderColor: color.line, padding: space(3), color: color.iron },
   row: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start', paddingVertical: space(1) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },

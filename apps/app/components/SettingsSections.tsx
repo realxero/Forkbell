@@ -462,7 +462,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space(2) },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   button: { ...buttons.filled },
   buttonText: { ...buttons.filledText },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },

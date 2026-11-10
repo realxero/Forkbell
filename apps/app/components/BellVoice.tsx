@@ -93,6 +93,6 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2), minHeight: 48 },
   pick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space(3), minHeight: 44 },
   play: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
-  tip: { gap: space(1), backgroundColor: color.chalk, borderRadius: 12, padding: space(3), marginTop: space(2) },
+  tip: { gap: space(1), backgroundColor: color.chalk, borderRadius: radius.row, padding: space(3), marginTop: space(2) },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.control },
 });

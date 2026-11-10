@@ -138,7 +138,7 @@ const s = StyleSheet.create({
   block: { gap: space(2), backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 1, borderColor: color.line },
   exRow: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   add: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
-  primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
+  primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(3), alignItems: 'center' },
   primaryText: { color: color.onAccent, fontWeight: '700', fontSize: textSize.body },
-  secondary: { borderWidth: 1, borderColor: color.line, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
+  secondary: { borderWidth: 1, borderColor: color.line, borderRadius: radius.row, paddingVertical: space(3), alignItems: 'center' },
 });

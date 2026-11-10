@@ -276,7 +276,7 @@ function StrengthGoal({ exercise, sessions }: { exercise: Exercise; sessions: { 
 }
 
 const s = StyleSheet.create({
-  goalInput: { ...type.body, flex: 1, minHeight: 44, borderWidth: 1, borderColor: color.line, borderRadius: 10, paddingHorizontal: space(3), backgroundColor: color.chalk },
+  goalInput: { ...type.body, flex: 1, minHeight: 44, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, paddingHorizontal: space(3), backgroundColor: color.chalk },
   goalButton: { ...buttons.small, minHeight: 44 },
   goalButtonText: buttons.smallText,
   screen: { flex: 1, backgroundColor: color.chalk },

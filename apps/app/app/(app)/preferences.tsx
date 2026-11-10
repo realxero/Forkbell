@@ -9,7 +9,7 @@ import { useAuth } from '../../lib/auth';
 import { Chip } from '../../components/AmountPicker';
 import { MealSlotsEditor } from '../../components/MealSlotsEditor';
 import { HeartSensorSettings } from '../../components/HeartSensorSettings';
-import { color, space, type, textSize } from '../../lib/theme';
+import { color, radius, space, type, textSize } from '../../lib/theme';
 
 const list = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -206,6 +206,6 @@ const s = StyleSheet.create({
   label: { ...type.small, marginTop: space(2) },
   note: { ...type.small },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3), paddingVertical: space(1) },
 });

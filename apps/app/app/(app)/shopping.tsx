@@ -90,5 +90,5 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   box: { width: 24, height: 24, borderRadius: 6, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: color.iron, borderColor: color.iron },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
 });

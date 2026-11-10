@@ -235,7 +235,7 @@ const s = StyleSheet.create({
   error: { ...type.body, color: color.over },
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2), borderWidth: 1, borderColor: color.line },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
-  primary: { backgroundColor: color.accent, borderRadius: 12, paddingVertical: space(3), alignItems: 'center' },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
+  primary: { backgroundColor: color.accent, borderRadius: radius.row, paddingVertical: space(3), alignItems: 'center' },
   primaryText: { color: color.onAccent, fontSize: textSize.body, fontWeight: '700' },
 });

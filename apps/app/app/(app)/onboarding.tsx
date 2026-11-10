@@ -286,7 +286,7 @@ const s = StyleSheet.create({
   content: { padding: space(4), paddingBottom: space(10), gap: space(3), maxWidth: 560, width: '100%', alignSelf: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   row: { flexDirection: 'row', gap: space(2) },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 12, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.row, padding: space(3) },
   option: { backgroundColor: color.card, borderRadius: radius.card, padding: space(4), borderWidth: 2, borderColor: color.line, gap: 2 },
   optionOn: { borderColor: color.accent, backgroundColor: color.infoBg },
   kcalCard: { alignItems: 'center', backgroundColor: color.card, borderRadius: radius.card, padding: space(5) },

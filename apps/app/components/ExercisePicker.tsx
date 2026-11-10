@@ -229,7 +229,7 @@ export function Thumb({ e, size = 52 }: { e: Pick<Exercise, 'howToRef' | 'pictur
       </View>
     );
   return (
-    <View style={{ width: size, height: size, borderRadius: 10, backgroundColor: color.raised, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: size, height: size, borderRadius: radius.input, backgroundColor: color.raised, alignItems: 'center', justifyContent: 'center' }}>
       <Ionicons name={GEAR_ICONS[e.equipment] ?? 'barbell-outline'} size={size * 0.45} color={color.ironSoft} />
     </View>
   );
@@ -273,9 +273,9 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.chalk },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space(4) },
   list: { padding: space(4), gap: space(2), paddingBottom: space(16), maxWidth: 640, width: '100%', alignSelf: 'center' },
-  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { ...type.body, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   section: { ...type.small, fontWeight: '700', marginTop: space(3) },
-  row: { backgroundColor: color.card, padding: space(3), borderRadius: 10 },
+  row: { backgroundColor: color.card, padding: space(3), borderRadius: radius.input },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space(2) },
   error: { ...type.body, color: color.over },
   button: { ...buttons.filled, marginTop: space(3) },

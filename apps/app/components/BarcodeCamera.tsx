@@ -49,5 +49,5 @@ export function BarcodeCamera({ onCode, onError }: BarcodeCameraProps) {
 const s = StyleSheet.create({
   frame: { width: '100%', aspectRatio: 3 / 4, maxHeight: 480, borderRadius: radius.card, overflow: 'hidden', backgroundColor: color.iron },
   center: { alignItems: 'center', justifyContent: 'center', padding: space(4) },
-  target: { position: 'absolute', left: '12%', right: '12%', top: '38%', height: '24%', borderWidth: 3, borderColor: color.chalk, borderRadius: 12 },
+  target: { position: 'absolute', left: '12%', right: '12%', top: '38%', height: '24%', borderWidth: 3, borderColor: color.chalk, borderRadius: radius.row },
 });

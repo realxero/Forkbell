@@ -172,7 +172,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   link: { color: color.accent, fontWeight: '700', fontSize: textSize.body },
   error: { ...type.body, color: color.over },
-  input: { backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: 10, padding: space(3) },
+  input: { backgroundColor: color.card, borderWidth: 1, borderColor: color.line, borderRadius: radius.input, padding: space(3) },
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(2) },
   row: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
   icon: { fontSize: textSize.heading, color: color.ironSoft, paddingHorizontal: space(1) },
