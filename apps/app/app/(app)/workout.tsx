@@ -1007,7 +1007,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: color.card, borderRadius: radius.card, padding: space(3), gap: space(1) },
   grouped: { borderLeftWidth: 4, borderLeftColor: color.accent },
   groupedNext: { marginTop: -space(2), borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-  groupTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: color.accent, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 2, marginBottom: space(1) },
+  groupTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: color.accent, borderRadius: radius.pill, paddingHorizontal: space(2), paddingVertical: 2, marginBottom: space(1) },
   groupTagText: { color: color.onAccent, fontSize: textSize.label, fontWeight: '800' },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space(2), marginBottom: space(1) },
   dots: { fontSize: textSize.stat, color: color.ironSoft, paddingHorizontal: space(1), lineHeight: 26 },

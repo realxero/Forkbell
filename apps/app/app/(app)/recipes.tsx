@@ -227,7 +227,7 @@ function Editor({ draft, onClose, onSaved }: { draft: Draft; onClose: () => void
 }
 
 const s = StyleSheet.create({
-  splitButton: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: color.line, borderRadius: 999, paddingHorizontal: space(2), paddingVertical: 4 },
+  splitButton: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: color.line, borderRadius: radius.pill, paddingHorizontal: space(2), paddingVertical: 4 },
   splitText: { color: color.accent, fontWeight: '700', fontSize: textSize.small },
   screen: { flex: 1, backgroundColor: color.chalk },
   content: { padding: space(4), paddingBottom: space(16), gap: space(3), maxWidth: 640, width: '100%', alignSelf: 'center' },
