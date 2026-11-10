@@ -1,10 +1,11 @@
 # One image: the API server plus the exported web app, served from the same origin.
-# Node 24 LTS (supported until April 2028). Build with --pull so Docker fetches the
-# newest Node 24 instead of reusing an old copy; the check in the runtime stage stops
-# a build on a Node with a known security hole (CVE-2026-111497, fixed in 24.22.1).
+# Node 26 LTS. Build with --pull so Docker fetches the newest Node 26 instead of
+# reusing an old copy; the check in the runtime stage stops a build on a Node with a
+# known security hole (CVE-2026-111497, fixed in 26.12.1).
 FROM node:26-bookworm-slim AS build
 WORKDIR /src
-RUN corepack enable
+# Node 25 and later no longer ship corepack, which supplies the pinned pnpm.
+RUN npm install -g corepack@0.36.0 && corepack enable
 COPY . .
 # Files keep their host permissions; make sure the runtime user can read them.
 RUN chmod -R a+rX packages/db/migrations

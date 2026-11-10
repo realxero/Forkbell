@@ -1,0 +1,5 @@
+# Built inside the image; a local copy would clash with the install there.
+**/node_modules
+apps/app/dist
+**/.expo
+graphify-out
