@@ -219,7 +219,9 @@ SearXNG needs JSON answers on: `search: formats: [html, json]` in its
   Forkbell server reaches it and tap *Try and save* (it only saves one that
   works). This needs `AI_ALLOW_CUSTOM_URL=true` on the server, the same
   switch as for your own AI server, since it lets people make the server
-  call an address of their choosing.
+  call an address of their choosing, including ones on your own network.
+  Turn it on only when you trust everyone with an account (it's off by
+  default, and the server never shows them what those addresses answer).
 - For everyone: `SEARCH_URL` in the stack. A small SearXNG in the same stack:
 
 ```yaml

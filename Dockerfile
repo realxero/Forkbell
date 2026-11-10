@@ -2,7 +2,7 @@
 # Node 24 LTS (supported until April 2028). Build with --pull so Docker fetches the
 # newest Node 24 instead of reusing an old copy; the check in the runtime stage stops
 # a build on a Node with a known security hole (CVE-2026-111497, fixed in 24.22.1).
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /src
 RUN corepack enable
 COPY . .
@@ -23,7 +23,7 @@ RUN cd apps/app && CI=1 npx expo export --platform web --output-dir /out/web
 # Same for the exported web app (public/form keeps its host permissions): the runtime user must be able to read every folder.
 RUN chmod -R a+rX /out/web
 
-FROM node:24-bookworm-slim
+FROM node:26-bookworm-slim
 COPY scripts/check-node.mjs /tmp/check-node.mjs
 RUN node /tmp/check-node.mjs
 WORKDIR /app

@@ -1,4 +1,5 @@
 // Importing a recipe: from a web page (its schema.org Recipe), from your
+import { loggable } from '../db-errors.ts';
 // Mealie, or from pasted ingredient lines. Bell turns each ingredient line
 // into a food and an amount in grams; ones that match a food you already
 // have (or a built-in one) use it. This only previews: the app shows every
@@ -217,7 +218,7 @@ export function recipeImportRoutes(db: ReturnType<typeof connect>) {
       const model = ai.format === 'anthropic' ? anthropic(cfg, INGREDIENTS_PROMPT, turns, []) : openai(cfg, INGREDIENTS_PROMPT, turns, []);
       answer = (await model.step()).text;
     } catch (e) {
-      console.error('Recipe import:', e);
+      console.error('Recipe import:', loggable(e));
       return c.json({ error: 'Bell couldn’t reach the AI service. Try again.' }, 502);
     }
     const parsed = aiItems.safeParse(extractJson(answer));

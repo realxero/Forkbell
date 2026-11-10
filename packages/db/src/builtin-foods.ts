@@ -52,6 +52,15 @@ const rows: Row[] = [
   ['tilapia-cooked', 'Tilapia, cooked', 128, 26.2, 0, 2.7, 0, 0, 56],
   ['tofu-firm', 'Tofu, firm', 144, 17.3, 2.8, 8.7, 2.3, 0.6, 14, { '½ cup': 126 }],
 
+  // Breakfast (USDA SR Legacy; Bell matches these instead of guessing)
+  ['french-toast', 'French toast', 229, 7.7, 25.0, 10.8, 0, 0, 479, { '1 slice': 65 }],
+  ['egg-scrambled', 'Eggs, scrambled', 149, 10.0, 1.6, 11.0, 0, 1.4, 145, { '1 large egg': 61, '1 cup': 220 }],
+  ['pancakes', 'Pancakes, plain', 227, 6.4, 28.3, 9.7, 0, 0, 439, { '1 pancake (4")': 38, '1 pancake (6")': 77 }],
+  ['waffles', 'Waffles, plain', 291, 7.9, 32.9, 14.1, 0, 0, 511, { '1 waffle (7")': 75 }],
+  ['pork-sausage-cooked', 'Pork sausage, link or patty, cooked', 325, 18.5, 1.4, 27.2, 0, 1.1, 814, { '1 patty': 27, '1 link': 23 }],
+  ['tater-tots', 'Tater tots, oven-baked', 192, 2.1, 27.3, 9.1, 2.0, 0.3, 463],
+  ['hash-browns', 'Hash browns, pan-fried', 219, 2.7, 28.5, 11.6, 3.2, 0.3, 15],
+  ['english-muffin', 'English muffin, plain', 227, 8.9, 44.2, 1.7, 3.5, 3.5, 425, { '1 muffin': 57 }],
   // Beans, nuts and seeds
   ['black-beans-cooked', 'Black beans, cooked', 132, 8.9, 23.7, 0.5, 8.7, 0.3, 1, { '½ cup': 86, '1 cup': 172 }],
   ['chickpeas-cooked', 'Chickpeas, cooked', 164, 8.9, 27.4, 2.6, 7.6, 4.8, 7, { '½ cup': 82, '1 cup': 164 }],

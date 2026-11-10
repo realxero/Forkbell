@@ -8,6 +8,10 @@ updates:
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
     ignore:
+      # Major versions are upgrades to plan, not weekly chores: @types/node has to
+      # match the Node we run (24), and a new postgres driver needs a real look.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
       # Expo pins these to its SDK; upgrade them together with
       # `npx expo install --fix` when moving to a new SDK.
       - dependency-name: "expo"
@@ -31,3 +35,7 @@ updates:
     directory: /
     target-branch: dev
     schedule: { interval: weekly }
+    ignore:
+      # node:24 → node:26 is a runtime upgrade, done on purpose.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]

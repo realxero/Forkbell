@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { loggable } from '../db-errors.ts';
 import { Hono, type Context } from 'hono';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { fasts, users, waterEntries, type connect } from '@forkbell/db';
@@ -110,7 +111,7 @@ function startJob(c: Context<AppEnv>, userId: string, work: Promise<{ code: numb
   const finished = work.then(
     (r) => (job.done = r),
     (e) => {
-      console.error('Bell:', e);
+      console.error('Bell:', loggable(e));
       job.done = { code: 500, body: { error: 'Bell ran into a problem. Check the server log.' } };
     },
   );
@@ -280,7 +281,7 @@ export function bellRoutes(db: ReturnType<typeof connect>, internal: (path: stri
           outOfTime = true;
           console.error(`Bell: no answer within ${ANSWER_WITHIN_MS / 1000} s; answering with what there is`);
         } else {
-        console.error('Bell:', e);
+        console.error('Bell:', loggable(e));
         return { code: 502 as const, body: { error: e instanceof Error && e.message.startsWith('The AI service') ? e.message : 'Bell couldn’t reach the AI service. Check the server log.' } };
         }
       }

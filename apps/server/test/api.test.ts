@@ -123,6 +123,15 @@ test('export: your diary as JSON and CSV, nothing secret, nothing of anyone else
   assert.equal((await b.call('GET', '/api/export')).body.data.diaryEntries.length, 0, "Bob's export has none of Alice's diary");
 });
 
+test('CSV export: a food name that looks like a formula is shown, never run', async () => {
+  const a = await newUser();
+  const food = { name: '=HYPERLINK("http://example.com","x")', brand: '+brand', source: 'custom', sourceId: null, per100: { kcal: 100, protein: 5, carbs: 10, fat: 4.4 }, servingGrams: null, servingLabel: null, barcode: null, portions: [] };
+  assert.ok((await a.call('POST', '/api/diary', { date: '2026-10-24', meal: 'lunch', grams: 10, food })).status < 300);
+  const csv = (await a.call('GET', '/api/export/diary.csv')).text;
+  assert.ok(csv.includes(`"'=HYPERLINK(""http://example.com"",""x"")"`), csv);
+  assert.ok(csv.includes(",'+brand,"), csv);
+});
+
 test('a Shortcut key only works for Shortcuts, and stops working when removed', async () => {
   const u = await newUser();
   const made = await u.call('POST', '/api/shortcuts/keys', { label: 'Test' });
@@ -573,6 +582,9 @@ test('AI apps over MCP: a key that reads, a key that logs, and nowhere else', as
   const day = await rpc(readKey, { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'get_day', arguments: { date: '2026-10-25' } } });
   assert.match(day.body!.result!.content![0]!.text, /"date":"2026-10-25"/);
   const refused = await rpc(readKey, { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'log_water', arguments: { amount: '500 ml' } } });
+  const batch = Array.from({ length: 21 }, (_, i) => ({ jsonrpc: '2.0', id: 100 + i, method: 'tools/list' }));
+  assert.equal((await rpc(readKey, batch)).status, 400, 'a batch has 20 calls at most');
+  assert.equal((await rpc(readKey, batch.slice(0, 20))).status, 200);
   assert.equal(refused.body!.result!.isError, true, 'a read key can’t log');
   assert.equal((await fetch(`${BASE}/api/me`, { headers: { authorization: `Bearer ${readKey}` } })).status, 403, 'and works nowhere but /mcp');
 

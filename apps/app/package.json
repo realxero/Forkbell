@@ -16,7 +16,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@forkbell/shared": "workspace:*",
     "@kingstinct/react-native-healthkit": "16.2.0",
-    "@mediapipe/tasks-vision": "1.1.1",
+    "@mediapipe/tasks-vision": "1.2.2",
     "@zxing/browser": "0.2.1",
     "@zxing/library": "0.23.0",
     "expo": "~58.0.17",
@@ -52,6 +52,6 @@
   "devDependencies": {
     "@types/react": "~19.3.0",
     "esbuild": "^0.28.2",
-    "typescript": "~5.9.3"
+    "typescript": "~7.0.2"
   }
 }

@@ -42,3 +42,15 @@ export function refusalFor(err: unknown): Refusal | null {
   const code = postgresCode(err);
   return code ? (REFUSALS[code] ?? null) : null;
 }
+
+/**
+ * What's safe to write to the log about an error. Drizzle's query errors carry
+ * the SQL and every parameter ("params: …"): health values, password hashes,
+ * session hashes. Those keep only the Postgres code and its short message.
+ */
+export function loggable(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  if (!/^Failed query/.test(err.message)) return err.stack ?? `${err.name}: ${err.message}`;
+  const pg = (err as { cause?: { message?: unknown } }).cause;
+  return `${err.name}: query failed (Postgres ${postgresCode(err) ?? 'error'}${typeof pg?.message === 'string' ? `: ${pg.message.split('\n')[0]}` : ''})`;
+}
