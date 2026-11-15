@@ -43,6 +43,8 @@ export async function requestHealthAccess() {
     { accessType: 'read', recordType: 'Vo2Max' },
     { accessType: 'read', recordType: 'LeanBodyMass' },
     { accessType: 'read', recordType: 'SleepSession' },
+    { accessType: 'read', recordType: 'BloodGlucose' },
+    { accessType: 'read', recordType: 'MenstruationFlow' },
     { accessType: 'read', recordType: 'ExerciseSession' },
     { accessType: 'write', recordType: 'Nutrition' },
     { accessType: 'write', recordType: 'ExerciseSession' },
@@ -102,6 +104,8 @@ export async function readHealth(from: string, to: string): Promise<Omit<HealthI
   await perDay('RespiratoryRate', 'resp_rate', (r) => r.rate as number, at);
   await perDay('Vo2Max', 'vo2max', (r) => r.vo2MillilitersPerMinuteKilogram as number, at);
   await perDay('LeanBodyMass', 'lean_kg', (r) => (r.mass as { inKilograms: number } | undefined)?.inKilograms, at);
+  await perDay('BloodGlucose', 'glucose', (r) => (r.level as { inMilligramsPerDeciliter: number } | undefined)?.inMilligramsPerDeciliter, at);
+  await perDay('MenstruationFlow', 'period', (r) => ((r.flow as number) > 0 ? 1 : undefined), at);
   // Sleep and exercise sessions: minutes, on the day they ended.
   const minutes = async (recordType: string, kind: HealthImport['days'][number]['kind']) => {
     try {

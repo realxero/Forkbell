@@ -68,7 +68,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     };
     const hr = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => valueOn('resting_hr', addDays(today, -i))).find((v) => v !== null) ?? null;
     // Every health number: latest, 7-day average, and four weeks for a small chart.
-    const metrics: HealthMetric[] = HEALTH_KINDS.filter((k) => data.health.some((h) => h.kind === k)).map((kind) => {
+    const metrics: HealthMetric[] = HEALTH_KINDS.filter((k) => k !== 'period' && data.health.some((h) => h.kind === k)).map((kind) => {
       const series = Array.from({ length: 28 }, (_, i) => valueOn(kind, addDays(today, i - 27)));
       const dated = data.health.filter((h) => h.kind === kind).sort((a, b) => (a.date < b.date ? 1 : -1));
       const latestDate = dated[0]?.date ?? null;
@@ -126,6 +126,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       calorieGoal: data.me.goalKcal,
       today,
       unit,
+      periodDays: data.health.filter((h) => h.kind === 'period' && h.date >= addDays(today, -7) && h.date < today).length,
     });
 
     return c.json({

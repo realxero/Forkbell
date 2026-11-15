@@ -22,6 +22,8 @@ export interface FoodWeek {
   today: string;
   /** how weights are shown in the text */
   unit?: 'lb' | 'kg';
+  /** days with period flow this week, from Apple Health or Health Connect */
+  periodDays?: number;
 }
 
 export interface FoodCheckIn {
@@ -113,6 +115,11 @@ export function foodCheckIn(w: FoodWeek): FoodCheckIn {
     verdict = `${parts} About ${target.toLocaleString()} kcal a day would match your plan (${vsAvg < 0 ? `${Math.abs(vsAvg)} less` : `${vsAvg} more`} than you've been eating).`;
     if (target === MIN_SUGGESTED_KCAL && vsAvg < 0) verdict += ' That’s the 1,200 kcal floor; a later goal date or more activity is the safer way to speed up.';
     if (!w.calorieGoal) verdict += ' Set a calorie goal to apply it.';
+  }
+  // Water weight around a period can hide a week's loss: say so, and don't change the goal over it.
+  if (w.periodDays && actualKg > 0) {
+    verdict += ' Your period was this week, and the water it holds often shows as a gain for a few days, so this week counts for less.';
+    suggestion = null;
   }
   return { ...base, expectedKg, actualKg, verdict, suggestion };
 }

@@ -360,6 +360,7 @@ export function milestones(opts: { loggedDates: string[]; workoutDates: string[]
 export const HEALTH_KINDS = [
   'steps', 'active_kcal', 'resting_kcal', 'resting_hr',
   'exercise_min', 'flights', 'distance_m', 'hr_avg', 'hrv_ms', 'spo2_pct', 'resp_rate', 'vo2max', 'lean_kg', 'sleep_min',
+  'glucose', 'period',
 ] as const;
 
 /** How each health number is shown, and whether a day's value is a total or an average. */
@@ -378,6 +379,9 @@ export const HEALTH_INFO: Record<(typeof HEALTH_KINDS)[number], { label: string;
   resp_rate: { label: 'Breathing rate', unit: '/min', total: false, digits: 1 },
   vo2max: { label: 'Cardio fitness', unit: 'VO₂max', total: false, digits: 1 },
   lean_kg: { label: 'Lean body mass', unit: 'kg', total: false, digits: 1 },
+  glucose: { label: 'Blood glucose', unit: 'mg/dL', total: false, digits: 0 },
+  /** 1 on a day with period flow; not shown as a number, used to explain water weight */
+  period: { label: 'Period', unit: '', total: false, digits: 0 },
 };
 export type HealthKind = (typeof HEALTH_KINDS)[number];
 export type HealthSource = 'apple_health' | 'health_connect';

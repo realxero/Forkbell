@@ -69,3 +69,12 @@ test('a new calorie goal keeps protein and moves carbs and fat in their split', 
   assert.ok(Math.abs(total - 2000) < 15, `macros add up to ${total}`);
   assert.deepEqual(goalsAtKcal({ kcal: 2200, protein: 160, carbs: null, fat: null }, 2000), { kcal: 2000, protein: 160, carbs: null, fat: null });
 });
+
+test('a heavier week with a period explains the water and suggests no change', () => {
+  const days = Array.from({ length: 7 }, (_, i) => ({ date: `2026-11-0${i + 1}`, kcal: 1800, sodium: null, fiber: null }));
+  const w: FoodWeek = { days, burn: 2300, trendFromKg: 80, trendToKg: 80.4, goalKg: 75, goalDate: null, calorieGoal: 1800, today: '2026-11-08', unit: 'kg' };
+  assert.ok(foodCheckIn(w).suggestion, 'without a period it suggests eating less');
+  const c = foodCheckIn({ ...w, periodDays: 3 });
+  assert.equal(c.suggestion, null);
+  assert.match(c.verdict, /period/);
+});
