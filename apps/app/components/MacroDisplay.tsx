@@ -27,16 +27,18 @@ const status = (m: Macro) =>
   m.goal ? (m.goal > m.value ? `${Math.round(m.goal - m.value)} left` : over(m) ? `${Math.round(m.value - m.goal)} over` : 'done') : 'no goal';
 const spoken = (m: Macro) => `${m.label}: ${Math.round(m.value)} grams, ${m.goal ? `${status(m)} of ${m.goal}` : 'no goal'}`;
 
-export function MacroDisplay({ protein, carbs, fat, goals, style = macroStyle() }: {
+export function MacroDisplay({ protein, carbs, fat, goals, style = macroStyle(), netCarbs = false }: {
   protein: number;
   carbs: number;
   fat: number;
   goals: { protein: number | null; carbs: number | null; fat: number | null };
   style?: MacroStyle;
+  /** carbs is already total minus fiber */
+  netCarbs?: boolean;
 }) {
   const macros: Macro[] = [
     { label: 'Protein', value: protein, goal: goals.protein, tint: color.protein },
-    { label: 'Carbs', value: carbs, goal: goals.carbs, tint: color.carbs },
+    { label: netCarbs ? 'Net carbs' : 'Carbs', value: carbs, goal: goals.carbs, tint: color.carbs },
     { label: 'Fat', value: fat, goal: goals.fat, tint: color.fat },
   ];
   if (style === 'bars') return <Bars macros={macros} />;

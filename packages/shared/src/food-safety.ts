@@ -64,6 +64,8 @@ export const preferencesSchema = z.object({
     .array(z.object({ key: z.enum(MEALS), name: z.string().trim().min(1).max(30), show: z.boolean() }))
     .max(6)
     .default(DEFAULT_MEAL_SLOTS.map((s) => ({ ...s }))),
+  /** count carbs as net carbs (total minus fiber), for keto and low-carb */
+  netCarbs: z.boolean().default(false),
   /** a planned diet break at maintenance: until when (inclusive), and the goals to go back to */
   dietBreak: z
     .object({

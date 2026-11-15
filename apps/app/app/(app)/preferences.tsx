@@ -146,6 +146,7 @@ export default function PreferencesScreen() {
           ))}
         </View>
         {sw('Patterns card on Progress', p.patterns, (v) => setP({ ...p, patterns: v }))}
+        {sw('Show net carbs (carbs minus fiber)', p.netCarbs, (v) => setP({ ...p, netCarbs: v }))}
         <Text style={s.note}>Off: what you said goes into the message box so you can fix it first.</Text>
 
           </>

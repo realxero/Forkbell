@@ -49,6 +49,7 @@ function dayLabel(date: string) {
 
 export default function Diary() {
   const { me, refreshMe } = useAuth();
+  const net = !!me?.preferences.netCarbs;
   const viewing = useViewing();
   // Someone else's diary is read-only unless they allowed "Log food for me".
   const canWrite = canLogFood(viewing);
@@ -247,14 +248,14 @@ export default function Diary() {
                 </Ring>
                 {barsBeside && !stacked && (
                   <View style={{ flex: 1 }}>
-                    <MacroDisplay protein={day.totals.protein} carbs={day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} />
+                    <MacroDisplay protein={day.totals.protein} carbs={net ? Math.max(0, day.totals.carbs - day.totals.fiber) : day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} netCarbs={net} />
                   </View>
                 )}
               </View>
               {goal === null && <Text style={type.small}>Set a calorie goal in Settings → Goals and targets to see what’s left.</Text>}
               {(!barsBeside || stacked) && (
                 <View style={s.macros}>
-                  <MacroDisplay protein={day.totals.protein} carbs={day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} />
+                  <MacroDisplay protein={day.totals.protein} carbs={net ? Math.max(0, day.totals.carbs - day.totals.fiber) : day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} netCarbs={net} />
                 </View>
               )}
             </View>
