@@ -45,6 +45,8 @@ export async function requestHealthAccess() {
       'HKQuantityTypeIdentifierVO2Max',
       'HKQuantityTypeIdentifierLeanBodyMass',
       'HKCategoryTypeIdentifierSleepAnalysis',
+      'HKQuantityTypeIdentifierBloodGlucose',
+      'HKCategoryTypeIdentifierMenstrualFlow',
     ],
     toShare: [
       'HKQuantityTypeIdentifierDietaryEnergyConsumed',
@@ -88,6 +90,16 @@ export async function readHealth(from: string, to: string): Promise<Omit<HealthI
   const before = days.length;
   await daily('spo2_pct', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierOxygenSaturation', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: '%' }));
   for (const d of days.slice(before)) if (d.value <= 1) d.value = Math.round(d.value * 1000) / 10;
+
+  await daily('glucose', () => queryStatisticsCollectionForQuantity('HKQuantityTypeIdentifierBloodGlucose', ['discreteAverage'], startDate, { day: 1 }, { filter, unit: 'mg/dL' }));
+  // Period days: any flow logged that day (5 is "none").
+  try {
+    const flow = new Set<string>();
+    for (const s of await queryCategorySamples('HKCategoryTypeIdentifierMenstrualFlow', { limit: 1000, ascending: true, filter })) if (s.value !== 5) flow.add(todayLocal(new Date(s.startDate)));
+    for (const date of flow) if (date >= from && date <= to) days.push({ date, kind: 'period', value: 1 });
+  } catch {
+    /* not allowed */
+  }
 
   // Sleep: time actually asleep (not just in bed), counted on the morning you woke up.
   try {
@@ -201,5 +213,15 @@ export async function writeWater(days: { date: string; ml: number }[]) {
       HKMetadataKeySyncIdentifier: `forkbell:${d.date}:water`,
       HKMetadataKeySyncVersion: Date.now(),
     }).catch(() => {});
+  }
+}
+
+/** Blood glucose readings for a day from Apple Health (a CGM or a meter). */
+export async function glucoseReadings(date: string): Promise<{ at: number; mgdl: number }[]> {
+  try {
+    const samples = await queryQuantitySamples('HKQuantityTypeIdentifierBloodGlucose', { limit: 2000, ascending: true, unit: 'mg/dL', filter: { date: { startDate: startOf(date), endDate: startOf(addDays(date, 1)) } } });
+    return samples.map((s) => ({ at: new Date(s.startDate).getTime(), mgdl: s.quantity }));
+  } catch {
+    return [];
   }
 }

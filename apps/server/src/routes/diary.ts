@@ -212,5 +212,5 @@ export function diaryRoutes({ asUser }: ReturnType<typeof connect>) {
 
 /** A diary row and its food, as the app sees it. */
 function toEntry(entry: typeof diaryEntries.$inferSelect, food: Parameters<typeof toFood>[0]): DiaryEntry {
-  return { id: entry.id, date: entry.date, meal: entry.meal, grams: entry.grams, food: toFood(food), amount: entry.amount ?? null, unit: entry.unit ?? null, name: entry.name ?? null };
+  return { id: entry.id, date: entry.date, meal: entry.meal, grams: entry.grams, food: toFood(food), amount: entry.amount ?? null, unit: entry.unit ?? null, name: entry.name ?? null, loggedAt: entry.createdAt?.toISOString() ?? null };
 }

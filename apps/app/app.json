@@ -17,6 +17,12 @@
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",
           "UIInterfaceOrientationLandscapeRight"
+        ],
+        "NSSupportsLiveActivities": true
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.realxero.forkbell"
         ]
       }
     },
@@ -40,6 +46,8 @@
         "android.permission.health.READ_VO2_MAX",
         "android.permission.health.READ_LEAN_BODY_MASS",
         "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_BLOOD_GLUCOSE",
+        "android.permission.health.READ_MENSTRUATION",
         "android.permission.health.READ_EXERCISE"
       ]
     },
@@ -61,7 +69,7 @@
       [
         "@kingstinct/react-native-healthkit",
         {
-          "NSHealthShareUsageDescription": "Forkbell reads your steps, activity, resting heart rate and weight to show your progress.",
+          "NSHealthShareUsageDescription": "Forkbell reads your steps, activity, heart rate, sleep, weight, blood glucose and cycle to show your progress.",
           "NSHealthUpdateUsageDescription": "Forkbell saves your daily calories, macros and workouts to Apple Health.",
           "background": false
         }
@@ -95,7 +103,9 @@
         {
           "enableRemoteNotifications": false
         }
-      ]
+      ],
+      "@bacons/apple-targets",
+      "expo-live-activity"
     ],
     "experiments": {
       "typedRoutes": false

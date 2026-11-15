@@ -38,6 +38,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { put } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { speak } from '../../lib/speak';
+import { workoutActivity } from '../../lib/live-activity';
 import { latestHeartRate, latestRestingHeartRate } from '../../lib/health';
 import { getHealthSettings, healthSupported } from '../../lib/health-sync';
 
@@ -174,6 +175,17 @@ export default function WorkoutScreen() {
     if (restEnd) void scheduleRestAlert(restEnd, restNext.current).catch(() => {});
     else void cancelRestAlert();
   }, [restEnd]);
+
+  // The lock screen card (iPhone Live Activity): sets done, or the rest countdown and what's next.
+  // ponytail: it comes down when you leave this screen; keep it up across screens if that's missed.
+  const setsDone = w ? w.exercises.flatMap((e) => e.sets).filter((s) => s.done).length : 0;
+  const setsAll = w ? w.exercises.flatMap((e) => e.sets).length : 0;
+  const live = !!w && !w.finishedAt && !summary;
+  useEffect(() => {
+    if (!live) return workoutActivity(null);
+    workoutActivity({ title: w!.name, subtitle: restEnd ? `Rest${restNext.current ? ` · next: ${restNext.current}` : ''}` : `${setsDone} of ${setsAll} sets`, restEnd });
+  }, [live, w?.name, restEnd, setsDone, setsAll]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => workoutActivity(null), []);
 
   // Heart rate (iPhone with Apple Health connected): your recovered rate once, then the newest reading every few seconds while resting.
   const hrOn = healthSupported && getHealthSettings().connected;

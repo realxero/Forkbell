@@ -3,7 +3,8 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, type Program } from '@forkbell/shared';
+import { addDays, blockWeek, planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, weekStart, weeksTrainedInARow, type Program } from '@forkbell/shared';
+import { readCache, writeCache } from '../lib/sync';
 import { post, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Chip } from './AmountPicker';
@@ -17,7 +18,7 @@ const NARROW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  * Your week on Train: pick the days you train, and the program's workouts are
  * laid over the next 7 days in order. A missed day moves the plan along.
  */
-export function YourWeek({ program, finished, onChanged }: { program: Program | null; finished: { date: string; name: string }[]; onChanged: () => void }) {
+export function YourWeek({ program, finished, pastDates = [], onChanged }: { program: Program | null; finished: { date: string; name: string }[]; pastDates?: string[]; onChanged: () => void }) {
   const { me, refreshMe } = useAuth();
   const [editing, setEditing] = useState(false);
   const saved = me?.preferences.training?.trainingDays ?? [];
@@ -82,6 +83,7 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
         </View>
       )}
       {saved.length > 0 && !program && <Text style={type.small}>No active program yet: tap Change days for a starter that fits.</Text>}
+      {program && <Deload pastDates={pastDates} />}
 
       <Modal visible={editing} transparent animationType="fade" onRequestClose={() => setEditing(false)}>
         <SheetFrame onClose={() => setEditing(false)} kind="dialog">
@@ -105,6 +107,59 @@ export function YourWeek({ program, finished, onChanged }: { program: Program | 
           </Pressable>
         </SheetFrame>
       </Modal>
+    </View>
+  );
+}
+
+/**
+ * After several weeks of training in a row, offer a lighter week: half the sets
+ * at about 90% of the weight. Workouts started from the program that week come
+ * out lighter, and next week's targets pick up from the last full week.
+ */
+function Deload({ pastDates }: { pastDates: string[] }) {
+  const { me, refreshMe } = useAuth();
+  const today = todayLocal();
+  const [notNow, setNotNow] = useState(readCache<string>('device:deload:notnow') === weekStart(today));
+  if (!me) return null;
+  const training = me.preferences.training;
+  const d = training.deload;
+  const on = !!d.from && !!d.until && today >= d.from && today <= d.until;
+  const inARow = weeksTrainedInARow(pastDates, today, d.until);
+  const save = async (deload: typeof d) => {
+    await put('/api/me/preferences', { ...me.preferences, training: { ...training, deload } });
+    await refreshMe();
+  };
+  const day = (x: string) => new Date(`${x}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' });
+  if (on) {
+    return (
+      <View style={s.starter}>
+        <Text style={type.body}>Deload week until {day(d.until!)}: half the sets at about 90% of the weight. Next week picks up where you left off.</Text>
+        <Pressable onPress={() => save({ ...d, until: addDays(today, -1) })} style={buttons.link} accessibilityRole="button">
+          <Text style={s.link}>End it now</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  const block = blockWeek(inARow, d.every);
+  if (block) {
+    return (
+      <Text style={type.small}>
+        Week {block.week} of {block.of} in this block: leave about {block.rir} {block.rir === 1 ? 'rep' : 'reps'} in reserve on your top sets (RPE {10 - block.rir}).{block.week === block.of ? ' A deload week comes next.' : ''}
+      </Text>
+    );
+  }
+  if (notNow || d.every === 0 || inARow < d.every) return null;
+  return (
+    <View style={s.starter}>
+      <Text style={type.body}>{inARow} weeks of training in a row. A lighter week now helps you recover and come back stronger.</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+        <Pressable onPress={() => save({ ...d, from: today, until: addDays(today, 6) })} style={s.secondary} accessibilityRole="button">
+          <Text style={s.secondaryText}>Start a deload week</Text>
+        </Pressable>
+        <Pressable onPress={() => { writeCache('device:deload:notnow', weekStart(today)); setNotNow(true); }} style={buttons.link} accessibilityRole="button">
+          <Text style={s.link}>Not now</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

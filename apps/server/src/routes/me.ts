@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
-import { goalsSchema, isTimeZone, preferencesSchema, type Me } from '@forkbell/shared';
+import { goalsAtKcal, goalsSchema, isTimeZone, preferencesSchema, reverseDietKcal, todayIn, type Me } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -9,8 +9,30 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
   const r = new Hono<AppEnv>();
 
   r.get('/', async (c) => {
-    const [u] = await asUser(c.get('profileId'), (tx) => tx.select().from(users).where(eq(users.id, c.get('profileId'))).limit(1));
+    let [u] = await asUser(c.get('profileId'), (tx) => tx.select().from(users).where(eq(users.id, c.get('profileId'))).limit(1));
     if (!u) return c.json({ error: 'Account not found.' }, 404);
+    // A diet break you planned ends by itself: the goals you had come back the day after.
+    // ponytail: checked when the app loads you, so a server-only read (Shortcuts, MCP) waits for the next app open.
+    const prefs = preferencesSchema.parse(u.preferences ?? {});
+    if (prefs.dietBreak && todayIn(u.timeZone) > prefs.dietBreak.until) {
+      const g = prefs.dietBreak.goals;
+      [u] = await asUser(c.get('profileId'), (tx) =>
+        tx.update(users).set({ goalKcal: g.kcal, goalProtein: g.protein, goalCarbs: g.carbs, goalFat: g.fat, preferences: { ...prefs, dietBreak: null } }).where(eq(users.id, c.get('profileId'))).returning(),
+      );
+      if (!u) return c.json({ error: 'Account not found.' }, 404);
+    }
+    // A reverse diet moves your calories up a step each week (carbs and fat with it), then ends at its target.
+    const rev = preferencesSchema.parse(u.preferences ?? {});
+    if (rev.reverseDiet) {
+      const step = reverseDietKcal(rev.reverseDiet, todayIn(u.timeZone));
+      if (step.kcal !== u.goalKcal || step.done) {
+        const g = goalsAtKcal({ kcal: u.goalKcal, protein: u.goalProtein, carbs: u.goalCarbs, fat: u.goalFat }, step.kcal);
+        [u] = await asUser(c.get('profileId'), (tx) =>
+          tx.update(users).set({ goalKcal: g.kcal, goalCarbs: g.carbs, goalFat: g.fat, preferences: { ...rev, reverseDiet: step.done ? null : rev.reverseDiet } }).where(eq(users.id, c.get('profileId'))).returning(),
+        );
+        if (!u) return c.json({ error: 'Account not found.' }, 404);
+      }
+    }
     const me: Me = {
       id: u.id,
       name: u.name,

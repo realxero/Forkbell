@@ -65,7 +65,8 @@ async function setsFor(tx: Tx, workoutExerciseIds: string[]) {
  * The sets from the most recent finished session of each exercise, before a
  * given workout (or before now). Powers the "previous" column and progression.
  */
-export async function lastSessions(tx: Tx, exerciseIds: string[], before?: { id: string; startedAt: string }) {
+/** skip: a deload week's dates, whose lighter sets shouldn't set the next targets. */
+export async function lastSessions(tx: Tx, exerciseIds: string[], before?: { id: string; startedAt: string }, skip?: { from: string; until: string } | null) {
   const out = new Map<string, SetEntry[]>();
   if (!exerciseIds.length) return out;
   const latest = await tx
@@ -77,6 +78,7 @@ export async function lastSessions(tx: Tx, exerciseIds: string[], before?: { id:
         inArray(workoutExercises.exerciseId, exerciseIds),
         isNotNull(workouts.finishedAt),
         ...(before ? [ne(workouts.id, before.id), lt(workouts.startedAt, before.startedAt)] : []),
+        ...(skip ? [sql`${workouts.date} not between ${skip.from}::date and ${skip.until}::date`] : []),
       ),
     )
     .orderBy(workoutExercises.exerciseId, desc(workouts.date), desc(workouts.startedAt));

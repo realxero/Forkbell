@@ -22,6 +22,8 @@ export interface FoodWeek {
   today: string;
   /** how weights are shown in the text */
   unit?: 'lb' | 'kg';
+  /** days with period flow this week, from Apple Health or Health Connect */
+  periodDays?: number;
 }
 
 export interface FoodCheckIn {
@@ -36,9 +38,37 @@ export interface FoodCheckIn {
   suggestion: { kcal: number; delta: number; why: string } | null;
   sodium: { avg: number; daysOver: number } | null;
   fiber: { avg: number; daysUnder: number } | null;
+  /** set when an automatic check-in already changed your calorie goal this week */
+  applied?: { fromKcal: number | null; toKcal: number };
 }
 
 const r10 = (n: number) => Math.round(n / 10) * 10;
+
+type Goals = { kcal: number | null; protein: number | null; carbs: number | null; fat: number | null };
+
+/**
+ * A new calorie goal with macros that still add up: protein stays (it's set from
+ * your weight, not your calories), carbs and fat share what's left in the split
+ * they had. Macros you never set stay unset.
+ */
+export function goalsAtKcal(g: Goals, kcal: number): Goals {
+  if (g.carbs === null || g.fat === null) return { ...g, kcal };
+  const left = kcal - (g.protein ?? 0) * 4;
+  const had = g.carbs * 4 + g.fat * 9;
+  if (left <= 0 || had <= 0) return { ...g, kcal };
+  const share = left / had;
+  return { ...g, kcal, carbs: Math.round(g.carbs * share), fat: Math.round(g.fat * share) };
+}
+
+/**
+ * Where a reverse diet has got to: up by its step for each full week since it
+ * started, never past the target. done once the target is reached.
+ */
+export function reverseDietKcal(r: { from: string; startKcal: number; targetKcal: number; step: number }, today: string): { kcal: number; done: boolean } {
+  const weeks = Math.max(0, Math.floor((Date.parse(today) - Date.parse(r.from)) / (7 * 86400000)));
+  const kcal = Math.min(r.targetKcal, r.startKcal + weeks * r.step);
+  return { kcal, done: kcal >= r.targetKcal };
+}
 
 export function foodCheckIn(w: FoodWeek): FoodCheckIn {
   const logged = w.days.filter((d) => d.kcal !== null && d.kcal > 0);
@@ -97,6 +127,11 @@ export function foodCheckIn(w: FoodWeek): FoodCheckIn {
     verdict = `${parts} About ${target.toLocaleString()} kcal a day would match your plan (${vsAvg < 0 ? `${Math.abs(vsAvg)} less` : `${vsAvg} more`} than you've been eating).`;
     if (target === MIN_SUGGESTED_KCAL && vsAvg < 0) verdict += ' That’s the 1,200 kcal floor; a later goal date or more activity is the safer way to speed up.';
     if (!w.calorieGoal) verdict += ' Set a calorie goal to apply it.';
+  }
+  // Water weight around a period can hide a week's loss: say so, and don't change the goal over it.
+  if (w.periodDays && actualKg > 0) {
+    verdict += ' Your period was this week, and the water it holds often shows as a gain for a few days, so this week counts for less.';
+    suggestion = null;
   }
   return { ...base, expectedKg, actualKg, verdict, suggestion };
 }

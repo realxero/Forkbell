@@ -360,6 +360,7 @@ export function milestones(opts: { loggedDates: string[]; workoutDates: string[]
 export const HEALTH_KINDS = [
   'steps', 'active_kcal', 'resting_kcal', 'resting_hr',
   'exercise_min', 'flights', 'distance_m', 'hr_avg', 'hrv_ms', 'spo2_pct', 'resp_rate', 'vo2max', 'lean_kg', 'sleep_min',
+  'glucose', 'period',
 ] as const;
 
 /** How each health number is shown, and whether a day's value is a total or an average. */
@@ -378,6 +379,9 @@ export const HEALTH_INFO: Record<(typeof HEALTH_KINDS)[number], { label: string;
   resp_rate: { label: 'Breathing rate', unit: '/min', total: false, digits: 1 },
   vo2max: { label: 'Cardio fitness', unit: 'VO₂max', total: false, digits: 1 },
   lean_kg: { label: 'Lean body mass', unit: 'kg', total: false, digits: 1 },
+  glucose: { label: 'Blood glucose', unit: 'mg/dL', total: false, digits: 0 },
+  /** 1 on a day with period flow; not shown as a number, used to explain water weight */
+  period: { label: 'Period', unit: '', total: false, digits: 0 },
 };
 export type HealthKind = (typeof HEALTH_KINDS)[number];
 export type HealthSource = 'apple_health' | 'health_connect';
@@ -412,20 +416,34 @@ export interface Activity {
 }
 
 // Goal presets ------------------------------------------------------------------------
-type GoalPreset = 'lose' | 'maintain' | 'gain';
+type GoalPreset = 'lose' | 'maintain' | 'gain' | 'keto';
 /**
  * Starting goals from your measured burn and trend weight: lose about 0.5% of
  * body weight a week, maintain, or gain about 0.25%. Protein 2.0 g per kg
  * while losing (more protein helps keep muscle in a deficit: Helms et al.,
  * JISSN 2014) and 1.6 g per kg otherwise (where the benefit levels off:
  * Morton et al., Br J Sports Med 2018). Fat about 28% of calories, carbs the
- * rest. Never below 1,200 kcal.
+ * rest. Never below 1,200 kcal. Keto loses at the same pace with 25 g net
+ * carbs and fat filling the rest.
  */
 export function presetGoals(preset: GoalPreset, burnKcal: number, weightKg: number) {
-  const weekly = preset === 'lose' ? -0.005 : preset === 'gain' ? 0.0025 : 0;
+  const weekly = preset === 'lose' || preset === 'keto' ? -0.005 : preset === 'gain' ? 0.0025 : 0;
   const kcal = Math.max(MIN_SUGGESTED_KCAL, Math.round((burnKcal + (weightKg * weekly * KCAL_PER_KG) / 7) / 10) * 10);
-  const protein = Math.round(weightKg * (preset === 'lose' ? 2.0 : 1.6));
+  const protein = Math.round(weightKg * (preset === 'lose' || preset === 'keto' ? 2.0 : 1.6));
+  if (preset === 'keto') return { kcal, protein, carbs: 25, fat: Math.max(0, Math.round((kcal - protein * 4 - 25 * 4) / 9)) };
   const fat = Math.round((kcal * 0.28) / 9);
   const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
   return { kcal, protein, carbs, fat };
+}
+
+// Glucose after a meal ---------------------------------------------------------------
+/**
+ * Your glucose around a meal: the last reading in the half hour before it, and
+ * the peak in the two hours after. Needs a reading after the meal.
+ */
+export function mealGlucose(readings: { at: number; mgdl: number }[], mealAt: number): { before: number | null; peak: number } | null {
+  const after = readings.filter((r) => r.at >= mealAt && r.at <= mealAt + 2 * 3600_000);
+  if (!after.length) return null;
+  const before = readings.filter((r) => r.at < mealAt && r.at >= mealAt - 30 * 60_000).sort((a, b) => b.at - a.at)[0];
+  return { before: before ? Math.round(before.mgdl) : null, peak: Math.round(Math.max(...after.map((r) => r.mgdl))) };
 }

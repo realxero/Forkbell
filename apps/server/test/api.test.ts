@@ -7,7 +7,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BASE, caller, newUser, serverLog, startServer, stopServer } from './harness.ts';
-import { todayIn } from '@forkbell/shared';
+import { addDays, todayIn } from '@forkbell/shared';
 
 const NOT_HERE = 'Your Forkbell server doesn’t have this yet. Update the server to the same version as the app.';
 const anon = caller(null);
@@ -105,6 +105,47 @@ test('saved plates and bowls survive a round trip through preferences', async ()
   const containers = [{ id: 'p1', name: 'Big plate', grams: 410 }];
   assert.equal((await u.call('PUT', '/api/me/preferences', { ...me.preferences, containers })).status, 200);
   assert.deepEqual((await u.call('GET', '/api/me')).body.preferences.containers, containers);
+});
+
+test('Pick for me starts a workout of built-in exercises for the most rested muscles', async () => {
+  const u = await newUser();
+  const r = await u.call('POST', '/api/workouts', { date: '2026-10-25', generate: true });
+  assert.equal(r.status, 201, explain(JSON.stringify(r.body)));
+  const w = r.body.workout;
+  assert.ok(w.exercises.length >= 3, `${w.exercises.length} exercises`);
+  assert.ok(w.exercises.every((e: { sets: unknown[] }) => e.sets.length === 3));
+  assert.notEqual(w.name, 'Workout');
+});
+
+test('a diet break that has ended gives the old goals back', async () => {
+  const u = await newUser();
+  const me = (await u.call('GET', '/api/me')).body;
+  const old = { kcal: 1900, protein: 160, carbs: 180, fat: 60 };
+  await u.call('PUT', '/api/me/goals', { kcal: 2500, protein: 160, carbs: 290, fat: 78 });
+  // Still on the break today: maintenance stays.
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, dietBreak: { until: todayIn(me.timeZone), goals: old } });
+  assert.equal((await u.call('GET', '/api/me')).body.goals.kcal, 2500);
+  // Ended yesterday: the goals come back and the break is cleared.
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, dietBreak: { until: '2020-01-01', goals: old } });
+  const after = (await u.call('GET', '/api/me')).body;
+  assert.deepEqual(after.goals, old);
+  assert.equal(after.preferences.dietBreak, null);
+});
+
+test('a reverse diet steps calories up each week and ends at its target', async () => {
+  const u = await newUser();
+  const me = (await u.call('GET', '/api/me')).body;
+  await u.call('PUT', '/api/me/goals', { kcal: 1800, protein: 160, carbs: 180, fat: 60 });
+  const today = todayIn(me.timeZone);
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, reverseDiet: { from: addDays(today, -14), startKcal: 1800, targetKcal: 2150, step: 100 } });
+  const mid = (await u.call('GET', '/api/me')).body;
+  assert.equal(mid.goals.kcal, 2000);
+  assert.equal(mid.goals.protein, 160, 'protein stays');
+  assert.ok(mid.goals.carbs > 180 && mid.goals.fat > 60);
+  await u.call('PUT', '/api/me/preferences', { ...mid.preferences, reverseDiet: { from: addDays(today, -70), startKcal: 1800, targetKcal: 2150, step: 100 } });
+  const done = (await u.call('GET', '/api/me')).body;
+  assert.equal(done.goals.kcal, 2150);
+  assert.equal(done.preferences.reverseDiet, null);
 });
 
 test('export: your diary as JSON and CSV, nothing secret, nothing of anyone else', async () => {

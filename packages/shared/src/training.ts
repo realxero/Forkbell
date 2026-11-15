@@ -192,9 +192,12 @@ interface NextTarget {
 /**
  * Double progression: stay at a weight until every working set reaches the
  * top of the rep range, then add one step and start again at the bottom.
- * Never suggests more than one step at a time.
+ * Never suggests more than one step at a time. With a target of reps in reserve
+ * for the week (a training block), your RPE also counts: a top set 2+ reps
+ * easier than the target adds a step early, and one 2+ reps harder holds the
+ * weight and reps.
  */
-export function nextTarget(last: SetEntry[], repMin: number, repMax: number, stepKg: number, kind: ExerciseKind): NextTarget | null {
+export function nextTarget(last: SetEntry[], repMin: number, repMax: number, stepKg: number, kind: ExerciseKind, targetRir: number | null = null): NextTarget | null {
   const sets = working(last);
   if (!sets.length || kind === 'cardio') return null;
   if (kind === 'time') {
@@ -206,6 +209,12 @@ export function nextTarget(last: SetEntry[], repMin: number, repMax: number, ste
   const atTop = sets.filter((s) => (s.weightKg ?? 0) === top);
   const allAtMax = atTop.length > 0 && atTop.every((s) => (s.reps ?? 0) >= repMax);
   const hardest = Math.max(...atTop.map((s) => s.rpe ?? 0));
+  const lowest0 = Math.min(...atTop.map((s) => s.reps ?? 0));
+  if (targetRir !== null && hardest > 0 && !allAtMax && kind === 'weight') {
+    const rir = 10 - hardest;
+    if (rir >= targetRir + 2) return { weightKg: top + stepKg, reps: Math.max(repMin, Math.min(lowest0, repMax)), note: `That was easier than this week’s aim (RPE ${hardest}, aim ${10 - targetRir}). Add a step.` };
+    if (rir <= targetRir - 2) return { weightKg: top || null, reps: Math.max(repMin, Math.min(lowest0, repMax)), note: `That was harder than this week’s aim (RPE ${hardest}, aim ${10 - targetRir}). Same weight and reps.` };
+  }
   if (allAtMax && hardest < 10 && (kind === 'weight' || top > 0)) {
     return { weightKg: top + stepKg, reps: repMin, note: `You hit ${repMax} reps on every set. Add a step and start at ${repMin}.` };
   }
@@ -346,6 +355,8 @@ export const startWorkoutSchema = z.object({
   id: z.string().uuid().optional(),
   date: dateSchema,
   routineId: z.string().uuid().nullish(),
+  /** pick the exercises for me: the most rested muscles */
+  generate: z.boolean().optional(),
   /** when the workout really started, for ones started offline and sent later */
   startedAt: z.string().datetime({ offset: true }).optional(),
   /** logging a workout you already did: when it ended (it's saved as finished) */

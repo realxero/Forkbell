@@ -42,5 +42,10 @@ export async function latestRestingHeartRate(): Promise<number | null> {
   return null;
 }
 
+/** Blood glucose readings for a day (a CGM or a meter), for the meals on Today. */
+export async function glucoseReadings(_date: string): Promise<{ at: number; mgdl: number }[]> {
+  return [];
+}
+
 /** Water to Apple Health: iPhone only, for now. */
 export async function writeWater(_days: { date: string; ml: number }[]): Promise<void> {}

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, users, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
 import {
   todayLocal,
@@ -16,10 +16,15 @@ import {
   type SetEntry,
   type WorkoutSummary,
   todayIn,
+  deloaded,
+  generateWorkout,
+  blockWeek,
+  weeksTrainedInARow,
+  preferencesSchema,
 } from '@forkbell/shared';
 import { timeZoneOf } from '../today.ts';
 import type { AppEnv } from '../auth.ts';
-import { historyBefore, isMissingExercise, lastSessions, loadWorkout, saveWorkout, volumeSql } from '../training.ts';
+import { historyBefore, isMissingExercise, lastSessions, loadWorkout, saveWorkout, toExercise, volumeSql } from '../training.ts';
 
 const isUuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
 /** A time sent by the app, never later than now (a phone clock can be off). */
@@ -159,29 +164,55 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
 
       let name = 'Workout';
       let plan: SaveWorkoutInput['exercises'] = [];
+      type Item = { re: { sets: number; repMin: number; repMax: number; restSeconds: number; superset: number | null }; ex: typeof exercises.$inferSelect };
+      let items: Item[] | null = null;
+      const [me] = await tx.select({ unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1);
+      const training = preferencesSchema.parse(me?.prefs ?? {}).training;
       if (parsed.data.routineId) {
         const [routine] = await tx.select().from(routines).where(eq(routines.id, parsed.data.routineId)).limit(1);
         if (!routine) return { missing: true };
         name = routine.name;
-        const items = await tx
+        items = await tx
           .select({ re: routineExercises, ex: exercises })
           .from(routineExercises)
           .innerJoin(exercises, eq(exercises.id, routineExercises.exerciseId))
           .where(eq(routineExercises.routineId, routine.id))
           .orderBy(asc(routineExercises.position));
-        const [me] = await tx.select({ unit: users.weightUnit }).from(users).where(eq(users.id, userId)).limit(1);
-        const last = await lastSessions(tx, items.map((i) => i.ex.id));
+      } else if (parsed.data.generate) {
+        // Picked for you: the most rested muscles, from your library and setup.
+        const library = await tx
+          .select({ ex: exercises, uses: sql<number>`(select count(*) from workout_exercises we where we.exercise_id = "exercises"."id")::int` })
+          .from(exercises)
+          .where(or(eq(exercises.ownerId, userId), isNull(exercises.ownerId)));
+        const trained = await tx.execute<{ muscle: string; last: string }>(
+          sql`select e.muscle, max(w.date)::text as last from workout_exercises we join exercises e on e.id = we.exercise_id join workouts w on w.id = we.workout_id where w.finished_at is not null group by e.muscle`,
+        );
+        const byId = new Map(library.map((l) => [l.ex.id, l.ex]));
+        const made = generateWorkout(library.map((l) => ({ ...toExercise(l.ex), uses: l.uses })), training, Object.fromEntries([...trained].map((t) => [t.muscle, t.last])), parsed.data.date);
+        name = made.name;
+        items = made.items.map((i) => ({ re: { sets: i.sets, repMin: i.repMin, repMax: i.repMax, restSeconds: i.exercise.restSeconds, superset: null }, ex: byId.get(i.exercise.id)! }));
+      }
+      if (items) {
+        const { deload } = training;
+        const span = deload.from && deload.until ? { from: deload.from, until: deload.until } : null;
+        const lighter = !!span && parsed.data.date >= span.from && parsed.data.date <= span.until;
+        const last = await lastSessions(tx, items.map((i) => i.ex.id), undefined, span);
+        // The week of your training block sets the reps in reserve to aim for.
+        const done = await tx.select({ date: workouts.date }).from(workouts).where(isNotNull(workouts.finishedAt));
+        const block = lighter ? null : blockWeek(weeksTrainedInARow(done.map((x) => x.date), parsed.data.date, deload.until), deload.every);
         plan = items.map(({ re, ex }) => {
-          const target = nextTarget(last.get(ex.id) ?? [], re.repMin, re.repMax, incrementKg(ex.increment, me?.unit ?? 'lb'), ex.kind);
-          const sets: SetEntry[] = Array.from({ length: re.sets }, () => ({
-            weightKg: target?.weightKg ?? null,
+          const step = incrementKg(ex.increment, me?.unit ?? 'lb');
+          const target = nextTarget(last.get(ex.id) ?? [], re.repMin, re.repMax, step, ex.kind, block?.rir ?? null);
+          const d = lighter ? deloaded(re.sets, target?.weightKg ?? null, step) : { sets: re.sets, weightKg: target?.weightKg ?? null };
+          const sets: SetEntry[] = Array.from({ length: d.sets }, () => ({
+            weightKg: d.weightKg,
             reps: target && ex.kind !== 'time' ? target.reps : null,
             seconds: null,
             rpe: null,
             warmup: false,
             done: false,
           }));
-          return { exerciseId: ex.id, restSeconds: re.restSeconds, targetSets: re.sets, repMin: re.repMin, repMax: re.repMax, sets, superset: re.superset };
+          return { exerciseId: ex.id, restSeconds: re.restSeconds, targetSets: d.sets, repMin: re.repMin, repMax: re.repMax, sets, superset: re.superset };
         });
       }
       const [w] = await tx

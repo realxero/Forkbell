@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { foodCheckIn, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
+import { foodCheckIn, goalsAtKcal, reverseDietKcal, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
 import type { Program } from './training.ts';
 
 const week = (kcal: (number | null)[], extra: Partial<FoodWeek> = {}): FoodWeek => ({
@@ -58,4 +58,30 @@ test('your week: the program continues on your days; a done day is shown, not sk
   assert.equal(doneToday[3]!.routine?.name, 'Pull');
   assert.equal(starterFor(3), 'full-body-3');
   assert.equal(starterFor(5), 'ppl-6');
+});
+
+test('a new calorie goal keeps protein and moves carbs and fat in their split', () => {
+  // 2,200 kcal: 160 g protein (640), 200 g carbs (800), 84 g fat (756)
+  const g = goalsAtKcal({ kcal: 2200, protein: 160, carbs: 200, fat: 84 }, 2000);
+  assert.equal(g.protein, 160);
+  assert.equal(g.kcal, 2000);
+  const total = g.protein! * 4 + g.carbs! * 4 + g.fat! * 9;
+  assert.ok(Math.abs(total - 2000) < 15, `macros add up to ${total}`);
+  assert.deepEqual(goalsAtKcal({ kcal: 2200, protein: 160, carbs: null, fat: null }, 2000), { kcal: 2000, protein: 160, carbs: null, fat: null });
+});
+
+test('a heavier week with a period explains the water and suggests no change', () => {
+  const days = Array.from({ length: 7 }, (_, i) => ({ date: `2026-11-0${i + 1}`, kcal: 1800, sodium: null, fiber: null }));
+  const w: FoodWeek = { days, burn: 2300, trendFromKg: 80, trendToKg: 80.4, goalKg: 75, goalDate: null, calorieGoal: 1800, today: '2026-11-08', unit: 'kg' };
+  assert.ok(foodCheckIn(w).suggestion, 'without a period it suggests eating less');
+  const c = foodCheckIn({ ...w, periodDays: 3 });
+  assert.equal(c.suggestion, null);
+  assert.match(c.verdict, /period/);
+});
+
+test('reverse diet: up a step each full week, stopping at the target', () => {
+  const r = { from: '2026-11-02', startKcal: 1800, targetKcal: 2150, step: 100 };
+  assert.deepEqual(reverseDietKcal(r, '2026-11-08'), { kcal: 1800, done: false });
+  assert.deepEqual(reverseDietKcal(r, '2026-11-09'), { kcal: 1900, done: false });
+  assert.deepEqual(reverseDietKcal(r, '2026-11-30'), { kcal: 2150, done: true });
 });

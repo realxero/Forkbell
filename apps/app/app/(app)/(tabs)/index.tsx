@@ -4,7 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, checkFood, forAmount, mealForTime, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type MealPlanCell, type SavedMeal, type TargetSuggestion, entryAmountText, entryName } from '@forkbell/shared';
+import { addDays, checkFood, forAmount, mealForTime, mealGlucose, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type MealPlanCell, type SavedMeal, type TargetSuggestion, entryAmountText, entryName } from '@forkbell/shared';
 import { SuggestionsCard } from '../../../components/SuggestionsCard';
 import { useAuth } from '../../../lib/auth';
 import { canLogFood, useViewing } from '../../../lib/profile';
@@ -24,6 +24,9 @@ import { FoodIcon } from '../../../components/FoodIcon';
 import { MealQuickActions } from '../../../components/MealQuickActions';
 import { StreakCheer } from '../../../components/StreakCheer';
 import { WaterCard } from '../../../components/WaterCard';
+import { updateWidget } from '../../../lib/widget';
+import { glucoseReadings } from '../../../lib/health';
+import { getHealthSettings, healthSupported } from '../../../lib/health-sync';
 import { MicrosCard } from '../../../components/MicrosCard';
 import { FastingCard } from '../../../components/FastingCard';
 import { color, radius, space, type, textSize } from '../../../lib/theme';
@@ -49,6 +52,7 @@ function dayLabel(date: string) {
 
 export default function Diary() {
   const { me, refreshMe } = useAuth();
+  const net = !!me?.preferences.netCarbs;
   const viewing = useViewing();
   // Someone else's diary is read-only unless they allowed "Log food for me".
   const canWrite = canLogFood(viewing);
@@ -174,6 +178,25 @@ export default function Diary() {
   const bonus = day?.goals.kcal ? day.bonus?.kcal ?? 0 : 0;
   const goal = day?.goals.kcal != null ? day.goals.kcal + bonus : null;
   const eaten = day?.totals.kcal ?? 0;
+  // Glucose from Apple Health or Health Connect (a CGM or meter), shown under each meal.
+  const [glucose, setGlucose] = useState<{ at: number; mgdl: number }[]>([]);
+  useEffect(() => {
+    setGlucose([]);
+    if (!healthSupported || viewing || !getHealthSettings().connected) return;
+    void glucoseReadings(date).then(setGlucose);
+  }, [date, viewing, day]);
+  // ponytail: a meal's time is when its first entry was logged; logging late shifts the window.
+  const glucoseFor = (entries: DiaryEntry[]) => {
+    const times = entries.map((e) => (e.loggedAt ? Date.parse(e.loggedAt) : NaN)).filter((t) => Number.isFinite(t) && todayLocal(new Date(t)) === date);
+    return glucose.length && times.length ? mealGlucose(glucose, Math.min(...times)) : null;
+  };
+
+  // Your own today goes to the home screen widget (iPhone).
+  useEffect(() => {
+    if (!day || viewing || date !== todayLocal()) return;
+    const carbs = net ? Math.max(0, day.totals.carbs - day.totals.fiber) : day.totals.carbs;
+    updateWidget({ date, kcalGoal: goal, kcalEaten: eaten, protein: day.totals.protein, proteinGoal: day.goals.protein, carbs, carbsGoal: day.goals.carbs, fat: day.totals.fat, fatGoal: day.goals.fat, netCarbs: net });
+  }, [day, viewing, date, goal, eaten, net]);
   const left = goal !== null ? goal - eaten : null;
   const ringLabel =
     left === null
@@ -247,14 +270,14 @@ export default function Diary() {
                 </Ring>
                 {barsBeside && !stacked && (
                   <View style={{ flex: 1 }}>
-                    <MacroDisplay protein={day.totals.protein} carbs={day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} />
+                    <MacroDisplay protein={day.totals.protein} carbs={net ? Math.max(0, day.totals.carbs - day.totals.fiber) : day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} netCarbs={net} />
                   </View>
                 )}
               </View>
               {goal === null && <Text style={type.small}>Set a calorie goal in Settings → Goals and targets to see what’s left.</Text>}
               {(!barsBeside || stacked) && (
                 <View style={s.macros}>
-                  <MacroDisplay protein={day.totals.protein} carbs={day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} />
+                  <MacroDisplay protein={day.totals.protein} carbs={net ? Math.max(0, day.totals.carbs - day.totals.fiber) : day.totals.carbs} fat={day.totals.fat} goals={day.goals} style={style} netCarbs={net} />
                 </View>
               )}
             </View>
@@ -314,6 +337,14 @@ export default function Diary() {
                       </>
                     )}
                   </View>
+                  {(() => {
+                    const g = glucoseFor(entries);
+                    return g ? (
+                      <Text style={type.small} accessibilityLabel={`Glucose ${g.before !== null ? `${g.before} before, ` : ''}peak ${g.peak} milligrams per decilitre in the 2 hours after`}>
+                        Glucose {g.before !== null ? `${g.before} → ` : ''}peak {g.peak} mg/dL in the 2 h after
+                      </Text>
+                    ) : null;
+                  })()}
                   {(() => {
                     // This weekday's plan for the meal, from your meal plan or your coach's.
                     const planned = planFor(meal);

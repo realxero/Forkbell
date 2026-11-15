@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { healthDaily, measurements, users, weighIns, workouts, type connect, dayGoals } from '@forkbell/db';
-import { findPatterns, foodCheckIn, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource, readiness } from '@forkbell/shared';
+import { findPatterns, foodCheckIn, goalsAtKcal, preferencesSchema, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource, readiness } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -68,7 +68,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     };
     const hr = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => valueOn('resting_hr', addDays(today, -i))).find((v) => v !== null) ?? null;
     // Every health number: latest, 7-day average, and four weeks for a small chart.
-    const metrics: HealthMetric[] = HEALTH_KINDS.filter((k) => data.health.some((h) => h.kind === k)).map((kind) => {
+    const metrics: HealthMetric[] = HEALTH_KINDS.filter((k) => k !== 'period' && data.health.some((h) => h.kind === k)).map((kind) => {
       const series = Array.from({ length: 28 }, (_, i) => valueOn(kind, addDays(today, i - 27)));
       const dated = data.health.filter((h) => h.kind === kind).sort((a, b) => (a.date < b.date ? 1 : -1));
       const latestDate = dated[0]?.date ?? null;
@@ -126,7 +126,26 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       calorieGoal: data.me.goalKcal,
       today,
       unit,
+      periodDays: data.health.filter((h) => h.kind === 'period' && h.date >= addDays(today, -7) && h.date < today).length,
     });
+
+    // Automatic check-ins (opt-in): once a week the suggested goal is applied, and
+    // the card says so with an Undo. Not during a diet break or a reverse diet.
+    const prefs = preferencesSchema.parse(data.me.preferences ?? {});
+    if (prefs.autoCheckIn && prefs.checkInWeek !== checkIn.weekOf && c.get('userId') === userId) {
+      const before = { kcal: data.me.goalKcal, protein: data.me.goalProtein, carbs: data.me.goalCarbs, fat: data.me.goalFat };
+      const change = checkIn.suggestion && !prefs.dietBreak && !prefs.reverseDiet ? goalsAtKcal(before, checkIn.suggestion.kcal) : null;
+      await asUser(userId, (tx) =>
+        tx.update(users).set({ ...(change ? { goalKcal: change.kcal, goalCarbs: change.carbs, goalFat: change.fat } : {}), preferences: { ...prefs, checkInWeek: checkIn.weekOf, checkInUndo: change ? before : null } }).where(eq(users.id, userId)),
+      );
+      prefs.checkInWeek = checkIn.weekOf;
+      prefs.checkInUndo = change ? before : null;
+      if (change) data.me.goalKcal = change.kcal;
+    }
+    if (prefs.checkInWeek === checkIn.weekOf && prefs.checkInUndo && data.me.goalKcal !== null) {
+      checkIn.applied = { fromKcal: prefs.checkInUndo.kcal, toKcal: data.me.goalKcal };
+      checkIn.suggestion = null;
+    }
 
     return c.json({
       today,

@@ -68,6 +68,8 @@ export interface DiaryEntry {
   unit?: string | null;
   /** this entry's own name, shown instead of the food's */
   name?: string | null;
+  /** when it was logged (ISO), from the server */
+  loggedAt?: string | null;
 }
 
 /** What to call an entry: its own name, or its food's. */
