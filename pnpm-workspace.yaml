@@ -5,3 +5,7 @@ packages:
 # Don't install a package version until it's been public for a day: hijacked
 # releases are usually caught and pulled within hours. (Minutes.)
 minimumReleaseAge: 1440
+patchedDependencies:
+  '@bacons/apple-targets@5.0.0': patches/@bacons__apple-targets@5.0.0.patch
+# The server's own install (pnpm deploy in the Dockerfile) doesn't include the app's patched packages.
+allowUnusedPatches: true

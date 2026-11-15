@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@bacons/apple-targets@5.0.0':
+    hash: 5b3f15228536c9a0c6cd271ce8f1b238d3deb4ea163f4b278c2ac05d4fbf2f85
+    path: patches/@bacons__apple-targets@5.0.0.patch
+
 importers:
 
   .: {}
@@ -12,7 +17,7 @@ importers:
     dependencies:
       '@bacons/apple-targets':
         specifier: 5.0.0
-        version: 5.0.0(expo@58.0.17)(typescript@7.0.2)
+        version: 5.0.0(patch_hash=5b3f15228536c9a0c6cd271ce8f1b238d3deb4ea163f4b278c2ac05d4fbf2f85)(expo@58.0.17)(typescript@7.0.2)
       '@expo/metro-runtime':
         specifier: ~58.0.15
         version: 58.0.15(@expo/log-box@58.0.13)(expo@58.0.17)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.0(@babel/core@7.29.13)(@react-native/metro-config@0.88.0(@babel/core@7.29.13))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
@@ -4291,7 +4296,7 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@bacons/apple-targets@5.0.0(expo@58.0.17)(typescript@7.0.2)':
+  '@bacons/apple-targets@5.0.0(patch_hash=5b3f15228536c9a0c6cd271ce8f1b238d3deb4ea163f4b278c2ac05d4fbf2f85)(expo@58.0.17)(typescript@7.0.2)':
     dependencies:
       '@bacons/xcode': 1.0.0-alpha.32
       '@expo/prebuild-config': 55.0.22(expo@58.0.17)(typescript@7.0.2)
