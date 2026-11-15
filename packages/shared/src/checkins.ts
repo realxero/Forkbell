@@ -38,6 +38,8 @@ export interface FoodCheckIn {
   suggestion: { kcal: number; delta: number; why: string } | null;
   sodium: { avg: number; daysOver: number } | null;
   fiber: { avg: number; daysUnder: number } | null;
+  /** set when an automatic check-in already changed your calorie goal this week */
+  applied?: { fromKcal: number | null; toKcal: number };
 }
 
 const r10 = (n: number) => Math.round(n / 10) * 10;
@@ -56,6 +58,16 @@ export function goalsAtKcal(g: Goals, kcal: number): Goals {
   if (left <= 0 || had <= 0) return { ...g, kcal };
   const share = left / had;
   return { ...g, kcal, carbs: Math.round(g.carbs * share), fat: Math.round(g.fat * share) };
+}
+
+/**
+ * Where a reverse diet has got to: up by its step for each full week since it
+ * started, never past the target. done once the target is reached.
+ */
+export function reverseDietKcal(r: { from: string; startKcal: number; targetKcal: number; step: number }, today: string): { kcal: number; done: boolean } {
+  const weeks = Math.max(0, Math.floor((Date.parse(today) - Date.parse(r.from)) / (7 * 86400000)));
+  const kcal = Math.min(r.targetKcal, r.startKcal + weeks * r.step);
+  return { kcal, done: kcal >= r.targetKcal };
 }
 
 export function foodCheckIn(w: FoodWeek): FoodCheckIn {

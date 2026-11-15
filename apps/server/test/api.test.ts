@@ -7,7 +7,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BASE, caller, newUser, serverLog, startServer, stopServer } from './harness.ts';
-import { todayIn } from '@forkbell/shared';
+import { addDays, todayIn } from '@forkbell/shared';
 
 const NOT_HERE = 'Your Forkbell server doesn’t have this yet. Update the server to the same version as the app.';
 const anon = caller(null);
@@ -130,6 +130,22 @@ test('a diet break that has ended gives the old goals back', async () => {
   const after = (await u.call('GET', '/api/me')).body;
   assert.deepEqual(after.goals, old);
   assert.equal(after.preferences.dietBreak, null);
+});
+
+test('a reverse diet steps calories up each week and ends at its target', async () => {
+  const u = await newUser();
+  const me = (await u.call('GET', '/api/me')).body;
+  await u.call('PUT', '/api/me/goals', { kcal: 1800, protein: 160, carbs: 180, fat: 60 });
+  const today = todayIn(me.timeZone);
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, reverseDiet: { from: addDays(today, -14), startKcal: 1800, targetKcal: 2150, step: 100 } });
+  const mid = (await u.call('GET', '/api/me')).body;
+  assert.equal(mid.goals.kcal, 2000);
+  assert.equal(mid.goals.protein, 160, 'protein stays');
+  assert.ok(mid.goals.carbs > 180 && mid.goals.fat > 60);
+  await u.call('PUT', '/api/me/preferences', { ...mid.preferences, reverseDiet: { from: addDays(today, -70), startKcal: 1800, targetKcal: 2150, step: 100 } });
+  const done = (await u.call('GET', '/api/me')).body;
+  assert.equal(done.goals.kcal, 2150);
+  assert.equal(done.preferences.reverseDiet, null);
 });
 
 test('export: your diary as JSON and CSV, nothing secret, nothing of anyone else', async () => {

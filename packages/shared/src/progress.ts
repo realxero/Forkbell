@@ -416,19 +416,21 @@ export interface Activity {
 }
 
 // Goal presets ------------------------------------------------------------------------
-type GoalPreset = 'lose' | 'maintain' | 'gain';
+type GoalPreset = 'lose' | 'maintain' | 'gain' | 'keto';
 /**
  * Starting goals from your measured burn and trend weight: lose about 0.5% of
  * body weight a week, maintain, or gain about 0.25%. Protein 2.0 g per kg
  * while losing (more protein helps keep muscle in a deficit: Helms et al.,
  * JISSN 2014) and 1.6 g per kg otherwise (where the benefit levels off:
  * Morton et al., Br J Sports Med 2018). Fat about 28% of calories, carbs the
- * rest. Never below 1,200 kcal.
+ * rest. Never below 1,200 kcal. Keto loses at the same pace with 25 g net
+ * carbs and fat filling the rest.
  */
 export function presetGoals(preset: GoalPreset, burnKcal: number, weightKg: number) {
-  const weekly = preset === 'lose' ? -0.005 : preset === 'gain' ? 0.0025 : 0;
+  const weekly = preset === 'lose' || preset === 'keto' ? -0.005 : preset === 'gain' ? 0.0025 : 0;
   const kcal = Math.max(MIN_SUGGESTED_KCAL, Math.round((burnKcal + (weightKg * weekly * KCAL_PER_KG) / 7) / 10) * 10);
-  const protein = Math.round(weightKg * (preset === 'lose' ? 2.0 : 1.6));
+  const protein = Math.round(weightKg * (preset === 'lose' || preset === 'keto' ? 2.0 : 1.6));
+  if (preset === 'keto') return { kcal, protein, carbs: 25, fat: Math.max(0, Math.round((kcal - protein * 4 - 25 * 4) / 9)) };
   const fat = Math.round((kcal * 0.28) / 9);
   const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
   return { kcal, protein, carbs, fat };

@@ -29,6 +29,16 @@ export function FoodCheckInCard({ checkIn, unit, onChanged }: { checkIn: FoodChe
     onChanged();
     showToast(`Calorie goal set to ${checkIn.suggestion.kcal.toLocaleString()}`, { action: { label: 'Undo', run: async () => { await put('/api/me/goals', before); await refreshMe(); onChanged(); } } });
   };
+  // An automatic check-in already changed the goal: Undo puts the old goals back.
+  const undo = async () => {
+    const old = me?.preferences.checkInUndo;
+    if (!me || !old) return;
+    await put('/api/me/goals', old);
+    await put('/api/me/preferences', { ...me.preferences, checkInUndo: null });
+    await refreshMe();
+    onChanged();
+    showToast(`Calorie goal back to ${old.kcal?.toLocaleString() ?? 'what it was'}`);
+  };
   return (
     <View style={s.card}>
       <View style={s.head}>
@@ -41,6 +51,11 @@ export function FoodCheckInCard({ checkIn, unit, onChanged }: { checkIn: FoodChe
         <Stat label="Trend" value={kg(checkIn.actualKg)} />
       </View>
       <Text style={type.body}>{checkIn.verdict}</Text>
+      {checkIn.applied && (
+        <Text style={[type.body, { fontWeight: '700' }]}>
+          Your calorie goal moved to {checkIn.applied.toKcal.toLocaleString()}{checkIn.applied.fromKcal ? ` (from ${checkIn.applied.fromKcal.toLocaleString()})` : ''}, with carbs and fat to match.
+        </Text>
+      )}
       {(checkIn.sodium || checkIn.fiber) && (
         <Text style={type.small}>
           {checkIn.sodium ? `Sodium averaged ${checkIn.sodium.avg.toLocaleString()} mg${checkIn.sodium.daysOver ? ` (over 2,300 on ${checkIn.sodium.daysOver} days)` : ''}. ` : ''}
@@ -48,7 +63,12 @@ export function FoodCheckInCard({ checkIn, unit, onChanged }: { checkIn: FoodChe
         </Text>
       )}
       <View style={s.actions}>
-        {checkIn.suggestion && !me?.preferences.dietBreak && (
+        {checkIn.applied && (
+          <Pressable onPress={undo} style={s.primary}>
+            <Text style={s.primaryText}>Undo</Text>
+          </Pressable>
+        )}
+        {checkIn.suggestion && !me?.preferences.dietBreak && !me?.preferences.reverseDiet && (
           <Pressable onPress={apply} style={s.primary}>
             <Text style={s.primaryText}>Use {checkIn.suggestion.kcal.toLocaleString()} kcal</Text>
           </Pressable>

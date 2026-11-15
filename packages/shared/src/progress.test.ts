@@ -88,6 +88,10 @@ test('goal presets add up and respect the floor', () => {
   assert.equal(presetGoals('gain', 2600, 80).protein, 128, '1.6 g per kg otherwise');
   assert.ok(Math.abs(g.protein * 4 + g.carbs * 4 + g.fat * 9 - g.kcal) < 15);
   assert.equal(presetGoals('lose', 1250, 50).kcal, 1200);
+  const k = presetGoals('keto', 2600, 80);
+  assert.equal(k.carbs, 25);
+  assert.equal(k.kcal, g.kcal);
+  assert.ok(Math.abs(k.protein * 4 + k.carbs * 4 + k.fat * 9 - k.kcal) < 15);
 });
 
 import { recipePer100 } from './nutrition.ts';

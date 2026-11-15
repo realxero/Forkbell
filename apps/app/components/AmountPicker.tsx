@@ -169,7 +169,11 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
       <View style={s.nutrition}>
         <Stat label="Calories" value={`${n.kcal}`} tint={color.accent} of={goals?.kcal} amount={n.kcal} />
         <Stat label="Protein" value={`${n.protein} g`} tint={color.protein} of={goals?.protein} amount={n.protein} />
-        <Stat label="Carbs" value={`${n.carbs} g`} tint={color.carbs} of={goals?.carbs} amount={n.carbs} />
+        {me?.preferences.netCarbs ? (
+          <Stat label="Net carbs" value={`${Math.max(0, Math.round((n.carbs - n.fiber) * 10) / 10)} g`} tint={color.carbs} of={goals?.carbs} amount={Math.max(0, n.carbs - n.fiber)} />
+        ) : (
+          <Stat label="Carbs" value={`${n.carbs} g`} tint={color.carbs} of={goals?.carbs} amount={n.carbs} />
+        )}
         <Stat label="Fat" value={`${n.fat} g`} tint={color.fat} of={goals?.fat} amount={n.fat} />
       </View>
       {goals?.kcal ? <Text style={type.small}>The bars show how much of the day’s goal this is.</Text> : null}

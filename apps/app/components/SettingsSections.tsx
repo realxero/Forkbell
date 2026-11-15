@@ -28,6 +28,7 @@ export function GoalsSection() {
   const str = (v: number | null | undefined) => (v === null || v === undefined ? '' : String(v));
   const [form, setForm] = useState({ kcal: str(g?.kcal), protein: str(g?.protein), carbs: str(g?.carbs), fat: str(g?.fat) });
   const [status, setStatus] = useState<string | null>(null);
+  const [keto, setKeto] = useState(false);
 
   const toNum = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
   const save = async () => {
@@ -35,6 +36,8 @@ export function GoalsSection() {
     if (goals.kcal !== null) goals.kcal = Math.round(goals.kcal);
     try {
       await put('/api/me/goals', goals);
+      // Keto counts net carbs; picking it turns that on.
+      if (keto && me && !me.preferences.netCarbs) await put('/api/me/preferences', { ...me.preferences, netCarbs: true });
       await refreshMe();
       setStatus('Goals saved.');
     } catch (e) {
@@ -45,7 +48,7 @@ export function GoalsSection() {
   const field = (k: keyof typeof form, label: string) => (
     <View style={{ gap: space(1) }}>
       <Text style={type.small}>{label}</Text>
-      <TextInput value={form[k]} onChangeText={(v) => setForm({ ...form, [k]: v })} keyboardType="decimal-pad" placeholder="No goal" style={s.input} />
+      <TextInput value={form[k]} onChangeText={(v) => { setForm({ ...form, [k]: v }); if (k === 'carbs') setKeto(false); }} keyboardType="decimal-pad" placeholder="No goal" style={s.input} />
     </View>
   );
 
@@ -56,10 +59,11 @@ export function GoalsSection() {
         <Text style={[type.small, { color: color.onAccent }]}>From your goal, body and training</Text>
       </Pressable>
       <Text style={type.small}>Or set them yourself. Leave one empty to just track it.</Text>
-      <Presets onPick={(g) => setForm({ kcal: String(g.kcal), protein: String(g.protein), carbs: String(g.carbs), fat: String(g.fat) })} />
+      <Presets onPick={(g, k) => { setForm({ kcal: String(g.kcal), protein: String(g.protein), carbs: String(g.carbs), fat: String(g.fat) }); setKeto(k); }} />
       {field('kcal', 'Calories')}
       {field('protein', 'Protein (g)')}
-      {field('carbs', 'Carbs (g)')}
+      {field('carbs', me?.preferences.netCarbs || keto ? 'Net carbs (g)' : 'Carbs (g)')}
+      {keto && !me?.preferences.netCarbs && <Text style={type.small}>Saving turns on net carbs (carbs minus fiber).</Text>}
       {field('fat', 'Fat (g)')}
       <Pressable onPress={save} style={s.button}>
         <Text style={s.buttonText}>Save goals</Text>
@@ -313,7 +317,7 @@ function MacroStylePicker() {
 }
 
 /** Starting goals from your measured burn and weight. They fill the boxes; nothing is saved until you tap Save. */
-function Presets({ onPick }: { onPick: (g: { kcal: number; protein: number; carbs: number; fat: number }) => void }) {
+function Presets({ onPick }: { onPick: (g: { kcal: number; protein: number; carbs: number; fat: number }, keto: boolean) => void }) {
   const [info, setInfo] = useState<{ burn: number; kg: number } | null | undefined>(undefined);
   useEffect(() => {
     cachedGet<{ energy: { kcal: number | null }; weighIns: { trendKg: number }[] }>(`/api/progress?today=${todayLocal()}`).then(
@@ -325,16 +329,18 @@ function Presets({ onPick }: { onPick: (g: { kcal: number; protein: number; carb
   if (info === null) return <Text style={type.small}>Presets appear once Forkbell knows your daily burn (about two weeks of logging and weigh-ins).</Text>;
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
-      {(['lose', 'maintain', 'gain'] as const).map((k) => (
-        <Chip key={k} label={k === 'lose' ? 'Lose steadily' : k === 'maintain' ? 'Maintain' : 'Gain slowly'} on={false} onPress={() => onPick(presetGoals(k, info.burn, info.kg))} />
+      {(['lose', 'maintain', 'gain', 'keto'] as const).map((k) => (
+        <Chip key={k} label={k === 'lose' ? 'Lose steadily' : k === 'maintain' ? 'Maintain' : k === 'gain' ? 'Gain slowly' : 'Keto'} on={false} onPress={() => onPick(presetGoals(k, info.burn, info.kg), k === 'keto')} />
       ))}
     </View>
   );
 }
 
 /**
- * A week or two at maintenance in the middle of a cut, then your goals come back
- * by themselves. Protein stays where it was.
+ * Diet phases: a week or two at maintenance in the middle of a cut (a diet
+ * break) or a longer maintenance block, after which your goals come back by
+ * themselves; or a reverse diet, calories up 100 a week to maintenance.
+ * Protein stays where it was.
  */
 function DietBreak() {
   const { me, refreshMe } = useAuth();
@@ -348,6 +354,18 @@ function DietBreak() {
   }, []);
   if (!me) return null;
   const on = me.preferences.dietBreak;
+  const rev = me.preferences.reverseDiet;
+  const maintain = burn ? presetGoals('maintain', burn.burn, burn.kg).kcal : null;
+  const canReverse = maintain !== null && me.goals.kcal !== null && maintain - me.goals.kcal >= 100;
+  const reverse = async (start: boolean) => {
+    try {
+      await put('/api/me/preferences', { ...me.preferences, reverseDiet: start && maintain && me.goals.kcal ? { from: todayLocal(), startKcal: me.goals.kcal, targetKcal: maintain, step: 100 } : null });
+      await refreshMe();
+      setMsg(null);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
   const until = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const save = async (dietBreak: typeof on, goals: Goals) => {
     try {
@@ -368,8 +386,17 @@ function DietBreak() {
   };
   return (
     <View style={{ gap: space(2), marginTop: space(3) }}>
-      <Text style={type.title}>Diet break</Text>
-      {on ? (
+      <Text style={type.title}>Diet phase</Text>
+      {rev ? (
+        <>
+          <Text style={type.body}>
+            Reverse diet: up 100 kcal a week, from {rev.startKcal.toLocaleString()} to {rev.targetKcal.toLocaleString()}. Carbs and fat rise with it.
+          </Text>
+          <Pressable onPress={() => reverse(false)} style={buttons.link} accessibilityRole="button">
+            <Text style={s.link}>Stop here</Text>
+          </Pressable>
+        </>
+      ) : on ? (
         <>
           <Text style={type.body}>
             Eating at maintenance until {until(on.until)}. Then your goal goes back to {on.goals.kcal ? `${on.goals.kcal.toLocaleString()} kcal` : 'what it was'}.
@@ -380,11 +407,19 @@ function DietBreak() {
         </>
       ) : burn ? (
         <>
-          <Text style={type.small}>A week or two at maintenance during a long cut. Protein stays; your goals come back by themselves.</Text>
+          <Text style={type.small}>Time at maintenance during a long cut: a short break or a longer block. Protein stays; your goals come back by themselves.</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
             <Chip label="1 week" on={false} onPress={() => start(1)} />
             <Chip label="2 weeks" on={false} onPress={() => start(2)} />
+            <Chip label="4 weeks" on={false} onPress={() => start(4)} />
+            <Chip label="8 weeks" on={false} onPress={() => start(8)} />
           </View>
+          {canReverse && (
+            <>
+              <Text style={type.small}>After a cut, a reverse diet brings you back up slowly: 100 kcal a week until {maintain!.toLocaleString()}.</Text>
+              <Chip label="Start a reverse diet" on={false} onPress={() => reverse(true)} />
+            </>
+          )}
         </>
       ) : (
         <Text style={type.small}>Available once Forkbell knows your daily burn.</Text>

@@ -82,6 +82,9 @@ export default function PreferencesScreen() {
 
         <Text style={s.section}>Diet</Text>
         <View style={s.chips}>{DIETS.map((d) => <Chip key={d} label={d === 'none' ? 'No restriction' : cap(d)} on={p.diet === d} onPress={() => setP({ ...p, diet: d })} />)}</View>
+        {sw('Show net carbs (carbs minus fiber)', p.netCarbs, (v) => setP({ ...p, netCarbs: v }))}
+        {sw('Update my calorie goal each week', p.autoCheckIn, (v) => setP({ ...p, autoCheckIn: v }))}
+        <Text style={s.note}>The weekly check-in changes your goal by itself, at most 300 kcal at a time, and tells you on Progress. Undo is on the card.</Text>
 
         <Text style={s.label}>Foods you dislike (never suggested, still loggable)</Text>
         <TextInput value={dislikes} onChangeText={setDislikes} placeholder="e.g. olives, cilantro" style={s.input} />
@@ -146,7 +149,6 @@ export default function PreferencesScreen() {
           ))}
         </View>
         {sw('Patterns card on Progress', p.patterns, (v) => setP({ ...p, patterns: v }))}
-        {sw('Show net carbs (carbs minus fiber)', p.netCarbs, (v) => setP({ ...p, netCarbs: v }))}
         <Text style={s.note}>Off: what you said goes into the message box so you can fix it first.</Text>
 
           </>

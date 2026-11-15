@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { foodCheckIn, goalsAtKcal, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
+import { foodCheckIn, goalsAtKcal, reverseDietKcal, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
 import type { Program } from './training.ts';
 
 const week = (kcal: (number | null)[], extra: Partial<FoodWeek> = {}): FoodWeek => ({
@@ -77,4 +77,11 @@ test('a heavier week with a period explains the water and suggests no change', (
   const c = foodCheckIn({ ...w, periodDays: 3 });
   assert.equal(c.suggestion, null);
   assert.match(c.verdict, /period/);
+});
+
+test('reverse diet: up a step each full week, stopping at the target', () => {
+  const r = { from: '2026-11-02', startKcal: 1800, targetKcal: 2150, step: 100 };
+  assert.deepEqual(reverseDietKcal(r, '2026-11-08'), { kcal: 1800, done: false });
+  assert.deepEqual(reverseDietKcal(r, '2026-11-09'), { kcal: 1900, done: false });
+  assert.deepEqual(reverseDietKcal(r, '2026-11-30'), { kcal: 2150, done: true });
 });

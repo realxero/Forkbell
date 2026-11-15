@@ -74,6 +74,16 @@ export const preferencesSchema = z.object({
     })
     .nullable()
     .default(null),
+  /** a reverse diet: calories up by step each week from the start date, until target */
+  reverseDiet: z
+    .object({ from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), startKcal: z.number().min(800).max(10000), targetKcal: z.number().min(800).max(10000), step: z.number().min(25).max(300) })
+    .nullable()
+    .default(null),
+  /** the weekly check-in changes your calorie goal by itself (you can undo it on the card) */
+  autoCheckIn: z.boolean().default(false),
+  /** the last check-in week handled automatically, and the goals before its change, for Undo */
+  checkInWeek: z.string().nullable().default(null),
+  checkInUndo: z.object({ kcal: z.number().nullable(), protein: z.number().nullable(), carbs: z.number().nullable(), fat: z.number().nullable() }).nullable().default(null),
   /** exercise adds to the day's calorie goal: off, half or all of the activity above your usual day */
   exerciseAdds: z.enum(['off', 'half', 'all']).default('off'),
   /** the Water card on Today: shown or hidden, and the daily goal in ml */
