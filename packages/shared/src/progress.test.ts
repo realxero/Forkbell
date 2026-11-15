@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { addDays } from './dates.ts';
-import { presetGoals, computeStreaks, estimateEnergy, milestones, planGoal, weekStart, weightTrend, type WeighIn } from './progress.ts';
+import { mealGlucose, presetGoals, computeStreaks, estimateEnergy, milestones, planGoal, weekStart, weightTrend, type WeighIn } from './progress.ts';
 
 const today = '2026-10-23';
 
@@ -161,4 +161,12 @@ test('maintaining keeps calories at the burn and protein at 1.6 g per kg', () =>
   const g = presetGoals('maintain', 2400, 80);
   assert.equal(g.kcal, 2400);
   assert.equal(g.protein, 128);
+});
+
+test('glucose around a meal: the reading just before and the 2-hour peak', () => {
+  const t = Date.parse('2026-11-14T12:00:00Z');
+  const m = 60_000;
+  const readings = [{ at: t - 60 * m, mgdl: 80 }, { at: t - 10 * m, mgdl: 92 }, { at: t + 45 * m, mgdl: 151.4 }, { at: t + 90 * m, mgdl: 120 }, { at: t + 150 * m, mgdl: 170 }];
+  assert.deepEqual(mealGlucose(readings, t), { before: 92, peak: 151 });
+  assert.equal(mealGlucose(readings, t + 200 * m), null);
 });

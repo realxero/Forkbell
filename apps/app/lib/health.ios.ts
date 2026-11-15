@@ -215,3 +215,13 @@ export async function writeWater(days: { date: string; ml: number }[]) {
     }).catch(() => {});
   }
 }
+
+/** Blood glucose readings for a day from Apple Health (a CGM or a meter). */
+export async function glucoseReadings(date: string): Promise<{ at: number; mgdl: number }[]> {
+  try {
+    const samples = await queryQuantitySamples('HKQuantityTypeIdentifierBloodGlucose', { limit: 2000, ascending: true, unit: 'mg/dL', filter: { date: { startDate: startOf(date), endDate: startOf(addDays(date, 1)) } } });
+    return samples.map((s) => ({ at: new Date(s.startDate).getTime(), mgdl: s.quantity }));
+  } catch {
+    return [];
+  }
+}

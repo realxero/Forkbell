@@ -204,5 +204,15 @@ export async function latestRestingHeartRate(): Promise<number | null> {
   return null;
 }
 
+export async function glucoseReadings(date: string): Promise<{ at: number; mgdl: number }[]> {
+  try {
+    if (!(await init())) return [];
+    const { records } = await readRecords('BloodGlucose', { timeRangeFilter: { operator: 'between', startTime: startOf(date).toISOString(), endTime: startOf(addDays(date, 1)).toISOString() } });
+    return (records as unknown as { time: string; level?: { inMilligramsPerDeciliter: number } }[]).filter((r) => r.level).map((r) => ({ at: Date.parse(r.time), mgdl: r.level!.inMilligramsPerDeciliter }));
+  } catch {
+    return [];
+  }
+}
+
 /** Water to Apple Health: iPhone only, for now. */
 export async function writeWater(_days: { date: string; ml: number }[]): Promise<void> {}

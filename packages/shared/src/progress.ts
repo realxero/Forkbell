@@ -435,3 +435,15 @@ export function presetGoals(preset: GoalPreset, burnKcal: number, weightKg: numb
   const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
   return { kcal, protein, carbs, fat };
 }
+
+// Glucose after a meal ---------------------------------------------------------------
+/**
+ * Your glucose around a meal: the last reading in the half hour before it, and
+ * the peak in the two hours after. Needs a reading after the meal.
+ */
+export function mealGlucose(readings: { at: number; mgdl: number }[], mealAt: number): { before: number | null; peak: number } | null {
+  const after = readings.filter((r) => r.at >= mealAt && r.at <= mealAt + 2 * 3600_000);
+  if (!after.length) return null;
+  const before = readings.filter((r) => r.at < mealAt && r.at >= mealAt - 30 * 60_000).sort((a, b) => b.at - a.at)[0];
+  return { before: before ? Math.round(before.mgdl) : null, peak: Math.round(Math.max(...after.map((r) => r.mgdl))) };
+}
