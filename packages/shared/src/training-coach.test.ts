@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { areasLoaded, deloaded, isStalled, onList, preferencesSchema, projectGoal, rankSwaps, trainingSetupSchema, trainingTips, volumeComparison, weeklyGaps, weeksTrainedInARow, type Exercise, type SetEntry } from './index.ts';
+import { areasLoaded, blockWeek, deloaded, isStalled, onList, preferencesSchema, projectGoal, rankSwaps, trainingSetupSchema, trainingTips, volumeComparison, weeklyGaps, weeksTrainedInARow, type Exercise, type SetEntry } from './index.ts';
 
 const ex = (id: string, name: string, muscle: string, equipment: string, kind: Exercise['kind'] = 'weight'): Exercise & { uses: number } => ({
   id: `00000000-0000-0000-0000-${id.padStart(12, '0')}`, name, muscle, equipment, kind, increment: 'small', restSeconds: 120, custom: false, uses: 0,
@@ -151,4 +151,11 @@ test('a generated workout trains the most rested muscles with exercises you know
   // Protected shoulders: no overhead press.
   const easy = generateWorkout(library, trainingSetupSchema.parse({ protectedAreas: ['shoulders'] }), {}, '2026-11-18');
   assert.ok(!easy.items.some((i) => /overhead press|bench press/i.test(i.exercise.name)));
+});
+
+test('training block: reps in reserve go 3 to 0 across the weeks before a deload', () => {
+  assert.deepEqual([0, 1, 2, 3, 4].map((n) => blockWeek(n, 6)!.rir), [3, 3, 2, 1, 0]);
+  assert.equal(blockWeek(6, 6), null, 'a deload is due');
+  assert.equal(blockWeek(2, 0), null, 'deloads off');
+  assert.deepEqual(blockWeek(0, 4), { week: 1, of: 4, rir: 3 });
 });

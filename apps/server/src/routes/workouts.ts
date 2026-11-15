@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, asc, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, users, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
 import {
   todayLocal,
@@ -18,6 +18,8 @@ import {
   todayIn,
   deloaded,
   generateWorkout,
+  blockWeek,
+  weeksTrainedInARow,
   preferencesSchema,
 } from '@forkbell/shared';
 import { timeZoneOf } from '../today.ts';
@@ -195,9 +197,12 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
         const span = deload.from && deload.until ? { from: deload.from, until: deload.until } : null;
         const lighter = !!span && parsed.data.date >= span.from && parsed.data.date <= span.until;
         const last = await lastSessions(tx, items.map((i) => i.ex.id), undefined, span);
+        // The week of your training block sets the reps in reserve to aim for.
+        const done = await tx.select({ date: workouts.date }).from(workouts).where(isNotNull(workouts.finishedAt));
+        const block = lighter ? null : blockWeek(weeksTrainedInARow(done.map((x) => x.date), parsed.data.date, deload.until), deload.every);
         plan = items.map(({ re, ex }) => {
           const step = incrementKg(ex.increment, me?.unit ?? 'lb');
-          const target = nextTarget(last.get(ex.id) ?? [], re.repMin, re.repMax, step, ex.kind);
+          const target = nextTarget(last.get(ex.id) ?? [], re.repMin, re.repMax, step, ex.kind, block?.rir ?? null);
           const d = lighter ? deloaded(re.sets, target?.weightKg ?? null, step) : { sets: re.sets, weightKg: target?.weightKg ?? null };
           const sets: SetEntry[] = Array.from({ length: d.sets }, () => ({
             weightKg: d.weightKg,

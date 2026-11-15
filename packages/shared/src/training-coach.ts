@@ -266,6 +266,18 @@ export function weeksTrainedInARow(workoutDates: string[], today: string, lastDe
   return n;
 }
 
+/**
+ * Where this week sits in a training block (a mesocycle): the weeks between
+ * deloads, getting harder as it goes. Reps in reserve on your top sets run from
+ * 3 in the first week down to 0 in the last before the deload. Null when deloads
+ * are off or one is due.
+ */
+export function blockWeek(weeksInARow: number, every: number): { week: number; of: number; rir: number } | null {
+  if (every < 2 || weeksInARow >= every) return null;
+  const week = weeksInARow + 1;
+  return { week, of: every, rir: Math.max(0, 3 - Math.floor(((week - 1) * 4) / (every - 1))) };
+}
+
 // Generated workouts ------------------------------------------------------------------
 
 /** Muscles a generated workout picks from, big ones first when equally rested. */

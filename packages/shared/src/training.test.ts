@@ -35,6 +35,17 @@ test('double progression adds one step only when every set hits the top', () => 
   assert.equal(stay.reps, 7);
 });
 
+test('reps in reserve: an easy top set adds a step early, a too-hard one holds', () => {
+  const step = incrementKg('small', 'lb');
+  const easy = nextTarget([set(lb(135), 6, { rpe: 6 }), set(lb(135), 6, { rpe: 6 })], 5, 8, step, 'weight', 2)!;
+  assert.equal(formatWeight(easy.weightKg, 'lb'), '140');
+  const hard = nextTarget([set(lb(135), 6, { rpe: 9.5 }), set(lb(135), 6, { rpe: 10 })], 5, 8, step, 'weight', 3)!;
+  assert.equal(formatWeight(hard.weightKg, 'lb'), '135');
+  assert.equal(hard.reps, 6);
+  const plain = nextTarget([set(lb(135), 6, { rpe: 8 }), set(lb(135), 6, { rpe: 8 })], 5, 8, step, 'weight', 2)!;
+  assert.equal(plain.reps, 7, 'on target: double progression as usual');
+});
+
 test('warm-ups and unfinished sets do not count toward progression', () => {
   const t = nextTarget([set(lb(95), 8, { warmup: true }), set(lb(135), 8), set(lb(135), 8, { done: false })], 5, 8, lb(5), 'weight')!;
   assert.equal(formatWeight(t.weightKg, 'lb'), '140');

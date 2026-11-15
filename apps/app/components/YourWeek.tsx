@@ -3,7 +3,7 @@ import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { addDays, planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, weekStart, weeksTrainedInARow, type Program } from '@forkbell/shared';
+import { addDays, blockWeek, planTrainingWeek, starterFor, STARTER_PROGRAMS, todayLocal, weekStart, weeksTrainedInARow, type Program } from '@forkbell/shared';
 import { readCache, writeCache } from '../lib/sync';
 import { post, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -138,6 +138,14 @@ function Deload({ pastDates }: { pastDates: string[] }) {
           <Text style={s.link}>End it now</Text>
         </Pressable>
       </View>
+    );
+  }
+  const block = blockWeek(inARow, d.every);
+  if (block) {
+    return (
+      <Text style={type.small}>
+        Week {block.week} of {block.of} in this block: leave about {block.rir} {block.rir === 1 ? 'rep' : 'reps'} in reserve on your top sets (RPE {10 - block.rir}).{block.week === block.of ? ' A deload week comes next.' : ''}
+      </Text>
     );
   }
   if (notNow || d.every === 0 || inARow < d.every) return null;
