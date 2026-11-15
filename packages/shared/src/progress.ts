@@ -80,9 +80,10 @@ export interface EnergyEstimate {
  * it isn't finished. Days with nothing logged are skipped, not counted as zero.
  */
 /**
- * `finished` is the days you marked complete. Once there are ten of them in the
+ * `finished` is the days you marked complete. Once you mark any day done in the
  * window, only those count: a half-logged day would make it look like you burn
- * less than you do.
+ * less than you do. If you never mark days, days well under your usual intake
+ * (under 60% of a typical full day) are taken as half-logged and left out.
  */
 export function estimateEnergy(intake: Record<string, number>, series: TrendPoint[], today: string, windowDays = 28, finished?: Set<string>): EnergyEstimate {
   const end = addDays(today, -1);
@@ -100,13 +101,16 @@ export function estimateEnergy(intake: Record<string, number>, series: TrendPoin
   const to = endPoint?.date ?? end;
   const allLogged = Object.entries(intake).filter(([d, kcal]) => d >= from && d <= to && kcal > 0);
   const finishedLogged = finished ? allLogged.filter(([d]) => finished.has(d)) : [];
-  const usesFinishedDays = finishedLogged.length >= 10;
-  const logged = usesFinishedDays ? finishedLogged : allLogged;
+  const usesFinishedDays = finishedLogged.length > 0;
+  const sorted = allLogged.map(([, k]) => k).sort((a, b) => a - b);
+  // A typical full day: the 75th percentile, so it holds even when many days were half logged.
+  const full = sorted.length ? sorted[Math.floor(sorted.length * 0.75)]! : 0;
+  const logged = usesFinishedDays ? finishedLogged : allLogged.filter(([, k]) => k >= full * 0.6);
   if (!startPoint || !endPoint || spanDays < 10) {
     const have = series.filter((p) => p.date <= end).length;
     return empty(have < 2 ? 'Weigh in a few times a week for two weeks.' : `Keep weighing in: ${Math.max(1, 10 - spanDays)} more days of weigh-ins needed.`, logged.length, spanDays);
   }
-  if (logged.length < 10) return empty(`Log your food on ${10 - logged.length} more days.`, logged.length, spanDays);
+  if (logged.length < 10) return empty(usesFinishedDays ? `Mark ${10 - logged.length} more fully logged days as done.` : `Log your food on ${10 - logged.length} more days.`, logged.length, spanDays);
 
   const avgIntake = logged.reduce((s, [, k]) => s + k, 0) / logged.length;
   const changeKg = endPoint.trendKg - startPoint.trendKg;

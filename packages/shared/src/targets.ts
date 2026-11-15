@@ -40,8 +40,11 @@ export function smartTargets(o: { goal: BodyGoal; focus: TrainingFocus; weightKg
   const kcal = Math.max(MIN_SUGGESTED_KCAL, Math.round(raw / 10) * 10);
   if (kcal !== Math.round(raw / 10) * 10) why.push('Calories are held at the 1,200 kcal floor: below that it’s hard to get enough nutrients from food, and very low-calorie diets need medical supervision.');
   const burnNote = o.measured ? 'your measured daily burn' : 'an estimate of your daily burn (it updates once you’ve logged and weighed in for about two weeks)';
+  const floored = kcal !== Math.round(raw / 10) * 10;
   why.push(
-    o.goal === 'lose'
+    floored && kcal >= o.burnKcal
+      ? `${burnNote[0]!.toUpperCase()}${burnNote.slice(1)} is about ${o.burnKcal.toLocaleString()} kcal, so the floor is above it. If that seems low, check that the days you've logged are complete.`
+      : o.goal === 'lose'
       ? `About ${Math.round(o.burnKcal - kcal)} kcal under ${burnNote}, to lose around ${pace(weeklyKg)} a week${lifting ? ', a slower pace that protects your strength' : ''}.`
       : o.goal === 'recomp'
         ? `A small deficit under ${burnNote}: you lose fat slowly while training builds muscle. Expect the scale to move slowly.`

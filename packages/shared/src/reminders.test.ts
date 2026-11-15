@@ -46,7 +46,7 @@ test('reminders stay out of quiet hours', () => {
   assert.equal(r[0]!.minutes, 23 * 60);
 });
 
-test('the burn estimate switches to finished days once there are ten', () => {
+test('the burn estimate counts only finished days once you mark any, else drops half-logged ones', () => {
   const series = Array.from({ length: 30 }, (_, i) => ({ date: `2026-09-${String(i + 1).padStart(2, '0')}`, weightKg: 80, trendKg: 80 }));
   const intake: Record<string, number> = {};
   const finished = new Set<string>();
@@ -60,8 +60,10 @@ test('the burn estimate switches to finished days once there are ten', () => {
   const fin = estimateEnergy(intake, series as never, '2026-09-30', 28, finished);
   assert.equal(fin.usesFinishedDays, true);
   assert.equal(fin.kcal, 2500);
-  assert.ok((all.kcal ?? 0) < 2000, 'half-logged days drag it down');
-  assert.equal(estimateEnergy(intake, series as never, '2026-09-30', 28, new Set([...finished].slice(0, 5))).usesFinishedDays, false);
+  assert.equal(all.kcal, 2500, 'unmarked: days under 60% of the usual are left out as half-logged');
+  const few = estimateEnergy(intake, series as never, '2026-09-30', 28, new Set([...finished].slice(0, 5)));
+  assert.equal(few.kcal, null, 'five done days: not enough yet, and the unmarked ones don’t fill in');
+  assert.match(few.needs!, /Mark \d+ more fully logged days as done/);
 });
 
 test('times are read the way people type them', () => {
