@@ -4,7 +4,7 @@
 import type { Food, FoodCandidate } from './types.ts';
 import type { WeightUnit } from './training.ts';
 
-type AmountFood = Pick<Food | FoodCandidate, 'name' | 'servingGrams' | 'servingLabel' | 'portions'>;
+type AmountFood = Pick<Food | FoodCandidate, 'name' | 'servingGrams' | 'servingLabel' | 'portions'> & { brand?: string | null };
 
 interface AmountUnit {
   /** stored with the entry: 'serving', 'g', 'oz', 'floz', a portion's name... */
@@ -41,7 +41,9 @@ const VOLUME_WORDS: [RegExp, string][] = [
   [/(\d+(?:\.\d+)?)\s*(?:tbsp|tablespoons?)\b/i, 'tbsp'],
   [/(\d+(?:\.\d+)?)\s*(?:tsp|teaspoons?)\b/i, 'tsp'],
 ];
-const LIQUID = /\b(shake|milk|juice|soda|cola|coffee|latte|cappuccino|tea|water|smoothie|kombucha|beer|wine|drink|beverage|lemonade|broth|soup|creamer|oil|syrup|sauce|dressing|yogurt drink|kefir|horchata|energy drink|sports drink|seltzer|spritz)\b/i;
+const LIQUID = /\b(shake|milk|juice|soda|cola|coffee|latte|cappuccino|espresso|cold brew|tea|water|smoothie|kombucha|beer|ale|lager|cider|wine|drink|beverage|lemonade|punch|nectar|tonic|broth|soup|creamer|oil|syrup|sauce|dressing|yogurt drink|kefir|horchata|energy drink|sports drink|electrolyte|seltzer|sparkling|spritz)\b/i;
+// Brands that are (nearly) all drinks: a "Pure Leaf Lemon" from Pepsi is a drink without saying so. Matched on the brand only, so "Monster cookie" stays food.
+const DRINK_BRANDS = /\b(pepsi|coca[- ]?cola|coke|pure leaf|lipton|brisk|snapple|arizona|gatorade|powerade|bodyarmor|body armor|prime hydration|monster|red bull|rockstar|celsius|bang|ghost energy|alani nu|c4 energy|sprite|fanta|mountain dew|dr\.? pepper|7[- ]?up|canada dry|schweppes|la ?croix|bubly|polar seltzer|topo chico|liquid death|poland spring|dasani|aquafina|smartwater|vitaminwater|tropicana|simply orange|simply lemonade|minute maid|ocean spray|naked juice|bolthouse|starbucks frappuccino|dunkin iced|core power|fairlife core|premier protein shake|muscle milk|ensure|olipop|poppi|zevia|v8)\b/i;
 
 /** A serving label that's a volume ("11 fl oz", "1 cup (240 ml)"): its millilitres. */
 export function servingMl(label: string | null | undefined): number | null {
@@ -53,9 +55,9 @@ export function servingMl(label: string | null | undefined): number | null {
   return null;
 }
 
-/** Drinks, soups, oils and sauces get cups, fl oz and ml too. */
+/** Drinks, soups, oils and sauces get cups, fl oz and ml too: from the serving, the name, a drinks brand, or a "1 bottle" or "1 can" serving. */
 export function isLiquid(food: AmountFood): boolean {
-  return servingMl(food.servingLabel) !== null || LIQUID.test(food.name);
+  return servingMl(food.servingLabel) !== null || LIQUID.test(food.name) || DRINK_BRANDS.test(food.brand ?? '') || /^\s*1\s+(bottle|can|carton|jug|pouch)\b/i.test(food.servingLabel ?? '');
 }
 
 /** Grams per millilitre: from a volume serving label when there is one, else water's 1. */

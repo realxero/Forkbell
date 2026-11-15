@@ -58,3 +58,11 @@ test('a serving word keeps an s that belongs to it', () => {
   assert.equal(servingWord('1 cookies (30 g)'), 'cookie');
   assert.equal(servingWord('1 slice'), 'slice');
 });
+
+test('drinks: known by a drinks brand or a bottle serving, not by a food name that shares a brand word', () => {
+  const tea = { name: 'Pure leaf lemon', brand: 'Pepsi', servingGrams: null, servingLabel: null, portions: [] };
+  assert.equal(isLiquid(tea), true);
+  assert.equal(unitsFor(tea, 'lb')[0]!.label, 'fl oz');
+  assert.equal(isLiquid({ name: 'Monster cookie', brand: null, servingGrams: null, servingLabel: null, portions: [] }), false);
+  assert.equal(isLiquid({ name: 'Lemon thing', servingGrams: 500, servingLabel: '1 bottle', portions: [] }), true);
+});

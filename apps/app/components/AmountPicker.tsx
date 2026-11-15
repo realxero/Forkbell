@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Pressable } from './Tap';
-import { MEALS, amountFromGrams, amountText, forAmount, isLiquid, parseQuantity, unitFor, unitsFor, type DiaryDay, type Food, type FoodCandidate, type Meal } from '@forkbell/shared';
+import { MEALS, amountFromGrams, amountText, forAmount, isLiquid, parseQuantity, tidyName, unitFor, unitsFor, type DiaryDay, type Food, type FoodCandidate, type Meal } from '@forkbell/shared';
 import { useAuth } from '../lib/auth';
 import { readCache } from '../lib/sync';
 import { setFoodServing } from '../lib/actions';
@@ -47,7 +47,8 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
   const units = useMemo(() => unitsFor(food, prefer), [food, prefer]);
   // Start with what was said before, else last time's amount, else one serving, else a cup of a drink or 100 g of a food, in your units.
   const start = useMemo(() => {
-    if (initialAmount) return { q: initialAmount.amount, key: unitFor(food, initialAmount.unit, prefer).key };
+    // A drink logged in weight oz before Forkbell knew it was a drink: the label meant fl oz.
+    if (initialAmount) return { q: initialAmount.amount, key: initialAmount.unit === 'oz' && isLiquid(food) ? 'floz' : unitFor(food, initialAmount.unit, prefer).key };
     const grams = initialGrams ?? lastGrams ?? null;
     if (grams) {
       const a = amountFromGrams(food, grams, prefer);
@@ -81,7 +82,7 @@ export function AmountPicker({ food: given, initialGrams, initialAmount, initial
 
   return (
     <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
-      <Text style={type.title}>{food.name}</Text>
+      <Text style={type.title}>{tidyName(food.name)}</Text>
       {food.brand ? <Text style={type.small}>{food.brand}</Text> : null}
       {food.servingLabel || food.servingGrams ? (
         <Text style={type.small}>

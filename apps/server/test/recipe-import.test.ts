@@ -56,7 +56,7 @@ test('a link: each ingredient becomes a food, matching ones you already have', a
   assert.equal(r.body.servings, 4);
   assert.deepEqual(r.body.ingredients.map((i: { name: string; grams: number }) => [i.name, i.grams]), [['All-purpose flour', 125], ['Egg', 100], ['Whole milk', 244]]);
   const milk = r.body.ingredients.find((i: { name: string }) => i.name === 'Whole milk');
-  assert.deepEqual([milk.match.id, milk.match.name], [mine.id, 'Whole milk'], 'your own food is used');
+  assert.deepEqual([milk.match.id, milk.match.name], [mine.id, 'Whole Milk'], 'your own food is used');
   assert.equal(milk.per100.kcal, 64, 'with its numbers');
   assert.deepEqual(r.body.skipped, ['salt to taste']);
 });
