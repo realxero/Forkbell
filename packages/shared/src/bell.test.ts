@@ -45,6 +45,14 @@ test('kJ-only labels and salt are converted', () => {
   assert.equal(r.food.per100.sodium, 480);
 });
 
+test('a bottle sized in fl oz is read per 100 ml', () => {
+  const r = labelToFood(labelReadSchema.parse({ readable: true, serving_label: '1 bottle (16.9 fl oz)', per_serving: { kcal: 140, protein: 0, carbs: 35, fat: 0 } }));
+  assert.ok('food' in r);
+  assert.equal(r.food.servingGrams, 500);
+  assert.equal(r.food.per100.kcal, 28);
+  assert.equal(r.food.per100.carbs, 7);
+});
+
 test('per serving without a gram size is refused, not guessed', () => {
   const r = labelToFood(labelReadSchema.parse({ readable: true, per_serving: { kcal: 120, protein: 2, carbs: 20, fat: 3 } }));
   assert.ok('error' in r);

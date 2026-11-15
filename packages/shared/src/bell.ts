@@ -1,4 +1,5 @@
 import { cleanMicros, microsSchema } from './micros.ts';
+import { servingMl } from './amounts.ts';
 import { z } from 'zod';
 import { dateSchema, per100Schema } from './schemas.ts';
 import { MEALS, type Food, type Meal, type Per100 } from './types.ts';
@@ -170,11 +171,15 @@ export function labelToFood(read: LabelRead): { food: LabelFood } | { error: str
   let source = read.per100 && kcalOf(read.per100) != null ? read.per100 : null;
   let factor = 1;
   let basis: LabelFood['basis'] = 'per 100 g column';
+  let servingGrams = read.serving_g ?? null;
   if (!source) {
     if (!read.per_serving || kcalOf(read.per_serving) == null) return { error: 'I couldn’t find the calories on that label. Make sure the whole table is in the photo.' };
-    if (!read.serving_g) return { error: 'The label gives numbers per serving but I couldn’t read the serving size in grams. Type the numbers in, or retake the photo with the serving size showing.' };
+    // "1 bottle (16.9 fl oz)": a drink's ml stand in for grams, as on a per 100 ml label.
+    const servingG = read.serving_g ?? servingMl(read.serving_label);
+    if (!servingG) return { error: 'The label gives numbers per serving but I couldn’t read the serving size in grams or ml. Type the numbers in, or retake the photo with the serving size showing.' };
+    servingGrams = Math.round(servingG);
     source = read.per_serving;
-    factor = 100 / read.serving_g;
+    factor = 100 / servingG;
     basis = 'per serving, converted';
   }
   const scale = (v: number | null | undefined) => (v == null ? null : round1(v * factor));
@@ -194,7 +199,7 @@ export function labelToFood(read: LabelRead): { food: LabelFood } | { error: str
       name: read.name || null,
       brand: read.brand || null,
       per100,
-      servingGrams: read.serving_g ?? null,
+      servingGrams,
       servingLabel: read.serving_label || null,
       basis,
       note: read.note || null,

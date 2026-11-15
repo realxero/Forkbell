@@ -44,7 +44,7 @@ const VOLUME_WORDS: [RegExp, string][] = [
 const LIQUID = /\b(shake|milk|juice|soda|cola|coffee|latte|cappuccino|tea|water|smoothie|kombucha|beer|wine|drink|beverage|lemonade|broth|soup|creamer|oil|syrup|sauce|dressing|yogurt drink|kefir|horchata|energy drink|sports drink|seltzer|spritz)\b/i;
 
 /** A serving label that's a volume ("11 fl oz", "1 cup (240 ml)"): its millilitres. */
-function servingMl(label: string | null | undefined): number | null {
+export function servingMl(label: string | null | undefined): number | null {
   if (!label) return null;
   for (const [re, unit] of VOLUME_WORDS) {
     const m = re.exec(label);
