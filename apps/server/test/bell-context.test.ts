@@ -120,7 +120,7 @@ test('Bell can search the web when SEARCH_URL is set, and a correction replaces 
   assert.equal(searches.at(-1), "Peet's croissant grilled cheese calories");
   const p = r.body.proposals[0];
   assert.equal(Math.round((p.per100.kcal * p.grams) / 100), 470, 'the stated 470, not 469');
-  assert.deepEqual(p.replaces, { id: entryId, name: 'Croissant grilled cheese', kcal: 560 });
+  assert.deepEqual(p.replaces, { id: entryId, name: 'Croissant Grilled Cheese', kcal: 560 });
   assert.match(systems.at(-1)!, /Never say you'll do something/);
 });
 
