@@ -265,3 +265,44 @@ export function weeksTrainedInARow(workoutDates: string[], today: string, lastDe
   for (let w = addDays(weekStart(today), -7); weeks.has(w); w = addDays(w, -7)) n++;
   return n;
 }
+
+// Generated workouts ------------------------------------------------------------------
+
+/** Muscles a generated workout picks from, big ones first when equally rested. */
+const PICKABLE = ['chest', 'back', 'quads', 'shoulders', 'hamstrings', 'glutes', 'biceps', 'triceps', 'core'] as const;
+
+export interface GeneratedItem {
+  exercise: Exercise;
+  sets: number;
+  repMin: number;
+  repMax: number;
+}
+
+/**
+ * A workout for the muscles that have rested longest: two exercises each for the
+ * two most rested, one for the third. Exercises you've done come first, then the
+ * everyday list; your equipment, protected areas and never-suggest list apply.
+ * Nothing trained in the last 2 days is picked when anything else is free.
+ */
+export function generateWorkout(library: (Exercise & { uses?: number })[], setup: TrainingSetup, lastTrained: Record<string, string>, today: string): { name: string; items: GeneratedItem[] } {
+  const rested = (m: string) => (lastTrained[m] ? daysBetween(lastTrained[m]!, today) : 999);
+  const muscles = [...PICKABLE].sort((a, b) => Math.min(rested(b), 14) - Math.min(rested(a), 14) || PICKABLE.indexOf(a) - PICKABLE.indexOf(b));
+  const fresh = muscles.filter((m) => rested(m) > 2);
+  const order = fresh.length >= 3 ? fresh : muscles;
+  const usable = library.filter(
+    (ex) => (ex.kind === 'weight' || ex.kind === 'bodyweight') && hasEquipment(ex, setup) && !onList(ex.name, setup.neverSuggest) && !areasLoaded(ex.name, setup.protectedAreas).length,
+  );
+  const score = (ex: Exercise & { uses?: number }) => Math.min(ex.uses ?? 0, 20) * 3 + (ex.library ? 0 : 4) + (ex.howTo ? 1 : 0);
+  const items: GeneratedItem[] = [];
+  const picked: string[] = [];
+  // A muscle with nothing you can do here is skipped, and the next most rested one takes its place.
+  for (const muscle of order) {
+    if (picked.length === 3) break;
+    const choices = usable.filter((ex) => ex.muscle === muscle).sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name));
+    if (!choices.length) continue;
+    for (const ex of choices.slice(0, picked.length < 2 ? 2 : 1)) items.push({ exercise: ex, sets: 3, repMin: muscle === 'core' ? 10 : 8, repMax: muscle === 'core' ? 15 : 12 });
+    picked.push(muscle);
+  }
+  const name = picked.length ? `${picked.map((m, i) => (i ? m : m[0]!.toUpperCase() + m.slice(1))).join(', ').replace(/, ([^,]*)$/, ' and $1')}` : 'Workout';
+  return { name, items };
+}

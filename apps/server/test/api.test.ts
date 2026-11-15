@@ -107,6 +107,16 @@ test('saved plates and bowls survive a round trip through preferences', async ()
   assert.deepEqual((await u.call('GET', '/api/me')).body.preferences.containers, containers);
 });
 
+test('Pick for me starts a workout of built-in exercises for the most rested muscles', async () => {
+  const u = await newUser();
+  const r = await u.call('POST', '/api/workouts', { date: '2026-10-25', generate: true });
+  assert.equal(r.status, 201, explain(JSON.stringify(r.body)));
+  const w = r.body.workout;
+  assert.ok(w.exercises.length >= 3, `${w.exercises.length} exercises`);
+  assert.ok(w.exercises.every((e: { sets: unknown[] }) => e.sets.length === 3));
+  assert.notEqual(w.name, 'Workout');
+});
+
 test('a diet break that has ended gives the old goals back', async () => {
   const u = await newUser();
   const me = (await u.call('GET', '/api/me')).body;

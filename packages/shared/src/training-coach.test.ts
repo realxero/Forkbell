@@ -131,3 +131,24 @@ test('deload: weeks trained in a row stop at a gap or the last deload, and a del
   assert.deepEqual(deloaded(3, 100, 2.5), { sets: 2, weightKg: 90 });
   assert.deepEqual(deloaded(1, null, 2.5), { sets: 1, weightKg: null });
 });
+
+test('a generated workout trains the most rested muscles with exercises you know', async () => {
+  const { generateWorkout } = await import('./training-coach.ts');
+  const ex = (id: string, name: string, muscle: string, equipment = 'barbell', uses = 0): Exercise & { uses: number } =>
+    ({ id, name, muscle, equipment, kind: 'weight', increment: 'large', restSeconds: 120, custom: false, uses });
+  const library = [
+    ex('1', 'Bench press', 'chest', 'barbell', 10), ex('2', 'Incline dumbbell press', 'chest', 'dumbbell'),
+    ex('3', 'Barbell row', 'back', 'barbell', 5), ex('4', 'Lat pulldown', 'back', 'cable'),
+    ex('5', 'Squat', 'quads', 'barbell', 8), ex('6', 'Leg press', 'quads', 'machine'),
+    ex('7', 'Overhead press', 'shoulders', 'barbell', 3),
+  ];
+  const setup = trainingSetupSchema.parse({});
+  // Legs yesterday, chest a week ago, back never: back and chest lead, legs wait.
+  const w = generateWorkout(library, setup, { quads: '2026-11-17', chest: '2026-11-11' }, '2026-11-18');
+  assert.deepEqual(w.items.slice(0, 2).map((i) => i.exercise.name).sort(), ['Barbell row', 'Lat pulldown']);
+  assert.ok(!w.items.some((i) => i.exercise.muscle === 'quads'), 'legs trained yesterday are left to rest');
+  assert.equal(w.items.find((i) => i.exercise.muscle === 'chest')?.exercise.name, 'Bench press', 'the one you know comes first');
+  // Protected shoulders: no overhead press.
+  const easy = generateWorkout(library, trainingSetupSchema.parse({ protectedAreas: ['shoulders'] }), {}, '2026-11-18');
+  assert.ok(!easy.items.some((i) => /overhead press|bench press/i.test(i.exercise.name)));
+});

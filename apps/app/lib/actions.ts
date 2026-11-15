@@ -149,10 +149,10 @@ export async function createFood(input: Omit<FoodCandidate, 'barcode' | 'portion
  * Start a workout. Online, the server fills in this session's suggested
  * weights. Offline, it starts from the routine on the device with empty sets.
  */
-export async function startWorkout(date: string, routineId?: string): Promise<Workout> {
+export async function startWorkout(date: string, routineId?: string, generate = false): Promise<Workout> {
   const id = newId();
   const startedAt = new Date().toISOString();
-  const r = await send<{ workout: Workout }>('POST', '/api/workouts', { id, date, startedAt, ...(routineId ? { routineId } : {}) }, { label: 'Start workout' });
+  const r = await send<{ workout: Workout }>('POST', '/api/workouts', { id, date, startedAt, ...(routineId ? { routineId } : {}), ...(generate ? { generate } : {}) }, { label: 'Start workout' });
   let workout: Workout;
   if (!r.queued && r.data?.workout) workout = r.data.workout;
   else {

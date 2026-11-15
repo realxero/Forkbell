@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { exercises, routineExercises, routines, users, workoutExercises, workoutSets, workouts, type connect } from '@forkbell/db';
 import {
   todayLocal,
@@ -17,11 +17,12 @@ import {
   type WorkoutSummary,
   todayIn,
   deloaded,
+  generateWorkout,
   preferencesSchema,
 } from '@forkbell/shared';
 import { timeZoneOf } from '../today.ts';
 import type { AppEnv } from '../auth.ts';
-import { historyBefore, isMissingExercise, lastSessions, loadWorkout, saveWorkout, volumeSql } from '../training.ts';
+import { historyBefore, isMissingExercise, lastSessions, loadWorkout, saveWorkout, toExercise, volumeSql } from '../training.ts';
 
 const isUuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
 /** A time sent by the app, never later than now (a phone clock can be off). */
@@ -161,18 +162,36 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
 
       let name = 'Workout';
       let plan: SaveWorkoutInput['exercises'] = [];
+      type Item = { re: { sets: number; repMin: number; repMax: number; restSeconds: number; superset: number | null }; ex: typeof exercises.$inferSelect };
+      let items: Item[] | null = null;
+      const [me] = await tx.select({ unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1);
+      const training = preferencesSchema.parse(me?.prefs ?? {}).training;
       if (parsed.data.routineId) {
         const [routine] = await tx.select().from(routines).where(eq(routines.id, parsed.data.routineId)).limit(1);
         if (!routine) return { missing: true };
         name = routine.name;
-        const items = await tx
+        items = await tx
           .select({ re: routineExercises, ex: exercises })
           .from(routineExercises)
           .innerJoin(exercises, eq(exercises.id, routineExercises.exerciseId))
           .where(eq(routineExercises.routineId, routine.id))
           .orderBy(asc(routineExercises.position));
-        const [me] = await tx.select({ unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1);
-        const { deload } = preferencesSchema.parse(me?.prefs ?? {}).training;
+      } else if (parsed.data.generate) {
+        // Picked for you: the most rested muscles, from your library and setup.
+        const library = await tx
+          .select({ ex: exercises, uses: sql<number>`(select count(*) from workout_exercises we where we.exercise_id = "exercises"."id")::int` })
+          .from(exercises)
+          .where(or(eq(exercises.ownerId, userId), isNull(exercises.ownerId)));
+        const trained = await tx.execute<{ muscle: string; last: string }>(
+          sql`select e.muscle, max(w.date)::text as last from workout_exercises we join exercises e on e.id = we.exercise_id join workouts w on w.id = we.workout_id where w.finished_at is not null group by e.muscle`,
+        );
+        const byId = new Map(library.map((l) => [l.ex.id, l.ex]));
+        const made = generateWorkout(library.map((l) => ({ ...toExercise(l.ex), uses: l.uses })), training, Object.fromEntries([...trained].map((t) => [t.muscle, t.last])), parsed.data.date);
+        name = made.name;
+        items = made.items.map((i) => ({ re: { sets: i.sets, repMin: i.repMin, repMax: i.repMax, restSeconds: i.exercise.restSeconds, superset: null }, ex: byId.get(i.exercise.id)! }));
+      }
+      if (items) {
+        const { deload } = training;
         const span = deload.from && deload.until ? { from: deload.from, until: deload.until } : null;
         const lighter = !!span && parsed.data.date >= span.from && parsed.data.date <= span.until;
         const last = await lastSessions(tx, items.map((i) => i.ex.id), undefined, span);

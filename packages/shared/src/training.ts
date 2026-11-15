@@ -346,6 +346,8 @@ export const startWorkoutSchema = z.object({
   id: z.string().uuid().optional(),
   date: dateSchema,
   routineId: z.string().uuid().nullish(),
+  /** pick the exercises for me: the most rested muscles */
+  generate: z.boolean().optional(),
   /** when the workout really started, for ones started offline and sent later */
   startedAt: z.string().datetime({ offset: true }).optional(),
   /** logging a workout you already did: when it ended (it's saved as finished) */

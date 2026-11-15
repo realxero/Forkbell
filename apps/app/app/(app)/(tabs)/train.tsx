@@ -34,7 +34,7 @@ function dayName(date: string) {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) });
 }
 
-type Starting = 'routine' | 'empty' | null;
+type Starting = 'routine' | 'empty' | 'generate' | null;
 
 export default function Train() {
   // Someone viewing your training (or planning it, as a coach) never starts or logs a workout.
@@ -94,7 +94,7 @@ export default function Train() {
     setStarting(from);
     setStartError(null);
     try {
-      const w = await startWorkout(todayLocal(), routineId);
+      const w = await startWorkout(todayLocal(), routineId, from === 'generate');
       router.push({ pathname: '/workout', params: { id: w.id } });
     } catch (e) {
       // Already one going: open that instead.
@@ -206,6 +206,12 @@ export default function Train() {
                 <Text style={s.toolText}>{starting === 'empty' ? 'Starting…' : 'Empty workout'}</Text>
               </Pressable>
             )}
+            {!open && !viewing && (
+              <Pressable onPress={() => start('generate')} disabled={busy} style={[s.tool, busy && { opacity: 0.5 }]} accessibilityLabel="Start a workout picked for you, for your most rested muscles" accessibilityState={{ busy: starting === 'generate', disabled: busy }}>
+                <Ionicons name="shuffle-outline" size={22} color={color.iron} />
+                <Text style={s.toolText}>{starting === 'generate' ? 'Starting…' : 'Pick for me'}</Text>
+              </Pressable>
+            )}
             <Pressable onPress={() => setPlates(true)} style={s.tool} accessibilityLabel="Plate calculator">
               <Ionicons name="barbell-outline" size={22} color={color.iron} />
               <Text style={s.toolText}>Plates</Text>
@@ -217,6 +223,7 @@ export default function Train() {
           </View>
         )}
         {startProblem('empty', () => start('empty'))}
+        {startProblem('generate', () => start('generate'))}
 
         {/* Built from the signed-in person's own training days, so only for your own week. */}
         {!viewing && (
