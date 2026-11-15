@@ -24,6 +24,7 @@ import { FoodIcon } from '../../../components/FoodIcon';
 import { MealQuickActions } from '../../../components/MealQuickActions';
 import { StreakCheer } from '../../../components/StreakCheer';
 import { WaterCard } from '../../../components/WaterCard';
+import { updateWidget } from '../../../lib/widget';
 import { MicrosCard } from '../../../components/MicrosCard';
 import { FastingCard } from '../../../components/FastingCard';
 import { color, radius, space, type, textSize } from '../../../lib/theme';
@@ -175,6 +176,12 @@ export default function Diary() {
   const bonus = day?.goals.kcal ? day.bonus?.kcal ?? 0 : 0;
   const goal = day?.goals.kcal != null ? day.goals.kcal + bonus : null;
   const eaten = day?.totals.kcal ?? 0;
+  // Your own today goes to the home screen widget (iPhone).
+  useEffect(() => {
+    if (!day || viewing || date !== todayLocal()) return;
+    const carbs = net ? Math.max(0, day.totals.carbs - day.totals.fiber) : day.totals.carbs;
+    updateWidget({ date, kcalGoal: goal, kcalEaten: eaten, protein: day.totals.protein, proteinGoal: day.goals.protein, carbs, carbsGoal: day.goals.carbs, fat: day.totals.fat, fatGoal: day.goals.fat, netCarbs: net });
+  }, [day, viewing, date, goal, eaten, net]);
   const left = goal !== null ? goal - eaten : null;
   const ringLabel =
     left === null

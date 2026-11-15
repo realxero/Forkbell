@@ -17,6 +17,12 @@
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",
           "UIInterfaceOrientationLandscapeRight"
+        ],
+        "NSSupportsLiveActivities": true
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.realxero.forkbell"
         ]
       }
     },
@@ -97,7 +103,9 @@
         {
           "enableRemoteNotifications": false
         }
-      ]
+      ],
+      "@bacons/apple-targets",
+      "expo-live-activity"
     ],
     "experiments": {
       "typedRoutes": false
