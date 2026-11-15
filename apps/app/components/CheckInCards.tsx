@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Pressable } from './Tap';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { addDays, todayLocal, trainingCheckIn, weekStart, type FoodCheckIn, type TrainingWeek } from '@forkbell/shared';
+import { addDays, goalsAtKcal, todayLocal, trainingCheckIn, weekStart, type FoodCheckIn, type TrainingWeek } from '@forkbell/shared';
 import { api, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { readCache, writeCache } from '../lib/sync';
@@ -24,7 +24,7 @@ export function FoodCheckInCard({ checkIn, unit, onChanged }: { checkIn: FoodChe
   const apply = async () => {
     if (!checkIn.suggestion || !me) return;
     const before = me.goals;
-    await put('/api/me/goals', { ...before, kcal: checkIn.suggestion.kcal });
+    await put('/api/me/goals', goalsAtKcal(before, checkIn.suggestion.kcal));
     await refreshMe();
     onChanged();
     showToast(`Calorie goal set to ${checkIn.suggestion.kcal.toLocaleString()}`, { action: { label: 'Undo', run: async () => { await put('/api/me/goals', before); await refreshMe(); onChanged(); } } });

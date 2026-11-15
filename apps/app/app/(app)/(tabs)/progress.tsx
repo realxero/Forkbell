@@ -8,7 +8,7 @@ import { Pressable } from '../../../components/Tap';
 import { TitleWithInfo } from '../../../components/Info';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
+import { addDays, goalsAtKcal, todayLocal, type Activity, type EnergyEstimate, type GoalPlan, type Milestone, type Streaks, type TrendPoint } from '@forkbell/shared';
 import { put } from '../../../lib/api';
 import { cachedGet, readCache, send, writeCache } from '../../../lib/sync';
 import { useAdvanced, useWide } from '../../../lib/layout';
@@ -305,7 +305,7 @@ export default function ProgressScreen() {
                         act(
                           'update your calorie goal',
                           async () => {
-                            await put('/api/me/goals', { ...goals, kcal });
+                            await put('/api/me/goals', goalsAtKcal(goals, kcal));
                             await refreshMe();
                           },
                           { text: `Calorie goal set to ${kcal.toLocaleString()}`, undo: async () => { await put('/api/me/goals', goals); await refreshMe(); } },

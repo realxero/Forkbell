@@ -40,6 +40,22 @@ export interface FoodCheckIn {
 
 const r10 = (n: number) => Math.round(n / 10) * 10;
 
+type Goals = { kcal: number | null; protein: number | null; carbs: number | null; fat: number | null };
+
+/**
+ * A new calorie goal with macros that still add up: protein stays (it's set from
+ * your weight, not your calories), carbs and fat share what's left in the split
+ * they had. Macros you never set stay unset.
+ */
+export function goalsAtKcal(g: Goals, kcal: number): Goals {
+  if (g.carbs === null || g.fat === null) return { ...g, kcal };
+  const left = kcal - (g.protein ?? 0) * 4;
+  const had = g.carbs * 4 + g.fat * 9;
+  if (left <= 0 || had <= 0) return { ...g, kcal };
+  const share = left / had;
+  return { ...g, kcal, carbs: Math.round(g.carbs * share), fat: Math.round(g.fat * share) };
+}
+
 export function foodCheckIn(w: FoodWeek): FoodCheckIn {
   const logged = w.days.filter((d) => d.kcal !== null && d.kcal > 0);
   const avgKcal = logged.length ? Math.round(logged.reduce((s, d) => s + d.kcal!, 0) / logged.length) : null;

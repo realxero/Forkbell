@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { foodCheckIn, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
+import { foodCheckIn, goalsAtKcal, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
 import type { Program } from './training.ts';
 
 const week = (kcal: (number | null)[], extra: Partial<FoodWeek> = {}): FoodWeek => ({
@@ -58,4 +58,14 @@ test('your week: the program continues on your days; a done day is shown, not sk
   assert.equal(doneToday[3]!.routine?.name, 'Pull');
   assert.equal(starterFor(3), 'full-body-3');
   assert.equal(starterFor(5), 'ppl-6');
+});
+
+test('a new calorie goal keeps protein and moves carbs and fat in their split', () => {
+  // 2,200 kcal: 160 g protein (640), 200 g carbs (800), 84 g fat (756)
+  const g = goalsAtKcal({ kcal: 2200, protein: 160, carbs: 200, fat: 84 }, 2000);
+  assert.equal(g.protein, 160);
+  assert.equal(g.kcal, 2000);
+  const total = g.protein! * 4 + g.carbs! * 4 + g.fat! * 9;
+  assert.ok(Math.abs(total - 2000) < 15, `macros add up to ${total}`);
+  assert.deepEqual(goalsAtKcal({ kcal: 2200, protein: 160, carbs: null, fat: null }, 2000), { kcal: 2000, protein: 160, carbs: null, fat: null });
 });
