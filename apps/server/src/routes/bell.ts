@@ -93,6 +93,7 @@ Answer with one JSON object and nothing else:
 Rules:
 - per100 is the "per 100 g" or "per 100 ml" column. per_serving is the "per serving" or "amount per serving" column. Fill whichever columns are printed; use null for anything not printed.
 - serving_g is the serving size in grams or ml, e.g. "2/3 cup (55g)" gives 55. If no gram or ml amount is printed, use null.
+- serving_label is the serving size as printed. If the serving is the whole pack ("1 bottle", "1 can") and the pack's size is printed anywhere on the label (e.g. "16.9 fl oz", "500 mL"), add it: "1 bottle (16.9 fl oz)".
 - kcal is food energy in kcal (US "Calories"). If only kJ is printed, put it in kj and set kcal to null.
 - carbs is total carbohydrate. sodium_mg in milligrams; salt_g only if salt is printed instead of sodium.
 - micros: the vitamins and minerals printed as amounts (not just %), as {"vitaminA": µg, "vitaminC": mg, "vitaminD": µg, "vitaminB12": µg, "folate": µg, "calcium": mg, "iron": mg, "potassium": mg, "magnesium": mg, "zinc": mg}; only those printed; null if none.
