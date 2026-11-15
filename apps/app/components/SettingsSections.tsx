@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
+import { addDays, DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
 import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent, textSize } from '../lib/theme';
 import { MACRO_STYLES, MacroDisplay, macroStyle, setMacroStyle, type MacroStyle } from './MacroDisplay';
@@ -65,6 +65,7 @@ export function GoalsSection() {
         <Text style={s.buttonText}>Save goals</Text>
       </Pressable>
       {status && <Text style={type.body}>{status}</Text>}
+      <DietBreak />
       <WeekdayGoals />
       <ExerciseAddsSetting />
       <WaterGoal />
@@ -327,6 +328,68 @@ function Presets({ onPick }: { onPick: (g: { kcal: number; protein: number; carb
       {(['lose', 'maintain', 'gain'] as const).map((k) => (
         <Chip key={k} label={k === 'lose' ? 'Lose steadily' : k === 'maintain' ? 'Maintain' : 'Gain slowly'} on={false} onPress={() => onPick(presetGoals(k, info.burn, info.kg))} />
       ))}
+    </View>
+  );
+}
+
+/**
+ * A week or two at maintenance in the middle of a cut, then your goals come back
+ * by themselves. Protein stays where it was.
+ */
+function DietBreak() {
+  const { me, refreshMe } = useAuth();
+  const [burn, setBurn] = useState<{ burn: number; kg: number } | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => {
+    cachedGet<{ energy: { kcal: number | null }; weighIns: { trendKg: number }[] }>(`/api/progress?today=${todayLocal()}`).then(
+      (p) => setBurn(p.energy.kcal && p.weighIns.length ? { burn: p.energy.kcal, kg: p.weighIns.at(-1)!.trendKg } : null),
+      () => setBurn(null),
+    );
+  }, []);
+  if (!me) return null;
+  const on = me.preferences.dietBreak;
+  const until = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const save = async (dietBreak: typeof on, goals: Goals) => {
+    try {
+      await put('/api/me/goals', goals);
+      await put('/api/me/preferences', { ...me.preferences, dietBreak });
+      await refreshMe();
+      setMsg(null);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const start = (weeks: number) => {
+    if (!burn) return;
+    const m = presetGoals('maintain', burn.burn, burn.kg);
+    const protein = me.goals.protein ?? m.protein;
+    const fat = Math.round((m.kcal * 0.28) / 9);
+    save({ until: addDays(todayLocal(), weeks * 7 - 1), goals: me.goals }, { kcal: m.kcal, protein, carbs: Math.max(0, Math.round((m.kcal - protein * 4 - fat * 9) / 4)), fat });
+  };
+  return (
+    <View style={{ gap: space(2), marginTop: space(3) }}>
+      <Text style={type.title}>Diet break</Text>
+      {on ? (
+        <>
+          <Text style={type.body}>
+            Eating at maintenance until {until(on.until)}. Then your goal goes back to {on.goals.kcal ? `${on.goals.kcal.toLocaleString()} kcal` : 'what it was'}.
+          </Text>
+          <Pressable onPress={() => save(null, on.goals)} style={buttons.link} accessibilityRole="button">
+            <Text style={s.link}>End the break now</Text>
+          </Pressable>
+        </>
+      ) : burn ? (
+        <>
+          <Text style={type.small}>A week or two at maintenance during a long cut. Protein stays; your goals come back by themselves.</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+            <Chip label="1 week" on={false} onPress={() => start(1)} />
+            <Chip label="2 weeks" on={false} onPress={() => start(2)} />
+          </View>
+        </>
+      ) : (
+        <Text style={type.small}>Available once Forkbell knows your daily burn.</Text>
+      )}
+      {msg && <Text style={type.body}>{msg}</Text>}
     </View>
   );
 }

@@ -107,6 +107,21 @@ test('saved plates and bowls survive a round trip through preferences', async ()
   assert.deepEqual((await u.call('GET', '/api/me')).body.preferences.containers, containers);
 });
 
+test('a diet break that has ended gives the old goals back', async () => {
+  const u = await newUser();
+  const me = (await u.call('GET', '/api/me')).body;
+  const old = { kcal: 1900, protein: 160, carbs: 180, fat: 60 };
+  await u.call('PUT', '/api/me/goals', { kcal: 2500, protein: 160, carbs: 290, fat: 78 });
+  // Still on the break today: maintenance stays.
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, dietBreak: { until: todayIn(me.timeZone), goals: old } });
+  assert.equal((await u.call('GET', '/api/me')).body.goals.kcal, 2500);
+  // Ended yesterday: the goals come back and the break is cleared.
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, dietBreak: { until: '2020-01-01', goals: old } });
+  const after = (await u.call('GET', '/api/me')).body;
+  assert.deepEqual(after.goals, old);
+  assert.equal(after.preferences.dietBreak, null);
+});
+
 test('export: your diary as JSON and CSV, nothing secret, nothing of anyone else', async () => {
   const a = await newUser('Alice');
   const b = await newUser('Bob');

@@ -48,7 +48,7 @@ export function FoodCheckInCard({ checkIn, unit, onChanged }: { checkIn: FoodChe
         </Text>
       )}
       <View style={s.actions}>
-        {checkIn.suggestion && (
+        {checkIn.suggestion && !me?.preferences.dietBreak && (
           <Pressable onPress={apply} style={s.primary}>
             <Text style={s.primaryText}>Use {checkIn.suggestion.kcal.toLocaleString()} kcal</Text>
           </Pressable>

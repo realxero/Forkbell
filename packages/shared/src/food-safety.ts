@@ -64,6 +64,14 @@ export const preferencesSchema = z.object({
     .array(z.object({ key: z.enum(MEALS), name: z.string().trim().min(1).max(30), show: z.boolean() }))
     .max(6)
     .default(DEFAULT_MEAL_SLOTS.map((s) => ({ ...s }))),
+  /** a planned diet break at maintenance: until when (inclusive), and the goals to go back to */
+  dietBreak: z
+    .object({
+      until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      goals: z.object({ kcal: z.number().nullable(), protein: z.number().nullable(), carbs: z.number().nullable(), fat: z.number().nullable() }),
+    })
+    .nullable()
+    .default(null),
   /** exercise adds to the day's calorie goal: off, half or all of the activity above your usual day */
   exerciseAdds: z.enum(['off', 'half', 'all']).default('off'),
   /** the Water card on Today: shown or hidden, and the daily goal in ml */
