@@ -16,6 +16,8 @@ import {
   type SetEntry,
   type WorkoutSummary,
   todayIn,
+  deloaded,
+  preferencesSchema,
 } from '@forkbell/shared';
 import { timeZoneOf } from '../today.ts';
 import type { AppEnv } from '../auth.ts';
@@ -169,19 +171,24 @@ export function workoutRoutes({ asUser }: ReturnType<typeof connect>) {
           .innerJoin(exercises, eq(exercises.id, routineExercises.exerciseId))
           .where(eq(routineExercises.routineId, routine.id))
           .orderBy(asc(routineExercises.position));
-        const [me] = await tx.select({ unit: users.weightUnit }).from(users).where(eq(users.id, userId)).limit(1);
-        const last = await lastSessions(tx, items.map((i) => i.ex.id));
+        const [me] = await tx.select({ unit: users.weightUnit, prefs: users.preferences }).from(users).where(eq(users.id, userId)).limit(1);
+        const { deload } = preferencesSchema.parse(me?.prefs ?? {}).training;
+        const span = deload.from && deload.until ? { from: deload.from, until: deload.until } : null;
+        const lighter = !!span && parsed.data.date >= span.from && parsed.data.date <= span.until;
+        const last = await lastSessions(tx, items.map((i) => i.ex.id), undefined, span);
         plan = items.map(({ re, ex }) => {
-          const target = nextTarget(last.get(ex.id) ?? [], re.repMin, re.repMax, incrementKg(ex.increment, me?.unit ?? 'lb'), ex.kind);
-          const sets: SetEntry[] = Array.from({ length: re.sets }, () => ({
-            weightKg: target?.weightKg ?? null,
+          const step = incrementKg(ex.increment, me?.unit ?? 'lb');
+          const target = nextTarget(last.get(ex.id) ?? [], re.repMin, re.repMax, step, ex.kind);
+          const d = lighter ? deloaded(re.sets, target?.weightKg ?? null, step) : { sets: re.sets, weightKg: target?.weightKg ?? null };
+          const sets: SetEntry[] = Array.from({ length: d.sets }, () => ({
+            weightKg: d.weightKg,
             reps: target && ex.kind !== 'time' ? target.reps : null,
             seconds: null,
             rpe: null,
             warmup: false,
             done: false,
           }));
-          return { exerciseId: ex.id, restSeconds: re.restSeconds, targetSets: re.sets, repMin: re.repMin, repMax: re.repMax, sets, superset: re.superset };
+          return { exerciseId: ex.id, restSeconds: re.restSeconds, targetSets: d.sets, repMin: re.repMin, repMax: re.repMax, sets, superset: re.superset };
         });
       }
       const [w] = await tx

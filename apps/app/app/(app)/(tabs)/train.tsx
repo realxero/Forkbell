@@ -223,6 +223,7 @@ export default function Train() {
           <YourWeek
             program={program}
             finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
+            pastDates={(history ?? []).map((w) => w.date)}
             onChanged={load}
           />
         )}

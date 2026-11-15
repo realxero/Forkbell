@@ -38,8 +38,12 @@ export const trainingSetupSchema = z
       .default([]),
     /** the bar last used for each exercise (exercise id to bar id) */
     barFor: z.record(z.string(), z.string().max(40)).default({}),
+    /** a lighter week every so many weeks (0 = never offered), and the last one taken */
+    deload: z
+      .object({ every: z.number().int().min(0).max(12).default(6), from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null), until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null) })
+      .default({ every: 6, from: null, until: null }),
   })
-  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {} });
+  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {}, deload: { every: 6, from: null, until: null } });
 export type TrainingSetup = z.infer<typeof trainingSetupSchema>;
 
 // Name fragments for movements that put real load on each area.
@@ -238,4 +242,26 @@ export function volumeComparison(volumeKg: number): string | null {
     return `That’s about ${n} ${n === 1 ? one : many} lifted today.`;
   }
   return null;
+}
+
+// Deload weeks ------------------------------------------------------------------------
+
+/** A deload week: half the sets (at least one) at about 90% of the weight. */
+export const DELOAD_SETS = 0.5;
+export const DELOAD_WEIGHT = 0.9;
+
+/** The deload's version of a planned exercise, rounded to the weight step you load in. */
+export function deloaded(sets: number, weightKg: number | null, stepKg: number) {
+  return { sets: Math.max(1, Math.ceil(sets * DELOAD_SETS)), weightKg: weightKg === null ? null : Math.round((weightKg * DELOAD_WEIGHT) / stepKg) * stepKg };
+}
+
+/**
+ * Weeks in a row before this one with at least one workout, counting back no
+ * further than the last deload. Monday weeks.
+ */
+export function weeksTrainedInARow(workoutDates: string[], today: string, lastDeloadUntil: string | null): number {
+  const weeks = new Set(workoutDates.filter((d) => !lastDeloadUntil || d > lastDeloadUntil).map(weekStart));
+  let n = 0;
+  for (let w = addDays(weekStart(today), -7); weeks.has(w); w = addDays(w, -7)) n++;
+  return n;
 }

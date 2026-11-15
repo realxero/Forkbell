@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { areasLoaded, isStalled, onList, preferencesSchema, projectGoal, rankSwaps, trainingSetupSchema, trainingTips, volumeComparison, weeklyGaps, type Exercise, type SetEntry } from './index.ts';
+import { areasLoaded, deloaded, isStalled, onList, preferencesSchema, projectGoal, rankSwaps, trainingSetupSchema, trainingTips, volumeComparison, weeklyGaps, weeksTrainedInARow, type Exercise, type SetEntry } from './index.ts';
 
 const ex = (id: string, name: string, muscle: string, equipment: string, kind: Exercise['kind'] = 'weight'): Exercise & { uses: number } => ({
   id: `00000000-0000-0000-0000-${id.padStart(12, '0')}`, name, muscle, equipment, kind, increment: 'small', restSeconds: 120, custom: false, uses: 0,
@@ -112,7 +112,7 @@ test('volume comparisons pick a sensible thing', () => {
 
 test('old preferences get training defaults', () => {
   const p = preferencesSchema.parse({ trainingTips: false });
-  assert.deepEqual(p.training, { equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {} });
+  assert.deepEqual(p.training, { equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {}, deload: { every: 6, from: null, until: null } });
 });
 
 test('picture paths match what the server serves', async () => {
@@ -121,4 +121,13 @@ test('picture paths match what the server serves', async () => {
   assert.equal(picturePath("Farmer's_Walk", 1), "/api/media/exercise/Farmer's_Walk/1.jpg");
   assert.deepEqual(picturePaths({ howToRef: 'Plank', pictures: 2 }), ['/api/media/exercise/Plank/0.jpg', '/api/media/exercise/Plank/1.jpg']);
   assert.deepEqual(picturePaths({ howToRef: null, pictures: 0 }), []);
+});
+
+test('deload: weeks trained in a row stop at a gap or the last deload, and a deload halves the sets', () => {
+  // Today is Wednesday 2026-11-18; the weeks before start Mon 11-09, 11-02, 10-26, 10-19.
+  const dates = ['2026-11-10', '2026-11-04', '2026-10-27', '2026-10-13'];
+  assert.equal(weeksTrainedInARow(dates, '2026-11-18', null), 3, 'the week of 10-19 had nothing');
+  assert.equal(weeksTrainedInARow(dates, '2026-11-18', '2026-11-01'), 2, 'weeks before the last deload don’t count');
+  assert.deepEqual(deloaded(3, 100, 2.5), { sets: 2, weightKg: 90 });
+  assert.deepEqual(deloaded(1, null, 2.5), { sets: 1, weightKg: null });
 });
