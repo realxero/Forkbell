@@ -4,7 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleShe
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { dataKind, forAmount, KIND_INFO, mealForTime, type NutritionCheck, per100Problems, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods, entryAmountText } from '@forkbell/shared';
+import { dataKind, forAmount, KIND_INFO, mealForTime, type NutritionCheck, per100Problems, tidyName, todayLocal, type Food, type FoodCandidate, type LabelFood, type Meal, type RecentFood, type RecentFoods, entryAmountText } from '@forkbell/shared';
 import { api, ApiError, post } from '../../lib/api';
 import { pickImage } from '../../lib/images';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -311,7 +311,7 @@ function Row({ food, onPress }: { food: Pick; onPress: () => void }) {
     >
       <FoodIcon name={food.name} brand={food.brand} size={36} />
       <View style={{ flex: 1 }}>
-        <Text style={type.body} numberOfLines={2}>{food.name}</Text>
+        <Text style={type.body} numberOfLines={2}>{tidyName(food.name)}</Text>
         <Text style={type.small} numberOfLines={1}>
           {food.brand ? `${food.brand} · ` : ''}
           <Text style={{ color: trusted ? color.iron : color.ironSoft, fontWeight: '700' }}>{trusted ? '✓ ' : ''}{kind.tag}</Text>

@@ -72,8 +72,23 @@ export interface DiaryEntry {
   loggedAt?: string | null;
 }
 
+const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with', 'w/', 'vs']);
+const UNIT_WORDS = /^(g|mg|kg|oz|lb|lbs|ml|l|fl|tsp|tbsp|kcal|cal)$/;
+/**
+ * A food name with even capitals: "overnight oats Vanilla Bean" → "Overnight
+ * Oats Vanilla Bean". Words that already have a capital (MUSH, iPhone) stay as
+ * they are, and so do small words and units after the first word.
+ */
+export function tidyName(name: string): string {
+  return name.replace(/\S+/g, (w, i: number) => {
+    if (/[A-Z]/.test(w) || !/^[a-z]/.test(w)) return w;
+    if (i > 0 && (SMALL_WORDS.has(w) || UNIT_WORDS.test(w))) return w;
+    return w[0]!.toUpperCase() + w.slice(1);
+  });
+}
+
 /** What to call an entry: its own name, or its food's. */
-export const entryName = (e: Pick<DiaryEntry, 'name' | 'food'>) => e.name?.trim() || e.food.name;
+export const entryName = (e: Pick<DiaryEntry, 'name' | 'food'>) => tidyName(e.name?.trim() || e.food.name);
 
 export interface Totals {
   kcal: number;

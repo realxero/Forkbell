@@ -1,4 +1,4 @@
-import { cleanMicros } from '@forkbell/shared';
+import { cleanMicros, tidyName } from '@forkbell/shared';
 import type { Food } from '@forkbell/shared';
 import type { foods } from '@forkbell/db';
 
@@ -7,7 +7,7 @@ type FoodRow = typeof foods.$inferSelect;
 export function toFood(r: FoodRow): Food {
   return {
     id: r.id,
-    name: r.name,
+    name: tidyName(r.name),
     brand: r.brand,
     source: r.source,
     sourceId: r.sourceId,
