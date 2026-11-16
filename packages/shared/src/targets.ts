@@ -2,7 +2,7 @@
 // from your body until there's enough data), and macros from your goal and
 // how you train. Evidence-based ranges, explained in plain words; never
 // under 1,200 kcal, never faster than about 1% of body weight a week.
-import { MIN_SUGGESTED_KCAL } from './progress.ts';
+import { fitMacros, MIN_SUGGESTED_KCAL } from './progress.ts';
 
 export type BodyGoal = 'lose' | 'recomp' | 'maintain' | 'gain';
 export type TrainingFocus = 'none' | 'health' | 'size' | 'strength' | 'both';
@@ -57,13 +57,14 @@ export function smartTargets(o: { goal: BodyGoal; focus: TrainingFocus; weightKg
   const bmi = o.heightCm ? o.weightKg / (o.heightCm / 100) ** 2 : null;
   const refKg = bmi && bmi > 30 && o.heightCm ? 25 * (o.heightCm / 100) ** 2 : o.weightKg; // weight at a BMI of 25
   const perKg = o.goal === 'lose' || o.goal === 'recomp' ? (lifting ? 2.2 : 2.0) : o.goal === 'gain' ? (lifting ? 2.0 : 1.8) : lifting ? 1.8 : 1.6;
-  const protein = Math.round(refKg * perKg);
+  const wantProtein = Math.round(refKg * perKg);
+  const wantFat = Math.max(Math.round(0.6 * o.weightKg), Math.round((kcal * (lifting ? 0.25 : 0.3)) / 9));
+  // On a low calorie goal the full protein and fat would leave no room for carbs: they give way a little.
+  const { protein, carbs, fat } = fitMacros(kcal, wantProtein, wantFat, refKg);
+  if (protein < wantProtein || fat < wantFat) why.push('Protein and fat are trimmed a little so the calories still leave room for at least 50 g of carbs.');
   why.push(`${perKg} g of protein per kg${refKg !== o.weightKg ? ' of a healthy reference weight' : ''}: ${o.goal === 'lose' || o.goal === 'recomp' ? 'keeps muscle while you lose fat' : lifting ? 'enough to build muscle' : 'covers your needs'}.`);
 
   // Fat: a share of calories, never too low for hormones; carbs fuel the rest.
-  const fatShare = o.focus === 'size' || o.focus === 'strength' || o.focus === 'both' ? 0.25 : 0.3;
-  const fat = Math.max(Math.round(0.6 * o.weightKg), Math.round((kcal * fatShare) / 9));
-  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
   why.push(lifting ? 'Fat at about a quarter of calories, leaving more carbs to fuel training.' : 'Fat at about 30% of calories; carbs make up the rest.');
   return { kcal, protein, carbs, fat, weeklyKg: Math.round(weeklyKg * 100) / 100, why };
 }

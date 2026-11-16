@@ -11,8 +11,10 @@ import type { Program, Routine } from './training.ts';
 
 export interface FoodWeek {
   /** the 7 days before today, oldest first; kcal null where nothing was logged */
-  days: { date: string; kcal: number | null; sodium: number | null; fiber: number | null }[];
+  days: { date: string; kcal: number | null; sodium: number | null; fiber: number | null; done?: boolean }[];
   burn: number | null;
+  /** how sure the burn is; a low one gives a verdict but no suggested change */
+  burnConfidence?: 'low' | 'medium' | 'high' | null;
   /** smoothed weight a week ago and yesterday */
   trendFromKg: number | null;
   trendToKg: number | null;
@@ -43,6 +45,8 @@ export interface FoodCheckIn {
 }
 
 const r10 = (n: number) => Math.round(n / 10) * 10;
+/** The most a check-in moves your calorie goal in one week. */
+export const CHECKIN_MAX_STEP = 300;
 
 type Goals = { kcal: number | null; protein: number | null; carbs: number | null; fat: number | null };
 
@@ -61,17 +65,39 @@ export function goalsAtKcal(g: Goals, kcal: number): Goals {
 }
 
 /**
- * Where a reverse diet has got to: up by its step for each full week since it
- * started, never past the target. done once the target is reached.
+ * A reverse diet's next step, if a new week has started: up by its step for
+ * each week not yet applied, from the goal you have now (so a goal you changed
+ * by hand is kept), never past the target. Null when there's nothing to do.
  */
-export function reverseDietKcal(r: { from: string; startKcal: number; targetKcal: number; step: number }, today: string): { kcal: number; done: boolean } {
+export function reverseDietStep(r: { from: string; targetKcal: number; step: number; week?: number }, today: string, currentKcal: number | null): { kcal: number; week: number; done: boolean } | null {
+  if (currentKcal === null) return null;
   const weeks = Math.max(0, Math.floor((Date.parse(today) - Date.parse(r.from)) / (7 * 86400000)));
-  const kcal = Math.min(r.targetKcal, r.startKcal + weeks * r.step);
-  return { kcal, done: kcal >= r.targetKcal };
+  const applied = r.week ?? 0;
+  if (currentKcal >= r.targetKcal) return { kcal: currentKcal, week: weeks, done: true };
+  if (weeks <= applied) return null;
+  const kcal = Math.min(r.targetKcal, currentKcal + (weeks - applied) * r.step);
+  return { kcal, week: weeks, done: kcal >= r.targetKcal };
+}
+
+/**
+ * Weekday goals move with the everyday goal when a plan changes it (a check-in,
+ * a diet break, a reverse diet), each keeping its difference. Going down stops
+ * at the 1,200 floor unless that day was already set lower.
+ */
+export function shiftWeekdayGoals<T extends { kcal: number | null }>(weekdayGoals: Record<string, T | undefined> | null | undefined, delta: number): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [day, g] of Object.entries(weekdayGoals ?? {})) {
+    if (!g) continue;
+    out[day] = g.kcal === null || !delta ? g : { ...g, kcal: delta < 0 ? Math.max(Math.min(g.kcal, MIN_SUGGESTED_KCAL), g.kcal + delta) : g.kcal + delta };
+  }
+  return out;
 }
 
 export function foodCheckIn(w: FoodWeek): FoodCheckIn {
-  const logged = w.days.filter((d) => d.kcal !== null && d.kcal > 0);
+  // Once you mark days done, only those count: a half-logged day would read as eating less than you did.
+  const withFood = w.days.filter((d) => d.kcal !== null && d.kcal > 0);
+  const doneMode = withFood.some((d) => d.done);
+  const logged = doneMode ? withFood.filter((d) => d.done) : withFood;
   const avgKcal = logged.length ? Math.round(logged.reduce((s, d) => s + d.kcal!, 0) / logged.length) : null;
   const avg = (vals: number[]) => (vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0);
   const sodiumDays = logged.filter((d) => d.sodium !== null).map((d) => d.sodium!);
@@ -84,7 +110,10 @@ export function foodCheckIn(w: FoodWeek): FoodCheckIn {
     fiber: fiberDays.length ? { avg: avg(fiberDays), daysUnder: fiberDays.filter((f) => f < 28).length } : null,
   };
   if (logged.length < 4) {
-    return { ...base, expectedKg: null, actualKg: null, verdict: `You logged ${logged.length} of the last 7 days. Log at least 4 to get a check-in you can trust.`, suggestion: null };
+    const verdict = doneMode
+      ? `${logged.length} of the last 7 days ${logged.length === 1 ? 'is' : 'are'} marked done. Mark at least 4 fully logged days to get a check-in you can trust.`
+      : `You logged ${logged.length} of the last 7 days. Log at least 4 to get a check-in you can trust.`;
+    return { ...base, expectedKg: null, actualKg: null, verdict, suggestion: null };
   }
   const expectedKg = w.burn !== null && avgKcal !== null ? Math.round((((avgKcal - w.burn) * 7) / KCAL_PER_KG) * 100) / 100 : null;
   const actualKg = w.trendFromKg !== null && w.trendToKg !== null ? Math.round((w.trendToKg - w.trendFromKg) * 100) / 100 : null;
@@ -97,7 +126,8 @@ export function foodCheckIn(w: FoodWeek): FoodCheckIn {
   let targetKg = 0; // per week, + gain / - lose
   if (w.goalKg !== null && Math.abs(w.goalKg - current) > 0.3) {
     const toGo = w.goalKg - current;
-    const weeksLeft = w.goalDate ? Math.max(1, (Date.parse(w.goalDate) - Date.parse(w.today)) / (7 * 86400000)) : null;
+    // A goal date that has passed is ignored (the steady default pace applies), not treated as "all of it this week".
+    const weeksLeft = w.goalDate && w.goalDate > w.today ? Math.max(1, (Date.parse(w.goalDate) - Date.parse(w.today)) / (7 * 86400000)) : null;
     const wanted = weeksLeft ? toGo / weeksLeft : toGo < 0 ? -current * 0.005 : current * 0.0025;
     targetKg = Math.sign(toGo) * Math.min(Math.abs(wanted), current * 0.01);
   }
@@ -122,11 +152,19 @@ export function foodCheckIn(w: FoodWeek): FoodCheckIn {
     const delta = w.calorieGoal ? target - w.calorieGoal : 0;
     const vsAvg = target - avgKcal!;
     if (w.calorieGoal && Math.abs(delta) >= 50) {
-      suggestion = { kcal: target, delta, why: vsAvg < 0 ? 'Progress was slower than your plan.' : 'You moved faster than your plan; a bit more food makes it easier to keep up.' };
+      // One step at a time: at most 300 kcal from the goal you have now, whatever the target says.
+      const step = Math.max(-CHECKIN_MAX_STEP, Math.min(CHECKIN_MAX_STEP, delta));
+      const kcal = Math.max(MIN_SUGGESTED_KCAL, w.calorieGoal + step);
+      if (kcal !== w.calorieGoal) suggestion = { kcal, delta: kcal - w.calorieGoal, why: delta < 0 ? 'Progress was slower than your plan.' : 'You moved faster than your plan; a bit more food makes it easier to keep up.' };
     }
     verdict = `${parts} About ${target.toLocaleString()} kcal a day would match your plan (${vsAvg < 0 ? `${Math.abs(vsAvg)} less` : `${vsAvg} more`} than you've been eating).`;
     if (target === MIN_SUGGESTED_KCAL && vsAvg < 0) verdict += ' That’s the 1,200 kcal floor; a later goal date or more activity is the safer way to speed up.';
     if (!w.calorieGoal) verdict += ' Set a calorie goal to apply it.';
+  }
+  // A burn worked out from little data shouldn't move your goal yet.
+  if (suggestion && w.burnConfidence === 'low') {
+    verdict += ' Your daily burn is still a rough estimate, so no change is suggested yet.';
+    suggestion = null;
   }
   // Water weight around a period can hide a week's loss: say so, and don't change the goal over it.
   if (w.periodDays && actualKg > 0) {

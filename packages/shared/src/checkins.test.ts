@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { foodCheckIn, goalsAtKcal, reverseDietKcal, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
+import { foodCheckIn, goalsAtKcal, reverseDietStep, shiftWeekdayGoals, planTrainingWeek, starterFor, trainingCheckIn, type FoodWeek } from './checkins.ts';
 import type { Program } from './training.ts';
 
 const week = (kcal: (number | null)[], extra: Partial<FoodWeek> = {}): FoodWeek => ({
@@ -22,7 +22,7 @@ test('slower than planned: the intake that matches the plan, never under 1,200',
   assert.match(c.verdict, /50 less than you've been eating/);
   assert.equal(c.sodium?.daysOver, 7);
   const floor = foodCheckIn(week([1300, 1300, 1300, 1300, 1300, 1300, 1300], { trendToKg: 99.9, burn: 1400, calorieGoal: 2100 }));
-  assert.equal(floor.suggestion?.kcal, 1200);
+  assert.equal(floor.suggestion?.kcal, 1800, 'one step of 300 toward the floor, not all 900 at once');
   assert.match(floor.verdict, /floor/);
 });
 
@@ -79,9 +79,36 @@ test('a heavier week with a period explains the water and suggests no change', (
   assert.match(c.verdict, /period/);
 });
 
-test('reverse diet: up a step each full week, stopping at the target', () => {
-  const r = { from: '2026-11-02', startKcal: 1800, targetKcal: 2150, step: 100 };
-  assert.deepEqual(reverseDietKcal(r, '2026-11-08'), { kcal: 1800, done: false });
-  assert.deepEqual(reverseDietKcal(r, '2026-11-09'), { kcal: 1900, done: false });
-  assert.deepEqual(reverseDietKcal(r, '2026-11-30'), { kcal: 2150, done: true });
+test('reverse diet: one step per new week from the goal you have, stopping at the target', () => {
+  const r = { from: '2026-11-02', targetKcal: 2150, step: 100, week: 0 };
+  assert.equal(reverseDietStep(r, '2026-11-08', 1800), null, 'still the first week');
+  assert.deepEqual(reverseDietStep(r, '2026-11-09', 1800), { kcal: 1900, week: 1, done: false });
+  assert.equal(reverseDietStep({ ...r, week: 1 }, '2026-11-12', 1750), null, 'a goal changed by hand mid-week is left alone');
+  assert.deepEqual(reverseDietStep({ ...r, week: 1 }, '2026-11-16', 1750), { kcal: 1850, week: 2, done: false }, 'and the next step starts from it');
+  assert.deepEqual(reverseDietStep(r, '2026-12-28', 1800), { kcal: 2150, week: 8, done: true });
+  assert.equal(reverseDietStep(r, '2026-11-03', 2300)!.done, true, 'already past the target: it ends');
+});
+
+test('weekday goals keep their difference when a plan moves the everyday goal', () => {
+  const wg = { '6': { kcal: 2500, protein: 150 }, '1': { kcal: 1300, protein: null }, '2': { kcal: null, protein: 140 } };
+  assert.deepEqual(shiftWeekdayGoals(wg, 200), { '6': { kcal: 2700, protein: 150 }, '1': { kcal: 1500, protein: null }, '2': { kcal: null, protein: 140 } });
+  assert.equal(shiftWeekdayGoals(wg, -300)['1']!.kcal, 1200, 'not below the floor');
+  assert.equal(shiftWeekdayGoals({ '0': { kcal: 1000 } }, -300)['0']!.kcal, 1000, 'a day already set lower stays');
+});
+
+test('check-in: one step of at most 300, done days only, no change on a rough burn or a passed date rush', () => {
+  const days = (kcal: number, done?: boolean[]) => Array.from({ length: 7 }, (_, i) => ({ date: `2026-11-0${i + 2}`, kcal, sodium: null, fiber: null, done: done?.[i] }));
+  const base: FoodWeek = { days: days(2200), burn: 2100, trendFromKg: 90, trendToKg: 90.4, goalKg: 80, goalDate: null, calorieGoal: 2400, today: '2026-11-09' };
+  const c = foodCheckIn(base);
+  assert.equal(c.suggestion?.kcal, 2100, 'the target is far lower, but the step is 300');
+  assert.equal(c.suggestion?.delta, -300);
+  assert.equal(foodCheckIn({ ...base, burnConfidence: 'low' }).suggestion, null);
+  // Three half-logged days not marked done don't drag the average down.
+  const mixed = { ...base, days: base.days.map((d, i) => (i < 3 ? { ...d, kcal: 600, done: false } : { ...d, done: true })) };
+  assert.equal(foodCheckIn(mixed).avgKcal, 2200);
+  assert.equal(foodCheckIn(mixed).loggedDays, 4);
+  // A goal date in the past is ignored instead of demanding the fastest pace.
+  const past = foodCheckIn({ ...base, goalDate: '2026-01-01' });
+  const none = foodCheckIn({ ...base, goalDate: null });
+  assert.equal(past.verdict, none.verdict);
 });

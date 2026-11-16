@@ -132,6 +132,49 @@ test('a diet break that has ended gives the old goals back', async () => {
   assert.equal(after.preferences.dietBreak, null);
 });
 
+test('calorie goal paths don’t fight: weekday goals follow a plan, saving goals ends a break, bookkeeping survives a stale save', async () => {
+  const u = await newUser();
+  const me = (await u.call('GET', '/api/me')).body;
+  const today = todayIn(me.timeZone);
+  const cut = { kcal: 1900, protein: 160, carbs: 180, fat: 60 };
+  // A break that ended: the everyday goal drops 600 back to the cut, and Saturday's higher goal drops with it.
+  await u.call('PUT', '/api/me/goals', { kcal: 2500, protein: 160, carbs: 290, fat: 78 });
+  await u.call('PUT', '/api/me/weekday-goals', { '6': { kcal: 2800, protein: 160, carbs: null, fat: null } });
+  await u.call('PUT', '/api/me/preferences', { ...me.preferences, dietBreak: { until: '2020-01-01', goals: cut } });
+  const back = (await u.call('GET', '/api/me')).body;
+  assert.equal(back.goals.kcal, 1900);
+  assert.equal(back.weekdayGoals['6'].kcal, 2200);
+
+  // Saving goals yourself during a break ends it, so the old goals don't come back over the new ones.
+  await u.call('PUT', '/api/me/preferences', { ...back.preferences, dietBreak: { until: today, goals: cut } });
+  const saved = await u.call('PUT', '/api/me/goals', { kcal: 2300, protein: 160, carbs: 250, fat: 70 });
+  assert.equal(saved.body.endedBreak, true);
+  const kept = (await u.call('GET', '/api/me')).body;
+  assert.equal(kept.preferences.dietBreak, null);
+  assert.equal(kept.goals.kcal, 2300);
+  assert.equal(kept.weekdayGoals['6'].kcal, 2200, 'a goal set by hand leaves weekday goals alone');
+
+  // A plan change (shiftWeekdays) moves weekday goals by the same amount.
+  await u.call('PUT', '/api/me/goals', { kcal: 2100, protein: 160, carbs: 220, fat: 64, shiftWeekdays: true });
+  assert.equal((await u.call('GET', '/api/me')).body.weekdayGoals['6'].kcal, 2000);
+
+  // A reverse diet keeps a goal changed by hand until its next weekly step.
+  await u.call('PUT', '/api/me/preferences', { ...kept.preferences, reverseDiet: { from: addDays(today, -8), startKcal: 2100, targetKcal: 2600, step: 100 } });
+  assert.equal((await u.call('GET', '/api/me')).body.goals.kcal, 2200, 'one week in: one step');
+  await u.call('PUT', '/api/me/goals', { kcal: 2150, protein: 160, carbs: 230, fat: 66 });
+  const mid = (await u.call('GET', '/api/me')).body;
+  assert.equal(mid.goals.kcal, 2150, 'not put back to 2200 on the next load');
+  assert.equal(mid.preferences.reverseDiet.week, 1);
+
+  // The check-in week the server has handled can't be reset by the app saving an older copy of preferences.
+  await u.call('PUT', '/api/me/preferences', { ...mid.preferences, reverseDiet: null, autoCheckIn: true });
+  await u.call('GET', `/api/progress?today=${today}`);
+  const handled = (await u.call('GET', '/api/me')).body.preferences;
+  assert.ok(handled.checkInWeek, 'the week is marked handled');
+  await u.call('PUT', '/api/me/preferences', { ...handled, checkInWeek: null, patterns: !handled.patterns });
+  assert.equal((await u.call('GET', '/api/me')).body.preferences.checkInWeek, handled.checkInWeek);
+});
+
 test('a reverse diet steps calories up each week and ends at its target', async () => {
   const u = await newUser();
   const me = (await u.call('GET', '/api/me')).body;

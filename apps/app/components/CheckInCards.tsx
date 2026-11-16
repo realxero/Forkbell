@@ -24,16 +24,16 @@ export function FoodCheckInCard({ checkIn, unit, onChanged }: { checkIn: FoodChe
   const apply = async () => {
     if (!checkIn.suggestion || !me) return;
     const before = me.goals;
-    await put('/api/me/goals', goalsAtKcal(before, checkIn.suggestion.kcal));
+    await put('/api/me/goals', { ...goalsAtKcal(before, checkIn.suggestion.kcal), shiftWeekdays: true });
     await refreshMe();
     onChanged();
-    showToast(`Calorie goal set to ${checkIn.suggestion.kcal.toLocaleString()}`, { action: { label: 'Undo', run: async () => { await put('/api/me/goals', before); await refreshMe(); onChanged(); } } });
+    showToast(`Calorie goal set to ${checkIn.suggestion.kcal.toLocaleString()}`, { action: { label: 'Undo', run: async () => { await put('/api/me/goals', { ...before, shiftWeekdays: true }); await refreshMe(); onChanged(); } } });
   };
   // An automatic check-in already changed the goal: Undo puts the old goals back.
   const undo = async () => {
     const old = me?.preferences.checkInUndo;
     if (!me || !old) return;
-    await put('/api/me/goals', old);
+    await put('/api/me/goals', { ...old, shiftWeekdays: true });
     await put('/api/me/preferences', { ...me.preferences, checkInUndo: null });
     await refreshMe();
     onChanged();
