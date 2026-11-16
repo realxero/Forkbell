@@ -170,3 +170,11 @@ test('glucose around a meal: the reading just before and the 2-hour peak', () =>
   assert.deepEqual(mealGlucose(readings, t), { before: 92, peak: 151 });
   assert.equal(mealGlucose(readings, t + 200 * m), null);
 });
+
+import { smartTargets } from './targets.ts';
+test('targets at the floor say what the burn is instead of a negative deficit', () => {
+  const t = smartTargets({ goal: 'lose', focus: 'none', weightKg: 90, burnKcal: 840, measured: true, unit: 'lb' });
+  assert.equal(t.kcal, 1200);
+  assert.ok(!t.why.some((w) => /-\d/.test(w)), t.why.join(' | '));
+  assert.ok(t.why.some((w) => w.includes('840 kcal')));
+});
