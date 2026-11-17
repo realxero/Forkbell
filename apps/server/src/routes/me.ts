@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { users, type connect } from '@forkbell/db';
-import { goalsAtKcal, goalsSchema, isTimeZone, preferencesSchema, reverseDietKcal, todayIn, type Me } from '@forkbell/shared';
+import { goalsAtKcal, goalsSchema, isTimeZone, preferencesSchema, reverseDietStep, shiftWeekdayGoals, todayIn, type Me } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -17,21 +17,28 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
     if (prefs.dietBreak && todayIn(u.timeZone) > prefs.dietBreak.until) {
       const g = prefs.dietBreak.goals;
       [u] = await asUser(c.get('profileId'), (tx) =>
-        tx.update(users).set({ goalKcal: g.kcal, goalProtein: g.protein, goalCarbs: g.carbs, goalFat: g.fat, preferences: { ...prefs, dietBreak: null } }).where(eq(users.id, c.get('profileId'))).returning(),
+        tx
+          .update(users)
+          .set({ goalKcal: g.kcal, goalProtein: g.protein, goalCarbs: g.carbs, goalFat: g.fat, weekdayGoals: shiftWeekdayGoals(u!.weekdayGoals as Me['weekdayGoals'], (g.kcal ?? 0) - (u!.goalKcal ?? g.kcal ?? 0)), preferences: { ...prefs, dietBreak: null } })
+          .where(eq(users.id, c.get('profileId')))
+          .returning(),
       );
       if (!u) return c.json({ error: 'Account not found.' }, 404);
     }
-    // A reverse diet moves your calories up a step each week (carbs and fat with it), then ends at its target.
+    // A reverse diet moves your calories up a step each new week (carbs, fat and weekday goals with it), then ends at its target.
     const rev = preferencesSchema.parse(u.preferences ?? {});
-    if (rev.reverseDiet) {
-      const step = reverseDietKcal(rev.reverseDiet, todayIn(u.timeZone));
-      if (step.kcal !== u.goalKcal || step.done) {
-        const g = goalsAtKcal({ kcal: u.goalKcal, protein: u.goalProtein, carbs: u.goalCarbs, fat: u.goalFat }, step.kcal);
-        [u] = await asUser(c.get('profileId'), (tx) =>
-          tx.update(users).set({ goalKcal: g.kcal, goalCarbs: g.carbs, goalFat: g.fat, preferences: { ...rev, reverseDiet: step.done ? null : rev.reverseDiet } }).where(eq(users.id, c.get('profileId'))).returning(),
-        );
-        if (!u) return c.json({ error: 'Account not found.' }, 404);
-      }
+    const step = rev.reverseDiet ? reverseDietStep(rev.reverseDiet, todayIn(u.timeZone), u.goalKcal) : null;
+    if (rev.reverseDiet && step) {
+      const g = goalsAtKcal({ kcal: u.goalKcal, protein: u.goalProtein, carbs: u.goalCarbs, fat: u.goalFat }, step.kcal);
+      const was = u;
+      [u] = await asUser(c.get('profileId'), (tx) =>
+        tx
+          .update(users)
+          .set({ goalKcal: g.kcal, goalCarbs: g.carbs, goalFat: g.fat, weekdayGoals: shiftWeekdayGoals(was.weekdayGoals as Me['weekdayGoals'], step.kcal - (was.goalKcal ?? step.kcal)), preferences: { ...rev, reverseDiet: step.done ? null : { ...rev.reverseDiet!, week: step.week } } })
+          .where(eq(users.id, c.get('profileId')))
+          .returning(),
+      );
+      if (!u) return c.json({ error: 'Account not found.' }, 404);
     }
     const me: Me = {
       id: u.id,
@@ -47,14 +54,29 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
     return c.json(me);
   });
 
+  /**
+   * Save your goals. Setting them yourself ends a diet break (so its old goals
+   * don't come back over the new ones) and drops a check-in's Undo. A change
+   * that comes from a plan sends shiftWeekdays, and weekday goals move with it.
+   */
   r.put('/goals', async (c) => {
-    const parsed = goalsSchema.safeParse(await c.req.json().catch(() => null));
+    const body = await c.req.json().catch(() => null);
+    const parsed = goalsSchema.safeParse(body);
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check your goals.' }, 400);
     const g = parsed.data;
-    await asUser(c.get('profileId'), (tx) =>
-      tx.update(users).set({ goalKcal: g.kcal, goalProtein: g.protein, goalCarbs: g.carbs, goalFat: g.fat }).where(eq(users.id, c.get('profileId'))),
-    );
-    return c.json({ goals: g });
+    const shift = (body as { shiftWeekdays?: unknown }).shiftWeekdays === true;
+    const endedBreak = await asUser(c.get('profileId'), async (tx) => {
+      const [u] = await tx.select().from(users).where(eq(users.id, c.get('profileId'))).limit(1);
+      if (!u) return false;
+      const prefs = preferencesSchema.parse(u.preferences ?? {});
+      const delta = shift && g.kcal !== null && u.goalKcal !== null ? g.kcal - u.goalKcal : 0;
+      await tx
+        .update(users)
+        .set({ goalKcal: g.kcal, goalProtein: g.protein, goalCarbs: g.carbs, goalFat: g.fat, weekdayGoals: shiftWeekdayGoals(u.weekdayGoals as Me['weekdayGoals'], delta), preferences: { ...prefs, dietBreak: null, checkInUndo: null } })
+        .where(eq(users.id, c.get('profileId')));
+      return !!prefs.dietBreak;
+    });
+    return c.json({ goals: g, endedBreak });
   });
 
   /** Different goals for particular weekdays, e.g. more on training days or weekends. */
@@ -70,8 +92,20 @@ export function meRoutes({ asUser }: ReturnType<typeof connect>) {
   r.put('/preferences', async (c) => {
     const parsed = preferencesSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? 'Check your preferences.' }, 400);
-    await asUser(c.get('profileId'), (tx) => tx.update(users).set({ preferences: parsed.data }).where(eq(users.id, c.get('profileId'))));
-    return c.json({ preferences: parsed.data });
+    // The app sends back its whole copy, which can be older than the server's. The
+    // server's own bookkeeping wins, or a stale copy would make a weekly check-in or
+    // a reverse-diet step run twice: which check-in week is handled, its Undo (the
+    // app may only clear it), and how many reverse-diet steps are done.
+    const next = parsed.data;
+    await asUser(c.get('profileId'), async (tx) => {
+      const [u] = await tx.select({ preferences: users.preferences }).from(users).where(eq(users.id, c.get('profileId'))).limit(1);
+      const now = preferencesSchema.parse(u?.preferences ?? {});
+      next.checkInWeek = now.checkInWeek;
+      next.checkInUndo = next.checkInUndo === null ? null : now.checkInUndo;
+      if (next.reverseDiet && now.reverseDiet && next.reverseDiet.from === now.reverseDiet.from) next.reverseDiet.week = now.reverseDiet.week;
+      await tx.update(users).set({ preferences: next }).where(eq(users.id, c.get('profileId')));
+    });
+    return c.json({ preferences: next });
   });
 
   r.put('/settings', async (c) => {

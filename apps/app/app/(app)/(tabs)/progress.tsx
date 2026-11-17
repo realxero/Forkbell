@@ -305,10 +305,10 @@ export default function ProgressScreen() {
                         act(
                           'update your calorie goal',
                           async () => {
-                            await put('/api/me/goals', goalsAtKcal(goals, kcal));
+                            await put('/api/me/goals', { ...goalsAtKcal(goals, kcal), shiftWeekdays: true });
                             await refreshMe();
                           },
-                          { text: `Calorie goal set to ${kcal.toLocaleString()}`, undo: async () => { await put('/api/me/goals', goals); await refreshMe(); } },
+                          { text: `Calorie goal set to ${kcal.toLocaleString()}`, undo: async () => { await put('/api/me/goals', { ...goals, shiftWeekdays: true }); await refreshMe(); } },
                         );
                       }
                 }

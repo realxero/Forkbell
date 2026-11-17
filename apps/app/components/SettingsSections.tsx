@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { addDays, DEFAULT_WATER_GOAL_ML, FAST_PRESETS, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
+import { addDays, DEFAULT_WATER_GOAL_ML, FAST_PRESETS, fitMacros, parseWaterGoal, presetGoals, todayLocal, waterText } from '@forkbell/shared';
 import { cachedGet, readCache, writeCache } from '../lib/sync';
 import { ACCENTS, nativeChoice, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, type AccentName, type SchemeChoice, savedNativeAccent, textSize } from '../lib/theme';
 import { MACRO_STYLES, MacroDisplay, macroStyle, setMacroStyle, type MacroStyle } from './MacroDisplay';
@@ -35,11 +35,11 @@ export function GoalsSection() {
     const goals: Goals = { kcal: toNum(form.kcal), protein: toNum(form.protein), carbs: toNum(form.carbs), fat: toNum(form.fat) };
     if (goals.kcal !== null) goals.kcal = Math.round(goals.kcal);
     try {
-      await put('/api/me/goals', goals);
+      const saved = await put<{ endedBreak?: boolean }>('/api/me/goals', goals);
       // Keto counts net carbs; picking it turns that on.
-      if (keto && me && !me.preferences.netCarbs) await put('/api/me/preferences', { ...me.preferences, netCarbs: true });
+      if (keto && me && !me.preferences.netCarbs) await put('/api/me/preferences', { ...me.preferences, netCarbs: true, dietBreak: null });
       await refreshMe();
-      setStatus('Goals saved.');
+      setStatus(saved.endedBreak ? 'Goals saved. Your diet break has ended, so these stay.' : 'Goals saved.');
     } catch (e) {
       setStatus(e instanceof Error ? e.message : String(e));
     }
@@ -369,7 +369,7 @@ function DietBreak() {
   const until = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const save = async (dietBreak: typeof on, goals: Goals) => {
     try {
-      await put('/api/me/goals', goals);
+      await put('/api/me/goals', { ...goals, shiftWeekdays: true });
       await put('/api/me/preferences', { ...me.preferences, dietBreak });
       await refreshMe();
       setMsg(null);
@@ -381,8 +381,7 @@ function DietBreak() {
     if (!burn) return;
     const m = presetGoals('maintain', burn.burn, burn.kg);
     const protein = me.goals.protein ?? m.protein;
-    const fat = Math.round((m.kcal * 0.28) / 9);
-    save({ until: addDays(todayLocal(), weeks * 7 - 1), goals: me.goals }, { kcal: m.kcal, protein, carbs: Math.max(0, Math.round((m.kcal - protein * 4 - fat * 9) / 4)), fat });
+    save({ until: addDays(todayLocal(), weeks * 7 - 1), goals: me.goals }, { kcal: m.kcal, ...fitMacros(m.kcal, protein, Math.round((m.kcal * 0.28) / 9), burn.kg) });
   };
   return (
     <View style={{ gap: space(2), marginTop: space(3) }}>

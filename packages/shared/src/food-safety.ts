@@ -74,9 +74,9 @@ export const preferencesSchema = z.object({
     })
     .nullable()
     .default(null),
-  /** a reverse diet: calories up by step each week from the start date, until target */
+  /** a reverse diet: calories up by step each week from the start date, until target; week is how many weekly steps are done */
   reverseDiet: z
-    .object({ from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), startKcal: z.number().min(800).max(10000), targetKcal: z.number().min(800).max(10000), step: z.number().min(25).max(300) })
+    .object({ from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), startKcal: z.number().min(800).max(10000), targetKcal: z.number().min(800).max(10000), step: z.number().min(25).max(300), week: z.number().int().min(0).default(0) })
     .nullable()
     .default(null),
   /** the weekly check-in changes your calorie goal by itself (you can undo it on the card) */

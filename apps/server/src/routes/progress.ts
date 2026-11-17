@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { healthDaily, measurements, users, weighIns, workouts, type connect, dayGoals } from '@forkbell/db';
-import { findPatterns, foodCheckIn, goalsAtKcal, preferencesSchema, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource, readiness } from '@forkbell/shared';
+import { findPatterns, foodCheckIn, goalsAtKcal, preferencesSchema, shiftWeekdayGoals, addDays, computeStreaks, dateSchema, estimateEnergy, HEALTH_KINDS, milestones, planGoal, todayLocal, weightTrend, type Activity, type HealthMetric, type HealthSource, readiness } from '@forkbell/shared';
 import { z } from 'zod';
 import type { AppEnv } from '../auth.ts';
 
@@ -48,7 +48,8 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
     for (const row of data.intakeRows) intake[row.date] = Number(row.kcal);
     const loggedDates = Object.keys(intake).filter((d) => intake[d]! > 0);
     const workoutDates = data.done.map((w) => w.date);
-    const energy = estimateEnergy(intake, series, today, 28, new Set([...data.finished].map((f) => f.date)));
+    const finishedDays = new Set([...data.finished].map((f) => f.date));
+    const energy = estimateEnergy(intake, series, today, 28, finishedDays);
     const current = series.at(-1) ?? null;
     const goalKg = data.me.goalWeightKg;
     const plan = current && goalKg !== null ? planGoal({ currentKg: current.trendKg, goalKg, goalDate: data.me.goalDate, today, energy, unit }) : null;
@@ -116,9 +117,10 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       days: Array.from({ length: 7 }, (_, i) => {
         const date = addDays(today, i - 7);
         const r = weekRows.get(date);
-        return { date, kcal: r ? Math.round(Number(r.kcal)) : null, sodium: r?.sodium != null ? Math.round(Number(r.sodium)) : null, fiber: r?.fiber != null ? Math.round(Number(r.fiber) * 10) / 10 : null };
+        return { date, done: finishedDays.has(date), kcal: r ? Math.round(Number(r.kcal)) : null, sodium: r?.sodium != null ? Math.round(Number(r.sodium)) : null, fiber: r?.fiber != null ? Math.round(Number(r.fiber) * 10) / 10 : null };
       }),
       burn: energy.kcal,
+      burnConfidence: energy.confidence,
       trendFromKg: series.length ? trendOn(addDays(today, -8)) : null,
       trendToKg: series.length ? trendOn(addDays(today, -1)) : null,
       goalKg,
@@ -136,7 +138,7 @@ export function progressRoutes({ asUser }: ReturnType<typeof connect>) {
       const before = { kcal: data.me.goalKcal, protein: data.me.goalProtein, carbs: data.me.goalCarbs, fat: data.me.goalFat };
       const change = checkIn.suggestion && !prefs.dietBreak && !prefs.reverseDiet ? goalsAtKcal(before, checkIn.suggestion.kcal) : null;
       await asUser(userId, (tx) =>
-        tx.update(users).set({ ...(change ? { goalKcal: change.kcal, goalCarbs: change.carbs, goalFat: change.fat } : {}), preferences: { ...prefs, checkInWeek: checkIn.weekOf, checkInUndo: change ? before : null } }).where(eq(users.id, userId)),
+        tx.update(users).set({ ...(change ? { goalKcal: change.kcal, goalCarbs: change.carbs, goalFat: change.fat, weekdayGoals: shiftWeekdayGoals(data.me.weekdayGoals as Record<string, { kcal: number | null }>, (change.kcal ?? 0) - (before.kcal ?? change.kcal ?? 0)) } : {}), preferences: { ...prefs, checkInWeek: checkIn.weekOf, checkInUndo: change ? before : null } }).where(eq(users.id, userId)),
       );
       prefs.checkInWeek = checkIn.weekOf;
       prefs.checkInUndo = change ? before : null;

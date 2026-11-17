@@ -115,7 +115,8 @@ export function estimateEnergy(intake: Record<string, number>, series: TrendPoin
   const avgIntake = logged.reduce((s, [, k]) => s + k, 0) / logged.length;
   const changeKg = endPoint.trendKg - startPoint.trendKg;
   const kcal = avgIntake - (changeKg * KCAL_PER_KG) / spanDays;
-  if (!(kcal > 800 && kcal < 7000)) return empty('The numbers so far don’t add up yet. Keep logging every day.', logged.length, spanDays);
+  // Under 1,000 kcal a day isn't a real adult's burn: it means food went unlogged.
+  if (!(kcal >= 1000 && kcal < 7000)) return empty('The numbers so far don’t add up yet. Keep logging every day.', logged.length, spanDays);
   const score = Math.min(logged.length, spanDays);
   return {
     usesFinishedDays,
@@ -430,14 +431,24 @@ type GoalPreset = 'lose' | 'maintain' | 'gain' | 'keto';
  * rest. Never below 1,200 kcal. Keto loses at the same pace with 25 g net
  * carbs and fat filling the rest.
  */
+/**
+ * Macros that fit a calorie goal. When a low goal leaves under 50 g of carbs,
+ * fat gives way first (not below a quarter of calories), then protein (not
+ * below 1.2 g per kg), so the day can still be eaten. Not for keto.
+ */
+export function fitMacros(kcal: number, protein: number, fat: number, weightKg: number): { protein: number; carbs: number; fat: number } {
+  const carbsFor = (p: number, f: number) => (kcal - p * 4 - f * 9) / 4;
+  if (carbsFor(protein, fat) < 50) fat = Math.min(fat, Math.max(Math.round((kcal * 0.25) / 9), Math.round((kcal - protein * 4 - 200) / 9)));
+  if (carbsFor(protein, fat) < 50) protein = Math.min(protein, Math.max(Math.round(weightKg * 1.2), Math.round((kcal - fat * 9 - 200) / 4)));
+  return { protein, carbs: Math.max(0, Math.round(carbsFor(protein, fat))), fat };
+}
+
 export function presetGoals(preset: GoalPreset, burnKcal: number, weightKg: number) {
   const weekly = preset === 'lose' || preset === 'keto' ? -0.005 : preset === 'gain' ? 0.0025 : 0;
   const kcal = Math.max(MIN_SUGGESTED_KCAL, Math.round((burnKcal + (weightKg * weekly * KCAL_PER_KG) / 7) / 10) * 10);
   const protein = Math.round(weightKg * (preset === 'lose' || preset === 'keto' ? 2.0 : 1.6));
   if (preset === 'keto') return { kcal, protein, carbs: 25, fat: Math.max(0, Math.round((kcal - protein * 4 - 25 * 4) / 9)) };
-  const fat = Math.round((kcal * 0.28) / 9);
-  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
-  return { kcal, protein, carbs, fat };
+  return { kcal, ...fitMacros(kcal, protein, Math.round((kcal * 0.28) / 9), weightKg) };
 }
 
 // Glucose after a meal ---------------------------------------------------------------
