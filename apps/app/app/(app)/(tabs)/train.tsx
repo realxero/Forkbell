@@ -15,6 +15,7 @@ import { LogPastWorkout } from '../../../components/LogPastWorkout';
 import { formatDuration, useUnit } from '../../../lib/units';
 import { Chip } from '../../../components/AmountPicker';
 import { YourWeek } from '../../../components/YourWeek';
+import { RoutinePreview } from '../../../components/RoutinePreview';
 import { PlateCalculator } from '../../../components/PlateCalculator';
 import { useAuth } from '../../../lib/auth';
 import { TrainingCheckInCard } from '../../../components/CheckInCards';
@@ -106,7 +107,10 @@ export default function Train() {
     }
   };
 
-  const next = program?.routines.find((r) => r.id === (pick ?? program.nextRoutineId)) ?? null;
+  // A workout you planned for today (Your week) comes first, then the program's next one.
+  const plannedToday = me?.preferences.training?.planned?.[todayLocal()];
+  const planRest = plannedToday === 'rest';
+  const next = program?.routines.find((r) => r.id === (pick ?? (plannedToday && !planRest ? plannedToday : null) ?? program.nextRoutineId)) ?? program?.routines.find((r) => r.id === program.nextRoutineId) ?? null;
   const busy = starting !== null;
 
   const startProblem = (from: Exclude<Starting, null>, retry: () => void) =>
@@ -166,8 +170,9 @@ export default function Train() {
               <Text style={[type.small, { color: color.accent, fontWeight: '700' }]}>{program.name}{program.fromCoach ? ' · from your coach' : ''}</Text>
               <Ionicons name="chevron-forward" size={14} color={color.accent} />
             </Pressable>
-            <Text style={type.title}>{pick ? next.name : `Next up: ${next.name}`}</Text>
-            <Text style={type.small} numberOfLines={2}>{next.exercises.map((e) => e.exercise.name).join(' · ') || 'No exercises yet. Edit this day to add some.'}</Text>
+            <Text style={type.title}>{pick ? next.name : plannedToday && !planRest ? `Today: ${next.name}` : `Next up: ${next.name}`}</Text>
+            {planRest && !pick && <Text style={type.small}>You planned today as a rest day. You can still train.</Text>}
+            <RoutinePreview routine={next} />
             {program.routines.length > 1 && (
               <View style={s.chips}>
                 {program.routines.map((r) => (
@@ -232,6 +237,7 @@ export default function Train() {
             finished={(history ?? []).filter((w) => w.date >= todayLocal()).map((w) => ({ date: w.date, name: w.name }))}
             pastDates={(history ?? []).map((w) => w.date)}
             onChanged={load}
+            onStart={viewing ? undefined : (id) => void start('routine', id)}
           />
         )}
         <TrainingCheckInCard />

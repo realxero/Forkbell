@@ -251,7 +251,8 @@ export function authRoutes(db: Database) {
     pending.delete(state);
     if (!login || login.expires < Date.now()) return c.text('This sign-in link expired. Go back to Forkbell and sign in again.', 400);
     const started = getCookie(c, SSO_COOKIE) ?? '';
-    deleteCookie(c, SSO_COOKIE, { path: '/auth' });
+    // A __Secure- cookie has to be cleared with Secure too, or Hono refuses and the sign-in fails.
+    deleteCookie(c, SSO_COOKIE, { path: '/auth', secure: env.secureCookies });
     if (!sameSecret(started, state)) return c.text('This sign-in was started somewhere else. Go back to Forkbell and sign in again.', 400);
 
     const config = await oidcConfig();
@@ -324,7 +325,7 @@ export function authRoutes(db: Database) {
   r.post('/logout', async (c) => {
     const token = readToken(c.req.header('authorization'), sessionCookie(c));
     if (token) await db.execute(sql`select auth_end_session(${hashToken(token)})`);
-    deleteCookie(c, COOKIE, { path: '/' });
+    deleteCookie(c, COOKIE, { path: '/', secure: env.secureCookies });
     if (COOKIE !== OLD_COOKIE) deleteCookie(c, OLD_COOKIE, { path: '/' });
     return c.json({ ok: true });
   });

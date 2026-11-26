@@ -38,12 +38,14 @@ export const trainingSetupSchema = z
       .default([]),
     /** the bar last used for each exercise (exercise id to bar id) */
     barFor: z.record(z.string(), z.string().max(40)).default({}),
+    /** days you planned ahead: a date to a routine id, or 'rest' (past dates are dropped when you plan again) */
+    planned: z.record(z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.string().min(1).max(60)).default({}),
     /** a lighter week every so many weeks (0 = never offered), and the last one taken */
     deload: z
       .object({ every: z.number().int().min(0).max(12).default(6), from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null), until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null) })
       .default({ every: 6, from: null, until: null }),
   })
-  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {}, deload: { every: 6, from: null, until: null } });
+  .default({ equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {}, planned: {}, deload: { every: 6, from: null, until: null } });
 export type TrainingSetup = z.infer<typeof trainingSetupSchema>;
 
 // Name fragments for movements that put real load on each area.

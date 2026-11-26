@@ -4,7 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { addDays, checkFood, forAmount, mealForTime, mealGlucose, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type MealPlanCell, type SavedMeal, type TargetSuggestion, entryAmountText, entryName } from '@forkbell/shared';
+import { addDays, checkFood, forAmount, mealForTime, mealGlucose, sumEntries, todayLocal, type DiaryDay, type DiaryEntry, type Meal, type MealPlanCell, type SavedMeal, type TargetSuggestion, type WaterDay, entryAmountText, entryName } from '@forkbell/shared';
 import { SuggestionsCard } from '../../../components/SuggestionsCard';
 import { useAuth } from '../../../lib/auth';
 import { canLogFood, useViewing } from '../../../lib/profile';
@@ -24,7 +24,8 @@ import { FoodIcon } from '../../../components/FoodIcon';
 import { MealQuickActions } from '../../../components/MealQuickActions';
 import { StreakCheer } from '../../../components/StreakCheer';
 import { WaterCard } from '../../../components/WaterCard';
-import { updateWidget } from '../../../lib/widget';
+import { startWidgetRefresh, updateWidget } from '../../../lib/widget';
+import { widgetToday } from '../../../lib/widget-today';
 import { glucoseReadings } from '../../../lib/health';
 import { getHealthSettings, healthSupported } from '../../../lib/health-sync';
 import { MicrosCard } from '../../../components/MicrosCard';
@@ -194,9 +195,10 @@ export default function Diary() {
   // Your own today goes to the home screen widget (iPhone).
   useEffect(() => {
     if (!day || viewing || date !== todayLocal()) return;
-    const carbs = net ? Math.max(0, day.totals.carbs - day.totals.fiber) : day.totals.carbs;
-    updateWidget({ date, kcalGoal: goal, kcalEaten: eaten, protein: day.totals.protein, proteinGoal: day.goals.protein, carbs, carbsGoal: day.goals.carbs, fat: day.totals.fat, fatGoal: day.goals.fat, netCarbs: net });
-  }, [day, viewing, date, goal, eaten, net]);
+    if (!me) return;
+    updateWidget(widgetToday(day, me, readCache<WaterDay>(`/api/wellbeing/water/${date}`)));
+    startWidgetRefresh();
+  }, [day, viewing, date, me]);
   const left = goal !== null ? goal - eaten : null;
   const ringLabel =
     left === null

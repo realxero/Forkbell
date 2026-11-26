@@ -8,6 +8,7 @@ import { readCache, writeCache } from '../lib/sync';
 import { post, put } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Chip } from './AmountPicker';
+import { RoutinePreview } from './RoutinePreview';
 import { buttons } from '../lib/buttons';
 import { color, radius, space, type, textSize } from '../lib/theme';
 
@@ -18,15 +19,34 @@ const NARROW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
  * Your week on Train: pick the days you train, and the program's workouts are
  * laid over the next 7 days in order. A missed day moves the plan along.
  */
-export function YourWeek({ program, finished, pastDates = [], onChanged }: { program: Program | null; finished: { date: string; name: string }[]; pastDates?: string[]; onChanged: () => void }) {
+export function YourWeek({ program, finished, pastDates = [], onChanged, onStart }: { program: Program | null; finished: { date: string; name: string }[]; pastDates?: string[]; onChanged: () => void; onStart?: (routineId: string) => void }) {
   const { me, refreshMe } = useAuth();
   const [editing, setEditing] = useState(false);
   const saved = me?.preferences.training?.trainingDays ?? [];
   const [days, setDays] = useState<number[]>(saved);
   const [error, setError] = useState<string | null>(null);
+  /** the day you're planning */
+  const [planning, setPlanning] = useState<string | null>(null);
   const today = todayLocal();
   if (!me) return null;
-  const plan = planTrainingWeek(program, saved, today, finished);
+  const planned = me.preferences.training?.planned ?? {};
+  const plan = planTrainingWeek(program, saved, today, finished, planned);
+
+  // Plan a day ahead: a workout or rest, or null to follow the program again. Nothing starts.
+  const planDay = async (date: string, pick: string | null) => {
+    setError(null);
+    // Past days are dropped, so the list stays a week or so long.
+    const next = Object.fromEntries(Object.entries(planned).filter(([d]) => d >= today && d !== date));
+    if (pick) next[date] = pick;
+    try {
+      await put('/api/me/preferences', { ...me.preferences, training: { ...me.preferences.training, planned: next } });
+      await refreshMe();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const day = plan.find((d) => d.date === planning) ?? null;
+  const dayName = (d: string) => (d === today ? 'Today' : new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }));
 
   const save = async () => {
     setError(null);
@@ -58,14 +78,22 @@ export function YourWeek({ program, finished, pastDates = [], onChanged }: { pro
           <Text style={s.link}>{saved.length ? 'Change days' : 'Pick your days'}</Text>
         </Pressable>
       </View>
-      {saved.length === 0 ? (
+      {saved.length === 0 && !program ? (
         <Text style={type.small}>Pick the days you train and Forkbell lays out your program over the week.</Text>
       ) : (
         <View style={s.week}>
           {plan.map((d) => {
             const isToday = d.date === today;
             return (
-              <View key={d.date} style={[s.day, isToday && s.today]}>
+              <Pressable
+                key={d.date}
+                onPress={() => (d.done ? null : setPlanning(d.date))}
+                disabled={!!d.done || !program}
+                style={[s.day, isToday && s.today]}
+                accessibilityRole="button"
+                accessibilityLabel={`${dayName(d.date)}: ${d.done ?? d.routine?.name ?? 'rest'}${d.planned ? ', planned by you' : ''}`}
+                accessibilityHint={d.done ? undefined : 'Plan this day'}
+              >
                 <Text style={[type.label, isToday && { color: color.accent }]}>{NARROW[d.weekday]}</Text>
                 {d.done ? (
                   <Ionicons name="checkmark-circle" size={22} color={color.iron} />
@@ -77,13 +105,54 @@ export function YourWeek({ program, finished, pastDates = [], onChanged }: { pro
                 <Text style={[s.name, !d.routine && !d.done && { color: color.ironSoft }]} numberOfLines={2} maxFontSizeMultiplier={1.4}>
                   {d.done ?? d.routine?.name ?? 'Rest'}
                 </Text>
-              </View>
+                {d.planned && <View style={s.mine} />}
+              </Pressable>
             );
           })}
         </View>
       )}
       {saved.length > 0 && !program && <Text style={type.small}>No active program yet: tap Change days for a starter that fits.</Text>}
+      {program && <Text style={type.small}>Tap a day to plan it.</Text>}
+      {error && !editing && <Text style={{ color: color.over }}>{error}</Text>}
       {program && <Deload pastDates={pastDates} />}
+
+      <Modal visible={!!day} transparent animationType="fade" onRequestClose={() => setPlanning(null)}>
+        {day && program && (
+          <SheetFrame onClose={() => setPlanning(null)} kind="dialog">
+            <Text style={type.title}>{dayName(day.date)}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
+              {program.routines.map((r) => (
+                <Chip key={r.id} label={r.name} on={day.routine?.id === r.id} onPress={() => void planDay(day.date, r.id)} />
+              ))}
+              <Chip label="Rest" on={!day.routine} onPress={() => void planDay(day.date, 'rest')} />
+            </View>
+            {day.routine ? <RoutinePreview routine={day.routine} /> : <Text style={type.small}>A rest day.</Text>}
+            {day.planned && (
+              <Pressable onPress={() => void planDay(day.date, null)} style={buttons.link} accessibilityRole="button">
+                <Text style={s.link}>Follow the program instead</Text>
+              </Pressable>
+            )}
+            {error && <Text style={{ color: color.over }}>{error}</Text>}
+            {day.date === today && day.routine && onStart ? (
+              <Pressable
+                onPress={() => {
+                  const id = day.routine!.id;
+                  setPlanning(null);
+                  onStart(id);
+                }}
+                style={s.primary}
+                accessibilityRole="button"
+              >
+                <Text style={s.primaryText}>Start {day.routine.name} now</Text>
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => setPlanning(null)} style={s.secondary} accessibilityRole="button">
+                <Text style={s.secondaryText}>Done</Text>
+              </Pressable>
+            )}
+          </SheetFrame>
+        )}
+      </Modal>
 
       <Modal visible={editing} transparent animationType="fade" onRequestClose={() => setEditing(false)}>
         <SheetFrame onClose={() => setEditing(false)} kind="dialog">
@@ -172,6 +241,8 @@ const s = StyleSheet.create({
   day: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: space(2), borderRadius: radius.input, backgroundColor: color.raised },
   today: { borderWidth: 1.5, borderColor: color.accent },
   dot: { width: 10, height: 10, borderRadius: 5, marginVertical: 6 },
+  /** a day you planned yourself */
+  mine: { width: 14, height: 2, borderRadius: 1, backgroundColor: color.iron },
   name: { fontSize: 10, fontWeight: '700', color: color.iron, textAlign: 'center', paddingHorizontal: 2 },
   starter: { backgroundColor: color.infoBg, borderRadius: radius.row, padding: space(3), gap: space(2) },
   primary: { ...buttons.small, minHeight: 44 },

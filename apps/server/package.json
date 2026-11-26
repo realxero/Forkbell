@@ -12,10 +12,10 @@
   "dependencies": {
     "@forkbell/db": "workspace:*",
     "@forkbell/shared": "workspace:*",
-    "@hono/node-server": "^2.1.6",
+    "@hono/node-server": "^2.1.11",
     "drizzle-orm": "^0.45.4",
-    "hono": "^4.13.16",
-    "openid-client": "^6.8.9",
+    "hono": "^4.13.19",
+    "openid-client": "^6.9.1",
     "postgres": "^4.1.0",
     "zod": "^4.6.7"
   },

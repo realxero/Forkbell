@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
+import { AccessibilityInfo, Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, Vibration, View } from 'react-native';
 import { Pressable } from '../../components/Tap';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { afterSet, bigJump, instant, recoveredAt, restAdvice, restCue, setFeedback, cardioKcal, distanceText, durationText, fromDistanceUnit, paceText, parseDuration, toDistanceUnit, leaveSuperset, linkWithNext, nextSetKind, supersetLetter, supersetRun, tidySupersets, volumeComparison, type Exercise, type PersonalRecord, type SetEntry, type Workout, type WorkoutExercise } from '@forkbell/shared';
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
-import { cachedGet } from '../../lib/sync';
+import { cachedGet, readCache, writeCache } from '../../lib/sync';
 import { discardWorkout, finishWorkout, saveWorkout, type FinishSummary } from '../../lib/actions';
 import { confirm } from '../../lib/confirm';
 import { formatDuration, useUnit } from '../../lib/units';
@@ -21,7 +22,8 @@ import { BARS, DEFAULT_PLATES, fromKg, toKg, usesPlates, warmupSets } from '@for
 import { FormCheck } from '../../components/FormCheck';
 import { HowToSheet } from '../../components/HowTo';
 import { useTrainingSetup } from '../../lib/training-setup';
-import { NumberField } from '../../components/NumberField';
+import { PAD_HEIGHT, SetPad, type PadKey } from '../../components/SetPad';
+import { Thumb } from '../../components/ExercisePicker';
 import { color, radius, space, type, textSize } from '../../lib/theme';
 import { Check } from '../../components/Check';
 import { useReduceMotion } from '../../lib/motion';
@@ -59,6 +61,65 @@ function nextLabel(list: WorkoutExercise[], i: number | null, unit: 'lb' | 'kg',
   return `${e.exercise.name.toLowerCase()}, ${kind}${load}`;
 }
 
+/** "Bench press, set 2": short enough for the lock screen card. */
+function nextShort(list: WorkoutExercise[], i: number | null): string | null {
+  const e = i === null ? null : list[i];
+  if (!e) return null;
+  const k = e.sets.findIndex((x) => !x.done);
+  if (k < 0) return e.exercise.name;
+  const set = e.sets[k]!;
+  const n = e.sets.slice(0, k + 1).filter((x) => !x.warmup && !x.drop).length;
+  return `${e.exercise.name}, ${set.warmup ? 'warm-up' : set.drop ? 'drop set' : `set ${n}`}`;
+}
+
+/** The boxes in a set row, left to right, for each kind of exercise. */
+type Field = 'weight' | 'reps' | 'rpe' | 'seconds' | 'minutes' | 'distance';
+const FIELDS: Record<string, Field[]> = { time: ['seconds'], cardio: ['minutes', 'distance'] };
+const fieldsFor = (kind: string): Field[] => FIELDS[kind] ?? ['weight', 'reps', 'rpe'];
+type UnitsT = { unit: 'lb' | 'kg'; show: (kg: number | null) => string; read: (t: string) => number | null };
+
+/** What a box shows for a set. */
+function fieldText(set: SetEntry, f: Field, units: UnitsT): string {
+  if (f === 'weight') return units.show(set.weightKg);
+  if (f === 'reps') return set.reps === null ? '' : String(set.reps);
+  if (f === 'rpe') return set.rpe === null ? '' : String(set.rpe);
+  if (f === 'seconds') return set.seconds === null ? '' : String(set.seconds);
+  if (f === 'minutes') return set.seconds === null ? '' : durationText(set.seconds);
+  return set.distanceM == null ? '' : String(Math.round(toDistanceUnit(set.distanceM, units.unit) * 100) / 100);
+}
+
+/** The greyed hint in an empty box: last time, the set above, or the rep range. */
+function fieldHint(e: WorkoutExercise, k: number, f: Field, units: UnitsT): string {
+  const ph = placeholderFor(e, k);
+  if (f === 'weight') return ph.weightKg ? units.show(ph.weightKg) : e.exercise.kind === 'bodyweight' ? '0' : '';
+  if (f === 'reps') return ph.reps ? String(ph.reps) : '';
+  if (f === 'rpe') return '–';
+  if (f === 'seconds') return ph.seconds ? String(ph.seconds) : '0';
+  if (f === 'minutes') return ph.seconds ? durationText(ph.seconds) : 'min';
+  return ph.distanceM ? String(Math.round(toDistanceUnit(ph.distanceM, units.unit) * 100) / 100) : '–';
+}
+
+/** What typing in a box changes on the set (an empty box clears it). */
+function fieldPatch(f: Field, t: string, units: UnitsT): Partial<SetEntry> {
+  const v = Number(t.replace(',', '.'));
+  if (f === 'weight') return { weightKg: units.read(t) };
+  if (f === 'reps') return { reps: t.trim() ? Math.min(1000, Math.max(0, Math.round(v) || 0)) : null };
+  if (f === 'rpe') return { rpe: t.trim() && v >= 1 && v <= 10 ? Math.round(v * 2) / 2 : null };
+  if (f === 'seconds') return { seconds: t.trim() ? Math.min(86400, Math.max(0, Math.round(v) || 0)) : null };
+  if (f === 'minutes') return { seconds: parseDuration(t) };
+  return { distanceM: t.trim() && v > 0 ? Math.round(fromDistanceUnit(v, units.unit)) : null };
+}
+
+/** The pad's − / + step for a box. */
+const stepFor = (f: Field, unit: 'lb' | 'kg') => (f === 'weight' ? (unit === 'lb' ? 5 : 2.5) : f === 'rpe' ? 0.5 : f === 'seconds' ? 5 : f === 'distance' ? 0.1 : 1);
+/** The pad's separator key: a decimal point, a colon for minutes, none for whole numbers. */
+const sepFor = (f: Field): '.' | ':' | null => (f === 'reps' || f === 'seconds' ? null : f === 'minutes' ? ':' : '.');
+const fieldName = (f: Field, unit: 'lb' | 'kg') => (f === 'weight' ? unit : f === 'rpe' ? 'RPE' : f === 'distance' ? (unit === 'lb' ? 'miles' : 'km') : f);
+
+/** A rest kept on the phone, so leaving the workout screen doesn't lose it. */
+type KeptRest = { end: number; total: number; next: string | null; short: string | null; planned: number; startedAt: number };
+const restKey = (workoutId: string) => `device:rest:${workoutId}`;
+
 /**
  * What an empty box means: the same set last time, else the set above, else
  * the bottom of the rep range. Shown greyed out, and used when you tick.
@@ -84,7 +145,7 @@ export default function WorkoutScreen() {
   const voice = me?.preferences.workoutVoice ?? 'off';
   /** the rest coach: what's been said this rest, and the rest's plan */
   const told = useRef(new Set<string>());
-  const restPlan = useRef({ planned: 0, startedAt: 0 });
+  const restPlan = useRef({ planned: readCache<KeptRest | null>(restKey(id))?.planned ?? 0, startedAt: readCache<KeptRest | null>(restKey(id))?.startedAt ?? 0 });
   const [hr, setHr] = useState<{ bpm: number; at: number } | null>(null);
   const [recoveredBpm, setRecoveredBpm] = useState(recoveredAt(null, null));
   const [w, setW] = useState<Workout | null>(null);
@@ -105,13 +166,24 @@ export default function WorkoutScreen() {
   const [platesFor, setPlatesFor] = useState<number | null>(null);
   const training = useTrainingSetup();
   const [menu, setMenu] = useState<number | null>(null);
-  const [restEnd, setRestEnd] = useState<number | null>(null);
-  const [restTotal, setRestTotal] = useState(0);
+  // A rest survives leaving the screen (another tab, the lock screen, even the app closing):
+  // it's kept on the phone per workout and picked up again here.
+  const kept = useRef(readCache<KeptRest | null>(restKey(id)) ?? null).current;
+  const keptLive = kept && kept.end > Date.now() ? kept : null;
+  const [restEnd, setRestEnd] = useState<number | null>(keptLive?.end ?? null);
+  const [restTotal, setRestTotal] = useState(keptLive?.total ?? 0);
   const [now, setNow] = useState(Date.now());
   const [summary, setSummary] = useState<Summary | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [skipWarmup, setSkipWarmup] = useState(false);
+  /** the box the number pad is typing into */
+  const [pad, setPad] = useState<{ i: number; k: number; f: Field; text: string; fresh: boolean } | null>(null);
+  const scroller = useRef<ScrollViewInstance>(null);
+  const scrollY = useRef(0);
+  const tapY = useRef(0);
+  const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
 
   const latest = useRef<Workout | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -170,22 +242,23 @@ export default function WorkoutScreen() {
 
   // The phone buzzes when the rest is up, even locked or with Forkbell in the background.
   // Leaving the screen keeps it; Skip, Finish and Discard cancel it.
-  const restNext = useRef<string | null>(null);
+  const restNext = useRef<string | null>(keptLive?.next ?? null);
+  const restShort = useRef<string | null>(keptLive?.short ?? null);
   useEffect(() => {
     if (restEnd) void scheduleRestAlert(restEnd, restNext.current).catch(() => {});
     else void cancelRestAlert();
-  }, [restEnd]);
+    writeCache(restKey(id), restEnd ? ({ end: restEnd, total: restTotal, next: restNext.current, short: restShort.current, planned: restPlan.current.planned, startedAt: restPlan.current.startedAt } satisfies KeptRest) : null);
+  }, [restEnd]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The lock screen card (iPhone Live Activity): sets done, or the rest countdown and what's next.
-  // ponytail: it comes down when you leave this screen; keep it up across screens if that's missed.
+  // It stays up when you leave this screen; finishing or discarding takes it down.
   const setsDone = w ? w.exercises.flatMap((e) => e.sets).filter((s) => s.done).length : 0;
   const setsAll = w ? w.exercises.flatMap((e) => e.sets).length : 0;
   const live = !!w && !w.finishedAt && !summary;
   useEffect(() => {
     if (!live) return workoutActivity(null);
-    workoutActivity({ title: w!.name, subtitle: restEnd ? `Rest${restNext.current ? ` · next: ${restNext.current}` : ''}` : `${setsDone} of ${setsAll} sets`, restEnd });
+    workoutActivity({ title: w!.name, subtitle: restEnd ? `Rest${restShort.current ? ` · ${restShort.current}` : ''}` : `${setsDone} of ${setsAll} sets`, restEnd });
   }, [live, w?.name, restEnd, setsDone, setsAll]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => workoutActivity(null), []);
 
   // Heart rate (iPhone with Apple Health connected): your recovered rate once, then the newest reading every few seconds while resting.
   const hrOn = healthSupported && getHealthSettings().connected;
@@ -372,6 +445,7 @@ export default function WorkoutScreen() {
     if (then.rest > 0) {
       // For the notification and the coach: another set of this, or the next exercise.
       restNext.current = nextLabel(list, then.next, units.unit, units.show) ?? nextName;
+      restShort.current = nextShort(list, then.next);
       told.current = new Set();
       restPlan.current = { planned: then.rest, startedAt: Date.now() };
       setRestTotal(then.rest);
@@ -461,6 +535,89 @@ export default function WorkoutScreen() {
     haptic.tap();
   };
 
+  // The number pad: each key updates the set straight away (saved like any change).
+  /** Scroll the box you're in above the pad. */
+  const keepVisible = () => {
+    const limit = winH - PAD_HEIGHT - insets.bottom - 64;
+    if (tapY.current <= limit) return;
+    scroller.current?.scrollTo({ y: scrollY.current + tapY.current - limit, animated: true });
+    tapY.current = limit;
+  };
+  const openPad = (i: number, k: number, f: Field, pageY?: number) => {
+    const set = w?.exercises[i]?.sets[k];
+    if (!set) return setPad(null);
+    if (pageY !== undefined) tapY.current = pageY;
+    setPad({ i, k, f, text: fieldText(set, f, units), fresh: true });
+    setTimeout(keepVisible, 0);
+  };
+  const padType = (text: string) => {
+    if (!pad) return;
+    setPad({ ...pad, text, fresh: false });
+    updateSet(pad.i, pad.k, fieldPatch(pad.f, text, units));
+  };
+  const padKey = (key: PadKey) => {
+    if (!pad) return;
+    if ((key === '.' || key === ':') && key !== sepFor(pad.f)) return;
+    let t = pad.fresh ? '' : pad.text;
+    if (key === 'back') t = t.slice(0, -1);
+    else if (key === '.' || key === ':') t = t.includes(key) ? t : `${t || '0'}${key}`;
+    else if (t.length < 7) t = t === '0' ? key : t + key;
+    padType(t);
+  };
+  const padStep = (dir: 1 | -1) => {
+    if (!pad) return;
+    const e = w!.exercises[pad.i]!;
+    const base = pad.text || fieldHint(e, pad.k, pad.f, units);
+    if (pad.f === 'minutes') {
+      const secs = Math.max(0, (parseDuration(base) ?? 0) + dir * 60);
+      return padType(secs ? durationText(secs) : '');
+    }
+    const v = Number(base.replace(',', '.')) || (pad.f === 'rpe' ? 7 : 0);
+    let next = Math.max(0, Math.round((v + dir * stepFor(pad.f, units.unit)) * 100) / 100);
+    if (pad.f === 'rpe') next = Math.min(10, Math.max(1, next));
+    padType(String(next));
+  };
+  const padFields = pad ? fieldsFor(w!.exercises[pad.i]?.exercise.kind ?? 'weight') : [];
+  const padLast = !!pad && padFields.indexOf(pad.f) === padFields.length - 1 && pad.k === (w!.exercises[pad.i]?.sets.length ?? 0) - 1;
+  const padNext = () => {
+    if (!pad) return;
+    const at = padFields.indexOf(pad.f);
+    if (at < padFields.length - 1) return openPad(pad.i, pad.k, padFields[at + 1]!);
+    if (pad.k < (w!.exercises[pad.i]?.sets.length ?? 0) - 1) {
+      tapY.current += 52; // about a row lower
+      return openPad(pad.i, pad.k + 1, padFields[0]!);
+    }
+    setPad(null);
+  };
+  // On a computer, the keyboard types into the pad too.
+  const padKeys = useRef({ padKey, padNext, close: () => setPad(null) });
+  padKeys.current = { padKey, padNext, close: () => setPad(null) };
+  const padOpen = !!pad;
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !padOpen) return;
+    const on = (ev: KeyboardEvent) => {
+      const k = padKeys.current;
+      if (/^[0-9.:]$/.test(ev.key)) k.padKey(ev.key as PadKey);
+      else if (ev.key === ',') k.padKey('.');
+      else if (ev.key === 'Backspace') k.padKey('back');
+      else if (ev.key === 'Enter' || ev.key === 'Tab') k.padNext();
+      else if (ev.key === 'Escape') k.close();
+      else return;
+      ev.preventDefault();
+    };
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
+  }, [padOpen]);
+  const padTitle = (() => {
+    if (!pad) return '';
+    const e = w!.exercises[pad.i];
+    const set = e?.sets[pad.k];
+    if (!e || !set) return '';
+    const n = e.sets.slice(0, pad.k + 1).filter((x) => !x.warmup && !x.drop).length;
+    const what = set.warmup ? 'Warm-up' : set.drop ? 'Drop set' : e.exercise.kind === 'cardio' ? `Bout ${pad.k + 1}` : `Set ${n}`;
+    return `${e.exercise.name} · ${what} · ${fieldName(pad.f, units.unit)}`;
+  })();
+
   const finish = async () => {
     const left = w!.exercises.flatMap((e) => e.sets).filter((s) => !s.done).length;
     if (left && !(await confirm('Finish workout?', `${left} unticked ${left === 1 ? 'set' : 'sets'} will be left out.`, 'Finish'))) return;
@@ -485,6 +642,8 @@ export default function WorkoutScreen() {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     void cancelRestAlert();
+    writeCache(restKey(w!.id), null);
+    workoutActivity(null);
     await discardWorkout(w!).catch(() => {});
     router.back();
   };
@@ -498,7 +657,7 @@ export default function WorkoutScreen() {
     );
 
   return (
-    <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
+    <SafeAreaView style={s.screen} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={s.head}>
           <Pressable onPress={() => router.back()} style={s.back} accessibilityRole="button" accessibilityLabel="Back">
@@ -511,11 +670,20 @@ export default function WorkoutScreen() {
               {saveState === 'saving' ? ' · saving…' : saveState === 'error' ? ' · not saved' : ''}
             </Text>
           </View>
-          {/* Balances the back button so the title stays centred. */}
-          <View style={s.back} />
+          {/* Bell sits top right (it used to float over the sets); otherwise an empty slot balances the back button. */}
+          {w.finishedAt ? <View style={s.back} /> : <WorkoutBell workoutId={w.id} beforeAsk={flush} />}
         </View>
 
-        <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scroller}
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[s.content, { paddingBottom: pad ? PAD_HEIGHT + insets.bottom + space(16) : space(24) + insets.bottom }]}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={32}
+          onScroll={(ev) => (scrollY.current = ev.nativeEvent.contentOffset.y)}
+          // Dragging the list puts the pad away, the way a keyboard goes.
+          onScrollBeginDrag={() => setPad(null)}
+        >
           {error && <Text style={s.error}>{error}</Text>}
           {hint && <Text style={s.hint}>{hint}</Text>}
           {w.finishedAt && (
@@ -558,7 +726,12 @@ export default function WorkoutScreen() {
               canMoveUp={i > 0}
               onMenu={() => setMenu(menu === i ? null : i)}
               onSet={(k, patch) => updateSet(i, k, patch)}
-              onToggle={(k) => toggleDone(i, k)}
+              active={pad && pad.i === i ? { k: pad.k, f: pad.f, text: pad.text } : null}
+              onCell={(k, f, pageY) => openPad(i, k, f, pageY)}
+              onToggle={(k) => {
+                setPad(null);
+                toggleDone(i, k);
+              }}
               onAddSet={() => updateExercise(i, (x) => ({ ...x, sets: [...x.sets, { ...(x.sets.at(-1) ?? blankSet()), done: false, warmup: false }] }))}
               onRemoveSet={() => updateExercise(i, (x) => ({ ...x, sets: x.sets.slice(0, -1) }))}
               onDeleteSet={(k) => updateExercise(i, (x) => ({ ...x, sets: x.sets.filter((_, j) => j !== k) }))}
@@ -613,15 +786,15 @@ export default function WorkoutScreen() {
         </ScrollView>
 
         {/* Finish sits where a thumb reaches it; while you rest, the rest timer takes its place. */}
-        {!w.finishedAt && restLeft === null && (
-          <View style={s.finishBar}>
+        {!w.finishedAt && restLeft === null && !pad && (
+          <View style={[s.finishBar, { bottom: space(3) + insets.bottom }]}>
             <Pressable onPress={finish} disabled={finishing} style={[s.finish, finishing && { opacity: 0.5 }]} accessibilityRole="button" accessibilityState={{ busy: finishing, disabled: finishing }}>
               <Text style={s.finishText}>{finishing ? 'Finishing…' : 'Finish workout'}</Text>
             </Pressable>
           </View>
         )}
-        {restLeft !== null && (
-          <View style={[s.rest, restLeft === 0 && { backgroundColor: color.accent }]}>
+        {restLeft !== null && !pad && (
+          <View style={[s.rest, { bottom: space(3) + insets.bottom }, restLeft === 0 && { backgroundColor: color.accent }]}>
             <View style={[s.restFill, { width: `${restTotal ? (100 * restLeft) / restTotal : 0}%` }]} />
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={[s.restText, { flex: 1 }]}>{restLeft === 0 ? 'Rest over. Next set!' : `Rest ${formatDuration(restLeft)}`}</Text>
@@ -640,8 +813,20 @@ export default function WorkoutScreen() {
             )}
           </View>
         )}
+        {pad && (
+          <SetPad
+            title={padTitle}
+            sep={sepFor(pad.f)}
+            step={String(stepFor(pad.f, units.unit))}
+            onKey={padKey}
+            onStep={padStep}
+            onNext={padNext}
+            onDone={() => setPad(null)}
+            last={padLast}
+            extra={restLeft ? <Text style={s.padRest}>Rest {formatDuration(restLeft)}</Text> : null}
+          />
+        )}
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: color.accent, opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] }) }]} />
-        {!w.finishedAt && <WorkoutBell workoutId={w.id} beforeAsk={flush} lifted={restLeft !== null} />}
       </KeyboardAvoidingView>
       <HowToSheet exercise={howToFor} onClose={() => setHowToFor(null)} />
       <PlateCalculator
@@ -711,6 +896,9 @@ function ExerciseCard(props: {
   canMoveUp: boolean;
   onMenu: () => void;
   onSet: (k: number, patch: Partial<SetEntry>) => void;
+  /** the box the number pad is in, on this card */
+  active: { k: number; f: Field; text: string } | null;
+  onCell: (k: number, f: Field, pageY: number) => void;
   onToggle: (k: number) => void;
   onAddSet: () => void;
   onRemoveSet: () => void;
@@ -752,6 +940,10 @@ function ExerciseCard(props: {
         </View>
       )}
       <View style={s.cardHead}>
+        {/* The movement at a glance; tap for how to do it. */}
+        <Pressable onPress={e.exercise.howTo ? props.onHowTo : () => router.push({ pathname: '/exercise', params: { id: e.exercise.id } })} accessibilityLabel={`How to do ${e.exercise.name}`}>
+          <Thumb e={e.exercise} size={48} />
+        </Pressable>
         <Pressable style={{ flex: 1 }} onPress={() => router.push({ pathname: '/exercise', params: { id: e.exercise.id } })}>
           <Text style={type.heading}>{e.exercise.name}</Text>
           <Text style={type.small}>
@@ -831,7 +1023,6 @@ function ExerciseCard(props: {
 
       {e.sets.map((set, k) => {
         const prev = e.previous[k];
-        const ph = placeholderFor(e, k);
         const prevText = !prev
           ? '—'
           : kind === 'time'
@@ -856,64 +1047,24 @@ function ExerciseCard(props: {
                 <Text style={[s.setNo, set.warmup && { color: color.ironSoft }, set.drop && { color: color.over }]}>{label}</Text>
               </Pressable>
               <Text style={[s.colPrev, type.small, type.number]} numberOfLines={1}>{prevText}</Text>
-              {kind === 'cardio' ? (
-                <>
-                  <NumberField
-                    label={`Bout ${k + 1} minutes`}
-                    value={set.seconds === null ? '' : durationText(set.seconds)}
-                    placeholder={ph.seconds ? durationText(ph.seconds) : 'min'}
-                    onCommit={(t) => props.onSet(k, { seconds: parseDuration(t) })}
-                    style={[s.cell, s.colNum]}
-                  />
-                  <NumberField
-                    label={`Bout ${k + 1} distance in ${units.unit === 'lb' ? 'miles' : 'kilometres'}`}
-                    value={set.distanceM == null ? '' : String(Math.round(toDistanceUnit(set.distanceM, units.unit) * 100) / 100)}
-                    placeholder={ph.distanceM ? String(Math.round(toDistanceUnit(ph.distanceM, units.unit) * 100) / 100) : '–'}
-                    onCommit={(t) => {
-                      const v = Number(t.replace(',', '.'));
-                      props.onSet(k, { distanceM: t.trim() && v > 0 ? Math.round(fromDistanceUnit(v, units.unit)) : null });
-                    }}
-                    style={[s.cell, s.colNum]}
-                  />
-                </>
-              ) : kind === 'time' ? (
-                <NumberField
-                  label={`Set ${k + 1} seconds`}
-                  value={set.seconds === null ? '' : String(set.seconds)}
-                  placeholder={ph.seconds ? String(ph.seconds) : '0'}
-                  decimal={false}
-                  onCommit={(t) => props.onSet(k, { seconds: t.trim() ? Math.min(86400, Math.max(0, Math.round(Number(t)) || 0)) : null })}
-                  style={[s.cell, s.colWide]}
-                />
-              ) : (
-                <>
-                  <NumberField
-                    label={`Set ${k + 1} weight in ${units.unit}`}
-                    value={units.show(set.weightKg)}
-                    placeholder={ph.weightKg ? units.show(ph.weightKg) : kind === 'bodyweight' ? '0' : ''}
-                    onCommit={(t) => props.onSet(k, { weightKg: units.read(t) })}
-                    style={[s.cell, s.colNum]}
-                  />
-                  <NumberField
-                    label={`Set ${k + 1} reps`}
-                    value={set.reps === null ? '' : String(set.reps)}
-                    placeholder={ph.reps ? String(ph.reps) : ''}
-                    decimal={false}
-                    onCommit={(t) => props.onSet(k, { reps: t.trim() ? Math.min(1000, Math.max(0, Math.round(Number(t)) || 0)) : null })}
-                    style={[s.cell, s.colNum]}
-                  />
-                  <NumberField
-                    label={`Set ${k + 1} RPE`}
-                    value={set.rpe === null ? '' : String(set.rpe)}
-                    placeholder="–"
-                    onCommit={(t) => {
-                      const v = Number(t.replace(',', '.'));
-                      props.onSet(k, { rpe: t.trim() && v >= 1 && v <= 10 ? Math.round(v * 2) / 2 : null });
-                    }}
-                    style={[s.cell, s.colRpe]}
-                  />
-                </>
-              )}
+              {fieldsFor(kind).map((f) => {
+                const on = props.active?.k === k && props.active.f === f;
+                const text = on ? props.active!.text : fieldText(set, f, units);
+                return (
+                  <Pressable
+                    key={f}
+                    onPress={(ev) => props.onCell(k, f, ev.nativeEvent.pageY)}
+                    style={[s.cell, f === 'rpe' ? s.colRpe : f === 'seconds' ? s.colWide : s.colNum, on && s.cellOn]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${what} ${fieldName(f, units.unit)}${text ? `, ${text}` : ''}`}
+                    accessibilityHint="Opens the number pad"
+                  >
+                    <Text style={[s.cellText, !text && { color: color.placeholder }]} numberOfLines={1} adjustsFontSizeToFit>
+                      {text || fieldHint(e, k, f, units)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
               <Pressable onPress={() => props.onToggle(k)} style={[s.colDone, s.check, set.done && s.checkOn]} accessibilityRole="checkbox" accessibilityState={{ checked: set.done }} accessibilityLabel={`Set ${k + 1} done`}>
                 <Check on={Boolean(set.done)} tint={color.card} offTint={color.ironSoft} size={22} />
               </Pressable>
@@ -1034,7 +1185,10 @@ const s = StyleSheet.create({
   colWide: { flex: 2 },
   colDone: { width: 40 },
   setNo: { ...type.body, fontWeight: '700' },
-  cell: { ...type.body, ...type.number, textAlign: 'center', backgroundColor: color.chalk, borderRadius: radius.input, paddingVertical: space(2), paddingHorizontal: 2, minWidth: 0 },
+  cell: { backgroundColor: color.chalk, borderRadius: radius.input, minHeight: 44, justifyContent: 'center', paddingHorizontal: 2, minWidth: 0, borderWidth: 2, borderColor: 'transparent' },
+  cellOn: { borderColor: color.accent },
+  cellText: { ...type.body, ...type.number, textAlign: 'center' },
+  padRest: { ...type.number, fontWeight: '800', color: color.iron },
   check: { height: 44, borderRadius: radius.input, borderWidth: 1, borderColor: color.line, alignItems: 'center', justifyContent: 'center', backgroundColor: color.card },
   checkOn: { backgroundColor: color.iron, borderColor: color.iron },
   tip: { ...type.small, color: color.warnText, backgroundColor: color.warnBg, borderRadius: radius.input, padding: space(2), marginBottom: space(1) },

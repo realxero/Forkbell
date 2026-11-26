@@ -220,14 +220,17 @@ interface PlannedDay {
   routine: Routine | null;
   /** you already finished a workout on this day */
   done: string | null;
+  /** you chose this day yourself */
+  planned?: boolean;
 }
 
 /**
  * Lay the program's workouts over the next 7 days on your training days, in
  * order, continuing after the last one you finished, so a missed day moves the
- * plan along instead of skipping a workout.
+ * plan along instead of skipping a workout. A day you planned yourself (a
+ * workout, or rest) wins, on any day, and the order carries on after it.
  */
-export function planTrainingWeek(program: Program | null, trainingDays: number[], today: string, finished: { date: string; name: string }[]): PlannedDay[] {
+export function planTrainingWeek(program: Program | null, trainingDays: number[], today: string, finished: { date: string; name: string }[], planned: Record<string, string> = {}): PlannedDay[] {
   const order = program?.routines ?? [];
   let i = Math.max(0, order.findIndex((r) => r.id === program?.nextRoutineId));
   return Array.from({ length: 7 }, (_, k) => {
@@ -236,6 +239,13 @@ export function planTrainingWeek(program: Program | null, trainingDays: number[]
     const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
     const done = finished.find((f) => f.date === date)?.name ?? null;
     if (done) return { date, weekday, routine: null, done };
+    const pick = planned[date];
+    if (pick === 'rest') return { date, weekday, routine: null, done: null, planned: true };
+    const at = pick ? order.findIndex((r) => r.id === pick) : -1;
+    if (at >= 0) {
+      i = at + 1;
+      return { date, weekday, routine: order[at]!, done: null, planned: true };
+    }
     if (!order.length || !trainingDays.includes(weekday)) return { date, weekday, routine: null, done: null };
     const routine = order[i % order.length]!;
     i++;

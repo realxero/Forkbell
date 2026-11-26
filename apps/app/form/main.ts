@@ -106,7 +106,7 @@ function finish() {
 async function camera() {
   if (!landmarker) return;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 960 } }, audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 960 }, aspectRatio: { ideal: 3 / 4 } }, audio: false });
     video.srcObject = stream;
     // Don't wait on play(): on an iPhone web view it can stay pending while the
     // camera runs, and the set never started. tick() waits for real frames.
