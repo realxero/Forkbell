@@ -112,7 +112,7 @@ test('volume comparisons pick a sensible thing', () => {
 
 test('old preferences get training defaults', () => {
   const p = preferencesSchema.parse({ trainingTips: false });
-  assert.deepEqual(p.training, { equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {}, deload: { every: 6, from: null, until: null } });
+  assert.deepEqual(p.training, { equipment: [], protectedAreas: [], neverSuggest: [], hiddenTips: [], goals: {}, perSide: [], trainingDays: [], plates: {}, bars: [], barFor: {}, planned: {}, deload: { every: 6, from: null, until: null } });
 });
 
 test('picture paths match what the server serves', async () => {

@@ -6,6 +6,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../lib/auth';
 import { color, isDark, nativeChoice, nativeThemeSaved, nativeThemeSupported, setNativeTheme, setWebAccent, setWebScheme, themeCss, type AccentName, type SchemeChoice } from '../lib/theme';
 import { initSync, readCache } from '../lib/sync';
+// Loaded at start-up so the widget's background refresh is defined when iOS wakes the app for it.
+import '../lib/widget';
 
 export default function RootLayout() {
   const [scheme, setScheme] = useState<SchemeChoice>('system');

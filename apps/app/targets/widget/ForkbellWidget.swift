@@ -5,7 +5,24 @@
 import SwiftUI
 import WidgetKit
 
-private let group = "group.com.realxero.forkbell"
+private let builtGroup = "group.com.realxero.forkbell"
+
+// The App Group this install really has. SideStore and AltStore rename it when
+// they re-sign (adding the signer's team) and list the new name under
+// ALTAppGroups in the app's Info.plist; the app writes to the same one
+// (modules/forkbell-widget).
+private let group: String = {
+  let app = Bundle.main.bundleURL.pathExtension == "appex"
+    ? Bundle(url: Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent())
+    : Bundle.main
+  var names: [String] = []
+  for b in [Bundle.main, app].compactMap({ $0 }) {
+    names += (b.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]) ?? []
+  }
+  names.append(builtGroup)
+  if let id = app?.bundleIdentifier { names.append("group.\(id)") }
+  return names.first { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil } ?? builtGroup
+}()
 
 struct Today: Codable {
   var date: String

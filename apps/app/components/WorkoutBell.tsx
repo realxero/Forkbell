@@ -21,7 +21,7 @@ const QUICK = ['What weight for my next set?', 'How long should I rest?', 'This 
 type Msg = { role: 'user' | 'assistant'; text: string; mood?: BellMood };
 
 /** The floating Bell button for the workout screen, and its sheet. Hidden when Bell has no AI key. */
-export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: string; beforeAsk: () => Promise<void>; lifted: boolean }) {
+export function WorkoutBell({ workoutId, beforeAsk }: { workoutId: string; beforeAsk: () => Promise<void> }) {
   const { me } = useAuth();
   const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -69,24 +69,14 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
     }
   };
 
-  if (!enabled) return null;
+  // In the workout's header, top right: out of the way of the sets and the Finish button.
+  // Without an AI key it keeps the space, so the title stays centred.
+  if (!enabled) return <View style={s.slot} />;
   return (
     <>
-      <View pointerEvents="box-none" style={[s.fabWrap, lifted && { bottom: 120 }]}>
-        {voice ? (
-          <VoiceButton big onTap={() => setOpen(true)} onHearing={(t, on) => setHearing(on ? t : null)} onDone={(t) => void ask(t, true)} onError={(m) => { setOpen(true); setError(m); }} />
-        ) : (
-          <Pressable onPress={() => setOpen(true)} style={s.fab} accessibilityLabel="Ask Bell about this workout">
-            <BellAvatar size={38} tint={color.onAccent} face={color.accent} />
-          </Pressable>
-        )}
-      </View>
-      {hearing !== null && !open && (
-        <View pointerEvents="none" style={[s.bubble, lifted && { bottom: 120 + 70 }]} accessibilityLiveRegion="polite">
-          <Ionicons name="mic" size={18} color={color.over} />
-          <Text style={[type.body, { flexShrink: 1 }]} numberOfLines={3}>{hearing || 'Listening… let go when you’re done'}</Text>
-        </View>
-      )}
+      <Pressable onPress={() => setOpen(true)} style={s.slot} hitSlop={6} accessibilityLabel="Ask Bell about this workout">
+        <BellAvatar size={30} tint={color.onAccent} face={color.accent} />
+      </Pressable>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <KeyboardLift>
         <SheetFrame onClose={() => !busy && setOpen(false)}>
@@ -112,7 +102,14 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
               </Pressable>
             ))}
           </ScrollView>
+          {hearing !== null && (
+            <View style={s.bubble} accessibilityLiveRegion="polite">
+              <Ionicons name="mic" size={18} color={color.over} />
+              <Text style={[type.body, { flexShrink: 1 }]} numberOfLines={3}>{hearing || 'Listening… let go when you’re done'}</Text>
+            </View>
+          )}
           <View style={s.inputRow}>
+            {voice && <VoiceButton disabled={busy} onHearing={(t, on) => setHearing(on ? t : null)} onDone={(t) => void ask(t, true)} onError={setError} />}
             <TextInput value={text} onChangeText={setText} placeholder="Ask about this workout" placeholderTextColor={color.placeholder} style={s.input} returnKeyType="send" onSubmitEditing={() => { void ask(text, false); setText(''); }} />
             <Pressable hitSlop={6} disabled={!text.trim() || busy} onPress={() => { void ask(text, false); setText(''); }} style={[s.send, (!text.trim() || busy) && { opacity: 0.4 }]} accessibilityLabel="Send">
               <Ionicons name="arrow-up" size={20} color={color.onAccent} />
@@ -126,9 +123,8 @@ export function WorkoutBell({ workoutId, beforeAsk, lifted }: { workoutId: strin
 }
 
 const s = StyleSheet.create({
-  fabWrap: { position: 'absolute', right: space(4), bottom: space(6) },
-  fab: { width: 58, height: 58, borderRadius: 29, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
-  bubble: { position: 'absolute', right: space(4), bottom: space(6) + 70, maxWidth: 300, flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.card, borderRadius: radius.row, padding: space(3), borderWidth: 1, borderColor: color.line },
+  slot: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  bubble: { flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.raised, borderRadius: radius.row, padding: space(3) },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   msg: { borderRadius: radius.row, padding: space(3), maxWidth: '88%' },
   mine: { alignSelf: 'flex-end', backgroundColor: color.iron },

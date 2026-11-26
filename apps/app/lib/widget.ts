@@ -11,6 +11,11 @@ export interface WidgetToday {
   fat: number;
   fatGoal: number | null;
   netCarbs: boolean;
+  waterMl?: number;
+  waterGoalMl?: number;
 }
 
 export function updateWidget(_today: WidgetToday): void {}
+
+/** Keep the widget fresh while the app is closed (iPhone only). */
+export function startWidgetRefresh(): void {}

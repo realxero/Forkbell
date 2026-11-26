@@ -56,6 +56,10 @@ test('your week: the program continues on your days; a done day is shown, not sk
   const doneToday = planTrainingWeek(program, [1, 3, 5], '2026-10-23', [{ date: '2026-10-23', name: 'Push' }]);
   assert.equal(doneToday[0]!.done, 'Push');
   assert.equal(doneToday[3]!.routine?.name, 'Pull');
+  // planning ahead: Legs on Saturday (not a training day), rest on Monday; the order carries on after Legs
+  const mine = planTrainingWeek(program, [1, 3, 5], '2026-10-23', [], { '2026-10-24': 'Legs', '2026-10-26': 'rest', '2026-10-01': 'Push' });
+  assert.deepEqual(mine.map((d) => d.routine?.name ?? '-'), ['Pull', 'Legs', '-', '-', '-', 'Push', '-']);
+  assert.equal(mine[3]!.planned, true);
   assert.equal(starterFor(3), 'full-body-3');
   assert.equal(starterFor(5), 'ppl-6');
 });
