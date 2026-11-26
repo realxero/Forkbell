@@ -1,5 +1,6 @@
+# Named ForkbellWidgetStore, not ForkbellWidget: that name is the widget extension's own module, and the clash broke the iOS build.
 Pod::Spec.new do |s|
-  s.name           = 'ForkbellWidget'
+  s.name           = 'ForkbellWidgetStore'
   s.version        = '1.0.0'
   s.summary        = 'Writes today\'s snapshot for the Forkbell home screen widget'
   s.description    = 'Finds the App Group the installed app really has (sideloaders rename it when they re-sign) and writes the widget snapshot there.'
