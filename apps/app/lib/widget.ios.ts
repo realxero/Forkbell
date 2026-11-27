@@ -7,7 +7,7 @@ import * as TaskManager from 'expo-task-manager';
 import { todayLocal, type DiaryDay, type Me, type WaterDay } from '@forkbell/shared';
 import { api, loadConnection } from './api';
 import { widgetStore } from '../modules/forkbell-widget';
-import { widgetToday } from './widget-today';
+import { widgetToday } from '@forkbell/shared';
 import type { WidgetToday } from './widget';
 
 export type { WidgetToday } from './widget';

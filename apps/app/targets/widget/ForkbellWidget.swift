@@ -1,7 +1,10 @@
 // Today at a glance: calories left, protein, carbs, fat and water.
-// The app writes a snapshot to the shared App Group whenever the day changes
-// (lib/widget.ios.ts); this only reads it. A snapshot from another day shows
-// as a fresh day with nothing eaten yet.
+// With a server address and a Shortcut key set in Edit Widget, it fetches
+// today from the server itself (/api/shortcuts/today) about every 20 minutes,
+// so it stays current without opening the app and whatever the signing allows.
+// Otherwise it reads the snapshot the app writes to the shared App Group
+// (lib/widget.ios.ts). A snapshot from another day shows as a fresh day.
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -21,8 +24,22 @@ private let group: String = {
   }
   names.append(builtGroup)
   if let id = app?.bundleIdentifier { names.append("group.\(id)") }
+  // Certificate signers (FlareStore, ESign…) may rename the group without saying so: its real name is in the profiles.
+  for b in [Bundle.main, app].compactMap({ $0 }) { names += profileGroups(b) }
   return names.first { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil } ?? builtGroup
 }()
+
+/// The App Groups in a bundle's embedded provisioning profile (a signed plist with the XML inside it as text).
+private func profileGroups(_ b: Bundle) -> [String] {
+  guard let url = b.url(forResource: "embedded", withExtension: "mobileprovision"),
+        let raw = try? Data(contentsOf: url),
+        let text = String(data: raw, encoding: .isoLatin1),
+        let start = text.range(of: "<?xml"), let end = text.range(of: "</plist>"),
+        let xml = text[start.lowerBound..<end.upperBound].data(using: .isoLatin1),
+        let plist = try? PropertyListSerialization.propertyList(from: xml, format: nil) as? [String: Any],
+        let ents = plist["Entitlements"] as? [String: Any] else { return [] }
+  return ents["com.apple.security.application-groups"] as? [String] ?? []
+}
 
 struct Today: Codable {
   var date: String
@@ -56,22 +73,51 @@ private func load() -> Today? {
   return t
 }
 
+/// Edit Widget: where to fetch today from. A Shortcut key only reads and asks; it can't log anything by itself.
+struct TodayConfig: WidgetConfigurationIntent {
+  static var title: LocalizedStringResource = "Forkbell"
+  static var description = IntentDescription("Add your server and a Shortcut key (Forkbell › Settings › Shortcuts) so the widget updates on its own.")
+  @Parameter(title: "Server address") var server: String?
+  @Parameter(title: "Shortcut key") var key: String?
+
+  var connected: Bool { !(server ?? "").isEmpty && !(key ?? "").isEmpty }
+}
+
+/// Today from the server, in the same shape the app writes; nil when not set up or unreachable.
+private func fetchToday(_ c: TodayConfig) async -> Today? {
+  guard c.connected, var base = c.server?.trimmingCharacters(in: .whitespacesAndNewlines),
+        let key = c.key?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+  if !base.contains("://") { base = "https://" + base }
+  while base.hasSuffix("/") { base.removeLast() }
+  guard let url = URL(string: "\(base)/api/shortcuts/today?today=\(todayString())") else { return nil }
+  var req = URLRequest(url: url, timeoutInterval: 15)
+  req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+  struct Reply: Decodable { let widget: Today? }
+  guard let got = try? await URLSession.shared.data(for: req), (got.1 as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+  return (try? JSONDecoder().decode(Reply.self, from: got.0))?.widget
+}
+
 struct Entry: TimelineEntry {
   let date: Date
   let today: Today?
+  var connected = false
 }
 
-struct Provider: TimelineProvider {
+struct Provider: AppIntentTimelineProvider {
   func placeholder(in context: Context) -> Entry {
     Entry(date: Date(), today: Today(date: todayString(), kcalGoal: 2200, kcalEaten: 1340, protein: 92, proteinGoal: 150, carbs: 160, carbsGoal: 220, fat: 48, fatGoal: 75, waterMl: 1250, waterGoalMl: 2000, netCarbs: false))
   }
-  func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
-    completion(context.isPreview ? placeholder(in: context) : Entry(date: Date(), today: load()))
+  func snapshot(for c: TodayConfig, in context: Context) async -> Entry {
+    if context.isPreview { return placeholder(in: context) }
+    return Entry(date: Date(), today: await fetchToday(c) ?? load(), connected: c.connected)
   }
-  func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-    // The app reloads the widget when you log; midnight starts a fresh day.
+  func timeline(for c: TodayConfig, in context: Context) async -> Timeline<Entry> {
+    let today = await fetchToday(c) ?? load()
+    // Connected: check again in 20 minutes (well inside WidgetKit's daily budget).
+    // Not: the app reloads it when you log. Either way midnight starts a fresh day.
     let midnight = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))
-    completion(Timeline(entries: [Entry(date: Date(), today: load())], policy: .after(midnight)))
+    let next = c.connected ? min(Date().addingTimeInterval(20 * 60), midnight) : midnight
+    return Timeline(entries: [Entry(date: Date(), today: today, connected: c.connected)], policy: .after(next))
   }
 }
 
@@ -134,7 +180,8 @@ struct WidgetView: View {
     if let t = entry.today {
       content(t)
     } else {
-      Text("Open Forkbell once to see today here.").font(.caption).multilineTextAlignment(.center)
+      Text(entry.connected ? "Can’t reach your server right now." : "Hold here, tap Edit Widget, and add your server and a Shortcut key.")
+        .font(.caption).multilineTextAlignment(.center)
     }
   }
 
@@ -196,7 +243,7 @@ struct ForkbellWidgetBundle: WidgetBundle {
 
 struct TodayWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "today", provider: Provider()) { entry in
+    AppIntentConfiguration(kind: "today", intent: TodayConfig.self, provider: Provider()) { entry in
       WidgetView(entry: entry).containerBackground(.fill.tertiary, for: .widget)
     }
     .configurationDisplayName("Today")

@@ -80,3 +80,16 @@ test('stretches are sorted into warm-ups, holds and foam rolling, with pictures'
   }
   assert.equal(new Set(s.map((x) => x.key)).size, s.length);
 });
+
+test('every built-in exercise has its own written tips', async () => {
+  const { tipsFor } = await import('@forkbell/shared');
+  const missing = builtinExercises.filter((e) => !tipsFor(e.name)).map((e) => e.name);
+  assert.deepEqual(missing, []);
+});
+
+test('every library exercise has written tips too', async () => {
+  const { tipsFor } = await import('@forkbell/shared');
+  const { default: data } = await import('../data/exercise-library.json', { with: { type: 'json' } });
+  const missing = (data.library as { name: string }[]).filter((e) => !tipsFor(e.name)).map((e) => e.name);
+  assert.deepEqual(missing, []);
+});

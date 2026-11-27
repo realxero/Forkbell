@@ -146,7 +146,7 @@ export default function ExerciseDetail() {
 
             {done && howTo}
 
-            {!!d.progressIdeas?.length && <ProgressIdeas ideas={d.progressIdeas} timed={d.exercise.kind === 'time'} />}
+            {!!d.progressIdeas?.length && <ProgressIdeas ideas={d.progressIdeas} timed={d.exercise.kind === 'time' || d.exercise.kind === 'cardio'} />}
             {!!d.variations?.length && <Variations list={d.variations} />}
           </>
         )}

@@ -4,7 +4,7 @@
     "slug": "forkbell",
     "scheme": "forkbell",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "ios": {
       "bundleIdentifier": "com.realxero.forkbell",

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { widgetStatus } from '../../../modules/forkbell-widget';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, type Href } from 'expo-router';
@@ -102,6 +103,17 @@ export default function Settings() {
 
   const serverLine =
     server === null ? '…' : server === 'unreachable' ? 'can’t reach it right now' : server === 'old' ? 'older than 0.11 (update it)' : versionLabel(server);
+  // Whether the home screen widget can see the app's numbers on this install (iPhone).
+  const widgetLine = (() => {
+    try {
+      const w = widgetStatus();
+      if (!w) return null;
+      if (w.group) return `Widget: connected (${w.group})`;
+      return `Widget: this install has no shared storage for it (groups: ${w.allowed?.join(', ') || 'none'}; keychain: ${w.keychain?.join(', ') || 'none'})`;
+    } catch {
+      return null;
+    }
+  })();
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -174,6 +186,7 @@ export default function Settings() {
           <View style={s.versions}>
             <Text style={type.small} selectable>App {versionLabel(BUILD)}</Text>
             <Text style={type.small} selectable>Server {serverLine}</Text>
+            {widgetLine && <Text style={[type.small, { textAlign: 'center' }]} selectable>{widgetLine}</Text>}
             {mismatch && (
               <Text style={[type.small, { color: color.over, textAlign: 'center' }]}>
                 The app and the server are different versions. Update {versionNewer(known.version, BUILD.version) ? 'the app' : 'the server'} so they match.

@@ -44,3 +44,5 @@ export * from './exercise-bonus.ts';
 export * from './meals.ts';
 export * from './readiness.ts';
 export * from './food-import.ts';
+export * from './exercise-tips.ts';
+export * from './widget-today.ts';

@@ -1,5 +1,6 @@
 // Variations of an exercise (the same movement done another way) and ways to
 // keep progressing when adding weight isn't the answer.
+import { tipsFor } from './exercise-tips.ts';
 import type { Exercise } from './training.ts';
 
 export type VariationLevel = 'harder' | 'angle' | 'easier';
@@ -147,9 +148,37 @@ export interface ProgressIdea {
  * stalled, or there's no heavier weight to add.
  */
 export function progressIdeas(ex: Pick<Exercise, 'name' | 'kind' | 'equipment'>): ProgressIdea[] {
+  // Written ideas for this exercise first, then the general ones they don't already cover.
+  const own = tipsFor(ex.name)?.progress ?? [];
+  const seen = new Set(own.map((i) => i.key));
+  return [...own, ...generalIdeas(ex).filter((i) => !seen.has(i.key))];
+}
+
+function generalIdeas(ex: Pick<Exercise, 'name' | 'kind' | 'equipment'>): ProgressIdea[] {
   const { mods } = movementOf(ex.name);
   const oneSide = mods.has('one-arm') || mods.has('one-leg');
   const canSplit = !oneSide && ['dumbbell', 'cable', 'kettlebell', 'machine', 'band', 'bodyweight'].includes(ex.equipment);
+  if (ex.kind === 'cardio') {
+    // The one lever that fits the machine: resistance on a bike, incline when you run or walk, and so on.
+    const name = ex.name.toLowerCase();
+    const lever: ProgressIdea = /bike|cycl|spin/.test(name)
+      ? { key: 'resistance', title: 'More resistance', detail: 'One step more resistance at the same cadence, or a gear harder on the road.' }
+      : /row/.test(name)
+        ? { key: 'split', title: 'A faster split', detail: 'Take 1–2 seconds off your 500 m pace, with stronger strokes, not more of them.' }
+        : /run|jog|walk|treadmill|hike/.test(name)
+          ? { key: 'incline', title: 'Add incline or hills', detail: 'Raise the treadmill 1–2% or pick a hillier route at the same pace.' }
+          : /swim/.test(name)
+            ? { key: 'pace', title: 'Faster lengths', detail: 'Same distance, a few seconds quicker per length.' }
+            : /stair|step|climb/.test(name)
+              ? { key: 'level', title: 'A higher level', detail: 'One level faster for the same time.' }
+              : { key: 'intensity', title: 'Work a little harder', detail: 'Same time at a slightly faster pace or a higher level.' };
+    return [
+      { key: 'longer', title: 'Go a little longer', detail: 'Add 5 minutes, or about 10%, each week. Not more than that.' },
+      lever,
+      { key: 'intervals', title: 'Intervals', detail: 'Alternate 1 minute hard with 2 minutes easy, 5–8 times. Start with one session a week.' },
+      { key: 'more', title: 'One more session', detail: 'Add an easy session to your week before making any one harder.' },
+    ];
+  }
   if (ex.kind === 'time') {
     return [
       { key: 'longer', title: 'Hold longer', detail: 'Add 5–10 seconds to each hold. Once you can do 60 s, make it harder instead.' },

@@ -145,6 +145,9 @@ export async function createFood(input: Omit<FoodCandidate, 'barcode' | 'portion
 
 // Training ----------------------------------------------------------------------
 
+/** A workout opened but not started yet: its clock waits until you're ready. */
+export const waitingKey = (workoutId: string) => `device:workout-waiting:${workoutId}`;
+
 /**
  * Start a workout. Online, the server fills in this session's suggested
  * weights. Offline, it starts from the routine on the device with empty sets.
@@ -152,6 +155,8 @@ export async function createFood(input: Omit<FoodCandidate, 'barcode' | 'portion
 export async function startWorkout(date: string, routineId?: string, generate = false): Promise<Workout> {
   const id = newId();
   const startedAt = new Date().toISOString();
+  // The clock waits for Start workout on the workout screen (or the first ticked set).
+  writeCache(waitingKey(id), true);
   const r = await send<{ workout: Workout }>('POST', '/api/workouts', { id, date, startedAt, ...(routineId ? { routineId } : {}), ...(generate ? { generate } : {}) }, { label: 'Start workout' });
   let workout: Workout;
   if (!r.queued && r.data?.workout) workout = r.data.workout;
@@ -193,8 +198,8 @@ export async function saveWorkout(w: Workout) {
       name: w.name,
       date: w.date,
       notes: w.notes,
-      // A finished workout can have its times fixed; one that's going keeps the clock running.
-      ...(w.finishedAt ? { startedAt: toIso(w.startedAt), finishedAt: toIso(w.finishedAt) } : {}),
+      // A finished workout can have its times fixed; one that's going sends its start, which moves when you tap Start workout.
+      ...(w.finishedAt ? { startedAt: toIso(w.startedAt), finishedAt: toIso(w.finishedAt) } : { startedAt: toIso(w.startedAt) }),
       exercises: w.exercises.map((e) => ({ exerciseId: e.exercise.id, restSeconds: e.restSeconds, targetSets: e.targetSets, repMin: e.repMin, repMax: e.repMax, sets: e.sets, pain: e.pain ?? false, painNote: e.painNote ?? null, superset: e.superset ?? null })),
     },
     { label: `Save ${w.name}`, coalesceKey: `workout:${w.id}` },

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BIG_JUMP, jumpShare, movementOf, progressIdeas, variationsOf, type Exercise } from './index.ts';
+import { BIG_JUMP, exerciseCues, jumpShare, movementOf, progressIdeas, variationsOf, type Exercise } from './index.ts';
 
 let n = 0;
 const ex = (name: string, extra: Partial<Exercise> = {}): Exercise => ({
@@ -75,6 +75,11 @@ test('ways to progress besides weight fit the exercise', () => {
   assert.ok(keys({ name: 'Pull-up', kind: 'bodyweight', equipment: 'bodyweight' }).includes('load'));
   assert.deepEqual(keys({ name: 'Plank', kind: 'time', equipment: 'bodyweight' })[0], 'longer');
   for (const k of ['reps', 'set', 'slow', 'pause', 'half', 'rest']) assert.ok(keys({ name: 'Curl', kind: 'weight', equipment: 'dumbbell' }).includes(k), k);
+  // cardio: nothing about weight or the way down, and the lever fits the machine
+  const bike = keys({ name: 'Bike ride', kind: 'cardio', equipment: 'machine' });
+  assert.ok(bike.includes('resistance') && !bike.includes('reps') && !bike.includes('slow'));
+  assert.ok(keys({ name: 'Treadmill run', kind: 'cardio', equipment: 'machine' }).includes('incline'));
+  assert.equal(exerciseCues({ name: 'Bike ride', muscle: 'full body', kind: 'cardio' }).hardLabel, 'Too hard if');
 });
 
 test('a 5 lb jump on 15 lb is big; on 225 it isn’t', () => {

@@ -25,7 +25,7 @@ import { MealQuickActions } from '../../../components/MealQuickActions';
 import { StreakCheer } from '../../../components/StreakCheer';
 import { WaterCard } from '../../../components/WaterCard';
 import { startWidgetRefresh, updateWidget } from '../../../lib/widget';
-import { widgetToday } from '../../../lib/widget-today';
+import { widgetToday } from '@forkbell/shared';
 import { glucoseReadings } from '../../../lib/health';
 import { getHealthSettings, healthSupported } from '../../../lib/health-sync';
 import { MicrosCard } from '../../../components/MicrosCard';
