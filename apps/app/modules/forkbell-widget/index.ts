@@ -5,4 +5,4 @@ import { requireOptionalNativeModule } from 'expo';
 
 type Native = { write(key: string, value: string): string | null };
 
-export const widgetStore = Platform.OS === 'ios' ? requireOptionalNativeModule<Native>('ForkbellWidget') : null;
+export const widgetStore = Platform.OS === 'ios' ? requireOptionalNativeModule<Native>('ForkbellWidgetStore') : null;

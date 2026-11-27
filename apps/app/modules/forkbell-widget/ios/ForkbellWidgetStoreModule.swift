@@ -15,9 +15,9 @@ func forkbellGroup() -> String? {
   return names.first { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil }
 }
 
-public class ForkbellWidgetModule: Module {
+public class ForkbellWidgetStoreModule: Module {
   public func definition() -> ModuleDefinition {
-    Name("ForkbellWidget")
+    Name("ForkbellWidgetStore")
 
     /// Saves the value and redraws the widget; returns the group used, or nil when the install has none.
     Function("write") { (key: String, value: String) -> String? in
