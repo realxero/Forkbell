@@ -601,9 +601,13 @@ test('Siri’s “how am I doing” includes water, and a fast when the timer is
   await u.call('PUT', '/api/me/preferences', { ...me.preferences, fasting: { show: true, hours: 16 } });
   await u.call('POST', '/api/wellbeing/fasts', { targetHours: 16, startedAt: new Date(Date.now() - 5 * 3_600_000).toISOString() });
   const r = await fetch(`${BASE}/api/shortcuts/today?today=${today}`, { headers: { authorization: `Bearer ${keyToken}` } });
-  const body = (await r.json()) as { speak: string; waterMl: number; fastingHours: number };
+  const body = (await r.json()) as { speak: string; waterMl: number; fastingHours: number; widget?: { date: string; kcalEaten: number; waterMl?: number } };
   assert.equal(r.status, 200, JSON.stringify(body));
   assert.equal(body.waterMl, 500);
+  // The home screen widget decodes `widget`; without it the widget says it can't reach the server.
+  assert.equal(body.widget?.date, today, JSON.stringify(body));
+  assert.equal(typeof body.widget?.kcalEaten, 'number');
+  assert.equal(body.widget?.waterMl, 500);
   assert.match(body.speak, /17 ounces of water/);
   assert.match(body.speak, /5 hours into your fast/);
 });
