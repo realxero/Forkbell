@@ -54,6 +54,8 @@ struct Today: Codable {
   var waterMl: Double?
   var waterGoalMl: Double?
   var netCarbs: Bool?
+  /// The app has changes the server hasn't got yet (logged offline, or still sending).
+  var pending: Bool?
 }
 
 private func todayString(_ d: Date = Date()) -> String {
@@ -83,6 +85,12 @@ struct TodayConfig: WidgetConfigurationIntent {
   var connected: Bool { !(server ?? "").isEmpty && !(key ?? "").isEmpty }
 }
 
+/// The app's own numbers while it has changes still to send (the server's would be missing them), else the server's.
+private func current(_ c: TodayConfig) async -> Today? {
+  if let mine = load(), mine.pending == true { return mine }
+  return await fetchToday(c) ?? load()
+}
+
 /// Today from the server, in the same shape the app writes; nil when not set up or unreachable.
 private func fetchToday(_ c: TodayConfig) async -> Today? {
   guard c.connected, var base = c.server?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -109,10 +117,10 @@ struct Provider: AppIntentTimelineProvider {
   }
   func snapshot(for c: TodayConfig, in context: Context) async -> Entry {
     if context.isPreview { return placeholder(in: context) }
-    return Entry(date: Date(), today: await fetchToday(c) ?? load(), connected: c.connected)
+    return Entry(date: Date(), today: await current(c), connected: c.connected)
   }
   func timeline(for c: TodayConfig, in context: Context) async -> Timeline<Entry> {
-    let today = await fetchToday(c) ?? load()
+    let today = await current(c)
     // Connected: check again in 20 minutes (well inside WidgetKit's daily budget).
     // Not: the app reloads it when you log. Either way midnight starts a fresh day.
     let midnight = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))

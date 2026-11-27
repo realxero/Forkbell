@@ -8,17 +8,20 @@ import WidgetKit
 
 private let builtGroup = "group.com.realxero.forkbell"
 
-func forkbellGroup() -> String? {
+// Globals are worked out once, on first use: the profile and groups can't change while the app runs.
+func forkbellGroup() -> String? { group }
+private let group: String? = {
   var names = (Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]) ?? []
   names.append(builtGroup)
   if let id = Bundle.main.bundleIdentifier { names.append("group.\(id)") }
   // Certificate signers (FlareStore, ESign…) may rename the group without saying so: its real name is in the profile.
   names += (profileEntitlements()?["com.apple.security.application-groups"] as? [String]) ?? []
   return names.first { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil }
-}
+}()
 
 /// The embedded provisioning profile's entitlements (a signed plist; the XML sits inside it as text).
-func profileEntitlements() -> [String: Any]? {
+func profileEntitlements() -> [String: Any]? { entitlements }
+private let entitlements: [String: Any]? = {
   guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
         let raw = try? Data(contentsOf: url),
         let text = String(data: raw, encoding: .isoLatin1),
@@ -27,7 +30,7 @@ func profileEntitlements() -> [String: Any]? {
         let plist = try? PropertyListSerialization.propertyList(from: xml, format: nil) as? [String: Any],
         let ents = plist["Entitlements"] as? [String: Any] else { return nil }
   return ents
-}
+}()
 
 public class ForkbellWidgetStoreModule: Module {
   public func definition() -> ModuleDefinition {

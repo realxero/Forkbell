@@ -145,8 +145,10 @@ export async function createFood(input: Omit<FoodCandidate, 'barcode' | 'portion
 
 // Training ----------------------------------------------------------------------
 
-/** A workout opened but not started yet: its clock waits until you're ready. */
-export const waitingKey = (workoutId: string) => `device:workout-waiting:${workoutId}`;
+/** The workout opened but not started yet: its clock waits until you're ready. One key, holding its id. */
+const WAITING = 'device:workout-waiting';
+export const isWaiting = (workoutId: string) => readCache<string>(WAITING) === workoutId;
+export const stopWaiting = () => updateCache(WAITING, () => undefined);
 
 /**
  * Start a workout. Online, the server fills in this session's suggested
@@ -156,7 +158,7 @@ export async function startWorkout(date: string, routineId?: string, generate = 
   const id = newId();
   const startedAt = new Date().toISOString();
   // The clock waits for Start workout on the workout screen (or the first ticked set).
-  writeCache(waitingKey(id), true);
+  writeCache(WAITING, id);
   const r = await send<{ workout: Workout }>('POST', '/api/workouts', { id, date, startedAt, ...(routineId ? { routineId } : {}), ...(generate ? { generate } : {}) }, { label: 'Start workout' });
   let workout: Workout;
   if (!r.queued && r.data?.workout) workout = r.data.workout;
@@ -211,6 +213,7 @@ export type FinishSummary = { durationSeconds: number; sets: number; volumeKg: n
 /** Finish a workout. Offline, records are worked out when it reaches the server. */
 export async function finishWorkout(w: Workout): Promise<{ discarded: boolean; summary: FinishSummary | null }> {
   const finishedAt = new Date().toISOString();
+  if (isWaiting(w.id)) stopWaiting();
   const r = await send<{ summary?: FinishSummary; discarded?: boolean }>('POST', `/api/workouts/${w.id}/finish`, { finishedAt }, { label: `Finish ${w.name}` });
   updateCache('/api/workouts/open', () => ({ workout: null }));
   const kept = w.exercises.map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) })).filter((e) => e.sets.length);
@@ -237,6 +240,7 @@ export async function finishWorkout(w: Workout): Promise<{ discarded: boolean; s
 }
 
 export async function discardWorkout(w: Workout) {
+  if (isWaiting(w.id)) stopWaiting();
   updateCache('/api/workouts/open', (o: { workout: Workout | null } | undefined) => (o?.workout?.id === w.id ? { workout: null } : o));
   updateCache(`/api/workouts/${w.id}`, () => undefined);
   updateCache<{ workouts: WorkoutSummary[] }>('/api/workouts', (h) => h && { workouts: h.workouts.filter((x) => x.id !== w.id) });

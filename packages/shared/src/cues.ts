@@ -2,12 +2,13 @@
 // General coaching cues by movement pattern (from the name) and by muscle,
 // so every exercise in the library gets sensible ones. Not medical advice:
 // sharp or joint pain always means stop.
+import { tipsFor } from './exercise-tips.ts';
+
 interface Cues {
   feel: string;
   tooHeavy: string[];
 }
 
-import { tipsFor } from './exercise-tips.ts';
 const PATTERNS: [RegExp, Cues][] = [
   [/\b(squat|leg press|hack squat|lunge|split squat|step[- ]?up)\b/i, {
     feel: 'Front of your thighs and your glutes, pushing through the whole foot.',
@@ -93,7 +94,7 @@ export function exerciseCues(e: { name: string; muscle: string; kind?: string })
   };
 }
 
-/** How a set should feel by the end, by reps left in the tank (RPE). */
 /** How most cardio should feel. */
 const CARDIO_EFFORT = 'Most sessions should be easy enough to talk in short sentences; keep the hard, breathless efforts for intervals.';
+/** How a set should feel by the end, by reps left in the tank (RPE). */
 export const EFFORT_GUIDE = 'Working sets should end with about 1–3 good reps left (RPE 7–9): hard, but your form looks the same as the first rep.';

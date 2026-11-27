@@ -103,17 +103,16 @@ export default function Settings() {
 
   const serverLine =
     server === null ? '…' : server === 'unreachable' ? 'can’t reach it right now' : server === 'old' ? 'older than 0.11 (update it)' : versionLabel(server);
-  // Whether the home screen widget can see the app's numbers on this install (iPhone).
-  const widgetLine = (() => {
+  // Whether the home screen widget can see the app's numbers on this install (iPhone). Read once: it can't change while the app runs.
+  const [widgetLine] = useState(() => {
     try {
       const w = widgetStatus();
       if (!w) return null;
-      if (w.group) return `Widget: connected (${w.group})`;
-      return `Widget: this install has no shared storage for it (groups: ${w.allowed?.join(', ') || 'none'}; keychain: ${w.keychain?.join(', ') || 'none'})`;
+      return w.group ? 'Widget: connected' : 'Widget: add your server and Shortcut key in Edit Widget';
     } catch {
       return null;
     }
-  })();
+  });
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>

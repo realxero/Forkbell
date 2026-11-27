@@ -8,9 +8,10 @@ import { afterSet, bigJump, instant, recoveredAt, restAdvice, restCue, setFeedba
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet, readCache, writeCache } from '../../lib/sync';
-import { discardWorkout, finishWorkout, saveWorkout, waitingKey, type FinishSummary } from '../../lib/actions';
+import { discardWorkout, finishWorkout, saveWorkout, isWaiting, stopWaiting, type FinishSummary } from '../../lib/actions';
 import { confirm } from '../../lib/confirm';
 import { formatDuration, useUnit } from '../../lib/units';
+import { Elapsed } from '../../components/Elapsed';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SwapSheet } from '../../components/SwapSheet';
@@ -389,9 +390,9 @@ export default function WorkoutScreen() {
 
   /** Tick a set. Empty boxes take what the placeholders showed, so a repeat of last time is one tap. */
   // Not started yet: the clock waits for Start workout, or for the first set you tick.
-  const [waiting, setWaiting] = useState(() => readCache<boolean>(waitingKey(id)) === true);
+  const [waiting, setWaiting] = useState(() => isWaiting(id));
   const begin = () => {
-    writeCache(waitingKey(id), null);
+    stopWaiting();
     setWaiting(false);
     haptic.tap();
     update((x) => ({ ...x, startedAt: new Date().toISOString() }));
@@ -399,7 +400,7 @@ export default function WorkoutScreen() {
   const toggleDone = (i: number, k: number) => {
     const e = w!.exercises[i]!;
     const s = e.sets[k]!;
-    if (waiting) begin();
+    if (waiting && !w!.finishedAt) begin(); // finished elsewhere: never move its start
     if (s.done) return updateSet(i, k, { done: false });
     const ph = placeholderFor(e, k);
     const patch: Partial<SetEntry> = { done: true };
@@ -1160,18 +1161,6 @@ function PainNote({ value, onSave }: { value: string; onSave: (note: string) => 
 
 
 /** The muscles a workout works, main ones first. */
-/** The workout's running time, on its own one-second clock. */
-function Elapsed({ startedAt, finishedAt }: Pick<Workout, 'startedAt' | 'finishedAt'>) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    if (finishedAt) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [finishedAt]);
-  const secs = Math.max(0, Math.floor(((finishedAt ? instant(finishedAt) : now) - instant(startedAt)) / 1000)) || 0;
-  return <>{finishedAt ? `Finished · ${formatDuration(secs)}` : formatDuration(secs)}</>;
-}
-
 const trained = (w: Workout) => [...new Set(w.exercises.map((e) => e.exercise.muscle))].filter((m) => m !== 'full body').slice(0, 5);
 
 
