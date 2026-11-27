@@ -8,9 +8,10 @@ import { afterSet, bigJump, instant, recoveredAt, restAdvice, restCue, setFeedba
 import { TextInput } from 'react-native';
 import { api } from '../../lib/api';
 import { cachedGet, readCache, writeCache } from '../../lib/sync';
-import { discardWorkout, finishWorkout, saveWorkout, type FinishSummary } from '../../lib/actions';
+import { discardWorkout, finishWorkout, saveWorkout, isWaiting, stopWaiting, type FinishSummary } from '../../lib/actions';
 import { confirm } from '../../lib/confirm';
 import { formatDuration, useUnit } from '../../lib/units';
+import { Elapsed } from '../../components/Elapsed';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SwapSheet } from '../../components/SwapSheet';
@@ -388,9 +389,18 @@ export default function WorkoutScreen() {
     updateExercise(i, (e) => ({ ...e, sets: e.sets.map((s, j) => (j === k ? { ...s, ...patch } : s)) }));
 
   /** Tick a set. Empty boxes take what the placeholders showed, so a repeat of last time is one tap. */
+  // Not started yet: the clock waits for Start workout, or for the first set you tick.
+  const [waiting, setWaiting] = useState(() => isWaiting(id));
+  const begin = () => {
+    stopWaiting();
+    setWaiting(false);
+    haptic.tap();
+    update((x) => ({ ...x, startedAt: new Date().toISOString() }));
+  };
   const toggleDone = (i: number, k: number) => {
     const e = w!.exercises[i]!;
     const s = e.sets[k]!;
+    if (waiting && !w!.finishedAt) begin(); // finished elsewhere: never move its start
     if (s.done) return updateSet(i, k, { done: false });
     const ph = placeholderFor(e, k);
     const patch: Partial<SetEntry> = { done: true };
@@ -521,6 +531,17 @@ export default function WorkoutScreen() {
   /** Ramp-up sets before the working weight, loadable with your plates and the bar you use. */
   const addWarmups = (i: number) => {
     const e = w!.exercises[i]!;
+    // Bodyweight and holds: an easier set or two first (half the reps or the time, then half the added weight).
+    if (e.exercise.kind !== 'weight') {
+      const at = Math.max(0, e.sets.findIndex((x) => !x.warmup));
+      const ph = placeholderFor(e, at);
+      const timed = e.exercise.kind === 'time';
+      const added = e.sets[at]?.weightKg ?? ph.weightKg ?? 0;
+      const easy = { reps: timed ? null : Math.max(3, Math.round((e.sets[at]?.reps ?? ph.reps ?? 8) / 2)), seconds: timed ? Math.max(10, Math.round((e.sets[at]?.seconds ?? ph.seconds ?? 30) / 2)) : null };
+      const warm = [{ ...easy, weightKg: timed ? null : 0 }, ...(added > 0 ? [{ ...easy, reps: easy.reps && 3, weightKg: Math.round(added / 2) }] : [])];
+      updateExercise(i, (x) => ({ ...x, sets: [...warm.map((ws) => ({ ...ws, rpe: null, warmup: true, done: false })), ...x.sets.filter((st) => !st.warmup)] }));
+      return haptic.tap();
+    }
     const kg = nextWorkingWeight(e);
     if (!kg) return setHint('Enter your working weight first, then tap Warm-up sets.');
     const unit = units.unit;
@@ -666,7 +687,7 @@ export default function WorkoutScreen() {
           <View style={{ alignItems: 'center' }}>
             <Text style={type.title} numberOfLines={1}>{w.name}</Text>
             <Text style={[type.small, type.number]}>
-              <Elapsed startedAt={w.startedAt} finishedAt={w.finishedAt} />
+              {waiting && !w.finishedAt ? <Text style={[type.small, { textAlign: 'center' }]}>Not started</Text> : <Elapsed startedAt={w.startedAt} finishedAt={w.finishedAt} />}
               {saveState === 'saving' ? ' · saving…' : saveState === 'error' ? ' · not saved' : ''}
             </Text>
           </View>
@@ -788,9 +809,15 @@ export default function WorkoutScreen() {
         {/* Finish sits where a thumb reaches it; while you rest, the rest timer takes its place. */}
         {!w.finishedAt && restLeft === null && !pad && (
           <View style={[s.finishBar, { bottom: space(3) + insets.bottom }]}>
-            <Pressable onPress={finish} disabled={finishing} style={[s.finish, finishing && { opacity: 0.5 }]} accessibilityRole="button" accessibilityState={{ busy: finishing, disabled: finishing }}>
-              <Text style={s.finishText}>{finishing ? 'Finishing…' : 'Finish workout'}</Text>
-            </Pressable>
+            {waiting ? (
+              <Pressable onPress={begin} style={s.finish} accessibilityRole="button" accessibilityHint="Starts the workout clock">
+                <Text style={s.finishText}>Start workout</Text>
+              </Pressable>
+            ) : (
+              <Pressable onPress={finish} disabled={finishing} style={[s.finish, finishing && { opacity: 0.5 }]} accessibilityRole="button" accessibilityState={{ busy: finishing, disabled: finishing }}>
+                <Text style={s.finishText}>{finishing ? 'Finishing…' : 'Finish workout'}</Text>
+              </Pressable>
+            )}
           </View>
         )}
         {restLeft !== null && !pad && (
@@ -1082,7 +1109,7 @@ function ExerciseCard(props: {
       {kind === 'cardio' && <CardioSummary e={e} unit={units.unit} />}
       <View style={s.cardFoot}>
         <Pressable onPress={props.onAddSet} style={buttons.link}><Text style={s.addText}>{kind === 'cardio' ? '+ Add a bout' : '+ Add set'}</Text></Pressable>
-        {e.exercise.kind === 'weight' && (
+        {e.exercise.kind !== 'cardio' && (
           <Pressable onPress={props.onWarmupSets} hitSlop={6} accessibilityLabel={`Add warm-up sets for ${e.exercise.name}`}><Text style={s.addText}>Warm-up sets</Text></Pressable>
         )}
         {e.exercise.kind === 'weight' && usesPlates(e.exercise) && (
@@ -1134,18 +1161,6 @@ function PainNote({ value, onSave }: { value: string; onSave: (note: string) => 
 
 
 /** The muscles a workout works, main ones first. */
-/** The workout's running time, on its own one-second clock. */
-function Elapsed({ startedAt, finishedAt }: Pick<Workout, 'startedAt' | 'finishedAt'>) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    if (finishedAt) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [finishedAt]);
-  const secs = Math.max(0, Math.floor(((finishedAt ? instant(finishedAt) : now) - instant(startedAt)) / 1000)) || 0;
-  return <>{finishedAt ? `Finished · ${formatDuration(secs)}` : formatDuration(secs)}</>;
-}
-
 const trained = (w: Workout) => [...new Set(w.exercises.map((e) => e.exercise.muscle))].filter((m) => m !== 'full body').slice(0, 5);
 
 

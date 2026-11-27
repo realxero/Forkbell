@@ -2,6 +2,8 @@
 // General coaching cues by movement pattern (from the name) and by muscle,
 // so every exercise in the library gets sensible ones. Not medical advice:
 // sharp or joint pain always means stop.
+import { tipsFor } from './exercise-tips.ts';
+
 interface Cues {
   feel: string;
   tooHeavy: string[];
@@ -70,14 +72,29 @@ const BY_MUSCLE: Record<string, string> = {
 const GENERAL = ['Your form changes to finish a rep', 'You can’t control the way down', 'Reps get much slower than usual long before the last one'];
 
 /** Cues for one exercise. Always ends with the rule that sharp pain means stop. */
-export function exerciseCues(e: { name: string; muscle: string }): Cues & { stop: string } {
+export function exerciseCues(e: { name: string; muscle: string; kind?: string }): Cues & { stop: string; hardLabel: string; effort: string } {
+  // Cardio has no weight: say what too hard feels like instead.
+  const own = tipsFor(e.name);
+  if (e.kind === 'cardio') {
+    return {
+      feel: own?.feel ?? 'Your breathing and heart rate go up and stay up; the work feels steady, not straining.',
+      tooHeavy: own?.tooHeavy ?? ['You can’t speak a short sentence on what should be an easy session', 'Your form falls apart, or you feel dizzy or sick', 'You can’t keep the pace for the time you planned'],
+      stop: 'Chest pain, dizziness or feeling faint is different from effort: stop and rest.',
+      hardLabel: 'Too hard if',
+      effort: CARDIO_EFFORT,
+    };
+  }
   const hit = PATTERNS.find(([re]) => re.test(e.name))?.[1];
   return {
-    feel: hit?.feel ?? BY_MUSCLE[e.muscle] ?? 'The muscle the exercise is for, not your joints.',
-    tooHeavy: hit?.tooHeavy ?? GENERAL,
+    feel: own?.feel ?? hit?.feel ?? BY_MUSCLE[e.muscle] ?? 'The muscle the exercise is for, not your joints.',
+    tooHeavy: own?.tooHeavy ?? hit?.tooHeavy ?? GENERAL,
     stop: 'Sharp, pinching or joint pain is different from effort: stop, and swap or lighten it.',
+    hardLabel: 'Too heavy if',
+    effort: EFFORT_GUIDE,
   };
 }
 
+/** How most cardio should feel. */
+const CARDIO_EFFORT = 'Most sessions should be easy enough to talk in short sentences; keep the hard, breathless efforts for intervals.';
 /** How a set should feel by the end, by reps left in the tank (RPE). */
 export const EFFORT_GUIDE = 'Working sets should end with about 1–3 good reps left (RPE 7–9): hard, but your form looks the same as the first rep.';

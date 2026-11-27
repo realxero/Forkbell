@@ -75,7 +75,10 @@ export function WorkoutBell({ workoutId, beforeAsk }: { workoutId: string; befor
   return (
     <>
       <Pressable onPress={() => setOpen(true)} style={s.slot} hitSlop={6} accessibilityLabel="Ask Bell about this workout">
-        <BellAvatar size={30} tint={color.onAccent} face={color.accent} />
+        {/* A filled accent circle, like Bell's button on Food, so it shows in light and dark. */}
+        <View style={s.badge}>
+          <BellAvatar size={24} tint={color.onAccent} face={color.accent} />
+        </View>
       </Pressable>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <KeyboardLift>
@@ -124,6 +127,7 @@ export function WorkoutBell({ workoutId, beforeAsk }: { workoutId: string; befor
 
 const s = StyleSheet.create({
   slot: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  badge: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.accent, alignItems: 'center', justifyContent: 'center' },
   bubble: { flexDirection: 'row', gap: space(2), alignItems: 'center', backgroundColor: color.raised, borderRadius: radius.row, padding: space(3) },
   head: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   msg: { borderRadius: radius.row, padding: space(3), maxWidth: '88%' },

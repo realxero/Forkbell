@@ -6,16 +6,20 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { todayLocal, type DiaryDay, type Me, type WaterDay } from '@forkbell/shared';
 import { api, loadConnection } from './api';
+import { onSyncChange, waitingNow } from './sync';
 import { widgetStore } from '../modules/forkbell-widget';
-import { widgetToday } from './widget-today';
+import { widgetToday } from '@forkbell/shared';
 import type { WidgetToday } from './widget';
 
 export type { WidgetToday } from './widget';
 
 let last = '';
+let shown: WidgetToday | null = null;
 
 export function updateWidget(today: WidgetToday): void {
-  const json = JSON.stringify(today);
+  shown = today;
+  // pending: changes not on the server yet, so the widget keeps these numbers over the server's until they're sent.
+  const json = JSON.stringify({ ...today, pending: waitingNow().count > 0 });
   if (json === last) return;
   last = json;
   try {
@@ -29,6 +33,9 @@ export function updateWidget(today: WidgetToday): void {
     // An install without the App Group (some sideloaders strip it): no widget, nothing else changes.
   }
 }
+
+// Once the outbox empties, say so, and the widget goes back to asking the server.
+onSyncChange(() => shown && updateWidget(shown));
 
 // Now and then while the app is closed, iOS wakes it briefly to fetch today and
 // redraw the widget, so food logged elsewhere (Shortcuts, the web, another phone)

@@ -196,7 +196,7 @@ export function setSyncOwner(id: string | null) {
  * neither sends nor sees any of it. Settings that belong to the phone
  * (theme, sounds, the health connection, ...) stay.
  */
-const PERSONAL_DEVICE_KEYS = ['device:tools-about', 'device:bell-chat', 'device:shopping', 'device:checkin:', 'device:fast-asked', 'device:rest-asked', 'device:streak-cheers'];
+const PERSONAL_DEVICE_KEYS = ['device:tools-about', 'device:bell-chat', 'device:shopping', 'device:checkin:', 'device:fast-asked', 'device:rest-asked', 'device:streak-cheers', 'device:workout-waiting'];
 export async function forgetAccount() {
   await initSync();
   state.outbox = state.outbox.filter((o) => o.userId && o.userId !== owner);
@@ -294,6 +294,12 @@ export function clearProblems() {
 }
 
 /** The signed-in person's waiting changes right now (for a decision made after a flush). */
+/** Run on every sync or cache change; returns the unsubscribe. */
+export function onSyncChange(l: () => void) {
+  listeners.add(l);
+  return () => void listeners.delete(l);
+}
+
 export function waitingNow() {
   const mine = state.outbox.filter((o) => !o.userId || o.userId === owner);
   return { count: mine.length, labels: mine.map((o) => o.label) };

@@ -6,7 +6,7 @@ import { AccessibilityInfo, Animated, Image, Modal, ScrollView, StyleSheet, Text
 import { Pressable } from './Tap';
 import { SheetFrame } from './Sheet';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { EFFORT_GUIDE, exerciseCues, type Exercise, type ExerciseHowTo } from '@forkbell/shared';
+import { exerciseCues, type Exercise, type ExerciseHowTo } from '@forkbell/shared';
 import { pictureSource } from '../lib/picture-cache';
 import { cachedGet } from '../lib/sync';
 import { color, radius, space, type, textSize } from '../lib/theme';
@@ -16,7 +16,7 @@ import { SkeletonCards } from './Skeleton';
 const src = pictureSource;
 
 /** Where you should feel it, signs it's too heavy, and when to stop. */
-export function CuesCard({ exercise }: { exercise: { name: string; muscle: string } }) {
+export function CuesCard({ exercise }: { exercise: { name: string; muscle: string; kind?: string } }) {
   const c = exerciseCues(exercise);
   return (
     <View style={s.cues}>
@@ -30,11 +30,11 @@ export function CuesCard({ exercise }: { exercise: { name: string; muscle: strin
       <View style={s.cueRow}>
         <Ionicons name="warning-outline" size={18} color={color.warnText} />
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={type.label}>Too heavy if</Text>
+          <Text style={type.label}>{c.hardLabel}</Text>
           {c.tooHeavy.map((t) => <Text key={t} style={type.body}>• {t}</Text>)}
         </View>
       </View>
-      <Text style={type.small}>{EFFORT_GUIDE}</Text>
+      <Text style={type.small}>{c.effort}</Text>
       <Text style={[type.small, { color: color.over, fontWeight: '700' }]}>{c.stop}</Text>
     </View>
   );

@@ -172,7 +172,8 @@ export async function saveWorkout(tx: Tx, id: string, input: SaveWorkoutInput) {
   // Times can be fixed afterwards (never in the future); a workout still going can't be finished this way.
   const past = (iso: string) => new Date(Math.min(Date.parse(iso), Date.now())).toISOString();
   const times = {
-    ...(input.startedAt ? { startedAt: past(input.startedAt) } : {}),
+    // Going: the start only moves later (Start workout), so a device with an older copy can't put the old start back.
+    ...(input.startedAt ? { startedAt: sql`case when ${workouts.finishedAt} is null then greatest(${workouts.startedAt}, ${past(input.startedAt)}::timestamptz) else ${past(input.startedAt)}::timestamptz end` } : {}),
     ...(input.finishedAt ? { finishedAt: sql`case when ${workouts.finishedAt} is null then null else ${past(input.finishedAt)}::timestamptz end` } : {}),
   };
   const updated = await tx.update(workouts).set({ name: input.name, date: input.date, notes: input.notes, ...times } as Partial<typeof workouts.$inferInsert>).where(eq(workouts.id, id)).returning({ id: workouts.id });

@@ -8,11 +8,12 @@ import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { addDays, todayLocal, type Program, type Workout, type WorkoutSummary, instant } from '@forkbell/shared';
 import { ApiError } from '../../../lib/api';
-import { cachedGet } from '../../../lib/sync';
+import { cachedGet, readCache } from '../../../lib/sync';
 import { problem } from '../../../lib/problem';
-import { startWorkout } from '../../../lib/actions';
+import { isWaiting, startWorkout } from '../../../lib/actions';
 import { LogPastWorkout } from '../../../components/LogPastWorkout';
 import { formatDuration, useUnit } from '../../../lib/units';
+import { Elapsed } from '../../../components/Elapsed';
 import { Chip } from '../../../components/AmountPicker';
 import { YourWeek } from '../../../components/YourWeek';
 import { RoutinePreview } from '../../../components/RoutinePreview';
@@ -55,7 +56,6 @@ export default function Train() {
   const [pick, setPick] = useState<string | null>(null);
   const [logPast, setLogPast] = useState(false);
   const [plates, setPlates] = useState(false);
-  const [now, setNow] = useState(Date.now());
 
   const load = useCallback(async () => {
     try {
@@ -80,15 +80,6 @@ export default function Train() {
     }, [load]),
   );
 
-  // The running workout's clock: tick while this tab is showing.
-  useFocusEffect(
-    useCallback(() => {
-      if (!open) return;
-      setNow(Date.now());
-      const t = setInterval(() => setNow(Date.now()), 30_000);
-      return () => clearInterval(t);
-    }, [open]),
-  );
   useEffect(() => setStartError(null), [pick]);
 
   const start = async (from: Exclude<Starting, null>, routineId?: string) => {
@@ -157,7 +148,7 @@ export default function Train() {
 
         {open ? (
           <Pressable onPress={() => router.push({ pathname: '/workout', params: { id: open.id } })} style={[s.card, s.live]} accessibilityHint="Opens the workout you’re in">
-            <Text style={[type.small, type.number, { color: color.chalk }]}>In progress · {formatDuration(Math.max(0, now - instant(open.startedAt)) / 1000)}</Text>
+            <Text style={[type.small, type.number, { color: color.chalk }]}>{isWaiting(open.id) ? 'Ready to start' : <>In progress · <Elapsed startedAt={open.startedAt} /></>}</Text>
             <Text style={[type.title, { color: color.chalk }]}>{open.name}</Text>
             <View style={s.resume}>
               <Text style={s.buttonText}>Resume workout</Text>

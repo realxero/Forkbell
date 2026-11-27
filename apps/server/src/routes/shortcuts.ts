@@ -8,7 +8,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { shortcutKeys, type connect } from '@forkbell/db';
-import { dateSchema, mealForTime, todayIn, type BellReply, type DiaryDay, type FoodProposal, fastProgress, waterGoalMl, waterText, type Fasts, type Preferences, type WaterDay } from '@forkbell/shared';
+import { dateSchema, mealForTime, todayIn, type BellReply, type DiaryDay, type FoodProposal, fastProgress, waterGoalMl, waterText, type Fasts, type Preferences, type WaterDay, widgetToday, type Me } from '@forkbell/shared';
 import { hashToken, MCP_PREFIX, SHORTCUT_PREFIX, type AppEnv } from '../auth.ts';
 import { timeZoneOf } from '../today.ts';
 
@@ -147,7 +147,7 @@ export function shortcutRoutes(db: ReturnType<typeof connect>, internal: Interna
       waterLine,
       fastLine,
     ].filter(Boolean);
-    return c.json({ speak: `${parts.join(', ')}.`.replace(/, ([^,]*)\.$/, ', and $1.'), caloriesLeft: kcal, proteinLeft: protein, totals: day.totals, goals: day.goals, waterMl: water?.totalMl ?? null, fastingHours: fasting?.open ? Math.round(fastProgress(fasting.open).hours * 10) / 10 : null });
+    return c.json({ speak: `${parts.join(', ')}.`.replace(/, ([^,]*)\.$/, ', and $1.'), caloriesLeft: kcal, proteinLeft: protein, totals: day.totals, goals: day.goals, waterMl: water?.totalMl ?? null, ...(me ? { widget: widgetToday(day, me as Me, water) } : {}), fastingHours: fasting?.open ? Math.round(fastProgress(fasting.open).hours * 10) / 10 : null });
   });
 
   return r;

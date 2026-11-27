@@ -1,8 +1,25 @@
 // Today's numbers in the widget's shape, from the diary and water days. Used by
-// the Today screen and by the background refresh (widget.ios.ts).
-import type { DiaryDay, Me, WaterDay } from '@forkbell/shared';
-import { waterGoalMl } from '@forkbell/shared';
-import type { WidgetToday } from './widget';
+// the app (Today screen, background refresh) and by the server, for a widget
+// that fetches today itself.
+import type { DiaryDay, Me } from './types.ts';
+import type { WaterDay } from './water.ts';
+import { waterGoalMl } from './water.ts';
+
+/** What the home screen widget shows: the app writes it to the widget, and the widget can fetch it from /api/shortcuts/today. */
+export interface WidgetToday {
+  date: string;
+  kcalGoal: number | null;
+  kcalEaten: number;
+  protein: number;
+  proteinGoal: number | null;
+  carbs: number;
+  carbsGoal: number | null;
+  fat: number;
+  fatGoal: number | null;
+  netCarbs: boolean;
+  waterMl?: number;
+  waterGoalMl?: number;
+}
 
 export function widgetToday(day: DiaryDay, me: Me, water: WaterDay | null | undefined): WidgetToday {
   const net = !!me.preferences.netCarbs;

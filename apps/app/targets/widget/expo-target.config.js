@@ -6,7 +6,7 @@ module.exports = (config) => ({
   name: 'ForkbellWidget',
   displayName: 'Forkbell',
   deploymentTarget: '17.0',
-  frameworks: ['SwiftUI', 'WidgetKit'],
+  frameworks: ['SwiftUI', 'WidgetKit', 'AppIntents'],
   entitlements: {
     'com.apple.security.application-groups': config.ios.entitlements['com.apple.security.application-groups'],
   },
