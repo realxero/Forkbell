@@ -1,10 +1,9 @@
 // Today at a glance: calories left, protein, carbs, fat and water.
-// With a server address and a Shortcut key set in Edit Widget, it fetches
-// today from the server itself (/api/shortcuts/today) about every 20 minutes,
-// so it stays current without opening the app and whatever the signing allows.
-// Otherwise it reads the snapshot the app writes to the shared App Group
-// (lib/widget.ios.ts). A snapshot from another day shows as a fresh day.
-import AppIntents
+// The app shares your server and a read-only Shortcut key through the App Group
+// (lib/widget.ios.ts), and the widget fetches today from /api/shortcuts/today about
+// every 20 minutes, so it stays current without opening the app. Until then, or
+// offline, it shows the snapshot the app writes. A snapshot from another day shows
+// as a fresh day. (A plain widget: the Edit Widget kind never started on re-signed installs.)
 import SwiftUI
 import WidgetKit
 
@@ -75,26 +74,23 @@ private func load() -> Today? {
   return t
 }
 
-/// Edit Widget: where to fetch today from. A Shortcut key only reads and asks; it can't log anything by itself.
-struct TodayConfig: WidgetConfigurationIntent {
-  static var title: LocalizedStringResource = "Forkbell"
-  static var description = IntentDescription("Add your server and a Shortcut key (Forkbell › Settings › Shortcuts) so the widget updates on its own.")
-  @Parameter(title: "Server address") var server: String?
-  @Parameter(title: "Shortcut key") var key: String?
-
-  var connected: Bool { !(server ?? "").isEmpty && !(key ?? "").isEmpty }
+/// Your server and a read-only Shortcut key, shared by the app once you've signed in.
+struct Link: Decodable { let server: String; let key: String }
+private func link() -> Link? {
+  guard let raw = UserDefaults(suiteName: group)?.string(forKey: "link"), let data = raw.data(using: .utf8) else { return nil }
+  return try? JSONDecoder().decode(Link.self, from: data)
 }
 
 /// The app's own numbers while it has changes still to send (the server's would be missing them), else the server's.
 /// Also says what happened, on the widget and to the app (Settings shows it), so a failure has a reason.
-private func current(_ c: TodayConfig) async -> (Today?, String?) {
+private func current() async -> (Today?, String?) {
   if let mine = load(), mine.pending == true { report("showing the app’s numbers until it sends its changes"); return (mine, nil) }
-  if !c.connected {
+  guard let l = link() else {
     let mine = load()
-    report(mine == nil ? "no numbers yet: open Forkbell, or add your server and key in Edit Widget" : "showing the app’s numbers (no server set in Edit Widget)")
+    report(mine == nil ? "no numbers yet: open Forkbell once" : "showing the app’s numbers (open Forkbell once to link it to your server)")
     return (mine, nil)
   }
-  let (got, problem) = await fetchToday(c)
+  let (got, problem) = await fetchToday(l)
   report(problem ?? "updated from your server")
   return (got ?? load(), problem)
 }
@@ -116,9 +112,9 @@ private let session: URLSession = {
 }()
 
 /// Today from the server, in the same shape the app writes, or what went wrong.
-private func fetchToday(_ c: TodayConfig) async -> (Today?, String?) {
-  guard var base = c.server?.trimmingCharacters(in: .whitespacesAndNewlines),
-        let key = c.key?.trimmingCharacters(in: .whitespacesAndNewlines) else { return (nil, nil) }
+private func fetchToday(_ l: Link) async -> (Today?, String?) {
+  var base = l.server.trimmingCharacters(in: .whitespacesAndNewlines)
+  let key = l.key
   if !base.contains("://") { base = "https://" + base }
   while base.hasSuffix("/") { base.removeLast() }
   guard let url = URL(string: "\(base)/api/shortcuts/today?today=\(todayString())") else { return (nil, "The server address isn’t a web address.") }
@@ -128,7 +124,7 @@ private func fetchToday(_ c: TodayConfig) async -> (Today?, String?) {
   let got: (Data, URLResponse)
   do { got = try await session.data(for: req) } catch { return (nil, "Can’t reach \(url.host ?? base): \(error.localizedDescription)") }
   let code = (got.1 as? HTTPURLResponse)?.statusCode ?? 0
-  if code == 401 || code == 403 { return (nil, "The server didn’t accept the key (\(code)). Copy it again from Settings › Shortcuts.") }
+  if code == 401 || code == 403 { return (nil, "The server didn’t accept the key (\(code)). Open Forkbell to make a new one.") }
   if code != 200 { return (nil, "The server answered \(code).") }
   guard let reply = try? JSONDecoder().decode(Reply.self, from: got.0) else { return (nil, "That address answered, but not like Forkbell. Check it’s your Forkbell address.") }
   guard let today = reply.widget else { return (nil, "Update your Forkbell server to use this widget.") }
@@ -138,27 +134,27 @@ private func fetchToday(_ c: TodayConfig) async -> (Today?, String?) {
 struct Entry: TimelineEntry {
   let date: Date
   let today: Today?
-  var connected = false
   var problem: String? = nil
 }
 
-struct Provider: AppIntentTimelineProvider {
+struct Provider: TimelineProvider {
   func placeholder(in context: Context) -> Entry {
     Entry(date: Date(), today: Today(date: todayString(), kcalGoal: 2200, kcalEaten: 1340, protein: 92, proteinGoal: 150, carbs: 160, carbsGoal: 220, fat: 48, fatGoal: 75, waterMl: 1250, waterGoalMl: 2000, netCarbs: false))
   }
-  func snapshot(for c: TodayConfig, in context: Context) async -> Entry {
-    // Snapshots must be quick: use what's saved; the timeline does the fetching.
-    if context.isPreview { return placeholder(in: context) }
-    return Entry(date: Date(), today: load(), connected: c.connected)
+  // Snapshots must be quick: use what's saved; the timeline does the fetching.
+  func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
+    completion(context.isPreview ? placeholder(in: context) : Entry(date: Date(), today: load()))
   }
-  func timeline(for c: TodayConfig, in context: Context) async -> Timeline<Entry> {
+  func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
     report("started") // If Settings is stuck on this, the widget stopped before finishing (a crash or iOS cutting it off).
-    let (today, problem) = await current(c)
-    // Connected: check again in 20 minutes (well inside WidgetKit's daily budget).
-    // Not: the app reloads it when you log. Either way midnight starts a fresh day.
-    let midnight = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))
-    let next = c.connected ? min(Date().addingTimeInterval(20 * 60), midnight) : midnight
-    return Timeline(entries: [Entry(date: Date(), today: today, connected: c.connected, problem: problem)], policy: .after(next))
+    Task {
+      let (today, problem) = await current()
+      // Linked: check again in 20 minutes (well inside WidgetKit's daily budget). Not: the app reloads it when you log.
+      // Either way midnight starts a fresh day.
+      let midnight = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))
+      let next = link() != nil ? min(Date().addingTimeInterval(20 * 60), midnight) : midnight
+      completion(Timeline(entries: [Entry(date: Date(), today: today, problem: problem)], policy: .after(next)))
+    }
   }
 }
 
@@ -221,7 +217,7 @@ struct WidgetView: View {
     if let t = entry.today {
       content(t)
     } else {
-      Text(entry.problem ?? (entry.connected ? "Can’t reach your server right now." : "Hold here, tap Edit Widget, and add your server and a Shortcut key."))
+      Text(entry.problem ?? "Open Forkbell once to show today here.")
         .font(.caption).minimumScaleFactor(0.7).multilineTextAlignment(.center)
     }
   }
@@ -279,52 +275,12 @@ struct WidgetView: View {
 
 @main
 struct ForkbellWidgetBundle: WidgetBundle {
-  var body: some Widget { TodayWidget(); StatusWidget() }
-}
-
-// ponytail: diagnostic only. A plain widget (the kind that ran before Edit Widget existed) that shows what it can see,
-// to tell "widgets can't start" from "the editable one can't" on re-signed installs. Remove once the widget works.
-struct StatusEntry: TimelineEntry { let date: Date; let lines: [String] }
-
-struct StatusProvider: TimelineProvider {
-  func placeholder(in context: Context) -> StatusEntry { StatusEntry(date: Date(), lines: ["Forkbell status"]) }
-  func getSnapshot(in context: Context, completion: @escaping (StatusEntry) -> Void) { completion(entry()) }
-  func getTimeline(in context: Context, completion: @escaping (Timeline<StatusEntry>) -> Void) {
-    completion(Timeline(entries: [entry()], policy: .after(Date().addingTimeInterval(15 * 60))))
-  }
-  private func entry() -> StatusEntry {
-    let shared = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil
-    let prior = UserDefaults(suiteName: group)?.string(forKey: "widgetReport")
-    let time = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
-    return StatusEntry(date: Date(), lines: [
-      "Running \(time)",
-      shared ? "Storage: \(group)" : "Storage: none",
-      load() != nil ? "App’s numbers: found" : "App’s numbers: none",
-      "Today widget: \(msg(prior) ?? "never ran")",
-    ])
-  }
-}
-
-private func msg(_ raw: String?) -> String? {
-  guard let data = raw?.data(using: .utf8), let o = try? JSONSerialization.jsonObject(with: data) as? [String: String] else { return nil }
-  return o["msg"]
-}
-
-struct StatusWidget: Widget {
-  var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "status", provider: StatusProvider()) { e in
-      VStack(alignment: .leading, spacing: 2) { ForEach(e.lines, id: \.self) { Text($0).font(.caption2).lineLimit(2) } }
-        .containerBackground(.fill.tertiary, for: .widget)
-    }
-    .configurationDisplayName("Forkbell status")
-    .description("Shows whether the widget can run and see the app. For fixing the Today widget.")
-    .supportedFamilies([.systemMedium])
-  }
+  var body: some Widget { TodayWidget() }
 }
 
 struct TodayWidget: Widget {
   var body: some WidgetConfiguration {
-    AppIntentConfiguration(kind: "today", intent: TodayConfig.self, provider: Provider()) { entry in
+    StaticConfiguration(kind: "today", provider: Provider()) { entry in
       WidgetView(entry: entry).containerBackground(.fill.tertiary, for: .widget)
     }
     .configurationDisplayName("Today")

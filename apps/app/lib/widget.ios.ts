@@ -5,7 +5,8 @@ import { ExtensionStorage } from '@bacons/apple-targets';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { todayLocal, type DiaryDay, type Me, type WaterDay } from '@forkbell/shared';
-import { api, loadConnection } from './api';
+import * as SecureStore from 'expo-secure-store';
+import { api, getServerUrl, loadConnection } from './api';
 import { onSyncChange, waitingNow } from './sync';
 import { widgetStore } from '../modules/forkbell-widget';
 import { widgetToday } from '@forkbell/shared';
@@ -66,4 +67,24 @@ export function startWidgetRefresh(): void {
   if (started) return;
   started = true;
   void BackgroundTask.registerTaskAsync(TASK, { minimumInterval: 30 }).catch(() => {});
+  void linkWidget().catch(() => {});
+}
+
+const LABEL = 'Home screen widget';
+const own = { headers: { 'x-forkbell-profile': '' } }; // always your own account, even while viewing someone else's
+
+/** Gives the widget your server and a read-only Shortcut key (made once, remade if you remove it), so it can fetch today itself. */
+async function linkWidget(): Promise<void> {
+  const server = getServerUrl();
+  if (!widgetStore || !server) return;
+  let key = await SecureStore.getItemAsync('widgetKey');
+  if (key) {
+    const { keys } = await api<{ keys: { label: string; hint: string }[] }>('/api/shortcuts/keys', own);
+    if (!keys.some((k) => k.label === LABEL && k.hint === `…${key!.slice(-4)}`)) key = null;
+  }
+  if (!key) {
+    key = (await api<{ token: string }>('/api/shortcuts/keys', { ...own, method: 'POST', body: JSON.stringify({ label: LABEL }) })).token;
+    await SecureStore.setItemAsync('widgetKey', key);
+  }
+  widgetStore.write('link', JSON.stringify({ server, key }));
 }

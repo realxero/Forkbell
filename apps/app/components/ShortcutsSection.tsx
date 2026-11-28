@@ -112,14 +112,9 @@ export function ShortcutsSection() {
       <Text style={type.small}>It reads out the calories and protein you have left, without using Bell’s AI.</Text>
 
       <Text style={s.group}>Home screen widget that updates itself</Text>
-      <Steps
-        steps={[
-          'Make a key above (one just for the widget is easiest to remove later).',
-          'Hold the Forkbell widget on your home screen and tap Edit Widget.',
-          `Server address: ${server}. Shortcut key: paste the key.`,
-        ]}
-      />
-      <Text style={type.small}>It then checks your server about every 20 minutes, even when you haven’t opened the app.</Text>
+      <Text style={type.small}>
+        Add the Forkbell widget to your home screen. It checks your server about every 20 minutes, even when you haven’t opened the app, using the “{'Home screen widget'}” key the app makes for it. Remove that key to stop it; opening the app makes a new one.
+      </Text>
 
       <Text style={s.group}>Without a key</Text>
       <Text style={type.small}>
