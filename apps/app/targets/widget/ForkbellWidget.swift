@@ -279,7 +279,47 @@ struct WidgetView: View {
 
 @main
 struct ForkbellWidgetBundle: WidgetBundle {
-  var body: some Widget { TodayWidget() }
+  var body: some Widget { TodayWidget(); StatusWidget() }
+}
+
+// ponytail: diagnostic only. A plain widget (the kind that ran before Edit Widget existed) that shows what it can see,
+// to tell "widgets can't start" from "the editable one can't" on re-signed installs. Remove once the widget works.
+struct StatusEntry: TimelineEntry { let date: Date; let lines: [String] }
+
+struct StatusProvider: TimelineProvider {
+  func placeholder(in context: Context) -> StatusEntry { StatusEntry(date: Date(), lines: ["Forkbell status"]) }
+  func getSnapshot(in context: Context, completion: @escaping (StatusEntry) -> Void) { completion(entry()) }
+  func getTimeline(in context: Context, completion: @escaping (Timeline<StatusEntry>) -> Void) {
+    completion(Timeline(entries: [entry()], policy: .after(Date().addingTimeInterval(15 * 60))))
+  }
+  private func entry() -> StatusEntry {
+    let shared = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil
+    let prior = UserDefaults(suiteName: group)?.string(forKey: "widgetReport")
+    let time = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+    return StatusEntry(date: Date(), lines: [
+      "Running \(time)",
+      shared ? "Storage: \(group)" : "Storage: none",
+      load() != nil ? "App’s numbers: found" : "App’s numbers: none",
+      "Today widget: \(msg(prior) ?? "never ran")",
+    ])
+  }
+}
+
+private func msg(_ raw: String?) -> String? {
+  guard let data = raw?.data(using: .utf8), let o = try? JSONSerialization.jsonObject(with: data) as? [String: String] else { return nil }
+  return o["msg"]
+}
+
+struct StatusWidget: Widget {
+  var body: some WidgetConfiguration {
+    StaticConfiguration(kind: "status", provider: StatusProvider()) { e in
+      VStack(alignment: .leading, spacing: 2) { ForEach(e.lines, id: \.self) { Text($0).font(.caption2).lineLimit(2) } }
+        .containerBackground(.fill.tertiary, for: .widget)
+    }
+    .configurationDisplayName("Forkbell status")
+    .description("Shows whether the widget can run and see the app. For fixing the Today widget.")
+    .supportedFamilies([.systemMedium])
+  }
 }
 
 struct TodayWidget: Widget {
