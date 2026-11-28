@@ -86,29 +86,60 @@ struct TodayConfig: WidgetConfigurationIntent {
 }
 
 /// The app's own numbers while it has changes still to send (the server's would be missing them), else the server's.
-private func current(_ c: TodayConfig) async -> Today? {
-  if let mine = load(), mine.pending == true { return mine }
-  return await fetchToday(c) ?? load()
+/// Also says what happened, on the widget and to the app (Settings shows it), so a failure has a reason.
+private func current(_ c: TodayConfig) async -> (Today?, String?) {
+  if let mine = load(), mine.pending == true { report("showing the app’s numbers until it sends its changes"); return (mine, nil) }
+  if !c.connected {
+    let mine = load()
+    report(mine == nil ? "no numbers yet: open Forkbell, or add your server and key in Edit Widget" : "showing the app’s numbers (no server set in Edit Widget)")
+    return (mine, nil)
+  }
+  let (got, problem) = await fetchToday(c)
+  report(problem ?? "updated from your server")
+  return (got ?? load(), problem)
 }
 
-/// Today from the server, in the same shape the app writes; nil when not set up or unreachable.
-private func fetchToday(_ c: TodayConfig) async -> Today? {
-  guard c.connected, var base = c.server?.trimmingCharacters(in: .whitespacesAndNewlines),
-        let key = c.key?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+/// Saves the widget's last result where the app can read it.
+private func report(_ msg: String) {
+  let at = ISO8601DateFormatter().string(from: Date())
+  if let data = try? JSONSerialization.data(withJSONObject: ["at": at, "msg": msg]) {
+    UserDefaults(suiteName: group)?.set(String(data: data, encoding: .utf8), forKey: "widgetReport")
+  }
+}
+
+// WidgetKit gives up on a timeline that takes too long and leaves the grey placeholder up, so cap the whole request.
+private let session: URLSession = {
+  let c = URLSessionConfiguration.ephemeral
+  c.timeoutIntervalForRequest = 8
+  c.timeoutIntervalForResource = 10
+  return URLSession(configuration: c)
+}()
+
+/// Today from the server, in the same shape the app writes, or what went wrong.
+private func fetchToday(_ c: TodayConfig) async -> (Today?, String?) {
+  guard var base = c.server?.trimmingCharacters(in: .whitespacesAndNewlines),
+        let key = c.key?.trimmingCharacters(in: .whitespacesAndNewlines) else { return (nil, nil) }
   if !base.contains("://") { base = "https://" + base }
   while base.hasSuffix("/") { base.removeLast() }
-  guard let url = URL(string: "\(base)/api/shortcuts/today?today=\(todayString())") else { return nil }
-  var req = URLRequest(url: url, timeoutInterval: 15)
+  guard let url = URL(string: "\(base)/api/shortcuts/today?today=\(todayString())") else { return (nil, "The server address isn’t a web address.") }
+  var req = URLRequest(url: url, timeoutInterval: 8)
   req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
   struct Reply: Decodable { let widget: Today? }
-  guard let got = try? await URLSession.shared.data(for: req), (got.1 as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-  return (try? JSONDecoder().decode(Reply.self, from: got.0))?.widget
+  let got: (Data, URLResponse)
+  do { got = try await session.data(for: req) } catch { return (nil, "Can’t reach \(url.host ?? base): \(error.localizedDescription)") }
+  let code = (got.1 as? HTTPURLResponse)?.statusCode ?? 0
+  if code == 401 || code == 403 { return (nil, "The server didn’t accept the key (\(code)). Copy it again from Settings › Shortcuts.") }
+  if code != 200 { return (nil, "The server answered \(code).") }
+  guard let reply = try? JSONDecoder().decode(Reply.self, from: got.0) else { return (nil, "That address answered, but not like Forkbell. Check it’s your Forkbell address.") }
+  guard let today = reply.widget else { return (nil, "Update your Forkbell server to use this widget.") }
+  return (today, nil)
 }
 
 struct Entry: TimelineEntry {
   let date: Date
   let today: Today?
   var connected = false
+  var problem: String? = nil
 }
 
 struct Provider: AppIntentTimelineProvider {
@@ -116,16 +147,18 @@ struct Provider: AppIntentTimelineProvider {
     Entry(date: Date(), today: Today(date: todayString(), kcalGoal: 2200, kcalEaten: 1340, protein: 92, proteinGoal: 150, carbs: 160, carbsGoal: 220, fat: 48, fatGoal: 75, waterMl: 1250, waterGoalMl: 2000, netCarbs: false))
   }
   func snapshot(for c: TodayConfig, in context: Context) async -> Entry {
+    // Snapshots must be quick: use what's saved; the timeline does the fetching.
     if context.isPreview { return placeholder(in: context) }
-    return Entry(date: Date(), today: await current(c), connected: c.connected)
+    return Entry(date: Date(), today: load(), connected: c.connected)
   }
   func timeline(for c: TodayConfig, in context: Context) async -> Timeline<Entry> {
-    let today = await current(c)
+    report("started") // If Settings is stuck on this, the widget stopped before finishing (a crash or iOS cutting it off).
+    let (today, problem) = await current(c)
     // Connected: check again in 20 minutes (well inside WidgetKit's daily budget).
     // Not: the app reloads it when you log. Either way midnight starts a fresh day.
     let midnight = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))
     let next = c.connected ? min(Date().addingTimeInterval(20 * 60), midnight) : midnight
-    return Timeline(entries: [Entry(date: Date(), today: today, connected: c.connected)], policy: .after(next))
+    return Timeline(entries: [Entry(date: Date(), today: today, connected: c.connected, problem: problem)], policy: .after(next))
   }
 }
 
@@ -188,8 +221,8 @@ struct WidgetView: View {
     if let t = entry.today {
       content(t)
     } else {
-      Text(entry.connected ? "Can’t reach your server right now." : "Hold here, tap Edit Widget, and add your server and a Shortcut key.")
-        .font(.caption).multilineTextAlignment(.center)
+      Text(entry.problem ?? (entry.connected ? "Can’t reach your server right now." : "Hold here, tap Edit Widget, and add your server and a Shortcut key."))
+        .font(.caption).minimumScaleFactor(0.7).multilineTextAlignment(.center)
     }
   }
 
