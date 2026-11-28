@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { widgetStatus } from '../../../modules/forkbell-widget';
+import { widgetReport, widgetStatus } from '../../../modules/forkbell-widget';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from '../../../components/Tap';
 import { router, useFocusEffect, type Href } from 'expo-router';
@@ -103,16 +103,19 @@ export default function Settings() {
 
   const serverLine =
     server === null ? '…' : server === 'unreachable' ? 'can’t reach it right now' : server === 'old' ? 'older than 0.11 (update it)' : versionLabel(server);
-  // Whether the home screen widget can see the app's numbers on this install (iPhone). Read once: it can't change while the app runs.
-  const [widgetLine] = useState(() => {
+  // What the home screen widget last did, in its own words (iPhone). Without shared storage it can't tell the app, so say where to look.
+  const widgetLine = (() => {
     try {
       const w = widgetStatus();
       if (!w) return null;
-      return w.group ? 'Widget: connected' : 'Widget: add your server and Shortcut key in Edit Widget';
+      if (!w.group) return 'Widget: it shows its own status on the home screen';
+      const r = widgetReport();
+      if (!r) return 'Widget: not added yet, or it hasn’t run';
+      return `Widget, ${new Date(r.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}: ${r.msg}`;
     } catch {
       return null;
     }
-  });
+  })();
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>

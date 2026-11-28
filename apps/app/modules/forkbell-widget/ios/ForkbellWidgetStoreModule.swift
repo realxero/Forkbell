@@ -50,6 +50,11 @@ public class ForkbellWidgetStoreModule: Module {
       return String(data: data, encoding: .utf8) ?? "{}"
     }
 
+    /// A value the widget saved (its last result, for Settings); nil when there's none.
+    Function("read") { (key: String) -> String? in
+      forkbellGroup().flatMap { UserDefaults(suiteName: $0)?.string(forKey: key) }
+    }
+
     /// Saves the value and redraws the widget; returns the group used, or nil when the install has none.
     Function("write") { (key: String, value: String) -> String? in
       guard let group = forkbellGroup(), let store = UserDefaults(suiteName: group) else { return nil }
